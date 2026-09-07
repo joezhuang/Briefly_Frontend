@@ -1,23 +1,26 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useColorScheme } from "react-native";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import { LanguageProvider } from "@/context/language";
+import { SavedArticlesProvider } from "@/context/saved-articles";
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-
-      <Stack>
-        <Stack.Screen name="index" options={{ title: "Briefly" }} />
-
-        <Stack.Screen name="story/[slug]" options={{ title: "Briefly" }} />
-      </Stack>
-    </ThemeProvider>
+    <LanguageProvider>
+      <SavedArticlesProvider>
+        <AnimatedSplashOverlay />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="saved/index" />
+          <Stack.Screen name="saved/[snapshotId]" />
+          <Stack.Screen name="search" />
+          <Stack.Screen name="story/[slug]" />
+          <Stack.Screen name="share/[versionId]" />
+        </Stack>
+      </SavedArticlesProvider>
+    </LanguageProvider>
   );
 }
