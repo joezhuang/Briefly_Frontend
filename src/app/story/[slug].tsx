@@ -9,6 +9,7 @@ import {
 import { ArticleView } from "@/components/article-view";
 import { ScreenState } from "@/components/screen-state";
 import { useBrieflyLanguage } from "@/context/language";
+import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
 
 const PREVIEW_DRAFTS =
@@ -30,7 +31,9 @@ export default function StoryDetailScreen() {
     [eventId],
   );
 
-  const { language } = useBrieflyLanguage();
+  const { language, t } = useBrieflyLanguage();
+  const { colors } = useBrieflyTheme();
+
   const [article, setArticle] = useState<CanonicalArticle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState("");
@@ -72,7 +75,7 @@ export default function StoryDetailScreen() {
             setArticle(null);
             setLoadingKey(requestKey);
             setError(
-              err instanceof Error ? err.message : "Unable to load this story.",
+              err instanceof Error ? err.message : t.storyUnavailable,
             );
           }
         });
@@ -87,22 +90,23 @@ export default function StoryDetailScreen() {
     language,
     reloadKey,
     requestKey,
+    t.storyUnavailable,
   ]);
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1 }}>
-        <ScreenState loading message="Loading story…" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <ScreenState loading message={t.loadingStory} />
       </SafeAreaView>
     );
   }
 
   if (!article || error) {
     return (
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <ScreenState
-          title="Story unavailable"
-          message={error ?? "Article not found."}
+          title={t.storyUnavailable}
+          message={error ?? t.articleNotFound}
           onRetry={() => setReloadKey((value) => value + 1)}
         />
       </SafeAreaView>

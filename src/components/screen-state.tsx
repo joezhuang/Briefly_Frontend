@@ -6,7 +6,8 @@ import {
   View,
 } from "react-native";
 
-import { colors } from "@/theme/tokens";
+import { useBrieflyLanguage } from "@/context/language";
+import { useBrieflyTheme } from "@/context/theme";
 
 type Props = {
   title?: string;
@@ -21,17 +22,29 @@ export function ScreenState({
   loading = false,
   onRetry,
 }: Props) {
+  const { t } = useBrieflyLanguage();
+  const { colors } = useBrieflyTheme();
+
   return (
     <View style={styles.state}>
-      {loading ? <ActivityIndicator size="large" /> : null}
+      {loading ? <ActivityIndicator size="large" color={colors.accent} /> : null}
 
-      {title ? <Text style={styles.title}>{title}</Text> : null}
+      {title ? (
+        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+      ) : null}
 
-      <Text style={styles.message}>{message}</Text>
+      <Text style={[styles.message, { color: colors.textMuted }]}>
+        {message}
+      </Text>
 
       {onRetry ? (
-        <Pressable onPress={onRetry} style={styles.retry}>
-          <Text style={styles.retryText}>Try again</Text>
+        <Pressable
+          onPress={onRetry}
+          style={[styles.retry, { backgroundColor: colors.text }]}
+        >
+          <Text style={[styles.retryText, { color: colors.background }]}>
+            {t.tryAgain}
+          </Text>
         </Pressable>
       ) : null}
     </View>
@@ -49,22 +62,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 23,
     fontWeight: "900",
-    color: colors.text,
   },
   message: {
-    color: colors.textMuted,
     fontSize: 16,
     textAlign: "center",
   },
   retry: {
     marginTop: 6,
     borderRadius: 999,
-    backgroundColor: colors.text,
     paddingHorizontal: 18,
     paddingVertical: 10,
   },
   retryText: {
-    color: colors.white,
     fontWeight: "800",
   },
 });

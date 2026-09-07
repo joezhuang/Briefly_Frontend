@@ -5,6 +5,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { getCanonicalArticleByVersionId } from "@/api/briefly";
 import { ArticleView } from "@/components/article-view";
 import { ScreenState } from "@/components/screen-state";
+import { useBrieflyLanguage } from "@/context/language";
+import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
 
 export default function SharedArticleScreen() {
@@ -19,6 +21,9 @@ export default function SharedArticleScreen() {
 
   const id = Number(resolved);
   const invalidId = !Number.isInteger(id) || id <= 0;
+
+  const { t } = useBrieflyLanguage();
+  const { colors } = useBrieflyTheme();
 
   const [article, setArticle] = useState<CanonicalArticle | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,9 +40,7 @@ export default function SharedArticleScreen() {
       .catch((err: unknown) => {
         if (active) {
           setError(
-            err instanceof Error
-              ? err.message
-              : "Unable to load this shared story.",
+            err instanceof Error ? err.message : t.sharedUnavailable,
           );
         }
       });
@@ -45,14 +48,14 @@ export default function SharedArticleScreen() {
     return () => {
       active = false;
     };
-  }, [id, invalidId]);
+  }, [id, invalidId, t.sharedUnavailable]);
 
   if (invalidId) {
     return (
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <ScreenState
-          title="Shared story unavailable"
-          message="Invalid shared article link."
+          title={t.sharedUnavailable}
+          message={t.invalidSharedLink}
         />
       </SafeAreaView>
     );
@@ -60,18 +63,18 @@ export default function SharedArticleScreen() {
 
   if (!article && !error) {
     return (
-      <SafeAreaView style={{ flex: 1 }}>
-        <ScreenState loading message="Loading shared story…" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <ScreenState loading message={t.loadingSharedStory} />
       </SafeAreaView>
     );
   }
 
   if (!article || error) {
     return (
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <ScreenState
-          title="Shared story unavailable"
-          message={error ?? "Article not found."}
+          title={t.sharedUnavailable}
+          message={error ?? t.articleNotFound}
         />
       </SafeAreaView>
     );
