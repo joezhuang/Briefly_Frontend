@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Briefly_Frontend",
-    "slug": "Briefly_Frontend",
+    "name": "Briefly",
+    "slug": "briefly",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "brieflyfrontend",
+    "scheme": "briefly",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
