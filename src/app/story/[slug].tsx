@@ -18,6 +18,7 @@ import {
 import { ArticleView } from "@/components/article-view";
 import { EventPreviewView } from "@/components/event-preview-view";
 import { ScreenState } from "@/components/screen-state";
+import { WebTranslateButton } from "@/components/web-translate-button";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -40,6 +41,17 @@ function preferredImage(
 ): CanonicalArticle {
   if (!imageUrl) return article;
   return { ...article, image_url: imageUrl };
+}
+
+function getWebStoryUrl(): string | null {
+  if (Platform.OS !== "web" || typeof window === "undefined") return null;
+
+  const configuredBase = process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, "");
+  if (configuredBase) {
+    return `${configuredBase}${window.location.pathname}${window.location.search}`;
+  }
+
+  return window.location.href;
 }
 
 export default function StoryDetailScreen() {
@@ -80,6 +92,9 @@ export default function StoryDetailScreen() {
   });
   const [podcastBusy, setPodcastBusy] = useState(false);
 
+  const isWeb = Platform.OS === "web";
+  const articleRequestLanguage = isWeb ? "en" : language;
+  const webTranslateSourceUrl = isWeb && language !== "en" ? getWebStoryUrl() : null;
   const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${language}:${reloadKey}`;
   const loading = loadingKey !== requestKey && !error && !article;
   const isPro = account?.translation_entitled === true;
@@ -123,7 +138,7 @@ export default function StoryDetailScreen() {
             resolvedEventId,
             {
               includeDraft: PREVIEW_DRAFTS,
-              language,
+              language: articleRequestLanguage,
             },
           );
           const canonical = preferredImage(canonicalResponse, resolvedImageUrl);
@@ -142,19 +157,22 @@ export default function StoryDetailScreen() {
 
           setAuthoritativeArticle(canonical);
 
-          if (language !== "en") {
+          if (!isWeb && language !== "en") {
             const localized = await getExperimentalArticleByEventId(resolvedEventId, {
               includeDraft: PREVIEW_DRAFTS,
               language,
             });
-            result = preferredImage(localized, resolvedImageUrl ?? canonical.image_url ?? undefined);
+            result = preferredImage(
+              localized,
+              resolvedImageUrl ?? canonical.image_url ?? undefined,
+            );
           } else {
             result = canonical;
           }
         } else {
           const canonicalBySlug = await getCanonicalArticleBySlug(resolvedSlug, {
             includeDraft: PREVIEW_DRAFTS,
-            language,
+            language: articleRequestLanguage,
           });
           result = preferredImage(canonicalBySlug, resolvedImageUrl);
         }
@@ -166,6 +184,7 @@ export default function StoryDetailScreen() {
         setError(null);
 
         if (
+          !isWeb &&
           language !== "en" &&
           resolvedEventId &&
           result.translation_status === "pending"
@@ -191,6 +210,8 @@ export default function StoryDetailScreen() {
     resolvedEventId,
     resolvedImageUrl,
     language,
+    articleRequestLanguage,
+    isWeb,
     reloadKey,
     requestKey,
     t.storyUnavailable,
@@ -294,6 +315,7 @@ export default function StoryDetailScreen() {
   }
 
   const canToggleOriginal =
+    !isWeb &&
     language !== "en" &&
     article.experimental_localization === true &&
     authoritativeArticle?.article_version_id != null;
@@ -311,6 +333,9 @@ export default function StoryDetailScreen() {
           mode={languageMode}
           onChange={setLanguageMode}
         />
+      )}
+      {webTranslateSourceUrl && (
+        <WebTranslateButton sourceUrl={webTranslateSourceUrl} />
       )}
       <ArticleView
         article={displayedArticle}
