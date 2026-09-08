@@ -4,9 +4,9 @@ import { Linking, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-  getCanonicalArticleByEventId,
   getCanonicalArticleBySlug,
   getExperimentalArticleByEventId,
+  getLazyCanonicalArticleByEventId,
   getPodcastAnalysisStatus,
   requestPodcastAnalysis,
   type PodcastAnalysisStatus,
@@ -20,8 +20,17 @@ import type { CanonicalArticle } from "@/models/article";
 
 const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
+const LAZY_ARTICLE_POLL_MS = 5000;
 const EXPERIMENTAL_POLL_MS = 5000;
 const PODCAST_POLL_MS = 5000;
+
+const preparingCopy = {
+  en: "Briefly analysis is being prepared from the event evidence…",
+  es: "El análisis de Briefly se está preparando a partir de las evidencias del evento…",
+  ja: "イベントの根拠情報からBrieflyの分析を準備しています…",
+  "zh-CN": "Briefly 正在根据事件证据生成分析…",
+  "zh-TW": "Briefly 正在根據事件證據產生分析…",
+} as const;
 
 type PodcastState = {
   key: string;
@@ -38,7 +47,6 @@ export default function StoryDetailScreen() {
     () => (Array.isArray(slug) ? slug[0] : slug),
     [slug],
   );
-
   const resolvedEventId = useMemo(
     () => (Array.isArray(eventId) ? eventId[0] : eventId),
     [eventId],
@@ -77,6 +85,11 @@ export default function StoryDetailScreen() {
     let active = true;
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
 
+    const schedulePoll = (delay: number) => {
+      if (pollTimer) clearTimeout(pollTimer);
+      pollTimer = setTimeout(() => void load(true), delay);
+    };
+
     const load = async (polling = false) => {
       if (!active) return;
 
@@ -89,21 +102,35 @@ export default function StoryDetailScreen() {
       try {
         let result: CanonicalArticle;
 
-        if (language !== "en" && resolvedEventId) {
-          result = await getExperimentalArticleByEventId(resolvedEventId, {
+        if (resolvedEventId) {
+          const canonical = await getLazyCanonicalArticleByEventId(resolvedEventId, {
+            includeDraft: PREVIEW_DRAFTS,
+          });
+
+          if (!active) return;
+
+          if (canonical.article_version_id == null) {
+            setArticle(canonical);
+            setLoadingKey(requestKey);
+            setError(null);
+            if (canonical.generation_status === "processing") {
+              schedulePoll(LAZY_ARTICLE_POLL_MS);
+            }
+            return;
+          }
+
+          result =
+            language !== "en"
+              ? await getExperimentalArticleByEventId(resolvedEventId, {
+                  includeDraft: PREVIEW_DRAFTS,
+                  language,
+                })
+              : canonical;
+        } else {
+          result = await getCanonicalArticleBySlug(resolvedSlug, {
             includeDraft: PREVIEW_DRAFTS,
             language,
           });
-        } else {
-          result = resolvedEventId
-            ? await getCanonicalArticleByEventId(resolvedEventId, {
-                includeDraft: PREVIEW_DRAFTS,
-                language,
-              })
-            : await getCanonicalArticleBySlug(resolvedSlug, {
-                includeDraft: PREVIEW_DRAFTS,
-                language,
-              });
         }
 
         if (!active) return;
@@ -117,16 +144,11 @@ export default function StoryDetailScreen() {
           resolvedEventId &&
           result.translation_status === "pending"
         ) {
-          pollTimer = setTimeout(() => {
-            void load(true);
-          }, EXPERIMENTAL_POLL_MS);
+          schedulePoll(EXPERIMENTAL_POLL_MS);
         }
       } catch (err: unknown) {
         if (!active) return;
-
-        if (!polling) {
-          setArticle(null);
-        }
+        if (!polling) setArticle(null);
         setLoadingKey(requestKey);
         setError(err instanceof Error ? err.message : t.storyUnavailable);
       }
@@ -191,12 +213,10 @@ export default function StoryDetailScreen() {
       router.push("/sign-in");
       return;
     }
-
     if (!isPro) {
       router.push("/upgrade");
       return;
     }
-
     if (!podcastSourceVersionId || !podcastRequestKey || podcastBusy) return;
 
     setPodcastBusy(true);
@@ -226,6 +246,25 @@ export default function StoryDetailScreen() {
           title={t.storyUnavailable}
           message={error ?? t.articleNotFound}
           onRetry={() => setReloadKey((value) => value + 1)}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (article.article_version_id == null) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <ScreenState
+          loading={article.generation_status === "processing"}
+          title={article.headline}
+          message={
+            preparingCopy[language] ?? preparingCopy.en
+          }
+          onRetry={
+            article.generation_status === "processing"
+              ? undefined
+              : () => setReloadKey((value) => value + 1)
+          }
         />
       </SafeAreaView>
     );
