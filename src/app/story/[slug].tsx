@@ -34,10 +34,19 @@ type PodcastState = {
   value: PodcastAnalysisStatus | null;
 };
 
+function preferredImage(
+  article: CanonicalArticle,
+  imageUrl: string | undefined,
+): CanonicalArticle {
+  if (!imageUrl) return article;
+  return { ...article, image_url: imageUrl };
+}
+
 export default function StoryDetailScreen() {
-  const { slug, eventId } = useLocalSearchParams<{
+  const { slug, eventId, imageUrl } = useLocalSearchParams<{
     slug?: string | string[];
     eventId?: string | string[];
+    imageUrl?: string | string[];
   }>();
 
   const resolvedSlug = useMemo(
@@ -47,6 +56,10 @@ export default function StoryDetailScreen() {
   const resolvedEventId = useMemo(
     () => (Array.isArray(eventId) ? eventId[0] : eventId),
     [eventId],
+  );
+  const resolvedImageUrl = useMemo(
+    () => (Array.isArray(imageUrl) ? imageUrl[0] : imageUrl),
+    [imageUrl],
   );
 
   const { language, t } = useBrieflyLanguage();
@@ -106,10 +119,14 @@ export default function StoryDetailScreen() {
         let result: CanonicalArticle;
 
         if (resolvedEventId) {
-          const canonical = await getLazyCanonicalArticleByEventId(resolvedEventId, {
-            includeDraft: PREVIEW_DRAFTS,
-            language,
-          });
+          const canonicalResponse = await getLazyCanonicalArticleByEventId(
+            resolvedEventId,
+            {
+              includeDraft: PREVIEW_DRAFTS,
+              language,
+            },
+          );
+          const canonical = preferredImage(canonicalResponse, resolvedImageUrl);
 
           if (!active) return;
 
@@ -130,21 +147,16 @@ export default function StoryDetailScreen() {
               includeDraft: PREVIEW_DRAFTS,
               language,
             });
-            result = {
-              ...localized,
-              // The selected background is event-level metadata. Keep the same
-              // validated cluster image when the localized article replaces the
-              // canonical English response.
-              image_url: localized.image_url ?? canonical.image_url ?? null,
-            };
+            result = preferredImage(localized, resolvedImageUrl ?? canonical.image_url ?? undefined);
           } else {
             result = canonical;
           }
         } else {
-          result = await getCanonicalArticleBySlug(resolvedSlug, {
+          const canonicalBySlug = await getCanonicalArticleBySlug(resolvedSlug, {
             includeDraft: PREVIEW_DRAFTS,
             language,
           });
+          result = preferredImage(canonicalBySlug, resolvedImageUrl);
         }
 
         if (!active) return;
@@ -177,6 +189,7 @@ export default function StoryDetailScreen() {
   }, [
     resolvedSlug,
     resolvedEventId,
+    resolvedImageUrl,
     language,
     reloadKey,
     requestKey,
@@ -269,7 +282,7 @@ export default function StoryDetailScreen() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <EventPreviewView
-          article={article}
+          article={preferredImage(article, resolvedImageUrl)}
           onRetry={
             article.generation_status === "processing"
               ? undefined
@@ -284,10 +297,12 @@ export default function StoryDetailScreen() {
     language !== "en" &&
     article.experimental_localization === true &&
     authoritativeArticle?.article_version_id != null;
-  const displayedArticle =
+  const displayedArticle = preferredImage(
     canToggleOriginal && languageMode === "original" && authoritativeArticle
       ? authoritativeArticle
-      : article;
+      : article,
+    resolvedImageUrl,
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
