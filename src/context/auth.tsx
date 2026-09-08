@@ -28,6 +28,7 @@ type AuthContextValue = {
   account: BrieflyAccountState | null;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithProvider: (provider: "google" | "apple") => Promise<void>;
+  refreshAccount: () => Promise<BrieflyAccountState | null>;
   signOut: () => Promise<void>;
 };
 
@@ -165,6 +166,17 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
     setAccount(await getCurrentBrieflyAccount());
   };
 
+  const refreshAccount = async () => {
+    if (!session) {
+      setAccount(null);
+      return null;
+    }
+
+    const next = await getCurrentBrieflyAccount();
+    setAccount(next);
+    return next;
+  };
+
   const signOut = async () => {
     if (!supabase) {
       clearBrieflyAccessToken();
@@ -189,6 +201,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
       account,
       signIn,
       signInWithProvider,
+      refreshAccount,
       signOut,
     }),
     [ready, session, account],
