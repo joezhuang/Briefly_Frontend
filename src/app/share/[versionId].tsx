@@ -9,6 +9,9 @@ import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
 
+const PREVIEW_DRAFTS =
+  process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
+
 export default function SharedArticleScreen() {
   const { versionId } = useLocalSearchParams<{
     versionId?: string | string[];
@@ -33,7 +36,9 @@ export default function SharedArticleScreen() {
 
     let active = true;
 
-    getCanonicalArticleByVersionId(id)
+    getCanonicalArticleByVersionId(id, {
+      includeDraft: PREVIEW_DRAFTS,
+    })
       .then((result) => {
         if (active) setArticle(result);
       })
