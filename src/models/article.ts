@@ -13,6 +13,10 @@ export type CanonicalArticle = {
   article_version_id: number;
   version_number: number;
   language: string;
+  content_language?: string;
+  requested_language?: string;
+  translation_available?: boolean;
+  translation_entitled?: boolean;
   status: string;
   slug: string;
   headline: string;
