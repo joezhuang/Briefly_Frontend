@@ -32,6 +32,14 @@ const preparingCopy = {
   "zh-TW": "Briefly 正在根據事件證據產生分析…",
 } as const;
 
+const generationUnavailableCopy = {
+  en: "Briefly could not prepare an authoritative analysis from the available source material. You can still review the original coverage and try again later.",
+  es: "Briefly no pudo preparar un análisis autorizado con el material fuente disponible. Aún puedes revisar la cobertura original e intentarlo de nuevo más tarde.",
+  ja: "現在利用できる情報源だけでは、Brieflyの信頼できる分析を作成できませんでした。元の報道を確認し、後でもう一度お試しください。",
+  "zh-CN": "根据目前可用的来源材料，Briefly 暂时无法生成权威分析。你仍可查看原始报道，并稍后重试。",
+  "zh-TW": "根據目前可用的來源材料，Briefly 暫時無法產生權威分析。你仍可查看原始報導，並稍後重試。",
+} as const;
+
 type PodcastState = {
   key: string;
   value: PodcastAnalysisStatus | null;
@@ -252,13 +260,16 @@ export default function StoryDetailScreen() {
   }
 
   if (article.article_version_id == null) {
+    const generationFailed = article.generation_status === "failed";
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <ScreenState
           loading={article.generation_status === "processing"}
           title={article.headline}
           message={
-            preparingCopy[language] ?? preparingCopy.en
+            generationFailed
+              ? generationUnavailableCopy[language] ?? generationUnavailableCopy.en
+              : preparingCopy[language] ?? preparingCopy.en
           }
           onRetry={
             article.generation_status === "processing"
