@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Linking, Platform, View } from "react-native";
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -31,6 +31,14 @@ const PREVIEW_DRAFTS =
 const LAZY_ARTICLE_POLL_MS = 5000;
 const EXPERIMENTAL_POLL_MS = 5000;
 const PODCAST_POLL_MS = 5000;
+
+const storyToolsCopy = {
+  en: { title: "Story tools", collapse: "Collapse", expand: "Show" },
+  es: { title: "Herramientas", collapse: "Ocultar", expand: "Mostrar" },
+  ja: { title: "記事ツール", collapse: "閉じる", expand: "表示" },
+  "zh-CN": { title: "报道工具", collapse: "收起", expand: "展开" },
+  "zh-TW": { title: "報導工具", collapse: "收起", expand: "展開" },
+} as const;
 
 type PodcastState = {
   key: string;
@@ -106,6 +114,7 @@ export default function StoryDetailScreen() {
     value: null,
   });
   const [podcastBusy, setPodcastBusy] = useState(false);
+  const [storyToolsExpanded, setStoryToolsExpanded] = useState(true);
 
   const isWeb = Platform.OS === "web";
   const articleRequestLanguage = isWeb ? "en" : language;
@@ -122,6 +131,10 @@ export default function StoryDetailScreen() {
       : "";
   const podcast =
     podcastState.key === podcastRequestKey ? podcastState.value : null;
+
+  useEffect(() => {
+    setStoryToolsExpanded(true);
+  }, [resolvedSlug]);
 
   useEffect(() => {
     if (!resolvedSlug) return;
@@ -351,20 +364,55 @@ export default function StoryDetailScreen() {
       : article,
     resolvedImageUrl,
   );
+  const storyToolsText = storyToolsCopy[language] ?? storyToolsCopy.en;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
-      {canToggleOriginal && (
-        <ArticleLanguageToggle
-          mode={languageMode}
-          onChange={setLanguageMode}
-        />
-      )}
-      {webTranslateSourceUrl && (
-        <WebTranslateButton sourceUrl={webTranslateSourceUrl} />
-      )}
-      <StaleStoryNotice article={displayedArticle} />
-      {!!resolvedEventId && <EventTimeline eventId={resolvedEventId} />}
+      <View
+        style={[
+          styles.storyTools,
+          {
+            backgroundColor: colors.surface,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            storyToolsExpanded ? storyToolsText.collapse : storyToolsText.expand
+          }
+          onPress={() => setStoryToolsExpanded((value) => !value)}
+          style={({ pressed }) => [
+            styles.storyToolsHandle,
+            { opacity: pressed ? 0.65 : 1 },
+          ]}
+        >
+          <Text style={[styles.storyToolsTitle, { color: colors.textMuted }]}>
+            {storyToolsText.title}
+          </Text>
+          <Text style={[styles.storyToolsAction, { color: colors.accent }]}>
+            {storyToolsExpanded ? `${storyToolsText.collapse} ↑` : `${storyToolsText.expand} ↓`}
+          </Text>
+        </Pressable>
+
+        {storyToolsExpanded && (
+          <View style={styles.storyToolsContent}>
+            {canToggleOriginal && (
+              <ArticleLanguageToggle
+                mode={languageMode}
+                onChange={setLanguageMode}
+              />
+            )}
+            {webTranslateSourceUrl && (
+              <WebTranslateButton sourceUrl={webTranslateSourceUrl} />
+            )}
+            <StaleStoryNotice article={displayedArticle} />
+            {!!resolvedEventId && <EventTimeline eventId={resolvedEventId} />}
+          </View>
+        )}
+      </View>
+
       <ArticleView
         article={displayedArticle}
         podcast={podcast}
@@ -376,3 +424,30 @@ export default function StoryDetailScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  storyTools: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  storyToolsHandle: {
+    minHeight: 44,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  storyToolsTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
+  },
+  storyToolsAction: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  storyToolsContent: {
+    paddingBottom: 8,
+  },
+});
