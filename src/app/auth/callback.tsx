@@ -22,7 +22,15 @@ export default function AuthCallbackScreen() {
     <SafeAreaView
       style={{ flex: 1, backgroundColor: colors.background }}
     >
-      <ScreenState loading message={t.completingSignIn} />
+      {!ready || user ? (
+        <ScreenState loading message={t.completingSignIn} />
+      ) : (
+        <ScreenState
+          title={t.signInFailed}
+          message={t.signInSubtitle}
+          onRetry={() => router.replace("/sign-in")}
+        />
+      )}
     </SafeAreaView>
   );
 }
