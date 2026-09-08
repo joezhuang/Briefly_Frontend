@@ -27,6 +27,7 @@ type TimelineResponse = {
   timeline: EventTimelineItem[];
   count: number;
   synthesis_version: number | null;
+  timeline_updated_at?: string | null;
 };
 
 const copy = {
@@ -34,48 +35,68 @@ const copy = {
     button: "How this story developed",
     title: "How this story developed",
     latest: "Latest",
+    latestBriefly: "Latest in Briefly",
     count: "developments",
-    live: "Live event timeline",
-    current: "View current story",
+    live: "Latest stored Briefly timeline",
+    current: "View latest Briefly version",
+    updated: "Updated",
     close: "Close",
   },
   es: {
     button: "Cómo evolucionó esta historia",
     title: "Cómo evolucionó esta historia",
     latest: "Último",
+    latestBriefly: "Último en Briefly",
     count: "novedades",
-    live: "Cronología del evento en vivo",
-    current: "Ver historia actual",
+    live: "Última cronología guardada en Briefly",
+    current: "Ver la última versión de Briefly",
+    updated: "Actualizado",
     close: "Cerrar",
   },
   ja: {
     button: "このニュースの経緯",
     title: "このニュースの経緯",
     latest: "最新",
+    latestBriefly: "Briefly内の最新",
     count: "件の動き",
-    live: "最新のイベント経緯",
-    current: "現在の記事を見る",
+    live: "Brieflyに保存された最新の経緯",
+    current: "Brieflyの最新記事を見る",
+    updated: "更新",
     close: "閉じる",
   },
   "zh-CN": {
     button: "事件如何发展",
     title: "事件如何发展",
     latest: "最新",
+    latestBriefly: "Briefly 中的最新进展",
     count: "个进展",
-    live: "实时事件时间线",
-    current: "查看最新报道",
+    live: "Briefly 已保存的最新时间线",
+    current: "查看 Briefly 最新版本",
+    updated: "更新时间",
     close: "关闭",
   },
   "zh-TW": {
     button: "事件如何發展",
     title: "事件如何發展",
     latest: "最新",
+    latestBriefly: "Briefly 中的最新進展",
     count: "個進展",
-    live: "即時事件時間線",
-    current: "查看最新報導",
+    live: "Briefly 已儲存的最新時間線",
+    current: "查看 Briefly 最新版本",
+    updated: "更新時間",
     close: "關閉",
   },
 } as const;
+
+function formatUpdatedAt(value: string | null, language: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(language, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
 
 export function EventTimeline({
   eventId,
@@ -90,6 +111,7 @@ export function EventTimeline({
   const { colors } = useBrieflyTheme();
   const labels = copy[language] ?? copy.en;
   const [items, setItems] = useState<EventTimelineItem[]>([]);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
@@ -113,9 +135,15 @@ export function EventTimeline({
         );
         if (!response.ok) throw new Error(`Timeline request failed: ${response.status}`);
         const payload = (await response.json()) as TimelineResponse;
-        if (active) setItems(Array.isArray(payload.timeline) ? payload.timeline : []);
+        if (active) {
+          setItems(Array.isArray(payload.timeline) ? payload.timeline : []);
+          setUpdatedAt(payload.timeline_updated_at ?? null);
+        }
       } catch {
-        if (active) setItems([]);
+        if (active) {
+          setItems([]);
+          setUpdatedAt(null);
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -143,6 +171,8 @@ export function EventTimeline({
 
   if (items.length < 2) return null;
 
+  const formattedUpdatedAt = formatUpdatedAt(updatedAt, language);
+
   return (
     <>
       <View style={[styles.triggerWrap, { backgroundColor: colors.surface }]}>
@@ -165,6 +195,9 @@ export function EventTimeline({
             <Text style={[styles.triggerMeta, { color: colors.textMuted }]}>
               {liveContext ? `${labels.live} · ` : ""}
               {items.length} {labels.count}
+              {liveContext && formattedUpdatedAt
+                ? ` · ${labels.updated} ${formattedUpdatedAt}`
+                : ""}
             </Text>
           </View>
           <Text style={[styles.triggerArrow, { color: colors.accent }]}>→</Text>
@@ -193,6 +226,9 @@ export function EventTimeline({
                 {liveContext && (
                   <Text style={[styles.sheetMeta, { color: colors.textMuted }]}>
                     {labels.live}
+                    {formattedUpdatedAt
+                      ? ` · ${labels.updated} ${formattedUpdatedAt}`
+                      : ""}
                   </Text>
                 )}
               </View>
@@ -215,7 +251,7 @@ export function EventTimeline({
                       )}
                       {latest && (
                         <Text style={[styles.latest, { color: colors.accent }]}>
-                          {labels.latest}
+                          {liveContext ? labels.latestBriefly : labels.latest}
                         </Text>
                       )}
                     </View>
