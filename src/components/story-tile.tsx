@@ -21,6 +21,7 @@ export function StoryTile({ article, size = "standard", href }: Props) {
   const storyHref = href ?? (() => {
     const params = new URLSearchParams({
       eventId: article.event_id,
+      previewHeadline: article.headline,
     });
     if (article.image_url) params.set("imageUrl", article.image_url);
     return `/story/${article.slug}?${params.toString()}`;
