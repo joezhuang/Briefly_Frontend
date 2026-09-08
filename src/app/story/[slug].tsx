@@ -17,6 +17,7 @@ import {
 } from "@/components/article-language-toggle";
 import { ArticleView } from "@/components/article-view";
 import { EventPreviewView } from "@/components/event-preview-view";
+import { EventTimeline } from "@/components/event-timeline";
 import { ScreenState } from "@/components/screen-state";
 import { WebTranslateButton } from "@/components/web-translate-button";
 import { useBrieflyAuth } from "@/context/auth";
@@ -354,6 +355,7 @@ export default function StoryDetailScreen() {
       {webTranslateSourceUrl && (
         <WebTranslateButton sourceUrl={webTranslateSourceUrl} />
       )}
+      {!!resolvedEventId && <EventTimeline eventId={resolvedEventId} />}
       <ArticleView
         article={displayedArticle}
         podcast={podcast}
