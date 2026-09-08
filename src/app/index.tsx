@@ -391,8 +391,8 @@ const styles = StyleSheet.create({
   twoColumnGrid: { flexDirection: "row", gap: 10 },
   feedGrid: { marginTop: 10, gap: 10 },
   feedGridWide: { flexDirection: "row", flexWrap: "wrap" },
-  third: { width: "32.75%" },
-  half: { width: "49.25%" },
+  third: { flexBasis: "31%", flexGrow: 1, minWidth: 0 },
+  half: { flexBasis: "48%", flexGrow: 1, minWidth: 0 },
   full: { width: "100%" },
   loadMoreIndicator: {
     minHeight: 72,
