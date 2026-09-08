@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   AppState,
   Platform,
   Pressable,
@@ -29,6 +30,8 @@ const PREVIEW_DRAFTS =
 const REFRESH_FRESHNESS_MS = 2 * 60 * 1000;
 const DEFAULT_COUNTRY = "Australia";
 const DEFAULT_CITY = "Sydney";
+const PAGE_SIZE = 20;
+const LOAD_MORE_THRESHOLD = 800;
 
 const feedCopy = {
   en: { top: "Top", national: "National", local: "Local", refresh: "Refresh" },
@@ -42,6 +45,21 @@ const scopes: HomepageFeedScope[] = ["top", "national", "local"];
 const storyKey = (article: CanonicalArticle) =>
   String(article.article_version_id ?? article.event_id);
 
+function mergeUnique(
+  current: CanonicalArticle[],
+  incoming: CanonicalArticle[],
+): CanonicalArticle[] {
+  const seen = new Set(current.map(storyKey));
+  const output = [...current];
+  for (const article of incoming) {
+    const key = storyKey(article);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push(article);
+  }
+  return output;
+}
+
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
@@ -51,43 +69,84 @@ export default function HomeScreen() {
   const [articles, setArticles] = useState<CanonicalArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastFetchedAt = useRef(0);
   const activeRequest = useRef(0);
+  const articlesRef = useRef<CanonicalArticle[]>([]);
+  const loadingMoreRef = useRef(false);
+  const hasMoreRef = useRef(false);
 
   const copy = feedCopy[language] ?? feedCopy.en;
 
+  const replaceArticles = useCallback((next: CanonicalArticle[]) => {
+    articlesRef.current = next;
+    setArticles(next);
+  }, []);
+
+  const appendArticles = useCallback((next: CanonicalArticle[]) => {
+    const merged = mergeUnique(articlesRef.current, next);
+    articlesRef.current = merged;
+    setArticles(merged);
+  }, []);
+
+  const updateHasMore = useCallback((value: boolean) => {
+    hasMoreRef.current = value;
+    setHasMore(value);
+  }, []);
+
   const loadFeed = useCallback(
-    async (mode: "initial" | "refresh" = "initial") => {
+    async (mode: "initial" | "refresh" | "more" = "initial") => {
+      if (mode === "more") {
+        if (loadingMoreRef.current || !hasMoreRef.current) return;
+        loadingMoreRef.current = true;
+        setLoadingMore(true);
+      }
+
       const requestId = activeRequest.current + 1;
       activeRequest.current = requestId;
 
       if (mode === "refresh") setRefreshing(true);
-      else setLoading(true);
-      setError(null);
+      else if (mode === "initial") setLoading(true);
+      if (mode !== "more") setError(null);
+
+      const offset = mode === "more" ? articlesRef.current.length : 0;
 
       try {
         const result = await getHomepageArticleFeed({
           scope,
+          language,
           includeDraft: PREVIEW_DRAFTS,
           country: DEFAULT_COUNTRY,
           city: DEFAULT_CITY,
-          limit: 30,
+          limit: PAGE_SIZE,
+          offset,
         });
         if (activeRequest.current !== requestId) return;
-        setArticles(result.articles ?? []);
+
+        if (mode === "more") appendArticles(result.articles ?? []);
+        else replaceArticles(result.articles ?? []);
+
+        updateHasMore(result.has_more === true);
         lastFetchedAt.current = Date.now();
       } catch (err: unknown) {
         if (activeRequest.current !== requestId) return;
-        setError(err instanceof Error ? err.message : t.unableLoad);
+        if (mode !== "more") {
+          setError(err instanceof Error ? err.message : t.unableLoad);
+        }
       } finally {
         if (activeRequest.current === requestId) {
           setLoading(false);
           setRefreshing(false);
         }
+        if (mode === "more") {
+          loadingMoreRef.current = false;
+          setLoadingMore(false);
+        }
       }
     },
-    [scope, t.unableLoad],
+    [appendArticles, language, replaceArticles, scope, t.unableLoad, updateHasMore],
   );
 
   const refreshIfStale = useCallback(() => {
@@ -96,8 +155,12 @@ export default function HomeScreen() {
   }, [loadFeed]);
 
   useEffect(() => {
+    articlesRef.current = [];
+    hasMoreRef.current = false;
+    setArticles([]);
+    setHasMore(false);
     Promise.resolve().then(() => void loadFeed("initial"));
-  }, [loadFeed]);
+  }, [loadFeed, language, scope]);
 
   useEffect(() => {
     if (Platform.OS === "web") {
@@ -115,6 +178,24 @@ export default function HomeScreen() {
     return () => subscription.remove();
   }, [refreshIfStale]);
 
+  const handleScroll = useCallback(
+    (event: {
+      nativeEvent: {
+        layoutMeasurement: { height: number };
+        contentOffset: { y: number };
+        contentSize: { height: number };
+      };
+    }) => {
+      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      const distanceFromBottom =
+        contentSize.height - (layoutMeasurement.height + contentOffset.y);
+      if (distanceFromBottom <= LOAD_MORE_THRESHOLD) {
+        void loadFeed("more");
+      }
+    },
+    [loadFeed],
+  );
+
   const desktop = width >= 1000;
   const tablet = width >= 700 && width < 1000;
   const lead = articles[0];
@@ -125,6 +206,8 @@ export default function HomeScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
+        onScroll={handleScroll}
+        scrollEventThrottle={200}
         refreshControl={
           Platform.OS === "web" ? undefined : (
             <RefreshControl
@@ -244,6 +327,16 @@ export default function HomeScreen() {
                   </View>
                 ))}
               </View>
+
+              {loadingMore && (
+                <View style={styles.loadMoreIndicator}>
+                  <ActivityIndicator color={colors.textMuted} />
+                </View>
+              )}
+
+              {!loadingMore && hasMore && (
+                <View style={styles.loadMoreSpacer} />
+              )}
             </>
           )}
         </View>
@@ -303,4 +396,10 @@ const styles = StyleSheet.create({
   third: { width: "32.75%" },
   half: { width: "49.25%" },
   full: { width: "100%" },
+  loadMoreIndicator: {
+    minHeight: 72,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadMoreSpacer: { height: 32 },
 });
