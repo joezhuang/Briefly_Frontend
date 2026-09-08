@@ -165,3 +165,12 @@ export function confirmBrieflyWebCheckout(sessionId: string) {
     session_id: sessionId,
   });
 }
+
+
+export function syncBrieflyWebSubscription() {
+  return postJson<{
+    status: "synced" | "no_customer";
+    translation_entitled: boolean;
+    briefly_pro_platform?: "stripe" | null;
+  }>("/api/subscriptions/web/sync", {});
+}
