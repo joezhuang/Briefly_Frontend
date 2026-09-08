@@ -164,6 +164,34 @@ export function getCanonicalArticles(options?: {
   return getJson<CanonicalArticleFeed>(`/api/articles?${params.toString()}`);
 }
 
+export type HomepageFeedScope = "top" | "national" | "local";
+
+export type HomepageArticleFeed = {
+  articles: CanonicalArticle[];
+  count: number;
+  scope: HomepageFeedScope;
+  country: string | null;
+  city: string | null;
+  feed_language: "en";
+};
+
+export function getHomepageArticleFeed(options?: {
+  scope?: HomepageFeedScope;
+  includeDraft?: boolean;
+  country?: string;
+  city?: string;
+  limit?: number;
+}) {
+  const params = new URLSearchParams({
+    scope: options?.scope ?? "top",
+    include_draft: String(options?.includeDraft ?? false),
+    country: options?.country ?? "Australia",
+    city: options?.city ?? "Sydney",
+    limit: String(options?.limit ?? 30),
+  });
+  return getJson<HomepageArticleFeed>(`/api/article-feed?${params.toString()}`);
+}
+
 export type BrieflyAccountState = {
   authenticated: boolean;
   email: string | null;
