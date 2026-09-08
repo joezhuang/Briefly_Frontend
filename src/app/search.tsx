@@ -17,6 +17,9 @@ import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
 import { layout } from "@/theme/tokens";
 
+const PREVIEW_DRAFTS =
+  process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
+
 export default function SearchScreen() {
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
@@ -35,7 +38,11 @@ export default function SearchScreen() {
       setLoading(true);
       setError(null);
 
-      getCanonicalArticles({ language, limit: 50 })
+      getCanonicalArticles({
+        includeDraft: PREVIEW_DRAFTS,
+        language,
+        limit: 50,
+      })
         .then((result) => {
           if (active) setArticles(result.articles ?? []);
         })
@@ -143,5 +150,5 @@ const styles = StyleSheet.create({
     fontSize: 17,
   },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  card: { minWidth: 300, flexGrow: 1, flexBasis: "32%" },
+  card: { minWidth: 0, flexGrow: 1, flexBasis: 300, maxWidth: "100%" },
 });
