@@ -75,7 +75,15 @@ export function AppHeader() {
           })}
 
           {user && account?.translation_entitled ? (
-            <Text style={[styles.proBadge, { color: colors.accent }]}>PRO</Text>
+            <Link href="/upgrade" asChild>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Briefly Pro subscription"
+                hitSlop={8}
+              >
+                <Text style={[styles.proBadge, { color: colors.accent }]}>PRO</Text>
+              </Pressable>
+            </Link>
           ) : null}
 
           {user && !account?.translation_entitled ? (
