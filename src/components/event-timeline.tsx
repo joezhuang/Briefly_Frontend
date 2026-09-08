@@ -33,30 +33,35 @@ const copy = {
     button: "How this story developed",
     title: "How this story developed",
     latest: "Latest",
+    count: "developments",
     close: "Close",
   },
   es: {
     button: "Cómo evolucionó esta historia",
     title: "Cómo evolucionó esta historia",
     latest: "Último",
+    count: "novedades",
     close: "Cerrar",
   },
   ja: {
     button: "このニュースの経緯",
     title: "このニュースの経緯",
     latest: "最新",
+    count: "件の動き",
     close: "閉じる",
   },
   "zh-CN": {
     button: "事件如何发展",
     title: "事件如何发展",
     latest: "最新",
+    count: "个进展",
     close: "关闭",
   },
   "zh-TW": {
     button: "事件如何發展",
     title: "事件如何發展",
     latest: "最新",
+    count: "個進展",
     close: "關閉",
   },
 } as const;
@@ -133,7 +138,7 @@ export function EventTimeline({ eventId }: { eventId: string }) {
               {labels.button}
             </Text>
             <Text style={[styles.triggerMeta, { color: colors.textMuted }]}>
-              {items.length} developments
+              {items.length} {labels.count}
             </Text>
           </View>
           <Text style={[styles.triggerArrow, { color: colors.accent }]}>→</Text>
@@ -236,7 +241,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   triggerCopy: { flex: 1, gap: 2 },
-  triggerTitle: { fontSize: 15, fontWeight: "850" },
+  triggerTitle: { fontSize: 15, fontWeight: "800" },
   triggerMeta: { fontSize: 12 },
   triggerArrow: { fontSize: 20, fontWeight: "800" },
   backdrop: {
@@ -269,7 +274,7 @@ const styles = StyleSheet.create({
   line: { width: 1, flex: 1, marginTop: 3 },
   itemCopy: { flex: 1, paddingLeft: 10, paddingBottom: 22, gap: 5 },
   timeRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  time: { fontSize: 12, fontWeight: "650" },
+  time: { fontSize: 12, fontWeight: "600" },
   latest: { fontSize: 11, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.7 },
   itemTitle: { fontSize: 17, lineHeight: 24, fontWeight: "700" },
   closeButton: {
