@@ -34,12 +34,35 @@ export default function UpgradeScreen() {
 
   const [busy, setBusy] = useState<BrieflyPlan | "restore" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [stripeSynced, setStripeSynced] = useState(false);
 
   useEffect(() => {
     if (!user) {
       router.replace("/sign-in");
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!user || Platform.OS !== "web" || stripeSynced) return;
+
+    let active = true;
+
+    void syncBrieflyWebSubscription()
+      .then(async (result) => {
+        if (!active) return;
+        setStripeSynced(true);
+        if (result.translation_entitled) {
+          await refreshAccount().catch(() => null);
+        }
+      })
+      .catch(() => {
+        if (active) setStripeSynced(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [refreshAccount, stripeSynced, user]);
 
   useEffect(() => {
     if (!user || payment !== "success") return;
