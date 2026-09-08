@@ -105,8 +105,6 @@ export default function UpgradeScreen() {
 
         await new Promise((resolve) => setTimeout(resolve, 1200));
       }
-
-      return;
     };
 
     void confirm();
@@ -151,6 +149,9 @@ export default function UpgradeScreen() {
     }
   };
 
+  // Account/subscription APIs still expose the legacy translation_entitled field.
+  // It now represents Briefly Pro account state only; experimental localization is
+  // free and does not consult this flag.
   const isPro = account?.translation_entitled === true;
   const confirmingPayment = payment === "success" && !isPro;
 
@@ -164,7 +165,7 @@ export default function UpgradeScreen() {
           {t.upgradeTitle}
         </Text>
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          {isPro ? t.alreadyPro : t.upgradeSubtitle}
+          {isPro ? t.alreadyPro : t.proFutureFeature}
         </Text>
 
         {confirmingPayment ? (
@@ -178,15 +179,6 @@ export default function UpgradeScreen() {
 
         {!isPro ? (
           <>
-            <View style={styles.features}>
-              <Text style={[styles.feature, { color: colors.text }]}>
-                ✓ {t.proTranslationFeature}
-              </Text>
-              <Text style={[styles.feature, { color: colors.text }]}>
-                ✓ {t.proFutureFeature}
-              </Text>
-            </View>
-
             <View
               style={[
                 styles.trialBadge,
@@ -311,15 +303,6 @@ const styles = StyleSheet.create({
   confirmingText: {
     fontSize: 14,
     lineHeight: 20,
-  },
-  features: {
-    gap: 10,
-    marginVertical: 4,
-  },
-  feature: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: "600",
   },
   trialBadge: {
     alignSelf: "flex-start",
