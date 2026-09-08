@@ -1,8 +1,10 @@
 import { useLocalSearchParams } from "expo-router";
 import { useMemo } from "react";
+import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ArticleView } from "@/components/article-view";
+import { EventTimeline } from "@/components/event-timeline";
 import { ScreenState } from "@/components/screen-state";
 import { useBrieflyLanguage } from "@/context/language";
 import { useSavedArticles } from "@/context/saved-articles";
@@ -43,5 +45,12 @@ export default function SavedArticleScreen() {
     );
   }
 
-  return <ArticleView article={article} immutable />;
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.surface }}>
+      {!!article.event_id && (
+        <EventTimeline eventId={article.event_id} liveContext />
+      )}
+      <ArticleView article={article} immutable />
+    </View>
+  );
 }
