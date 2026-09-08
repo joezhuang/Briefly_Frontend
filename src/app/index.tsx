@@ -1,5 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AppState,
+  Platform,
+  Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,7 +12,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { getCanonicalArticles } from "@/api/briefly";
+import {
+  getHomepageArticleFeed,
+  type HomepageFeedScope,
+} from "@/api/briefly";
 import { AppHeader } from "@/components/app-header";
 import { ScreenState } from "@/components/screen-state";
 import { StoryTile } from "@/components/story-tile";
@@ -19,48 +26,97 @@ import { layout } from "@/theme/tokens";
 
 const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
+const REFRESH_FRESHNESS_MS = 2 * 60 * 1000;
+const DEFAULT_COUNTRY = "Australia";
+const DEFAULT_CITY = "Sydney";
+
+const feedCopy = {
+  en: { top: "Top", national: "National", local: "Local", refresh: "Refresh" },
+  es: { top: "Principal", national: "Nacional", local: "Local", refresh: "Actualizar" },
+  ja: { top: "トップ", national: "国内", local: "地域", refresh: "更新" },
+  "zh-CN": { top: "头条", national: "全国", local: "本地", refresh: "刷新" },
+  "zh-TW": { top: "頭條", national: "全國", local: "本地", refresh: "重新整理" },
+} as const;
+
+const scopes: HomepageFeedScope[] = ["top", "national", "local"];
 
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
 
+  const [scope, setScope] = useState<HomepageFeedScope>("top");
   const [articles, setArticles] = useState<CanonicalArticle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
+  const lastFetchedAt = useRef(0);
+  const activeRequest = useRef(0);
 
-  useEffect(() => {
-    let active = true;
+  const copy = feedCopy[language] ?? feedCopy.en;
 
-    Promise.resolve().then(() => {
-      if (!active) return;
+  const loadFeed = useCallback(
+    async (mode: "initial" | "refresh" = "initial") => {
+      const requestId = activeRequest.current + 1;
+      activeRequest.current = requestId;
 
-      setLoading(true);
+      if (mode === "refresh") {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
 
-      getCanonicalArticles({
-        includeDraft: PREVIEW_DRAFTS,
-        language,
-        limit: 30,
-      })
-        .then((result) => {
-          if (active) setArticles(result.articles ?? []);
-        })
-        .catch((err: unknown) => {
-          if (active) {
-            setError(err instanceof Error ? err.message : t.unableLoad);
-          }
-        })
-        .finally(() => {
-          if (active) setLoading(false);
+      try {
+        const result = await getHomepageArticleFeed({
+          scope,
+          includeDraft: PREVIEW_DRAFTS,
+          country: DEFAULT_COUNTRY,
+          city: DEFAULT_CITY,
+          limit: 30,
         });
-    });
+        if (activeRequest.current !== requestId) return;
+        setArticles(result.articles ?? []);
+        lastFetchedAt.current = Date.now();
+      } catch (err: unknown) {
+        if (activeRequest.current !== requestId) return;
+        setError(err instanceof Error ? err.message : t.unableLoad);
+      } finally {
+        if (activeRequest.current === requestId) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    },
+    [scope, t.unableLoad],
+  );
 
-    return () => {
-      active = false;
-    };
-  }, [language, reloadKey, t.unableLoad]);
+  const refreshIfStale = useCallback(() => {
+    if (Date.now() - lastFetchedAt.current < REFRESH_FRESHNESS_MS) return;
+    void loadFeed("refresh");
+  }, [loadFeed]);
+
+  useEffect(() => {
+    // Schedule the request after the effect body so the effect itself only
+    // synchronizes lifecycle with the external feed request.
+    Promise.resolve().then(() => void loadFeed("initial"));
+  }, [loadFeed]);
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      if (typeof document === "undefined") return;
+      const onVisibility = () => {
+        if (document.visibilityState === "visible") refreshIfStale();
+      };
+      document.addEventListener("visibilitychange", onVisibility);
+      return () => document.removeEventListener("visibilitychange", onVisibility);
+    }
+
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") refreshIfStale();
+    });
+    return () => subscription.remove();
+  }, [refreshIfStale]);
 
   const desktop = width >= 1000;
   const tablet = width >= 700 && width < 1000;
@@ -70,17 +126,75 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          Platform.OS === "web" ? undefined : (
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void loadFeed("refresh")}
+            />
+          )
+        }
+      >
         <View style={[styles.page, width < 480 && styles.pageCompact]}>
           <AppHeader />
 
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>
-              {t.topStories}
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-              {t.subtitle}
-            </Text>
+            <View style={styles.headingRow}>
+              <View style={styles.headingCopy}>
+                <Text style={[styles.title, { color: colors.text }]}>
+                  {t.topStories}
+                </Text>
+                <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+                  {t.subtitle}
+                </Text>
+              </View>
+
+              {Platform.OS === "web" && (
+                <Pressable
+                  onPress={() => void loadFeed("refresh")}
+                  disabled={refreshing}
+                  style={[
+                    styles.refreshButton,
+                    { borderColor: colors.border },
+                    refreshing && styles.refreshDisabled,
+                  ]}
+                >
+                  <Text style={[styles.refreshText, { color: colors.textMuted }]}>
+                    {copy.refresh}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+
+            <View style={styles.scopeTabs}>
+              {scopes.map((item) => {
+                const selected = scope === item;
+                return (
+                  <Pressable
+                    key={item}
+                    onPress={() => setScope(item)}
+                    style={[
+                      styles.scopeTab,
+                      {
+                        borderColor: selected ? colors.text : colors.border,
+                        backgroundColor: selected ? colors.text : "transparent",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.scopeText,
+                        { color: selected ? colors.background : colors.textMuted },
+                      ]}
+                    >
+                      {copy[item]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           {loading && <ScreenState loading message={t.loadingStories} />}
@@ -89,7 +203,7 @@ export default function HomeScreen() {
             <ScreenState
               title={t.unableLoad}
               message={error}
-              onRetry={() => setReloadKey((value) => value + 1)}
+              onRetry={() => void loadFeed("initial")}
             />
           )}
 
@@ -97,7 +211,7 @@ export default function HomeScreen() {
             <ScreenState
               title={t.noStories}
               message={t.noStoriesMessage}
-              onRetry={() => setReloadKey((value) => value + 1)}
+              onRetry={() => void loadFeed("refresh")}
             />
           )}
 
@@ -175,7 +289,14 @@ const styles = StyleSheet.create({
   pageCompact: {
     paddingHorizontal: layout.pagePaddingCompact,
   },
-  header: { paddingTop: 28, paddingBottom: 24 },
+  header: { paddingTop: 28, paddingBottom: 24, gap: 20 },
+  headingRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 18,
+  },
+  headingCopy: { flex: 1 },
   title: {
     fontSize: 43,
     lineHeight: 50,
@@ -187,6 +308,22 @@ const styles = StyleSheet.create({
     fontSize: 21,
     lineHeight: 29,
   },
+  refreshButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  refreshDisabled: { opacity: 0.5 },
+  refreshText: { fontSize: 13, fontWeight: "700" },
+  scopeTabs: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  scopeTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  scopeText: { fontSize: 14, fontWeight: "800" },
   heroGrid: { flexDirection: "row", gap: 8 },
   heroColumn: { flex: 2 },
   secondaryColumn: { flex: 1, gap: 8 },
