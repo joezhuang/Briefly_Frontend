@@ -82,9 +82,10 @@ export function getCanonicalArticleByEventId(
 
 export function getLazyCanonicalArticleByEventId(
   eventId: string,
-  options?: { includeDraft?: boolean },
+  options?: { includeDraft?: boolean; language?: string },
 ) {
   const params = new URLSearchParams({
+    language: options?.language ?? "en",
     include_draft: String(options?.includeDraft ?? false),
   });
   return getJson<CanonicalArticle>(
