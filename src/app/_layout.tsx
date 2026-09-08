@@ -26,6 +26,7 @@ function AppStack() {
         <Stack.Screen name="saved/[snapshotId]" />
         <Stack.Screen name="search" />
         <Stack.Screen name="sign-in" />
+        <Stack.Screen name="upgrade" />
         <Stack.Screen name="auth/callback" />
         <Stack.Screen name="story/[slug]" />
         <Stack.Screen name="share/[versionId]" />
