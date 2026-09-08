@@ -115,8 +115,8 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
 
     const redirectTo =
       Platform.OS === "web"
-        ? window.location.origin
-        : Linking.createURL("/");
+        ? `${window.location.origin}/auth/callback`
+        : Linking.createURL("/auth/callback");
 
     if (Platform.OS === "web") {
       const { error } = await supabase.auth.signInWithOAuth({
