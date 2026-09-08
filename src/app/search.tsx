@@ -28,6 +28,7 @@ export default function SearchScreen() {
   const [articles, setArticles] = useState<CanonicalArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -61,7 +62,7 @@ export default function SearchScreen() {
     return () => {
       active = false;
     };
-  }, [language, t.searchUnavailable]);
+  }, [language, reloadKey, t.searchUnavailable]);
 
   const results = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
@@ -112,7 +113,11 @@ export default function SearchScreen() {
           {loading ? (
             <ScreenState loading message={t.loadingStories} />
           ) : error ? (
-            <ScreenState title={t.searchUnavailable} message={error} />
+            <ScreenState
+              title={t.searchUnavailable}
+              message={error}
+              onRetry={() => setReloadKey((value) => value + 1)}
+            />
           ) : results.length === 0 ? (
             <ScreenState title={t.noMatches} message={t.noMatchesMessage} />
           ) : (
