@@ -30,30 +30,38 @@ export default function SharedArticleScreen() {
 
   const [article, setArticle] = useState<CanonicalArticle | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (invalidId) return;
 
     let active = true;
 
-    getCanonicalArticleByVersionId(id, {
+    Promise.resolve().then(() => {
+      if (!active) return;
+
+      setArticle(null);
+      setError(null);
+
+      getCanonicalArticleByVersionId(id, {
       includeDraft: PREVIEW_DRAFTS,
     })
       .then((result) => {
         if (active) setArticle(result);
       })
-      .catch((err: unknown) => {
-        if (active) {
-          setError(
-            err instanceof Error ? err.message : t.sharedUnavailable,
-          );
-        }
-      });
+        .catch((err: unknown) => {
+          if (active) {
+            setError(
+              err instanceof Error ? err.message : t.sharedUnavailable,
+            );
+          }
+        });
+    });
 
     return () => {
       active = false;
     };
-  }, [id, invalidId, t.sharedUnavailable]);
+  }, [id, invalidId, reloadKey, t.sharedUnavailable]);
 
   if (invalidId) {
     return (
@@ -80,6 +88,7 @@ export default function SharedArticleScreen() {
         <ScreenState
           title={t.sharedUnavailable}
           message={error ?? t.articleNotFound}
+          onRetry={() => setReloadKey((value) => value + 1)}
         />
       </SafeAreaView>
     );
