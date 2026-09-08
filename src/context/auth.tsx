@@ -30,7 +30,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function BrieflyAuthProvider({ children }: PropsWithChildren) {
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(!supabase);
   const [session, setSession] = useState<Session | null>(null);
   const [account, setAccount] = useState<BrieflyAccountState | null>(null);
 
@@ -39,7 +39,6 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
 
     if (!supabase) {
       clearBrieflyAccessToken();
-      setReady(true);
       return () => {
         active = false;
       };
