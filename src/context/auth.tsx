@@ -4,6 +4,7 @@ import type { Provider, Session, User } from "@supabase/supabase-js";
 import {
   createContext,
   PropsWithChildren,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -166,7 +167,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
     setAccount(await getCurrentBrieflyAccount());
   };
 
-  const refreshAccount = async () => {
+  const refreshAccount = useCallback(async () => {
     if (!session) {
       setAccount(null);
       return null;
@@ -175,7 +176,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
     const next = await getCurrentBrieflyAccount();
     setAccount(next);
     return next;
-  };
+  }, [session]);
 
   const signOut = async () => {
     if (!supabase) {
