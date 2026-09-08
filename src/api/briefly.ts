@@ -93,6 +93,26 @@ export function getLazyCanonicalArticleByEventId(
   );
 }
 
+export type StaleStoryRefreshStatus = {
+  status: "not_generated" | "processing" | "ready" | "failed" | "disabled";
+  event_id: string;
+  canonical_stale: boolean;
+  article_version_id: number | null;
+};
+
+export function requestStaleStoryRefresh(
+  eventId: string,
+  options?: { includeDraft?: boolean },
+) {
+  const params = new URLSearchParams({
+    include_draft: String(options?.includeDraft ?? false),
+  });
+  return postJson<StaleStoryRefreshStatus>(
+    `/api/lazy-articles/event/${encodeURIComponent(eventId)}/refresh?${params.toString()}`,
+    {},
+  );
+}
+
 export function getExperimentalArticleByEventId(
   eventId: string,
   options?: { includeDraft?: boolean; language?: string },
@@ -258,6 +278,6 @@ export function syncBrieflyWebSubscription() {
   return postJson<{
     status: "synced" | "no_customer";
     translation_entitled: boolean;
-    briefly_pro_platform?: "stripe" | null;
+    briefly_pro_platform?: string | null;
   }>("/api/subscriptions/web/sync", {});
 }
