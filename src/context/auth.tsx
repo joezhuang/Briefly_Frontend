@@ -1,4 +1,6 @@
-import type { Session, User } from "@supabase/supabase-js";
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
+import type { Provider, Session, User } from "@supabase/supabase-js";
 import {
   createContext,
   PropsWithChildren,
@@ -7,6 +9,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { Platform } from "react-native";
 
 import {
   clearBrieflyAccessToken,
@@ -24,6 +27,7 @@ type AuthContextValue = {
   user: User | null;
   account: BrieflyAccountState | null;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithProvider: (provider: "google" | "apple") => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -102,6 +106,65 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
     }
   };
 
+  const signInWithProvider = async (
+    provider: "google" | "apple",
+  ) => {
+    if (!supabase) {
+      throw new Error("Supabase authentication is not configured.");
+    }
+
+    const redirectTo =
+      Platform.OS === "web"
+        ? window.location.origin
+        : Linking.createURL("/");
+
+    if (Platform.OS === "web") {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: provider as Provider,
+        options: { redirectTo },
+      });
+      if (error) throw error;
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: provider as Provider,
+      options: {
+        redirectTo,
+        skipBrowserRedirect: true,
+      },
+    });
+
+    if (error) throw error;
+    if (!data.url) {
+      throw new Error("OAuth provider did not return a sign-in URL.");
+    }
+
+    const result = await WebBrowser.openAuthSessionAsync(
+      data.url,
+      redirectTo,
+    );
+
+    if (result.type !== "success" || !result.url) {
+      return;
+    }
+
+    const callback = new URL(result.url);
+    const code = callback.searchParams.get("code");
+    if (!code) {
+      throw new Error("OAuth callback did not include an authorization code.");
+    }
+
+    const { data: sessionData, error: exchangeError } =
+      await supabase.auth.exchangeCodeForSession(code);
+
+    if (exchangeError) throw exchangeError;
+
+    setSession(sessionData.session);
+    setBrieflyAccessToken(sessionData.session?.access_token ?? null);
+    setAccount(await getCurrentBrieflyAccount());
+  };
+
   const signOut = async () => {
     if (!supabase) {
       clearBrieflyAccessToken();
@@ -125,6 +188,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
       user: session?.user ?? null,
       account,
       signIn,
+      signInWithProvider,
       signOut,
     }),
     [ready, session, account],
