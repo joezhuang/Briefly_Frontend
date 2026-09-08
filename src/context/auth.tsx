@@ -12,12 +12,17 @@ import {
   clearBrieflyAccessToken,
   setBrieflyAccessToken,
 } from "@/auth/session";
+import {
+  getCurrentBrieflyAccount,
+  type BrieflyAccountState,
+} from "@/api/briefly";
 import { supabase } from "@/auth/supabase";
 
 type AuthContextValue = {
   ready: boolean;
   session: Session | null;
   user: User | null;
+  account: BrieflyAccountState | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -27,6 +32,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function BrieflyAuthProvider({ children }: PropsWithChildren) {
   const [ready, setReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
+  const [account, setAccount] = useState<BrieflyAccountState | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -45,6 +51,13 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
         if (!active) return;
         setSession(data.session);
         setBrieflyAccessToken(data.session?.access_token ?? null);
+        if (data.session) {
+          void getCurrentBrieflyAccount()
+            .then(setAccount)
+            .catch(() => setAccount(null));
+        } else {
+          setAccount(null);
+        }
       })
       .finally(() => {
         if (active) setReady(true);
@@ -55,6 +68,13 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setBrieflyAccessToken(nextSession?.access_token ?? null);
+      if (nextSession) {
+        void getCurrentBrieflyAccount()
+          .then(setAccount)
+          .catch(() => setAccount(null));
+      } else {
+        setAccount(null);
+      }
       setReady(true);
     });
 
@@ -78,12 +98,16 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
 
     setSession(data.session);
     setBrieflyAccessToken(data.session?.access_token ?? null);
+    if (data.session) {
+      setAccount(await getCurrentBrieflyAccount());
+    }
   };
 
   const signOut = async () => {
     if (!supabase) {
       clearBrieflyAccessToken();
       setSession(null);
+      setAccount(null);
       return;
     }
 
@@ -92,6 +116,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
 
     clearBrieflyAccessToken();
     setSession(null);
+    setAccount(null);
   };
 
   const value = useMemo(
@@ -99,10 +124,11 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
       ready,
       session,
       user: session?.user ?? null,
+      account,
       signIn,
       signOut,
     }),
-    [ready, session],
+    [ready, session, account],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
