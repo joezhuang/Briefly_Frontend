@@ -421,9 +421,6 @@ export function ArticleView({
                   ]}
                 >
                   <View style={styles.buttonContent}>
-                    {podcastProcessing && (
-                      <ActivityIndicator size="small" color={colors.background} />
-                    )}
                     <Text
                       style={[
                         styles.podcastButtonText,
