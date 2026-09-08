@@ -12,7 +12,7 @@ export async function beginBrieflySubscription(
   const origin = window.location.origin;
   const result = await createBrieflyWebCheckout(
     plan,
-    `${origin}/upgrade?payment=success`,
+    `${origin}/upgrade?payment=success&session_id={CHECKOUT_SESSION_ID}`,
     `${origin}/upgrade?payment=cancel`,
   );
 
