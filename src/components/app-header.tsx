@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 
+import { useBrieflyAuth } from "@/context/auth";
 import { LANGUAGES, useBrieflyLanguage } from "@/context/language";
 import {
   BrieflyThemeMode,
@@ -23,6 +24,7 @@ const themeModes: BrieflyThemeMode[] = ["system", "light", "dark"];
 
 export function AppHeader() {
   const pathname = usePathname();
+  const { user, signOut } = useBrieflyAuth();
   const { language, setLanguage, t } = useBrieflyLanguage();
   const { mode, setMode, colors } = useBrieflyTheme();
 
@@ -71,6 +73,33 @@ export function AppHeader() {
               </Link>
             );
           })}
+
+          {user ? (
+            <Pressable onPress={() => void signOut()}>
+              <Text style={[styles.navText, { color: colors.textMuted }]}>
+                {t.signOut}
+              </Text>
+            </Pressable>
+          ) : (
+            <Link href="/sign-in" asChild>
+              <Pressable>
+                <Text
+                  style={[
+                    styles.navText,
+                    {
+                      color:
+                        pathname === "/sign-in"
+                          ? colors.text
+                          : colors.textMuted,
+                    },
+                    pathname === "/sign-in" && styles.active,
+                  ]}
+                >
+                  {t.signIn}
+                </Text>
+              </Pressable>
+            </Link>
+          )}
         </View>
       </View>
 
