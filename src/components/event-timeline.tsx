@@ -34,6 +34,7 @@ const copy = {
     title: "How this story developed",
     latest: "Latest",
     count: "developments",
+    live: "Live event timeline",
     close: "Close",
   },
   es: {
@@ -41,6 +42,7 @@ const copy = {
     title: "Cómo evolucionó esta historia",
     latest: "Último",
     count: "novedades",
+    live: "Cronología del evento en vivo",
     close: "Cerrar",
   },
   ja: {
@@ -48,6 +50,7 @@ const copy = {
     title: "このニュースの経緯",
     latest: "最新",
     count: "件の動き",
+    live: "最新のイベント経緯",
     close: "閉じる",
   },
   "zh-CN": {
@@ -55,6 +58,7 @@ const copy = {
     title: "事件如何发展",
     latest: "最新",
     count: "个进展",
+    live: "实时事件时间线",
     close: "关闭",
   },
   "zh-TW": {
@@ -62,11 +66,18 @@ const copy = {
     title: "事件如何發展",
     latest: "最新",
     count: "個進展",
+    live: "即時事件時間線",
     close: "關閉",
   },
 } as const;
 
-export function EventTimeline({ eventId }: { eventId: string }) {
+export function EventTimeline({
+  eventId,
+  liveContext = false,
+}: {
+  eventId: string;
+  liveContext?: boolean;
+}) {
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const labels = copy[language] ?? copy.en;
@@ -138,6 +149,7 @@ export function EventTimeline({ eventId }: { eventId: string }) {
               {labels.button}
             </Text>
             <Text style={[styles.triggerMeta, { color: colors.textMuted }]}>
+              {liveContext ? `${labels.live} · ` : ""}
               {items.length} {labels.count}
             </Text>
           </View>
@@ -160,9 +172,16 @@ export function EventTimeline({ eventId }: { eventId: string }) {
             ]}
           >
             <View style={styles.sheetHeader}>
-              <Text style={[styles.sheetTitle, { color: colors.text }]}>
-                {labels.title}
-              </Text>
+              <View style={styles.sheetHeadingCopy}>
+                <Text style={[styles.sheetTitle, { color: colors.text }]}>
+                  {labels.title}
+                </Text>
+                {liveContext && (
+                  <Text style={[styles.sheetMeta, { color: colors.textMuted }]}>
+                    {labels.live}
+                  </Text>
+                )}
+              </View>
               <Pressable onPress={() => setOpen(false)} hitSlop={10}>
                 <Text style={[styles.close, { color: colors.textMuted }]}>×</Text>
               </Pressable>
@@ -261,11 +280,13 @@ const styles = StyleSheet.create({
   },
   sheetHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     marginBottom: 18,
   },
-  sheetTitle: { fontSize: 25, fontWeight: "900", flex: 1 },
+  sheetHeadingCopy: { flex: 1, gap: 3 },
+  sheetTitle: { fontSize: 25, fontWeight: "900" },
+  sheetMeta: { fontSize: 12, fontWeight: "700" },
   close: { fontSize: 30, lineHeight: 30, paddingLeft: 14 },
   timeline: { paddingBottom: 4 },
   row: { flexDirection: "row", minHeight: 78 },
