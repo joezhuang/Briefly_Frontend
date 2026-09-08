@@ -45,7 +45,23 @@ export default function UpgradeScreen() {
 
     const confirm = async () => {
       if (sessionId) {
-        await confirmBrieflyWebCheckout(sessionId).catch(() => null);
+        try {
+          const confirmation = await confirmBrieflyWebCheckout(sessionId);
+          if (confirmation.translation_entitled) {
+            await refreshAccount().catch(() => null);
+            if (active) {
+              router.replace("/");
+            }
+            return;
+          }
+        } catch (err: unknown) {
+          if (active) {
+            setError(
+              err instanceof Error ? err.message : t.purchaseFailed,
+            );
+          }
+          return;
+        }
       }
 
       for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -68,7 +84,7 @@ export default function UpgradeScreen() {
     return () => {
       active = false;
     };
-  }, [payment, refreshAccount, sessionId, user]);
+  }, [payment, refreshAccount, sessionId, t.purchaseFailed, user]);
 
   if (!user) return null;
 
