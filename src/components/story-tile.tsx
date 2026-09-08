@@ -18,15 +18,16 @@ export function StoryTile({ article, size = "standard", href }: Props) {
         ? styles.secondaryHeadline
         : styles.standardHeadline;
   const sourceCount = article.source_count ?? article.sources_used?.length ?? 0;
+  const storyHref = href ?? (() => {
+    const params = new URLSearchParams({
+      eventId: article.event_id,
+    });
+    if (article.image_url) params.set("imageUrl", article.image_url);
+    return `/story/${article.slug}?${params.toString()}`;
+  })();
 
   return (
-    <Link
-      href={
-        (href ??
-          `/story/${article.slug}?eventId=${encodeURIComponent(article.event_id)}`) as never
-      }
-      asChild
-    >
+    <Link href={storyHref as never} asChild>
       <Pressable style={StyleSheet.flatten([styles.tile, { height }])}>
         {article.image_url ? (
           <Image
