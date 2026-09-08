@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -21,17 +21,52 @@ import {
 
 export default function UpgradeScreen() {
   const { user, account, refreshAccount } = useBrieflyAuth();
+  const { payment } = useLocalSearchParams<{ payment?: string }>();
   const { t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
 
   const [busy, setBusy] = useState<BrieflyPlan | "restore" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
   useEffect(() => {
     if (!user) {
       router.replace("/sign-in");
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!user || payment !== "success") return;
+
+    let active = true;
+    setConfirmingPayment(true);
+    setError(null);
+
+    const confirm = async () => {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const next = await refreshAccount().catch(() => null);
+        if (!active) return;
+
+        if (next?.translation_entitled) {
+          setConfirmingPayment(false);
+          router.replace("/");
+          return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+      }
+
+      if (active) {
+        setConfirmingPayment(false);
+      }
+    };
+
+    void confirm();
+
+    return () => {
+      active = false;
+    };
+  }, [payment, refreshAccount, user]);
 
   if (!user) return null;
 
@@ -83,6 +118,15 @@ export default function UpgradeScreen() {
           {isPro ? t.alreadyPro : t.upgradeSubtitle}
         </Text>
 
+        {confirmingPayment ? (
+          <View style={styles.confirming}>
+            <ActivityIndicator color={colors.text} />
+            <Text style={[styles.confirmingText, { color: colors.textMuted }]}>
+              {t.confirmingSubscription}
+            </Text>
+          </View>
+        ) : null}
+
         {!isPro ? (
           <>
             <View style={styles.features}>
@@ -104,9 +148,9 @@ export default function UpgradeScreen() {
                 {t.trialIncluded}
               </Text>
             </View>
-          <>
+
             <Pressable
-              disabled={busy !== null}
+              disabled={busy !== null || confirmingPayment}
               onPress={() => void purchase("monthly")}
               style={[
                 styles.plan,
@@ -114,7 +158,7 @@ export default function UpgradeScreen() {
                   borderColor: colors.border,
                   backgroundColor: colors.surface,
                 },
-                busy !== null && styles.disabled,
+                (busy !== null || confirmingPayment) && styles.disabled,
               ]}
             >
               <Text style={[styles.planTitle, { color: colors.text }]}>
@@ -126,7 +170,7 @@ export default function UpgradeScreen() {
             </Pressable>
 
             <Pressable
-              disabled={busy !== null}
+              disabled={busy !== null || confirmingPayment}
               onPress={() => void purchase("yearly")}
               style={[
                 styles.plan,
@@ -134,7 +178,7 @@ export default function UpgradeScreen() {
                   borderColor: colors.text,
                   backgroundColor: colors.text,
                 },
-                busy !== null && styles.disabled,
+                (busy !== null || confirmingPayment) && styles.disabled,
               ]}
             >
               <Text style={[styles.planTitle, { color: colors.background }]}>
@@ -148,12 +192,12 @@ export default function UpgradeScreen() {
         ) : null}
 
         <Pressable
-          disabled={busy !== null}
+          disabled={busy !== null || confirmingPayment}
           onPress={() => void restore()}
           style={[
             styles.secondary,
             { borderColor: colors.border },
-            busy !== null && styles.disabled,
+            (busy !== null || confirmingPayment) && styles.disabled,
           ]}
         >
           {busy === "restore" ? (
@@ -209,6 +253,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 27,
     marginBottom: 4,
+  },
+  confirming: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  confirmingText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   features: {
     gap: 10,
