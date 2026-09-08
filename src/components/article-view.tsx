@@ -17,6 +17,49 @@ import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
 import { layout } from "@/theme/tokens";
 
+const localizationCopy = {
+  en: {
+    pendingTitle: "Experimental translation is being prepared",
+    pendingText:
+      "Showing the English original for now. This page will update automatically when the local translation is ready.",
+    readyTitle: "Experimental translation",
+    readyText:
+      "This AI-generated translation may contain inaccuracies or awkward wording. Refer to the original English article for authoritative content.",
+  },
+  es: {
+    pendingTitle: "Traducción experimental en preparación",
+    pendingText:
+      "Por ahora mostramos el artículo original en inglés. Esta página se actualizará automáticamente cuando la traducción local esté lista.",
+    readyTitle: "Traducción experimental",
+    readyText:
+      "Esta traducción generada por IA puede contener errores o expresiones poco naturales. Consulta el artículo original en inglés como fuente de referencia.",
+  },
+  ja: {
+    pendingTitle: "実験的な翻訳を準備しています",
+    pendingText:
+      "現在は英語の原文を表示しています。ローカル翻訳の準備ができると、このページは自動的に更新されます。",
+    readyTitle: "実験的な翻訳",
+    readyText:
+      "このAI生成翻訳には誤りや不自然な表現が含まれる可能性があります。正確な内容は英語の原文を参照してください。",
+  },
+  "zh-CN": {
+    pendingTitle: "正在准备实验性翻译",
+    pendingText:
+      "目前先显示英文原文。本地翻译准备好后，此页面会自动更新。",
+    readyTitle: "实验性翻译",
+    readyText:
+      "此翻译由 AI 生成，可能包含错误或不自然的表述。权威内容请以英文原文为准。",
+  },
+  "zh-TW": {
+    pendingTitle: "正在準備實驗性翻譯",
+    pendingText:
+      "目前先顯示英文原文。本地翻譯準備完成後，此頁面會自動更新。",
+    readyTitle: "實驗性翻譯",
+    readyText:
+      "此翻譯由 AI 產生，可能包含錯誤或不自然的表述。權威內容請以英文原文為準。",
+  },
+} as const;
+
 function formatDate(value: string | null, language: string) {
   if (!value) return null;
   const date = new Date(value);
@@ -51,6 +94,7 @@ export function ArticleView({
     language !== "en" && contentLanguage === "en";
   const translationPending = article.translation_status === "pending";
   const experimentalTranslation = article.experimental_localization === true;
+  const localizationText = localizationCopy[language] ?? localizationCopy.en;
 
   const share = async () => {
     const webBase =
@@ -144,8 +188,8 @@ export function ArticleView({
           >
             <Text style={[styles.localizationNoticeTitle, { color: colors.text }]}>
               {translationPending
-                ? "Experimental translation is being prepared"
-                : "Experimental translation"}
+                ? localizationText.pendingTitle
+                : localizationText.readyTitle}
             </Text>
             <Text
               style={[
@@ -154,9 +198,8 @@ export function ArticleView({
               ]}
             >
               {translationPending
-                ? "Showing the English original for now. This page will update automatically when the local translation is ready."
-                : article.localization_warning ??
-                  "This AI-generated translation may contain inaccuracies. Refer to the original English article for authoritative content."}
+                ? localizationText.pendingText
+                : localizationText.readyText}
             </Text>
           </View>
         )}
