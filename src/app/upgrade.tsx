@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -27,10 +27,13 @@ export default function UpgradeScreen() {
   const [busy, setBusy] = useState<BrieflyPlan | "restore" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (!user) {
-    router.replace("/sign-in");
-    return null;
-  }
+  useEffect(() => {
+    if (!user) {
+      router.replace("/sign-in");
+    }
+  }, [user]);
+
+  if (!user) return null;
 
   const purchase = async (plan: BrieflyPlan) => {
     setBusy(plan);
