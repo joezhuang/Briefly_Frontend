@@ -159,6 +159,8 @@ export function confirmBrieflyWebCheckout(sessionId: string) {
   return postJson<{
     status: "confirmed";
     translation_entitled: boolean;
+    briefly_pro_platform: "stripe";
+    profile_updated: boolean;
   }>("/api/subscriptions/web/confirm", {
     session_id: sessionId,
   });
