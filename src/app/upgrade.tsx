@@ -85,6 +85,26 @@ export default function UpgradeScreen() {
 
         {!isPro ? (
           <>
+            <View style={styles.features}>
+              <Text style={[styles.feature, { color: colors.text }]}>
+                ✓ {t.proTranslationFeature}
+              </Text>
+              <Text style={[styles.feature, { color: colors.text }]}>
+                ✓ {t.proFutureFeature}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.trialBadge,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.trialText, { color: colors.accent }]}>
+                {t.trialIncluded}
+              </Text>
+            </View>
+          <>
             <Pressable
               disabled={busy !== null}
               onPress={() => void purchase("monthly")}
@@ -147,6 +167,12 @@ export default function UpgradeScreen() {
           )}
         </Pressable>
 
+        {!isPro ? (
+          <Text style={[styles.finePrint, { color: colors.textMuted }]}>
+            {t.cancelTrial}
+          </Text>
+        ) : null}
+
         {!!error && (
           <Text style={[styles.error, { color: colors.error }]}>
             {error}
@@ -184,6 +210,26 @@ const styles = StyleSheet.create({
     lineHeight: 27,
     marginBottom: 4,
   },
+  features: {
+    gap: 10,
+    marginVertical: 4,
+  },
+  feature: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: "600",
+  },
+  trialBadge: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  trialText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
   plan: {
     minHeight: 86,
     borderWidth: 1,
@@ -212,6 +258,11 @@ const styles = StyleSheet.create({
   secondaryText: {
     fontSize: 15,
     fontWeight: "800",
+  },
+  finePrint: {
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
   },
   error: {
     fontSize: 14,
