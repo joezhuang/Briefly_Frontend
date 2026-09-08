@@ -99,3 +99,14 @@ export function getCanonicalArticles(options?: {
   });
   return getJson<CanonicalArticleFeed>(`/api/articles?${params.toString()}`);
 }
+
+
+export type BrieflyAccountState = {
+  authenticated: boolean;
+  email: string | null;
+  translation_entitled: boolean;
+};
+
+export function getCurrentBrieflyAccount() {
+  return getJson<BrieflyAccountState>("/api/me");
+}
