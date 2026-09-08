@@ -154,6 +154,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    flexWrap: "wrap",
     gap: 18,
   },
   logo: {
@@ -163,6 +164,7 @@ const styles = StyleSheet.create({
   },
   nav: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 20,
   },
   navText: {
