@@ -133,10 +133,6 @@ export default function StoryDetailScreen() {
     podcastState.key === podcastRequestKey ? podcastState.value : null;
 
   useEffect(() => {
-    setStoryToolsExpanded(true);
-  }, [resolvedSlug]);
-
-  useEffect(() => {
     if (!resolvedSlug) return;
 
     let active = true;
@@ -369,6 +365,7 @@ export default function StoryDetailScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
       <View
+        key={resolvedSlug ?? "story-tools"}
         style={[
           styles.storyTools,
           {
