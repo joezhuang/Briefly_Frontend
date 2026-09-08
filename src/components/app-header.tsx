@@ -78,6 +78,16 @@ export function AppHeader() {
             <Text style={[styles.proBadge, { color: colors.accent }]}>PRO</Text>
           ) : null}
 
+          {user && !account?.translation_entitled ? (
+            <Link href="/upgrade" asChild>
+              <Pressable>
+                <Text style={[styles.navText, { color: colors.accent }]}>
+                  {t.upgrade}
+                </Text>
+              </Pressable>
+            </Link>
+          ) : null}
+
           {user ? (
             <Pressable onPress={() => void signOut()}>
               <Text style={[styles.navText, { color: colors.textMuted }]}>
