@@ -3,9 +3,11 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  Platform,
   Share,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -33,6 +35,7 @@ export function ArticleView({
   article: CanonicalArticle;
   immutable?: boolean;
 }) {
+  const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const { isSaved, toggleSaved } = useSavedArticles();
@@ -58,10 +61,16 @@ export function ArticleView({
 
     const url = `${webBase}/share/${article.article_version_id}`;
 
-    await Share.share({
-      message: `${article.headline}\n${url}`,
-      url,
-    });
+    await Share.share(
+      Platform.OS === "ios"
+        ? {
+            message: article.headline,
+            url,
+          }
+        : {
+            message: `${article.headline}\n${url}`,
+          },
+    );
   };
 
   const briefSection = (title: string, text: string) => {
@@ -84,7 +93,7 @@ export function ArticleView({
       style={[styles.screen, { backgroundColor: colors.surface }]}
       contentContainerStyle={styles.scrollContent}
     >
-      <View style={styles.page}>
+      <View style={[styles.page, width < 480 && styles.pageCompact]}>
         {!!article.image_url && (
           <Image
             source={{ uri: article.image_url }}
@@ -99,12 +108,24 @@ export function ArticleView({
 
         <Text style={[styles.brand, { color: colors.accent }]}>BRIEFLY</Text>
 
-        <Text style={[styles.headline, { color: colors.text }]}>
+        <Text
+          style={[
+            styles.headline,
+            width < 480 && styles.headlineCompact,
+            { color: colors.text },
+          ]}
+        >
           {article.headline}
         </Text>
 
         {!!article.standfirst && (
-          <Text style={[styles.standfirst, { color: colors.textMuted }]}>
+          <Text
+            style={[
+              styles.standfirst,
+              width < 480 && styles.standfirstCompact,
+              { color: colors.textMuted },
+            ]}
+          >
             {article.standfirst}
           </Text>
         )}
@@ -245,6 +266,10 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 72,
   },
+  pageCompact: {
+    paddingHorizontal: 14,
+    paddingTop: 18,
+  },
   heroImage: {
     width: "100%",
     aspectRatio: 16 / 9,
@@ -263,10 +288,19 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: -1.1,
   },
+  headlineCompact: {
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.7,
+  },
   standfirst: {
     marginTop: 18,
     fontSize: 21,
     lineHeight: 31,
+  },
+  standfirstCompact: {
+    fontSize: 18,
+    lineHeight: 27,
   },
   meta: {
     flexDirection: "row",
