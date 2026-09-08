@@ -157,8 +157,6 @@ export default function HomeScreen() {
   useEffect(() => {
     articlesRef.current = [];
     hasMoreRef.current = false;
-    setArticles([]);
-    setHasMore(false);
     Promise.resolve().then(() => void loadFeed("initial"));
   }, [loadFeed, language, scope]);
 
