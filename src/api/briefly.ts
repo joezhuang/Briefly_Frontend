@@ -153,3 +153,13 @@ export function createBrieflyWebPortal(returnUrl: string) {
     { return_url: returnUrl },
   );
 }
+
+
+export function confirmBrieflyWebCheckout(sessionId: string) {
+  return postJson<{
+    status: "confirmed";
+    translation_entitled: boolean;
+  }>("/api/subscriptions/web/confirm", {
+    session_id: sessionId,
+  });
+}
