@@ -1,4 +1,10 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppHeader } from "@/components/app-header";
@@ -10,6 +16,7 @@ import { useBrieflyTheme } from "@/context/theme";
 import { layout } from "@/theme/tokens";
 
 export default function SavedScreen() {
+  const { width } = useWindowDimensions();
   const { snapshots, ready } = useSavedArticles();
   const { t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
@@ -17,7 +24,7 @@ export default function SavedScreen() {
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.page}>
+        <View style={[styles.page, width < 480 && styles.pageCompact]}>
           <AppHeader />
 
           <View style={styles.header}>
@@ -62,6 +69,9 @@ const styles = StyleSheet.create({
     maxWidth: layout.pageMax,
     paddingHorizontal: layout.pagePadding,
     paddingBottom: 80,
+  },
+  pageCompact: {
+    paddingHorizontal: layout.pagePaddingCompact,
   },
   header: { paddingVertical: 28 },
   title: { fontSize: 42, fontWeight: "900" },
