@@ -16,8 +16,8 @@ function requestHeaders() {
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
-  // TEST ONLY. Production translation entitlement must come from authenticated
-  // account state on the backend, never from this public environment variable.
+  // TEST ONLY. Production Pro state must come from authenticated account state
+  // on the backend, never from this public environment variable.
   if (process.env.EXPO_PUBLIC_BRIEFLY_TEST_SUBSCRIBER === "true") {
     headers["X-Briefly-Test-Subscriber"] = "1";
   }
@@ -101,6 +101,41 @@ export function getCanonicalArticleByVersionId(
   });
   return getJson<CanonicalArticle>(
     `/api/articles/version/${encodeURIComponent(String(articleVersionId))}?${params}`,
+  );
+}
+
+export type PodcastAnalysisStatus = {
+  status: "not_generated" | "processing" | "ready" | "failed";
+  language: string;
+  audio_url: string | null;
+  row_id: string | null;
+  article_version_id?: number;
+  event_id?: string;
+  source_language?: "en";
+  pro_required?: boolean;
+};
+
+function podcastPath(articleVersionId: number, language: string) {
+  const params = new URLSearchParams({ language });
+  return `/api/articles/version/${encodeURIComponent(String(articleVersionId))}/podcast?${params}`;
+}
+
+export function getPodcastAnalysisStatus(
+  articleVersionId: number,
+  language: string,
+) {
+  return getJson<PodcastAnalysisStatus>(
+    podcastPath(articleVersionId, language),
+  );
+}
+
+export function requestPodcastAnalysis(
+  articleVersionId: number,
+  language: string,
+) {
+  return postJson<PodcastAnalysisStatus>(
+    podcastPath(articleVersionId, language),
+    {},
   );
 }
 
