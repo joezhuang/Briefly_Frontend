@@ -12,6 +12,7 @@ import {
   type PodcastAnalysisStatus,
 } from "@/api/briefly";
 import { ArticleView } from "@/components/article-view";
+import { EventPreviewView } from "@/components/event-preview-view";
 import { ScreenState } from "@/components/screen-state";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
@@ -23,22 +24,6 @@ const PREVIEW_DRAFTS =
 const LAZY_ARTICLE_POLL_MS = 5000;
 const EXPERIMENTAL_POLL_MS = 5000;
 const PODCAST_POLL_MS = 5000;
-
-const preparingCopy = {
-  en: "Briefly analysis is being prepared from the event evidence…",
-  es: "El análisis de Briefly se está preparando a partir de las evidencias del evento…",
-  ja: "イベントの根拠情報からBrieflyの分析を準備しています…",
-  "zh-CN": "Briefly 正在根据事件证据生成分析…",
-  "zh-TW": "Briefly 正在根據事件證據產生分析…",
-} as const;
-
-const generationUnavailableCopy = {
-  en: "Briefly could not prepare an authoritative analysis from the available source material. You can still review the original coverage and try again later.",
-  es: "Briefly no pudo preparar un análisis autorizado con el material fuente disponible. Aún puedes revisar la cobertura original e intentarlo de nuevo más tarde.",
-  ja: "現在利用できる情報源だけでは、Brieflyの信頼できる分析を作成できませんでした。元の報道を確認し、後でもう一度お試しください。",
-  "zh-CN": "根据目前可用的来源材料，Briefly 暂时无法生成权威分析。你仍可查看原始报道，并稍后重试。",
-  "zh-TW": "根據目前可用的來源材料，Briefly 暫時無法產生權威分析。你仍可查看原始報導，並稍後重試。",
-} as const;
 
 type PodcastState = {
   key: string;
@@ -260,17 +245,10 @@ export default function StoryDetailScreen() {
   }
 
   if (article.article_version_id == null) {
-    const generationFailed = article.generation_status === "failed";
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScreenState
-          loading={article.generation_status === "processing"}
-          title={article.headline}
-          message={
-            generationFailed
-              ? generationUnavailableCopy[language] ?? generationUnavailableCopy.en
-              : preparingCopy[language] ?? preparingCopy.en
-          }
+        <EventPreviewView
+          article={article}
           onRetry={
             article.generation_status === "processing"
               ? undefined
