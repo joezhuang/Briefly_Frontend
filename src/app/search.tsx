@@ -34,22 +34,18 @@ export default function SearchScreen() {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
+  const trimmedQuery = query.trim();
+  const hasQuery = trimmedQuery.length > 0;
+
   useEffect(() => {
-    const trimmed = query.trim();
-    if (!trimmed) {
-      setArticles([]);
-      setLoading(false);
-      setError(null);
-      setHasSearched(false);
-      return;
-    }
+    if (!trimmedQuery) return;
 
     let active = true;
     const timer = setTimeout(() => {
       setLoading(true);
       setError(null);
 
-      void searchBrieflyArticles(trimmed, {
+      void searchBrieflyArticles(trimmedQuery, {
         includeDraft: PREVIEW_DRAFTS,
         language,
         limit: 30,
@@ -74,7 +70,13 @@ export default function SearchScreen() {
       active = false;
       clearTimeout(timer);
     };
-  }, [language, query, t.searchUnavailable]);
+  }, [language, trimmedQuery, t.searchUnavailable]);
+
+  const visibleArticles = hasQuery ? articles : [];
+  const visibleError = hasQuery ? error : null;
+  const showLoading = hasQuery && loading;
+  const showNoMatches =
+    hasQuery && hasSearched && !showLoading && visibleArticles.length === 0;
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -103,7 +105,7 @@ export default function SearchScreen() {
                 autoCapitalize="none"
                 returnKeyType="search"
               />
-              {loading ? (
+              {showLoading ? (
                 <ActivityIndicator
                   size="small"
                   color={colors.accent}
@@ -113,13 +115,13 @@ export default function SearchScreen() {
             </View>
           </View>
 
-          {error ? (
-            <ScreenState title={t.searchUnavailable} message={error} />
-          ) : hasSearched && !loading && articles.length === 0 ? (
+          {visibleError ? (
+            <ScreenState title={t.searchUnavailable} message={visibleError} />
+          ) : showNoMatches ? (
             <ScreenState title={t.noMatches} message={t.noMatchesMessage} />
-          ) : articles.length > 0 ? (
+          ) : visibleArticles.length > 0 ? (
             <View style={styles.grid}>
-              {articles.map((article) => (
+              {visibleArticles.map((article) => (
                 <View
                   key={String(article.event_id ?? article.article_version_id)}
                   style={styles.card}
