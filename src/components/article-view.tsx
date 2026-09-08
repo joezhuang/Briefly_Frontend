@@ -49,6 +49,8 @@ export function ArticleView({
   const contentLanguage = article.content_language ?? article.language;
   const showingEnglishFallback =
     language !== "en" && contentLanguage === "en";
+  const translationPending = article.translation_status === "pending";
+  const experimentalTranslation = article.experimental_localization === true;
 
   const share = async () => {
     const webBase =
@@ -128,6 +130,35 @@ export function ArticleView({
           >
             {article.standfirst}
           </Text>
+        )}
+
+        {(translationPending || experimentalTranslation) && (
+          <View
+            style={[
+              styles.localizationNotice,
+              {
+                backgroundColor: colors.surfaceMuted,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.localizationNoticeTitle, { color: colors.text }]}>
+              {translationPending
+                ? "Experimental translation is being prepared"
+                : "Experimental translation"}
+            </Text>
+            <Text
+              style={[
+                styles.localizationNoticeText,
+                { color: colors.textMuted },
+              ]}
+            >
+              {translationPending
+                ? "Showing the English original for now. This page will update automatically when the local translation is ready."
+                : article.localization_warning ??
+                  "This AI-generated translation may contain inaccuracies. Refer to the original English article for authoritative content."}
+            </Text>
+          </View>
         )}
 
         <View style={styles.meta}>
@@ -302,6 +333,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 27,
   },
+  localizationNotice: {
+    marginTop: 22,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 5,
+  },
+  localizationNoticeTitle: { fontSize: 14, fontWeight: "800" },
+  localizationNoticeText: { fontSize: 13, lineHeight: 19 },
   meta: {
     flexDirection: "row",
     flexWrap: "wrap",
