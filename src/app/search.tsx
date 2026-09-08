@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,6 +22,7 @@ const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
 
 export default function SearchScreen() {
+  const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
 
@@ -85,7 +87,7 @@ export default function SearchScreen() {
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.page}>
+        <View style={[styles.page, width < 480 && styles.pageCompact]}>
           <AppHeader />
 
           <View style={styles.header}>
@@ -143,6 +145,9 @@ const styles = StyleSheet.create({
     maxWidth: layout.pageMax,
     paddingHorizontal: layout.pagePadding,
     paddingBottom: 80,
+  },
+  pageCompact: {
+    paddingHorizontal: layout.pagePaddingCompact,
   },
   header: { paddingVertical: 28, gap: 18 },
   title: { fontSize: 42, fontWeight: "900" },
