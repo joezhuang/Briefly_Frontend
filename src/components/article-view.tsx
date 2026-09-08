@@ -1,10 +1,12 @@
 import { Image } from "expo-image";
 import { createElement } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Linking,
+  Platform,
   Pressable,
   ScrollView,
-  Platform,
   Share,
   StyleSheet,
   Text,
@@ -18,6 +20,8 @@ import { useSavedArticles } from "@/context/saved-articles";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
 import { layout } from "@/theme/tokens";
+
+const PODCAST_VOLUME_STORAGE_KEY = "briefly.podcast.volume.v1";
 
 const localizationCopy = {
   en: {
@@ -115,7 +119,15 @@ const podcastCopy = {
   },
 } as const;
 
-function formatDate(value: string | null, language: string) {
+const coverageCopy = {
+  en: { title: "Coverage", open: "Open original" },
+  es: { title: "Cobertura", open: "Abrir original" },
+  ja: { title: "関連記事", open: "元記事を開く" },
+  "zh-CN": { title: "相关报道", open: "打开原文" },
+  "zh-TW": { title: "相關報導", open: "開啟原文" },
+} as const;
+
+function formatDate(value: string | null | undefined, language: string) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime())
@@ -124,6 +136,18 @@ function formatDate(value: string | null, language: string) {
         dateStyle: "medium",
         timeStyle: "short",
       }).format(date);
+}
+
+function readStoredPodcastVolume() {
+  if (Platform.OS !== "web" || typeof window === "undefined") return 1;
+  const stored = Number(window.localStorage.getItem(PODCAST_VOLUME_STORAGE_KEY));
+  return Number.isFinite(stored) && stored >= 0 && stored <= 1 ? stored : 1;
+}
+
+function storePodcastVolume(volume: number) {
+  if (Platform.OS !== "web" || typeof window === "undefined") return;
+  const normalized = Math.max(0, Math.min(1, volume));
+  window.localStorage.setItem(PODCAST_VOLUME_STORAGE_KEY, String(normalized));
 }
 
 export function ArticleView({
@@ -161,6 +185,8 @@ export function ArticleView({
   const experimentalTranslation = article.experimental_localization === true;
   const localizationText = localizationCopy[language] ?? localizationCopy.en;
   const podcastText = podcastCopy[language] ?? podcastCopy.en;
+  const coverageText = coverageCopy[language] ?? coverageCopy.en;
+  const podcastProcessing = podcastBusy || podcast?.status === "processing";
   const webPodcastReady =
     Platform.OS === "web" &&
     podcast?.status === "ready" &&
@@ -179,14 +205,17 @@ export function ArticleView({
 
     await Share.share(
       Platform.OS === "ios"
-        ? {
-            message: article.headline,
-            url,
-          }
-        : {
-            message: `${article.headline}\n${url}`,
-          },
+        ? { message: article.headline, url }
+        : { message: `${article.headline}\n${url}` },
     );
+  };
+
+  const openCoverage = async (url: string) => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    await Linking.openURL(url);
   };
 
   const briefSection = (title: string, text: string) => {
@@ -194,12 +223,8 @@ export function ArticleView({
 
     return (
       <View style={styles.briefSection}>
-        <Text style={[styles.briefTitle, { color: colors.accent }]}>
-          {title}
-        </Text>
-        <Text style={[styles.briefText, { color: colors.text }]}>
-          {text}
-        </Text>
+        <Text style={[styles.briefTitle, { color: colors.accent }]}>{title}</Text>
+        <Text style={[styles.briefText, { color: colors.text }]}>{text}</Text>
       </View>
     );
   };
@@ -211,7 +236,7 @@ export function ArticleView({
     podcastAction = podcastText.signIn;
   } else if (!podcastPro) {
     podcastAction = podcastText.proOnly;
-  } else if (podcastBusy || podcast?.status === "processing") {
+  } else if (podcastProcessing) {
     podcastAction = podcastText.preparing;
     podcastDisabled = true;
   } else if (podcast?.status === "ready") {
@@ -229,10 +254,7 @@ export function ArticleView({
         {!!article.image_url && (
           <Image
             source={{ uri: article.image_url }}
-            style={[
-              styles.heroImage,
-              { backgroundColor: colors.imageFallback },
-            ]}
+            style={[styles.heroImage, { backgroundColor: colors.imageFallback }]}
             contentFit="contain"
             transition={180}
           />
@@ -272,11 +294,16 @@ export function ArticleView({
               },
             ]}
           >
-            <Text style={[styles.localizationNoticeTitle, { color: colors.text }]}>
-              {translationPending
-                ? localizationText.pendingTitle
-                : localizationText.readyTitle}
-            </Text>
+            <View style={styles.statusTitleRow}>
+              {translationPending && (
+                <ActivityIndicator size="small" color={colors.accent} />
+              )}
+              <Text style={[styles.localizationNoticeTitle, { color: colors.text }]}>
+                {translationPending
+                  ? localizationText.pendingTitle
+                  : localizationText.readyTitle}
+              </Text>
+            </View>
             <Text
               style={[
                 styles.localizationNoticeText,
@@ -326,10 +353,7 @@ export function ArticleView({
             style={[
               styles.action,
               { borderColor: colors.border },
-              saved && {
-                backgroundColor: colors.text,
-                borderColor: colors.text,
-              },
+              saved && { backgroundColor: colors.text, borderColor: colors.text },
             ]}
           >
             <Text
@@ -360,9 +384,14 @@ export function ArticleView({
             ]}
           >
             <View style={styles.podcastCopy}>
-              <Text style={[styles.podcastTitle, { color: colors.text }]}>
-                {podcastText.title}
-              </Text>
+              <View style={styles.statusTitleRow}>
+                {podcastProcessing && (
+                  <ActivityIndicator size="small" color={colors.accent} />
+                )}
+                <Text style={[styles.podcastTitle, { color: colors.text }]}>
+                  {podcastText.title}
+                </Text>
+              </View>
               <Text style={[styles.podcastBody, { color: colors.textMuted }]}>
                 {podcastText.body}
               </Text>
@@ -373,6 +402,12 @@ export function ArticleView({
                   controls: true,
                   preload: "metadata",
                   src: podcast.audio_url ?? undefined,
+                  onLoadedMetadata: (event: { currentTarget: HTMLAudioElement }) => {
+                    event.currentTarget.volume = readStoredPodcastVolume();
+                  },
+                  onVolumeChange: (event: { currentTarget: HTMLAudioElement }) => {
+                    storePodcastVolume(event.currentTarget.volume);
+                  },
                   style: { width: "100%" },
                 })
               : (
@@ -385,22 +420,25 @@ export function ArticleView({
                     podcastDisabled && styles.podcastButtonDisabled,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.podcastButtonText,
-                      { color: colors.background },
-                    ]}
-                  >
-                    {podcastAction}
-                  </Text>
+                  <View style={styles.buttonContent}>
+                    {podcastProcessing && (
+                      <ActivityIndicator size="small" color={colors.background} />
+                    )}
+                    <Text
+                      style={[
+                        styles.podcastButtonText,
+                        { color: colors.background },
+                      ]}
+                    >
+                      {podcastAction}
+                    </Text>
+                  </View>
                 </Pressable>
               )}
           </View>
         )}
 
-        <View
-          style={[styles.briefCard, { backgroundColor: colors.surfaceMuted }]}
-        >
+        <View style={[styles.briefCard, { backgroundColor: colors.surfaceMuted }]}>
           {briefSection(t.whatHappened, article.what_happened)}
           {briefSection(t.whyItMatters, article.why_it_matters)}
           {briefSection(t.whatNext, article.what_next)}
@@ -457,6 +495,47 @@ export function ArticleView({
             ))}
           </View>
         )}
+
+        {(article.coverage ?? []).length > 0 && (
+          <View style={[styles.group, { borderTopColor: colors.border }]}>
+            <Text style={[styles.groupTitle, { color: colors.text }]}>
+              {coverageText.title} · {article.coverage?.length ?? 0}
+            </Text>
+            {(article.coverage ?? []).map((item, index) => {
+              const coverageDate = formatDate(item.published_at, language);
+              return (
+                <Pressable
+                  key={`${item.evidence_id || item.url}-${index}`}
+                  onPress={() => void openCoverage(item.url)}
+                  style={({ pressed }) => [
+                    styles.coverageRow,
+                    { borderColor: colors.border },
+                    pressed && styles.coveragePressed,
+                  ]}
+                >
+                  <View style={styles.coverageCopy}>
+                    <Text style={[styles.coverageSource, { color: colors.accent }]}>
+                      {item.source}
+                    </Text>
+                    {!!item.title && (
+                      <Text style={[styles.coverageTitle, { color: colors.text }]}>
+                        {item.title}
+                      </Text>
+                    )}
+                    {!!coverageDate && (
+                      <Text style={[styles.coverageMeta, { color: colors.textMuted }]}>
+                        {coverageDate}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={[styles.coverageOpen, { color: colors.textMuted }]}>
+                    {coverageText.open} ↗
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -472,10 +551,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 72,
   },
-  pageCompact: {
-    paddingHorizontal: 14,
-    paddingTop: 18,
-  },
+  pageCompact: { paddingHorizontal: 14, paddingTop: 18 },
   heroImage: {
     width: "100%",
     aspectRatio: 16 / 9,
@@ -494,20 +570,9 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: -1.1,
   },
-  headlineCompact: {
-    fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: -0.7,
-  },
-  standfirst: {
-    marginTop: 18,
-    fontSize: 21,
-    lineHeight: 31,
-  },
-  standfirstCompact: {
-    fontSize: 18,
-    lineHeight: 27,
-  },
+  headlineCompact: { fontSize: 34, lineHeight: 40, letterSpacing: -0.7 },
+  standfirst: { marginTop: 18, fontSize: 21, lineHeight: 31 },
+  standfirstCompact: { fontSize: 18, lineHeight: 27 },
   localizationNotice: {
     marginTop: 22,
     padding: 16,
@@ -515,7 +580,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     gap: 5,
   },
-  localizationNoticeTitle: { fontSize: 14, fontWeight: "800" },
+  statusTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  localizationNoticeTitle: { fontSize: 14, fontWeight: "800", flexShrink: 1 },
   localizationNoticeText: { fontSize: 13, lineHeight: 19 },
   meta: {
     flexDirection: "row",
@@ -543,7 +609,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   podcastCopy: { gap: 5 },
-  podcastTitle: { fontSize: 19, fontWeight: "900" },
+  podcastTitle: { fontSize: 19, fontWeight: "900", flexShrink: 1 },
   podcastBody: { fontSize: 14, lineHeight: 21 },
   podcastButton: {
     alignSelf: "flex-start",
@@ -554,6 +620,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   podcastButtonDisabled: { opacity: 0.6 },
+  buttonContent: { flexDirection: "row", alignItems: "center", gap: 8 },
   podcastButtonText: { fontSize: 14, fontWeight: "800" },
   briefCard: {
     marginTop: 34,
@@ -584,4 +651,18 @@ const styles = StyleSheet.create({
   source: { gap: 4, paddingVertical: 7 },
   sourceName: { fontSize: 16, fontWeight: "700" },
   sourceContribution: { fontSize: 15, lineHeight: 22 },
+  coverageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  coveragePressed: { opacity: 0.6 },
+  coverageCopy: { flex: 1, gap: 4 },
+  coverageSource: { fontSize: 13, fontWeight: "800" },
+  coverageTitle: { fontSize: 16, lineHeight: 22, fontWeight: "650" },
+  coverageMeta: { fontSize: 12 },
+  coverageOpen: { fontSize: 12, fontWeight: "700", flexShrink: 0 },
 });
