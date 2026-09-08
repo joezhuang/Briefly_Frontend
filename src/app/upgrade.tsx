@@ -10,7 +10,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { confirmBrieflyWebCheckout } from "@/api/briefly";
+import {
+  confirmBrieflyWebCheckout,
+  syncBrieflyWebSubscription,
+} from "@/api/briefly";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -54,14 +57,18 @@ export default function UpgradeScreen() {
             }
             return;
           }
-        } catch (err: unknown) {
-          if (active) {
-            setError(
-              err instanceof Error ? err.message : t.purchaseFailed,
-            );
-          }
-          return;
+        } catch {
+          // Fall through to Stripe reconciliation below.
         }
+      }
+
+      const synced = await syncBrieflyWebSubscription().catch(() => null);
+      if (synced?.translation_entitled) {
+        await refreshAccount().catch(() => null);
+        if (active) {
+          router.replace("/");
+        }
+        return;
       }
 
       for (let attempt = 0; attempt < 5; attempt += 1) {
