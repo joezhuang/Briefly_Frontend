@@ -1,6 +1,12 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Linking, Platform, View } from "react-native";
+import {
+  ActivityIndicator,
+  Linking,
+  Platform,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -30,6 +36,29 @@ const PREVIEW_DRAFTS =
 const LAZY_ARTICLE_POLL_MS = 5000;
 const EXPERIMENTAL_POLL_MS = 5000;
 const PODCAST_POLL_MS = 5000;
+
+const staleCopy = {
+  en: {
+    updating: "Newer source coverage exists. Briefly is updating this story…",
+    stale: "Newer source coverage exists, but Briefly has not synthesized it into a newer article yet.",
+  },
+  es: {
+    updating: "Hay cobertura más reciente. Briefly está actualizando esta historia…",
+    stale: "Hay cobertura más reciente, pero Briefly aún no la ha sintetizado en una nueva versión del artículo.",
+  },
+  ja: {
+    updating: "より新しい報道があります。Briefly がこの記事を更新しています…",
+    stale: "より新しい報道がありますが、Briefly はまだ新しい記事版に反映していません。",
+  },
+  "zh-CN": {
+    updating: "已有更新的来源报道。Briefly 正在更新这篇报道…",
+    stale: "已有更新的来源报道，但 Briefly 尚未将其整理成更新的文章版本。",
+  },
+  "zh-TW": {
+    updating: "已有更新的來源報導。Briefly 正在更新這篇報導…",
+    stale: "已有更新的來源報導，但 Briefly 尚未將其整理成更新的文章版本。",
+  },
+} as const;
 
 type PodcastState = {
   key: string;
@@ -171,7 +200,12 @@ export default function StoryDetailScreen() {
 
           setAuthoritativeArticle(canonical);
 
-          if (!isWeb && language !== "en") {
+          if (canonical.canonical_stale) {
+            result = canonical;
+            if (canonical.generation_status === "processing") {
+              schedulePoll(LAZY_ARTICLE_POLL_MS);
+            }
+          } else if (!isWeb && language !== "en") {
             const localized = await getExperimentalArticleByEventId(resolvedEventId, {
               includeDraft: PREVIEW_DRAFTS,
               language,
@@ -198,6 +232,7 @@ export default function StoryDetailScreen() {
         setError(null);
 
         if (
+          !result.canonical_stale &&
           !isWeb &&
           language !== "en" &&
           resolvedEventId &&
@@ -333,6 +368,7 @@ export default function StoryDetailScreen() {
   }
 
   const canToggleOriginal =
+    !article.canonical_stale &&
     !isWeb &&
     language !== "en" &&
     article.experimental_localization === true &&
@@ -343,6 +379,7 @@ export default function StoryDetailScreen() {
       : article,
     resolvedImageUrl,
   );
+  const staleText = staleCopy[language] ?? staleCopy.en;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -354,6 +391,27 @@ export default function StoryDetailScreen() {
       )}
       {webTranslateSourceUrl && (
         <WebTranslateButton sourceUrl={webTranslateSourceUrl} />
+      )}
+      {displayedArticle.canonical_stale && (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            paddingHorizontal: 18,
+            paddingVertical: 11,
+            backgroundColor: colors.surfaceMuted,
+          }}
+        >
+          {displayedArticle.generation_status === "processing" && (
+            <ActivityIndicator size="small" color={colors.accent} />
+          )}
+          <Text style={{ flex: 1, color: colors.textMuted, fontSize: 13, lineHeight: 19 }}>
+            {displayedArticle.generation_status === "processing"
+              ? staleText.updating
+              : staleText.stale}
+          </Text>
+        </View>
       )}
       {!!resolvedEventId && <EventTimeline eventId={resolvedEventId} />}
       <ArticleView
