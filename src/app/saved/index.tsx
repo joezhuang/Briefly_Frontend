@@ -72,5 +72,5 @@ const styles = StyleSheet.create({
     lineHeight: 27,
   },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  card: { minWidth: 300, flexGrow: 1, flexBasis: "32%" },
+  card: { minWidth: 0, flexGrow: 1, flexBasis: 300, maxWidth: "100%" },
 });
