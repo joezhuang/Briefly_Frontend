@@ -39,6 +39,8 @@ const feedCopy = {
 } as const;
 
 const scopes: HomepageFeedScope[] = ["top", "national", "local"];
+const storyKey = (article: CanonicalArticle) =>
+  String(article.article_version_id ?? article.event_id);
 
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
@@ -60,11 +62,8 @@ export default function HomeScreen() {
       const requestId = activeRequest.current + 1;
       activeRequest.current = requestId;
 
-      if (mode === "refresh") {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      if (mode === "refresh") setRefreshing(true);
+      else setLoading(true);
       setError(null);
 
       try {
@@ -97,8 +96,6 @@ export default function HomeScreen() {
   }, [loadFeed]);
 
   useEffect(() => {
-    // Schedule the request after the effect body so the effect itself only
-    // synchronizes lifecycle with the external feed request.
     Promise.resolve().then(() => void loadFeed("initial"));
   }, [loadFeed]);
 
@@ -143,12 +140,8 @@ export default function HomeScreen() {
           <View style={styles.header}>
             <View style={styles.headingRow}>
               <View style={styles.headingCopy}>
-                <Text style={[styles.title, { color: colors.text }]}>
-                  {t.topStories}
-                </Text>
-                <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-                  {t.subtitle}
-                </Text>
+                <Text style={[styles.title, { color: colors.text }]}>{t.topStories}</Text>
+                <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t.subtitle}</Text>
               </View>
 
               {Platform.OS === "web" && (
@@ -224,11 +217,7 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.secondaryColumn}>
                     {secondary.map((article) => (
-                      <StoryTile
-                        key={article.article_version_id}
-                        article={article}
-                        size="secondary"
-                      />
+                      <StoryTile key={storyKey(article)} article={article} size="secondary" />
                     ))}
                   </View>
                 </View>
@@ -237,10 +226,7 @@ export default function HomeScreen() {
                   <StoryTile article={lead} size="hero" />
                   <View style={tablet ? styles.twoColumnGrid : styles.stack}>
                     {secondary.map((article) => (
-                      <View
-                        key={article.article_version_id}
-                        style={tablet ? styles.half : undefined}
-                      >
+                      <View key={storyKey(article)} style={tablet ? styles.half : undefined}>
                         <StoryTile article={article} size="secondary" />
                       </View>
                     ))}
@@ -248,22 +234,11 @@ export default function HomeScreen() {
                 </View>
               )}
 
-              <View
-                style={[
-                  styles.feedGrid,
-                  (desktop || tablet) && styles.feedGridWide,
-                ]}
-              >
+              <View style={[styles.feedGrid, (desktop || tablet) && styles.feedGridWide]}>
                 {remaining.map((article) => (
                   <View
-                    key={article.article_version_id}
-                    style={
-                      desktop
-                        ? styles.third
-                        : tablet
-                          ? styles.half
-                          : styles.full
-                    }
+                    key={storyKey(article)}
+                    style={desktop ? styles.third : tablet ? styles.half : styles.full}
                   >
                     <StoryTile article={article} />
                   </View>
@@ -286,9 +261,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.pagePadding,
     paddingBottom: 80,
   },
-  pageCompact: {
-    paddingHorizontal: layout.pagePaddingCompact,
-  },
+  pageCompact: { paddingHorizontal: layout.pagePaddingCompact },
   header: { paddingTop: 28, paddingBottom: 24, gap: 20 },
   headingRow: {
     flexDirection: "row",
@@ -303,11 +276,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: -1.1,
   },
-  subtitle: {
-    marginTop: 6,
-    fontSize: 21,
-    lineHeight: 29,
-  },
+  subtitle: { marginTop: 6, fontSize: 21, lineHeight: 29 },
   refreshButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
