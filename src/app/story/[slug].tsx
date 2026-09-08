@@ -183,6 +183,8 @@ export default function StoryDetailScreen() {
 
           if (canonical.canonical_stale) {
             result = canonical;
+            // Existing articles are read-only on normal GET. Poll only when an explicit
+            // timeline refresh is already running.
             if (canonical.generation_status === "processing") {
               schedulePoll(LAZY_ARTICLE_POLL_MS);
             }
@@ -405,7 +407,14 @@ export default function StoryDetailScreen() {
               <WebTranslateButton sourceUrl={webTranslateSourceUrl} />
             )}
             <StaleStoryNotice article={displayedArticle} />
-            {!!resolvedEventId && <EventTimeline eventId={resolvedEventId} />}
+            {!!resolvedEventId && (
+              <EventTimeline
+                eventId={resolvedEventId}
+                canonicalStale={displayedArticle.canonical_stale === true}
+                pro={isPro}
+                onRefreshStarted={() => setReloadKey((value) => value + 1)}
+              />
+            )}
           </View>
         )}
       </View>
