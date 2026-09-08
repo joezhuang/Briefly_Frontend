@@ -8,6 +8,15 @@ export type ArticleSource = {
   contribution?: string;
 };
 
+export type ArticleCoverage = {
+  evidence_id: string;
+  url: string;
+  title: string;
+  source: string;
+  language?: string | null;
+  published_at?: string | null;
+};
+
 export type CanonicalArticle = {
   event_id: string;
   article_version_id: number;
@@ -36,6 +45,7 @@ export type CanonicalArticle = {
   uncertainties: string[];
   body: ArticleParagraph[];
   sources_used: ArticleSource[];
+  coverage?: ArticleCoverage[];
   generated_at: string | null;
   published_at: string | null;
   updated_at: string | null;
