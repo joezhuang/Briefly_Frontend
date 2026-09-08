@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   getCanonicalArticleByEventId,
   getCanonicalArticleBySlug,
+  getExperimentalArticleByEventId,
 } from "@/api/briefly";
 import { ArticleView } from "@/components/article-view";
 import { ScreenState } from "@/components/screen-state";
@@ -14,6 +15,7 @@ import type { CanonicalArticle } from "@/models/article";
 
 const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
+const EXPERIMENTAL_POLL_MS = 5000;
 
 export default function StoryDetailScreen() {
   const { slug, eventId } = useLocalSearchParams<{
@@ -40,49 +42,74 @@ export default function StoryDetailScreen() {
   const [reloadKey, setReloadKey] = useState(0);
 
   const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${language}:${reloadKey}`;
-  const loading = loadingKey !== requestKey && !error;
+  const loading = loadingKey !== requestKey && !error && !article;
 
   useEffect(() => {
     if (!resolvedSlug) return;
 
     let active = true;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
 
-    Promise.resolve().then(() => {
+    const load = async (polling = false) => {
       if (!active) return;
 
-      setError(null);
-      setLoadingKey("");
+      if (!polling) {
+        setError(null);
+        setLoadingKey("");
+        setArticle(null);
+      }
 
-      const request = resolvedEventId
-        ? getCanonicalArticleByEventId(resolvedEventId, {
-            includeDraft: PREVIEW_DRAFTS,
-            language,
-          })
-        : getCanonicalArticleBySlug(resolvedSlug, {
+      try {
+        let result: CanonicalArticle;
+
+        if (language !== "en" && resolvedEventId) {
+          result = await getExperimentalArticleByEventId(resolvedEventId, {
             includeDraft: PREVIEW_DRAFTS,
             language,
           });
+        } else {
+          result = resolvedEventId
+            ? await getCanonicalArticleByEventId(resolvedEventId, {
+                includeDraft: PREVIEW_DRAFTS,
+                language,
+              })
+            : await getCanonicalArticleBySlug(resolvedSlug, {
+                includeDraft: PREVIEW_DRAFTS,
+                language,
+              });
+        }
 
-      request
-        .then((result) => {
-          if (active) {
-            setArticle(result);
-            setLoadingKey(requestKey);
-          }
-        })
-        .catch((err: unknown) => {
-          if (active) {
-            setArticle(null);
-            setLoadingKey(requestKey);
-            setError(
-              err instanceof Error ? err.message : t.storyUnavailable,
-            );
-          }
-        });
-    });
+        if (!active) return;
+
+        setArticle(result);
+        setLoadingKey(requestKey);
+        setError(null);
+
+        if (
+          language !== "en" &&
+          resolvedEventId &&
+          result.translation_status === "pending"
+        ) {
+          pollTimer = setTimeout(() => {
+            void load(true);
+          }, EXPERIMENTAL_POLL_MS);
+        }
+      } catch (err: unknown) {
+        if (!active) return;
+
+        if (!polling) {
+          setArticle(null);
+        }
+        setLoadingKey(requestKey);
+        setError(err instanceof Error ? err.message : t.storyUnavailable);
+      }
+    };
+
+    void load(false);
 
     return () => {
       active = false;
+      if (pollTimer) clearTimeout(pollTimer);
     };
   }, [
     resolvedSlug,
