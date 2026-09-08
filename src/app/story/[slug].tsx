@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Linking, Platform } from "react-native";
+import { Linking, Platform, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -11,6 +11,10 @@ import {
   requestPodcastAnalysis,
   type PodcastAnalysisStatus,
 } from "@/api/briefly";
+import {
+  ArticleLanguageToggle,
+  type ArticleLanguageMode,
+} from "@/components/article-language-toggle";
 import { ArticleView } from "@/components/article-view";
 import { EventPreviewView } from "@/components/event-preview-view";
 import { ScreenState } from "@/components/screen-state";
@@ -50,6 +54,10 @@ export default function StoryDetailScreen() {
   const { user, account } = useBrieflyAuth();
 
   const [article, setArticle] = useState<CanonicalArticle | null>(null);
+  const [authoritativeArticle, setAuthoritativeArticle] =
+    useState<CanonicalArticle | null>(null);
+  const [languageMode, setLanguageMode] =
+    useState<ArticleLanguageMode>("localized");
   const [error, setError] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -90,6 +98,8 @@ export default function StoryDetailScreen() {
         setError(null);
         setLoadingKey("");
         setArticle(null);
+        setAuthoritativeArticle(null);
+        setLanguageMode("localized");
       }
 
       try {
@@ -112,6 +122,8 @@ export default function StoryDetailScreen() {
             }
             return;
           }
+
+          setAuthoritativeArticle(canonical);
 
           result =
             language !== "en"
@@ -260,14 +272,31 @@ export default function StoryDetailScreen() {
     );
   }
 
+  const canToggleOriginal =
+    language !== "en" &&
+    article.experimental_localization === true &&
+    authoritativeArticle?.article_version_id != null;
+  const displayedArticle =
+    canToggleOriginal && languageMode === "original" && authoritativeArticle
+      ? authoritativeArticle
+      : article;
+
   return (
-    <ArticleView
-      article={article}
-      podcast={podcast}
-      podcastBusy={podcastBusy}
-      podcastPro={isPro}
-      podcastSignedIn={!!user}
-      onPodcastAction={() => void handlePodcastAction()}
-    />
+    <View style={{ flex: 1, backgroundColor: colors.surface }}>
+      {canToggleOriginal && (
+        <ArticleLanguageToggle
+          mode={languageMode}
+          onChange={setLanguageMode}
+        />
+      )}
+      <ArticleView
+        article={displayedArticle}
+        podcast={podcast}
+        podcastBusy={podcastBusy}
+        podcastPro={isPro}
+        podcastSignedIn={!!user}
+        onPodcastAction={() => void handlePodcastAction()}
+      />
+    </View>
   );
 }
