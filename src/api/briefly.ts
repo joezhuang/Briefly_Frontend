@@ -7,8 +7,22 @@ function requireApiBaseUrl() {
   return API_BASE_URL;
 }
 
+function requestHeaders() {
+  const headers: Record<string, string> = {};
+
+  // TEST ONLY. Production translation entitlement must come from authenticated
+  // account state on the backend, never from this public environment variable.
+  if (process.env.EXPO_PUBLIC_BRIEFLY_TEST_SUBSCRIBER === "true") {
+    headers["X-Briefly-Test-Subscriber"] = "1";
+  }
+
+  return headers;
+}
+
 async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${requireApiBaseUrl()}${path}`);
+  const response = await fetch(`${requireApiBaseUrl()}${path}`, {
+    headers: requestHeaders(),
+  });
   if (!response.ok) {
     const message = await response.text().catch(() => "");
     throw new Error(
@@ -61,6 +75,8 @@ export type CanonicalArticleFeed = {
   limit: number;
   offset: number;
   language: string;
+  feed_language?: string;
+  translation_entitled?: boolean;
 };
 
 export function getCanonicalArticles(options?: {
