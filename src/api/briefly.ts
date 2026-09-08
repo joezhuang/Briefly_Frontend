@@ -176,26 +176,36 @@ export type HomepageFeedScope = "top" | "national" | "local";
 export type HomepageArticleFeed = {
   articles: CanonicalArticle[];
   count: number;
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
   scope: HomepageFeedScope;
   country: string | null;
   city: string | null;
   feed_language: "en";
+  presentation_language?: string;
   generation_mode?: "lazy";
+  feed_localization?: string;
 };
 
 export function getHomepageArticleFeed(options?: {
   scope?: HomepageFeedScope;
   includeDraft?: boolean;
+  language?: string;
   country?: string;
   city?: string;
   limit?: number;
+  offset?: number;
 }) {
   const params = new URLSearchParams({
     scope: options?.scope ?? "top",
+    language: options?.language ?? "en",
     include_draft: String(options?.includeDraft ?? false),
     country: options?.country ?? "Australia",
     city: options?.city ?? "Sydney",
-    limit: String(options?.limit ?? 30),
+    limit: String(options?.limit ?? 20),
+    offset: String(options?.offset ?? 0),
   });
   return getJson<HomepageArticleFeed>(`/api/article-feed?${params.toString()}`);
 }
