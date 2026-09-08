@@ -27,7 +27,8 @@
     "react-native-screens": "~4.26.0",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.10.1",
-    "@supabase/supabase-js": "^2.116.0"
+    "@supabase/supabase-js": "^2.116.0",
+    "react-native-purchases": "10.9.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
