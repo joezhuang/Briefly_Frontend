@@ -19,8 +19,8 @@ export type ArticleCoverage = {
 
 export type CanonicalArticle = {
   event_id: string;
-  article_version_id: number;
-  version_number: number;
+  article_version_id: number | null;
+  version_number: number | null;
   language: string;
   content_language?: string;
   requested_language?: string;
@@ -31,6 +31,7 @@ export type CanonicalArticle = {
   authoritative_language?: string;
   authoritative_article_version_id?: number | null;
   localization_warning?: string | null;
+  generation_status?: "not_generated" | "processing" | "ready" | "disabled";
   status: string;
   slug: string;
   headline: string;
