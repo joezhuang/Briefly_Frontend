@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 
+import { requestStaleStoryRefresh } from "@/api/briefly";
 import { getBrieflyAccessToken } from "@/auth/session";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -40,6 +41,9 @@ const copy = {
     live: "Latest stored Briefly timeline",
     current: "View latest Briefly version",
     updated: "Updated",
+    refresh: "Generate latest Briefly version",
+    refreshing: "Updating story…",
+    upgrade: "Upgrade to update this story",
     close: "Close",
   },
   es: {
@@ -51,6 +55,9 @@ const copy = {
     live: "Última cronología guardada en Briefly",
     current: "Ver la última versión de Briefly",
     updated: "Actualizado",
+    refresh: "Generar la última versión de Briefly",
+    refreshing: "Actualizando la historia…",
+    upgrade: "Mejorar para actualizar esta historia",
     close: "Cerrar",
   },
   ja: {
@@ -62,6 +69,9 @@ const copy = {
     live: "Brieflyに保存された最新の経緯",
     current: "Brieflyの最新記事を見る",
     updated: "更新",
+    refresh: "Brieflyの最新記事を生成",
+    refreshing: "記事を更新中…",
+    upgrade: "Proでこの記事を更新",
     close: "閉じる",
   },
   "zh-CN": {
@@ -73,6 +83,9 @@ const copy = {
     live: "Briefly 已保存的最新时间线",
     current: "查看 Briefly 最新版本",
     updated: "更新时间",
+    refresh: "生成 Briefly 最新版本",
+    refreshing: "正在更新报道…",
+    upgrade: "升级 Pro 以更新这篇报道",
     close: "关闭",
   },
   "zh-TW": {
@@ -84,6 +97,9 @@ const copy = {
     live: "Briefly 已儲存的最新時間線",
     current: "查看 Briefly 最新版本",
     updated: "更新時間",
+    refresh: "產生 Briefly 最新版本",
+    refreshing: "正在更新報導…",
+    upgrade: "升級 Pro 以更新這篇報導",
     close: "關閉",
   },
 } as const;
@@ -102,10 +118,16 @@ export function EventTimeline({
   eventId,
   liveContext = false,
   liveStoryHref,
+  canonicalStale = false,
+  pro = false,
+  onRefreshStarted,
 }: {
   eventId: string;
   liveContext?: boolean;
   liveStoryHref?: string;
+  canonicalStale?: boolean;
+  pro?: boolean;
+  onRefreshStarted?: () => void;
 }) {
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
@@ -114,6 +136,7 @@ export function EventTimeline({
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -159,6 +182,28 @@ export function EventTimeline({
     if (!liveStoryHref) return;
     setOpen(false);
     router.push(liveStoryHref as never);
+  };
+
+  const refreshStory = async () => {
+    if (!canonicalStale || refreshing) return;
+    if (!pro) {
+      setOpen(false);
+      router.push("/upgrade");
+      return;
+    }
+
+    setRefreshing(true);
+    try {
+      const result = await requestStaleStoryRefresh(eventId, {
+        includeDraft: process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true",
+      });
+      if (result.status === "processing") {
+        setOpen(false);
+        onRefreshStarted?.();
+      }
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   if (loading) {
@@ -304,6 +349,29 @@ export function EventTimeline({
               })}
             </ScrollView>
 
+            {canonicalStale && (
+              <Pressable
+                disabled={refreshing}
+                onPress={() => void refreshStory()}
+                style={({ pressed }) => [
+                  styles.refreshButton,
+                  {
+                    backgroundColor: colors.accent,
+                    opacity: refreshing || pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
+                {refreshing && <ActivityIndicator size="small" color={colors.background} />}
+                <Text style={[styles.refreshButtonText, { color: colors.background }]}>
+                  {refreshing
+                    ? labels.refreshing
+                    : pro
+                      ? labels.refresh
+                      : labels.upgrade}
+                </Text>
+              </Pressable>
+            )}
+
             <Pressable
               onPress={() => setOpen(false)}
               style={[styles.closeButton, { backgroundColor: colors.text }]}
@@ -383,6 +451,18 @@ const styles = StyleSheet.create({
   latest: { fontSize: 11, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.7 },
   itemTitle: { fontSize: 17, lineHeight: 24, fontWeight: "700" },
   currentLink: { fontSize: 13, fontWeight: "800", marginTop: 3 },
+  refreshButton: {
+    alignSelf: "stretch",
+    minHeight: 46,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 18,
+    marginTop: 10,
+  },
+  refreshButtonText: { fontSize: 13, fontWeight: "900" },
   closeButton: {
     alignSelf: "flex-end",
     marginTop: 14,
