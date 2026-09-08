@@ -26,7 +26,7 @@ import {
 
 const proCopy = {
   en: {
-    subtitle: "Go beyond reading. Listen to deeper analysis and keep important stories up to date as they develop.",
+    subtitle: "Go beyond reading. Listen to deeper analysis and update important stories when you choose.",
     included: "Included with Briefly Pro",
     features: [
       {
@@ -34,12 +34,12 @@ const proCopy = {
         body: "Turn a Briefly story into a Deeply two-host analysis, grounded in the authoritative English article and delivered in your selected language.",
       },
       {
-        title: "Update developing stories",
-        body: "When newer source evidence appears, Briefly can rebuild an existing story into a fresh canonical version instead of leaving you with an outdated article.",
+        title: "Generate the latest story version",
+        body: "When newer source evidence exists, use the event timeline to explicitly ask Briefly to generate a fresh canonical version. Normal story reading never triggers this paid update automatically.",
       },
       {
         title: "Follow saved stories forward",
-        body: "Use the event timeline to move from the version you saved to the latest Briefly update when a story continues to develop.",
+        body: "Use the event timeline to move from the version you saved to newer Briefly developments, then generate a fresh version when you decide it is worth updating.",
       },
       {
         title: "Pro access across Briefly",
@@ -48,7 +48,7 @@ const proCopy = {
     ],
   },
   es: {
-    subtitle: "Ve más allá de leer: escucha análisis más profundos y mantén al día las historias importantes a medida que evolucionan.",
+    subtitle: "Ve más allá de leer: escucha análisis más profundos y actualiza las historias importantes cuando tú lo decidas.",
     included: "Incluido con Briefly Pro",
     features: [
       {
@@ -56,12 +56,12 @@ const proCopy = {
         body: "Convierte una historia de Briefly en un análisis de Deeply con dos presentadores, basado en el artículo original en inglés y generado en el idioma que hayas elegido.",
       },
       {
-        title: "Actualiza historias en desarrollo",
-        body: "Cuando aparece evidencia más reciente, Briefly puede reconstruir una historia existente como una nueva versión canónica en lugar de dejarte con un artículo desactualizado.",
+        title: "Genera la versión más reciente",
+        body: "Cuando haya evidencia más reciente, usa la cronología del evento para pedir explícitamente a Briefly una nueva versión canónica. Leer una historia normalmente nunca activa esta actualización de pago automáticamente.",
       },
       {
         title: "Sigue la evolución de tus historias guardadas",
-        body: "Usa la cronología del evento para pasar de la versión que guardaste a la actualización más reciente de Briefly cuando la historia siga desarrollándose.",
+        body: "Usa la cronología para pasar de la versión guardada a novedades posteriores de Briefly y genera una nueva versión solo cuando decidas que merece la pena.",
       },
       {
         title: "Acceso Pro en Briefly",
@@ -70,7 +70,7 @@ const proCopy = {
     ],
   },
   ja: {
-    subtitle: "読むだけで終わらず、より深い音声分析を聴き、重要なニュースのその後も追いかけられます。",
+    subtitle: "読むだけで終わらず、より深い音声分析を聴き、必要なときだけ重要なニュースを更新できます。",
     included: "Briefly Pro に含まれる機能",
     features: [
       {
@@ -78,12 +78,12 @@ const proCopy = {
         body: "Brieflyの記事を、権威ある英語版を事実の基盤としたDeeplyの2人ホスト分析に変換し、選択した言語で聴けます。",
       },
       {
-        title: "進展したニュースを更新",
-        body: "より新しい情報源が見つかった場合、古い記事のままにせず、Brieflyが最新の根拠から新しい正規版を生成できます。",
+        title: "最新の記事版を生成",
+        body: "より新しい情報源がある場合、イベントのタイムラインから明示的に最新の正規版生成を依頼できます。通常の記事閲覧だけでは有料更新は自動実行されません。",
       },
       {
         title: "保存したニュースの続報を追跡",
-        body: "イベントのタイムラインから、保存した時点の記事と、その後に更新されたBrieflyの最新版をつなげて確認できます。",
+        body: "タイムラインで保存時点からその後の動きを確認し、更新する価値があると判断したときだけ新しい版を生成できます。",
       },
       {
         title: "Briefly全体でProアクセス",
@@ -92,7 +92,7 @@ const proCopy = {
     ],
   },
   "zh-CN": {
-    subtitle: "不只是阅读。收听更深入的分析，并在重要事件持续发展时保持更新。",
+    subtitle: "不只是阅读。收听更深入的分析，并在你需要时主动更新重要事件。",
     included: "Briefly Pro 包含",
     features: [
       {
@@ -100,12 +100,12 @@ const proCopy = {
         body: "把 Briefly 新闻转成 Deeply 双主持人深度分析，以权威英文文章作为事实来源，并用你选择的语言生成。",
       },
       {
-        title: "更新持续发展的新闻",
-        body: "当出现更新的来源证据时，Briefly 可以重新生成新的权威文章版本，而不是让你停留在已经过时的报道上。",
+        title: "主动生成最新报道版本",
+        body: "当出现更新的来源证据时，可从事件时间线明确请求 Briefly 生成新的权威版本。普通点击和阅读新闻不会自动触发这项付费更新。",
       },
       {
         title: "继续追踪已保存的新闻",
-        body: "通过事件时间线，从你当时保存的版本直接查看 Briefly 后续整理出的最新进展。",
+        body: "通过事件时间线查看保存之后的新进展，并仅在你认为值得更新时主动生成新的 Briefly 版本。",
       },
       {
         title: "Briefly 全平台 Pro 权益",
@@ -114,7 +114,7 @@ const proCopy = {
     ],
   },
   "zh-TW": {
-    subtitle: "不只是閱讀。收聽更深入的分析，並在重要事件持續發展時保持更新。",
+    subtitle: "不只是閱讀。收聽更深入的分析，並在你需要時主動更新重要事件。",
     included: "Briefly Pro 包含",
     features: [
       {
@@ -122,12 +122,12 @@ const proCopy = {
         body: "把 Briefly 新聞轉成 Deeply 雙主持人深度分析，以權威英文文章作為事實來源，並用你選擇的語言產生。",
       },
       {
-        title: "更新持續發展的新聞",
-        body: "當出現更新的來源證據時，Briefly 可以重新產生新的權威文章版本，而不是讓你停留在已經過時的報導上。",
+        title: "主動產生最新報導版本",
+        body: "當出現更新的來源證據時，可從事件時間線明確要求 Briefly 產生新的權威版本。一般點擊和閱讀新聞不會自動觸發這項付費更新。",
       },
       {
         title: "繼續追蹤已儲存的新聞",
-        body: "透過事件時間線，從你當時儲存的版本直接查看 Briefly 後續整理出的最新進展。",
+        body: "透過事件時間線查看儲存之後的新進展，並只在你認為值得更新時主動產生新的 Briefly 版本。",
       },
       {
         title: "Briefly 全平台 Pro 權益",
