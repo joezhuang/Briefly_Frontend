@@ -65,6 +65,7 @@ const copy = {
     invalidSharedLink: "Invalid shared article link.",
     shareConfigMissing:
       "Set EXPO_PUBLIC_BRIEFLY_WEB_URL to your public Briefly web address before sharing.",
+    articleContentEnglish: "Article content is currently in English.",
     themeSystem: "System",
     themeLight: "Light",
     themeDark: "Dark",
@@ -114,6 +115,7 @@ const copy = {
     invalidSharedLink: "Enlace compartido no válido.",
     shareConfigMissing:
       "Configura EXPO_PUBLIC_BRIEFLY_WEB_URL con la dirección pública de Briefly antes de compartir.",
+    articleContentEnglish: "El contenido del artículo está actualmente en inglés.",
     themeSystem: "Sistema",
     themeLight: "Claro",
     themeDark: "Oscuro",
@@ -163,6 +165,7 @@ const copy = {
     invalidSharedLink: "共有リンクが無効です。",
     shareConfigMissing:
       "共有する前にEXPO_PUBLIC_BRIEFLY_WEB_URLへBrieflyの公開URLを設定してください。",
+    articleContentEnglish: "記事本文は現在英語で表示されています。",
     themeSystem: "システム",
     themeLight: "ライト",
     themeDark: "ダーク",
@@ -209,6 +212,7 @@ const copy = {
     sharedUnavailable: "分享文章不可用",
     invalidSharedLink: "分享链接无效。",
     shareConfigMissing: "分享前请将 EXPO_PUBLIC_BRIEFLY_WEB_URL 设置为 Briefly 的公开网址。",
+    articleContentEnglish: "文章内容目前以英文显示。",
     themeSystem: "跟随系统",
     themeLight: "浅色",
     themeDark: "深色",
@@ -255,6 +259,7 @@ const copy = {
     sharedUnavailable: "分享文章無法使用",
     invalidSharedLink: "分享連結無效。",
     shareConfigMissing: "分享前請將 EXPO_PUBLIC_BRIEFLY_WEB_URL 設為 Briefly 的公開網址。",
+    articleContentEnglish: "文章內容目前以英文顯示。",
     themeSystem: "跟隨系統",
     themeLight: "淺色",
     themeDark: "深色",
