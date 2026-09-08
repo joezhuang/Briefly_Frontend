@@ -13,9 +13,9 @@ export function toSavedSnapshot(article: CanonicalArticle): SavedArticleSnapshot
     ...article,
     snapshot_id: snapshotIdFor(article),
     saved_at: new Date().toISOString(),
-    body: [...(article.body ?? [])],
+    body: (article.body ?? []).map((block) => ({ ...block })),
     uncertainties: [...(article.uncertainties ?? [])],
-    sources_used: [...(article.sources_used ?? [])],
+    sources_used: (article.sources_used ?? []).map((source) => ({ ...source })),
   };
 }
 
