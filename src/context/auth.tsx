@@ -1,4 +1,3 @@
-import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import type { Provider, Session, User } from "@supabase/supabase-js";
 import {
@@ -21,6 +20,8 @@ import {
   type BrieflyAccountState,
 } from "@/api/briefly";
 import { supabase } from "@/auth/supabase";
+
+const BRIEFLY_MOBILE_AUTH_CALLBACK = "briefly://auth/callback";
 
 type AuthContextValue = {
   ready: boolean;
@@ -118,7 +119,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
     const redirectTo =
       Platform.OS === "web"
         ? `${window.location.origin}/auth/callback`
-        : Linking.createURL("/auth/callback");
+        : BRIEFLY_MOBILE_AUTH_CALLBACK;
 
     if (Platform.OS === "web") {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -152,6 +153,10 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
     }
 
     const callback = new URL(result.url);
+    if (callback.protocol !== "briefly:") {
+      throw new Error("OAuth returned to the wrong app. Check the Supabase redirect URL configuration.");
+    }
+
     const code = callback.searchParams.get("code");
     if (!code) {
       throw new Error("OAuth callback did not include an authorization code.");
