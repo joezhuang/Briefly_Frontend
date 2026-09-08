@@ -1,5 +1,5 @@
-import { useLocalSearchParams } from "expo-router";
-import { useMemo } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useMemo, useRef } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -23,6 +23,25 @@ export default function SavedArticleScreen() {
   const { snapshots, ready } = useSavedArticles();
   const { t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+  const hadArticle = useRef(false);
+
+  const article = useMemo(
+    () => snapshots.find((item) => item.snapshot_id === resolved),
+    [resolved, snapshots],
+  );
+
+  useEffect(() => {
+    if (!ready || !resolved) return;
+
+    if (article) {
+      hadArticle.current = true;
+      return;
+    }
+
+    if (hadArticle.current) {
+      router.replace("/saved");
+    }
+  }, [article, ready, resolved]);
 
   if (!ready) {
     return (
@@ -31,8 +50,6 @@ export default function SavedArticleScreen() {
       </SafeAreaView>
     );
   }
-
-  const article = snapshots.find((item) => item.snapshot_id === resolved);
 
   if (!article) {
     return (
