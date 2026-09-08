@@ -83,6 +83,15 @@ export function getCanonicalArticleByEventId(
   );
 }
 
+export function getExperimentalArticleByEventId(
+  eventId: string,
+  options?: { includeDraft?: boolean; language?: string },
+) {
+  return getJson<CanonicalArticle>(
+    `/api/articles/event/${encodeURIComponent(eventId)}/experimental?${articleQuery(options)}`,
+  );
+}
+
 export function getCanonicalArticleByVersionId(
   articleVersionId: number,
   options?: { includeDraft?: boolean },
@@ -120,7 +129,6 @@ export function getCanonicalArticles(options?: {
   return getJson<CanonicalArticleFeed>(`/api/articles?${params.toString()}`);
 }
 
-
 export type BrieflyAccountState = {
   authenticated: boolean;
   email: string | null;
@@ -130,7 +138,6 @@ export type BrieflyAccountState = {
 export function getCurrentBrieflyAccount() {
   return getJson<BrieflyAccountState>("/api/me");
 }
-
 
 export function createBrieflyWebCheckout(
   plan: "monthly" | "yearly",
@@ -154,7 +161,6 @@ export function createBrieflyWebPortal(returnUrl: string) {
   );
 }
 
-
 export function confirmBrieflyWebCheckout(sessionId: string) {
   return postJson<{
     status: "confirmed";
@@ -165,7 +171,6 @@ export function confirmBrieflyWebCheckout(sessionId: string) {
     session_id: sessionId,
   });
 }
-
 
 export function syncBrieflyWebSubscription() {
   return postJson<{
