@@ -1,3 +1,4 @@
+import { getBrieflyAccessToken } from "@/auth/session";
 import type { CanonicalArticle } from "@/models/article";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
@@ -9,6 +10,11 @@ function requireApiBaseUrl() {
 
 function requestHeaders() {
   const headers: Record<string, string> = {};
+  const accessToken = getBrieflyAccessToken();
+
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
 
   // TEST ONLY. Production translation entitlement must come from authenticated
   // account state on the backend, never from this public environment variable.
