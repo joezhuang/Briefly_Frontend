@@ -23,14 +23,38 @@ import {
   type BrieflyPlan,
 } from "@/subscriptions";
 
+const proCopy = {
+  en: {
+    subtitle: "Unlock two-host podcast analysis for Briefly stories.",
+    feature: "Deeply two-host podcast analysis from the authoritative English article",
+  },
+  es: {
+    subtitle: "Desbloquea análisis en pódcast con dos presentadores para las noticias de Briefly.",
+    feature: "Análisis de Deeply con dos presentadores a partir del artículo original en inglés",
+  },
+  ja: {
+    subtitle: "Brieflyの記事を2人ホストのポッドキャスト分析でさらに深く理解できます。",
+    feature: "権威ある英語記事を基にしたDeeplyの2人ホスト分析",
+  },
+  "zh-CN": {
+    subtitle: "解锁 Briefly 新闻的双主持人播客分析。",
+    feature: "由 Deeply 根据权威英文原文生成双主持人播客分析",
+  },
+  "zh-TW": {
+    subtitle: "解鎖 Briefly 新聞的雙主持人 Podcast 分析。",
+    feature: "由 Deeply 根據權威英文原文產生雙主持人 Podcast 分析",
+  },
+} as const;
+
 export default function UpgradeScreen() {
   const { user, account, refreshAccount } = useBrieflyAuth();
   const { payment, session_id: sessionId } = useLocalSearchParams<{
     payment?: string;
     session_id?: string;
   }>();
-  const { t } = useBrieflyLanguage();
+  const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+  const currentProCopy = proCopy[language] ?? proCopy.en;
 
   const [busy, setBusy] = useState<BrieflyPlan | "restore" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -75,9 +99,7 @@ export default function UpgradeScreen() {
           const confirmation = await confirmBrieflyWebCheckout(sessionId);
           if (confirmation.translation_entitled) {
             await refreshAccount().catch(() => null);
-            if (active) {
-              router.replace("/");
-            }
+            if (active) router.replace("/");
             return;
           }
         } catch {
@@ -88,21 +110,17 @@ export default function UpgradeScreen() {
       const synced = await syncBrieflyWebSubscription().catch(() => null);
       if (synced?.translation_entitled) {
         await refreshAccount().catch(() => null);
-        if (active) {
-          router.replace("/");
-        }
+        if (active) router.replace("/");
         return;
       }
 
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const next = await refreshAccount().catch(() => null);
         if (!active) return;
-
         if (next?.translation_entitled) {
           router.replace("/");
           return;
         }
-
         await new Promise((resolve) => setTimeout(resolve, 1200));
       }
     };
@@ -139,9 +157,7 @@ export default function UpgradeScreen() {
 
     try {
       const active = await restoreBrieflySubscription(user.id);
-      if (active) {
-        await refreshAccount();
-      }
+      if (active) await refreshAccount();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t.purchaseFailed);
     } finally {
@@ -149,9 +165,8 @@ export default function UpgradeScreen() {
     }
   };
 
-  // Account/subscription APIs still expose the legacy translation_entitled field.
-  // It now represents Briefly Pro account state only; experimental localization is
-  // free and does not consult this flag.
+  // Legacy API field; it now represents Briefly Pro account state. Experimental
+  // localization is free and does not consult this flag.
   const isPro = account?.translation_entitled === true;
   const confirmingPayment = payment === "success" && !isPro;
 
@@ -165,7 +180,7 @@ export default function UpgradeScreen() {
           {t.upgradeTitle}
         </Text>
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          {isPro ? t.alreadyPro : t.proFutureFeature}
+          {isPro ? t.alreadyPro : currentProCopy.subtitle}
         </Text>
 
         {confirmingPayment ? (
@@ -179,6 +194,15 @@ export default function UpgradeScreen() {
 
         {!isPro ? (
           <>
+            <View style={styles.features}>
+              <Text style={[styles.feature, { color: colors.text }]}>
+                ✓ {currentProCopy.feature}
+              </Text>
+              <Text style={[styles.feature, { color: colors.text }]}>
+                ✓ {t.proFutureFeature}
+              </Text>
+            </View>
+
             <View
               style={[
                 styles.trialBadge,
@@ -259,9 +283,7 @@ export default function UpgradeScreen() {
         ) : null}
 
         {!!error && (
-          <Text style={[styles.error, { color: colors.error }]}>
-            {error}
-          </Text>
+          <Text style={[styles.error, { color: colors.error }]}>{error}</Text>
         )}
       </View>
     </SafeAreaView>
@@ -303,6 +325,15 @@ const styles = StyleSheet.create({
   confirmingText: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  features: {
+    gap: 10,
+    marginVertical: 4,
+  },
+  feature: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: "600",
   },
   trialBadge: {
     alignSelf: "flex-start",
