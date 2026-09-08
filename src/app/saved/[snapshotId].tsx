@@ -45,10 +45,21 @@ export default function SavedArticleScreen() {
     );
   }
 
+  const liveStoryHref = (() => {
+    const params = new URLSearchParams({ eventId: article.event_id });
+    if (article.image_url) params.set("imageUrl", article.image_url);
+    if (article.headline) params.set("previewHeadline", article.headline);
+    return `/story/${article.slug}?${params.toString()}`;
+  })();
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
       {!!article.event_id && (
-        <EventTimeline eventId={article.event_id} liveContext />
+        <EventTimeline
+          eventId={article.event_id}
+          liveContext
+          liveStoryHref={liveStoryHref}
+        />
       )}
       <ArticleView article={article} immutable />
     </View>
