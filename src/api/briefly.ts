@@ -38,6 +38,26 @@ async function getJson<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(`${requireApiBaseUrl()}${path}`, {
+    method: "POST",
+    headers: {
+      ...requestHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => "");
+    throw new Error(
+      `Briefly API request failed (${response.status}): ${message || response.statusText}`,
+    );
+  }
+
+  return response.json() as Promise<T>;
+}
+
 function articleQuery(options?: { includeDraft?: boolean; language?: string }) {
   return new URLSearchParams({
     language: options?.language ?? "en",
@@ -109,4 +129,27 @@ export type BrieflyAccountState = {
 
 export function getCurrentBrieflyAccount() {
   return getJson<BrieflyAccountState>("/api/me");
+}
+
+
+export function createBrieflyWebCheckout(
+  plan: "monthly" | "yearly",
+  successUrl: string,
+  cancelUrl: string,
+) {
+  return postJson<{ checkout_url: string }>(
+    "/api/subscriptions/web/checkout",
+    {
+      plan,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    },
+  );
+}
+
+export function createBrieflyWebPortal(returnUrl: string) {
+  return postJson<{ portal_url: string }>(
+    "/api/subscriptions/web/portal",
+    { return_url: returnUrl },
+  );
 }
