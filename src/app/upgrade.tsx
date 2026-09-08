@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { confirmBrieflyWebCheckout } from "@/api/briefly";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -21,7 +22,10 @@ import {
 
 export default function UpgradeScreen() {
   const { user, account, refreshAccount } = useBrieflyAuth();
-  const { payment } = useLocalSearchParams<{ payment?: string }>();
+  const { payment, session_id: sessionId } = useLocalSearchParams<{
+    payment?: string;
+    session_id?: string;
+  }>();
   const { t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
 
@@ -40,6 +44,10 @@ export default function UpgradeScreen() {
     let active = true;
 
     const confirm = async () => {
+      if (sessionId) {
+        await confirmBrieflyWebCheckout(sessionId).catch(() => null);
+      }
+
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const next = await refreshAccount().catch(() => null);
         if (!active) return;
@@ -60,7 +68,7 @@ export default function UpgradeScreen() {
     return () => {
       active = false;
     };
-  }, [payment, refreshAccount, user]);
+  }, [payment, refreshAccount, sessionId, user]);
 
   if (!user) return null;
 
