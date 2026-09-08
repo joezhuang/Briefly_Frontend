@@ -24,7 +24,7 @@ const themeModes: BrieflyThemeMode[] = ["system", "light", "dark"];
 
 export function AppHeader() {
   const pathname = usePathname();
-  const { user, signOut } = useBrieflyAuth();
+  const { user, account, signOut } = useBrieflyAuth();
   const { language, setLanguage, t } = useBrieflyLanguage();
   const { mode, setMode, colors } = useBrieflyTheme();
 
@@ -73,6 +73,10 @@ export function AppHeader() {
               </Link>
             );
           })}
+
+          {user && account?.translation_entitled ? (
+            <Text style={[styles.proBadge, { color: colors.accent }]}>PRO</Text>
+          ) : null}
 
           {user ? (
             <Pressable onPress={() => void signOut()}>
@@ -201,6 +205,11 @@ const styles = StyleSheet.create({
   },
   active: {
     fontWeight: "800",
+  },
+  proBadge: {
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1,
   },
   controls: {
     gap: 8,
