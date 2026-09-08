@@ -125,13 +125,21 @@ export default function StoryDetailScreen() {
 
           setAuthoritativeArticle(canonical);
 
-          result =
-            language !== "en"
-              ? await getExperimentalArticleByEventId(resolvedEventId, {
-                  includeDraft: PREVIEW_DRAFTS,
-                  language,
-                })
-              : canonical;
+          if (language !== "en") {
+            const localized = await getExperimentalArticleByEventId(resolvedEventId, {
+              includeDraft: PREVIEW_DRAFTS,
+              language,
+            });
+            result = {
+              ...localized,
+              // The selected background is event-level metadata. Keep the same
+              // validated cluster image when the localized article replaces the
+              // canonical English response.
+              image_url: localized.image_url ?? canonical.image_url ?? null,
+            };
+          } else {
+            result = canonical;
+          }
         } else {
           result = await getCanonicalArticleBySlug(resolvedSlug, {
             includeDraft: PREVIEW_DRAFTS,
