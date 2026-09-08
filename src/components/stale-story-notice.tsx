@@ -1,5 +1,4 @@
-import { router } from "expo-router";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -7,34 +6,29 @@ import type { CanonicalArticle } from "@/models/article";
 
 const copy = {
   en: {
-    updating: "Newer source coverage exists. Briefly Pro is updating this story…",
-    stale: "Newer source coverage exists, but Briefly has not synthesized it into a newer article yet.",
-    pro: "Newer source coverage exists. Briefly Pro can rebuild this story with the latest evidence.",
-    upgrade: "Upgrade to update this story",
+    updating: "Newer source coverage is available. Briefly Pro is generating an updated version…",
+    pro: "Newer source coverage is available. Open the timeline to review the latest developments or generate an updated Briefly version.",
+    free: "Newer source coverage is available. Open the timeline to review the latest developments. Briefly Pro can generate an updated article from the newest evidence.",
   },
   es: {
-    updating: "Hay cobertura más reciente. Briefly Pro está actualizando esta historia…",
-    stale: "Hay cobertura más reciente, pero Briefly aún no la ha sintetizado en una nueva versión del artículo.",
-    pro: "Hay cobertura más reciente. Briefly Pro puede reconstruir esta historia con la evidencia más reciente.",
-    upgrade: "Mejorar para actualizar esta historia",
+    updating: "Hay cobertura más reciente. Briefly Pro está generando una versión actualizada…",
+    pro: "Hay cobertura más reciente. Abre la cronología para revisar las últimas novedades o generar una versión actualizada de Briefly.",
+    free: "Hay cobertura más reciente. Abre la cronología para revisar las últimas novedades. Briefly Pro puede generar un artículo actualizado con la evidencia más reciente.",
   },
   ja: {
-    updating: "より新しい報道があります。Briefly Pro がこの記事を更新しています…",
-    stale: "より新しい報道がありますが、Briefly はまだ新しい記事版に反映していません。",
-    pro: "より新しい報道があります。Briefly Pro なら最新の根拠からこの記事を再構成できます。",
-    upgrade: "Proでこの記事を更新",
+    updating: "より新しい報道があります。Briefly Pro が更新版を生成しています…",
+    pro: "より新しい報道があります。タイムラインで最新の動きを確認するか、Briefly の更新版を生成できます。",
+    free: "より新しい報道があります。タイムラインで最新の動きを確認できます。Briefly Pro なら最新の根拠から更新版の記事を生成できます。",
   },
   "zh-CN": {
-    updating: "已有更新的来源报道。Briefly Pro 正在更新这篇报道…",
-    stale: "已有更新的来源报道，但 Briefly 尚未将其整理成更新的文章版本。",
-    pro: "已有更新的来源报道。Briefly Pro 可根据最新证据重新生成这篇报道。",
-    upgrade: "升级 Pro 以更新这篇报道",
+    updating: "已有更新的来源报道。Briefly Pro 正在生成更新版本…",
+    pro: "已有更新的来源报道。打开时间线可查看最新进展，或生成更新后的 Briefly 版本。",
+    free: "已有更新的来源报道。打开时间线可查看最新进展。Briefly Pro 可根据最新证据生成更新后的文章。",
   },
   "zh-TW": {
-    updating: "已有更新的來源報導。Briefly Pro 正在更新這篇報導…",
-    stale: "已有更新的來源報導，但 Briefly 尚未將其整理成更新的文章版本。",
-    pro: "已有更新的來源報導。Briefly Pro 可根據最新證據重新產生這篇報導。",
-    upgrade: "升級 Pro 以更新這篇報導",
+    updating: "已有更新的來源報導。Briefly Pro 正在產生更新版本…",
+    pro: "已有更新的來源報導。開啟時間線可查看最新進展，或產生更新後的 Briefly 版本。",
+    free: "已有更新的來源報導。開啟時間線可查看最新進展。Briefly Pro 可根據最新證據產生更新後的文章。",
   },
 } as const;
 
@@ -46,30 +40,14 @@ export function StaleStoryNotice({ article }: { article: CanonicalArticle }) {
   if (!article.canonical_stale) return null;
 
   const processing = article.generation_status === "processing";
-  const proRequired = article.generation_status === "pro_required";
+  const canRefresh = article.stale_refresh_entitled === true;
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.surfaceMuted }]}>
       {processing && <ActivityIndicator size="small" color={colors.accent} />}
-      <View style={styles.copy}>
-        <Text style={[styles.text, { color: colors.textMuted }]}>
-          {processing ? labels.updating : proRequired ? labels.pro : labels.stale}
-        </Text>
-        {proRequired && (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push("/upgrade")}
-            style={({ pressed }) => [
-              styles.upgrade,
-              { backgroundColor: colors.text, opacity: pressed ? 0.72 : 1 },
-            ]}
-          >
-            <Text style={[styles.upgradeText, { color: colors.background }]}>
-              {labels.upgrade}
-            </Text>
-          </Pressable>
-        )}
-      </View>
+      <Text style={[styles.text, { color: colors.textMuted }]}>
+        {processing ? labels.updating : canRefresh ? labels.pro : labels.free}
+      </Text>
     </View>
   );
 }
@@ -82,15 +60,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 11,
   },
-  copy: { flex: 1, gap: 9 },
-  text: { fontSize: 13, lineHeight: 19 },
-  upgrade: {
-    alignSelf: "flex-start",
-    minHeight: 36,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
+  text: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 19,
   },
-  upgradeText: { fontSize: 12, fontWeight: "800" },
 });
