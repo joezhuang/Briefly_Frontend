@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Linking } from "react-native";
+import { Linking, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -181,7 +181,9 @@ export default function StoryDetailScreen() {
 
   const handlePodcastAction = async () => {
     if (podcast?.status === "ready" && podcast.audio_url) {
-      await Linking.openURL(podcast.audio_url);
+      if (Platform.OS !== "web") {
+        await Linking.openURL(podcast.audio_url);
+      }
       return;
     }
 
