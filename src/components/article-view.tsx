@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
   coveragePressed: { opacity: 0.6 },
   coverageCopy: { flex: 1, gap: 4 },
   coverageSource: { fontSize: 13, fontWeight: "800" },
-  coverageTitle: { fontSize: 16, lineHeight: 22, fontWeight: "650" },
+  coverageTitle: { fontSize: 16, lineHeight: 22, fontWeight: "600" },
   coverageMeta: { fontSize: 12 },
   coverageOpen: { fontSize: 12, fontWeight: "700", flexShrink: 0 },
 });
