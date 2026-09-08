@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { createElement } from "react";
 import {
   Alert,
   Pressable,
@@ -160,6 +161,10 @@ export function ArticleView({
   const experimentalTranslation = article.experimental_localization === true;
   const localizationText = localizationCopy[language] ?? localizationCopy.en;
   const podcastText = podcastCopy[language] ?? podcastCopy.en;
+  const webPodcastReady =
+    Platform.OS === "web" &&
+    podcast?.status === "ready" &&
+    !!podcast.audio_url;
 
   const share = async () => {
     const webBase =
@@ -362,19 +367,34 @@ export function ArticleView({
                 {podcastText.body}
               </Text>
             </View>
-            <Pressable
-              disabled={podcastDisabled}
-              onPress={onPodcastAction}
-              style={[
-                styles.podcastButton,
-                { backgroundColor: colors.text },
-                podcastDisabled && styles.podcastButtonDisabled,
-              ]}
-            >
-              <Text style={[styles.podcastButtonText, { color: colors.background }]}>
-                {podcastAction}
-              </Text>
-            </Pressable>
+
+            {webPodcastReady
+              ? createElement("audio", {
+                  controls: true,
+                  preload: "metadata",
+                  src: podcast.audio_url ?? undefined,
+                  style: { width: "100%" },
+                })
+              : (
+                <Pressable
+                  disabled={podcastDisabled}
+                  onPress={onPodcastAction}
+                  style={[
+                    styles.podcastButton,
+                    { backgroundColor: colors.text },
+                    podcastDisabled && styles.podcastButtonDisabled,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.podcastButtonText,
+                      { color: colors.background },
+                    ]}
+                  >
+                    {podcastAction}
+                  </Text>
+                </Pressable>
+              )}
           </View>
         )}
 
@@ -520,19 +540,21 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 18,
     borderWidth: StyleSheet.hairlineWidth,
-    gap: 16,
+    gap: 14,
   },
   podcastCopy: { gap: 5 },
-  podcastTitle: { fontSize: 18, fontWeight: "900" },
+  podcastTitle: { fontSize: 19, fontWeight: "900" },
   podcastBody: { fontSize: 14, lineHeight: 21 },
   podcastButton: {
     alignSelf: "flex-start",
+    minHeight: 42,
     paddingHorizontal: 18,
-    paddingVertical: 11,
     borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  podcastButtonDisabled: { opacity: 0.55 },
-  podcastButtonText: { fontSize: 14, fontWeight: "900" },
+  podcastButtonDisabled: { opacity: 0.6 },
+  podcastButtonText: { fontSize: 14, fontWeight: "800" },
   briefCard: {
     marginTop: 34,
     padding: 24,
