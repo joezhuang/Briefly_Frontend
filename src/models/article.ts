@@ -37,6 +37,8 @@ export type CanonicalArticle = {
     | "ready"
     | "failed"
     | "disabled";
+  canonical_stale?: boolean;
+  latest_evidence_at?: string | null;
   status: string;
   slug: string;
   headline: string;
