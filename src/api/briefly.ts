@@ -16,8 +16,6 @@ function requestHeaders() {
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
-  // TEST ONLY. Production Pro state must come from authenticated account state
-  // on the backend, never from this public environment variable.
   if (process.env.EXPO_PUBLIC_BRIEFLY_TEST_SUBSCRIBER === "true") {
     headers["X-Briefly-Test-Subscriber"] = "1";
   }
@@ -54,7 +52,6 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
       `Briefly API request failed (${response.status}): ${message || response.statusText}`,
     );
   }
-
   return response.json() as Promise<T>;
 }
 
@@ -80,6 +77,18 @@ export function getCanonicalArticleByEventId(
 ) {
   return getJson<CanonicalArticle>(
     `/api/articles/event/${encodeURIComponent(eventId)}?${articleQuery(options)}`,
+  );
+}
+
+export function getLazyCanonicalArticleByEventId(
+  eventId: string,
+  options?: { includeDraft?: boolean },
+) {
+  const params = new URLSearchParams({
+    include_draft: String(options?.includeDraft ?? false),
+  });
+  return getJson<CanonicalArticle>(
+    `/api/lazy-articles/event/${encodeURIComponent(eventId)}?${params.toString()}`,
   );
 }
 
@@ -124,9 +133,7 @@ export function getPodcastAnalysisStatus(
   articleVersionId: number,
   language: string,
 ) {
-  return getJson<PodcastAnalysisStatus>(
-    podcastPath(articleVersionId, language),
-  );
+  return getJson<PodcastAnalysisStatus>(podcastPath(articleVersionId, language));
 }
 
 export function requestPodcastAnalysis(
@@ -173,6 +180,7 @@ export type HomepageArticleFeed = {
   country: string | null;
   city: string | null;
   feed_language: "en";
+  generation_mode?: "lazy";
 };
 
 export function getHomepageArticleFeed(options?: {
