@@ -98,6 +98,7 @@ export default function StoryDetailScreen() {
         if (resolvedEventId) {
           const canonical = await getLazyCanonicalArticleByEventId(resolvedEventId, {
             includeDraft: PREVIEW_DRAFTS,
+            language,
           });
 
           if (!active) return;
