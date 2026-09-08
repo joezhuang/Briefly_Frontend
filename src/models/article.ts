@@ -36,9 +36,11 @@ export type CanonicalArticle = {
     | "processing"
     | "ready"
     | "failed"
-    | "disabled";
+    | "disabled"
+    | "pro_required";
   canonical_stale?: boolean;
   latest_evidence_at?: string | null;
+  stale_refresh_entitled?: boolean;
   status: string;
   slug: string;
   headline: string;
