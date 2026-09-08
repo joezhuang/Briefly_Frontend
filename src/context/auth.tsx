@@ -204,7 +204,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
       refreshAccount,
       signOut,
     }),
-    [ready, session, account],
+    [ready, session, account, refreshAccount],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
