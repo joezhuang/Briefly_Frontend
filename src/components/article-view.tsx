@@ -43,6 +43,9 @@ export function ArticleView({
     article.published_at ?? article.generated_at,
     language,
   );
+  const contentLanguage = article.content_language ?? article.language;
+  const showingEnglishFallback =
+    language !== "en" && contentLanguage === "en";
 
   const share = async () => {
     const webBase =
@@ -116,6 +119,12 @@ export function ArticleView({
           {!!timestamp && (
             <Text style={[styles.metaText, { color: colors.textMuted }]}>
               {timestamp}
+            </Text>
+          )}
+
+          {showingEnglishFallback && (
+            <Text style={[styles.languageBadge, { color: colors.textMuted }]}>
+              {t.articleContentEnglish}
             </Text>
           )}
 
@@ -267,6 +276,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   metaText: { fontSize: 13 },
+  languageBadge: { fontSize: 12, fontWeight: "700" },
   snapshotBadge: { fontSize: 12, fontWeight: "800" },
   actions: { flexDirection: "row", gap: 10, marginTop: 22 },
   action: {
