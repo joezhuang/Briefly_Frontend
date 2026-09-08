@@ -43,6 +43,14 @@ function preferredImage(
   return { ...article, image_url: imageUrl };
 }
 
+function preferredPreviewHeadline(
+  article: CanonicalArticle,
+  previewHeadline: string | undefined,
+): CanonicalArticle {
+  if (!previewHeadline || article.article_version_id != null) return article;
+  return { ...article, headline: previewHeadline };
+}
+
 function getWebStoryUrl(): string | null {
   if (Platform.OS !== "web" || typeof window === "undefined") return null;
 
@@ -55,10 +63,11 @@ function getWebStoryUrl(): string | null {
 }
 
 export default function StoryDetailScreen() {
-  const { slug, eventId, imageUrl } = useLocalSearchParams<{
+  const { slug, eventId, imageUrl, previewHeadline } = useLocalSearchParams<{
     slug?: string | string[];
     eventId?: string | string[];
     imageUrl?: string | string[];
+    previewHeadline?: string | string[];
   }>();
 
   const resolvedSlug = useMemo(
@@ -72,6 +81,10 @@ export default function StoryDetailScreen() {
   const resolvedImageUrl = useMemo(
     () => (Array.isArray(imageUrl) ? imageUrl[0] : imageUrl),
     [imageUrl],
+  );
+  const resolvedPreviewHeadline = useMemo(
+    () => (Array.isArray(previewHeadline) ? previewHeadline[0] : previewHeadline),
+    [previewHeadline],
   );
 
   const { language, t } = useBrieflyLanguage();
@@ -146,7 +159,7 @@ export default function StoryDetailScreen() {
           if (!active) return;
 
           if (canonical.article_version_id == null) {
-            setArticle(canonical);
+            setArticle(preferredPreviewHeadline(canonical, resolvedPreviewHeadline));
             setLoadingKey(requestKey);
             setError(null);
             if (canonical.generation_status === "processing") {
@@ -209,6 +222,7 @@ export default function StoryDetailScreen() {
     resolvedSlug,
     resolvedEventId,
     resolvedImageUrl,
+    resolvedPreviewHeadline,
     language,
     articleRequestLanguage,
     isWeb,
@@ -303,7 +317,10 @@ export default function StoryDetailScreen() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <EventPreviewView
-          article={preferredImage(article, resolvedImageUrl)}
+          article={preferredPreviewHeadline(
+            preferredImage(article, resolvedImageUrl),
+            resolvedPreviewHeadline,
+          )}
           onRetry={
             article.generation_status === "processing"
               ? undefined
