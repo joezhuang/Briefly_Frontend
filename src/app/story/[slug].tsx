@@ -23,6 +23,11 @@ const PREVIEW_DRAFTS =
 const EXPERIMENTAL_POLL_MS = 5000;
 const PODCAST_POLL_MS = 5000;
 
+type PodcastState = {
+  key: string;
+  value: PodcastAnalysisStatus | null;
+};
+
 export default function StoryDetailScreen() {
   const { slug, eventId } = useLocalSearchParams<{
     slug?: string | string[];
@@ -47,7 +52,10 @@ export default function StoryDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
-  const [podcast, setPodcast] = useState<PodcastAnalysisStatus | null>(null);
+  const [podcastState, setPodcastState] = useState<PodcastState>({
+    key: "",
+    value: null,
+  });
   const [podcastBusy, setPodcastBusy] = useState(false);
 
   const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${language}:${reloadKey}`;
@@ -56,6 +64,12 @@ export default function StoryDetailScreen() {
   const podcastSourceVersionId = article
     ? article.authoritative_article_version_id ?? article.article_version_id
     : null;
+  const podcastRequestKey =
+    isPro && podcastSourceVersionId
+      ? `${podcastSourceVersionId}:${language}`
+      : "";
+  const podcast =
+    podcastState.key === podcastRequestKey ? podcastState.value : null;
 
   useEffect(() => {
     if (!resolvedSlug) return;
@@ -134,8 +148,7 @@ export default function StoryDetailScreen() {
   ]);
 
   useEffect(() => {
-    setPodcast(null);
-    if (!isPro || !podcastSourceVersionId) return;
+    if (!podcastRequestKey || !podcastSourceVersionId) return;
 
     let active = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -147,12 +160,14 @@ export default function StoryDetailScreen() {
           language,
         );
         if (!active) return;
-        setPodcast(next);
+        setPodcastState({ key: podcastRequestKey, value: next });
         if (next.status === "processing") {
           timer = setTimeout(() => void loadStatus(), PODCAST_POLL_MS);
         }
       } catch {
-        if (active) setPodcast(null);
+        if (active) {
+          setPodcastState({ key: podcastRequestKey, value: null });
+        }
       }
     };
 
@@ -162,7 +177,7 @@ export default function StoryDetailScreen() {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [isPro, language, podcastSourceVersionId]);
+  }, [language, podcastRequestKey, podcastSourceVersionId]);
 
   const handlePodcastAction = async () => {
     if (podcast?.status === "ready" && podcast.audio_url) {
@@ -180,7 +195,7 @@ export default function StoryDetailScreen() {
       return;
     }
 
-    if (!podcastSourceVersionId || podcastBusy) return;
+    if (!podcastSourceVersionId || !podcastRequestKey || podcastBusy) return;
 
     setPodcastBusy(true);
     try {
@@ -188,7 +203,7 @@ export default function StoryDetailScreen() {
         podcastSourceVersionId,
         language,
       );
-      setPodcast(next);
+      setPodcastState({ key: podcastRequestKey, value: next });
     } finally {
       setPodcastBusy(false);
     }
