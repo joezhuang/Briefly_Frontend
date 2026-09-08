@@ -82,7 +82,7 @@ export function EventPreviewView({
         </Text>
 
         {!!article.standfirst && (
-          <Text style={[styles.standfirst, { color: colors.textMuted }]}>
+          <Text style={[styles.standfirst, width < 480 && styles.standfirstCompact, { color: colors.textMuted }]}>
             {article.standfirst}
           </Text>
         )}
@@ -134,28 +134,29 @@ const styles = StyleSheet.create({
   scrollContent: { alignItems: "center" },
   page: {
     width: "100%",
-    maxWidth: layout.pageMax,
-    paddingHorizontal: layout.pagePadding,
-    paddingTop: 28,
-    paddingBottom: 80,
+    maxWidth: layout.articleMax,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 72,
   },
-  pageCompact: { paddingHorizontal: layout.pagePaddingCompact },
+  pageCompact: { paddingHorizontal: 14, paddingTop: 18 },
   heroImage: { width: "100%", aspectRatio: 16 / 9, borderRadius: 18, marginBottom: 28 },
-  brand: { fontSize: 13, fontWeight: "900", letterSpacing: 1.8, marginBottom: 12 },
-  headline: { fontSize: 46, lineHeight: 52, fontWeight: "900", letterSpacing: -1.1 },
-  headlineCompact: { fontSize: 34, lineHeight: 40 },
-  standfirst: { marginTop: 14, fontSize: 20, lineHeight: 29, maxWidth: 900 },
-  metaRow: { marginTop: 16 },
+  brand: { fontSize: 13, fontWeight: "800", letterSpacing: 2.2, marginBottom: 16 },
+  headline: { fontSize: 42, lineHeight: 49, fontWeight: "900", letterSpacing: -1.1 },
+  headlineCompact: { fontSize: 34, lineHeight: 40, letterSpacing: -0.7 },
+  standfirst: { marginTop: 18, fontSize: 21, lineHeight: 31 },
+  standfirstCompact: { fontSize: 18, lineHeight: 27 },
+  metaRow: { marginTop: 18 },
   metaText: { fontSize: 13, fontWeight: "600" },
   statusCard: { marginTop: 28, borderWidth: 1, borderRadius: 16, padding: 18, gap: 14 },
   statusTitle: { fontSize: 16, lineHeight: 23, fontWeight: "700" },
   retryButton: { alignSelf: "flex-start", borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   retryText: { fontSize: 13, fontWeight: "800" },
-  coverageSection: { marginTop: 34, gap: 10 },
-  coverageTitle: { fontSize: 22, lineHeight: 28, fontWeight: "900" },
-  coverageRow: { borderTopWidth: 1, paddingVertical: 16, flexDirection: "row", gap: 16, alignItems: "center" },
+  coverageSection: { marginTop: 44, paddingTop: 28, gap: 14 },
+  coverageTitle: { fontSize: 24, lineHeight: 30, fontWeight: "800" },
+  coverageRow: { borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 14, flexDirection: "row", gap: 16, alignItems: "center" },
   coverageCopy: { flex: 1, gap: 4 },
-  coverageSource: { fontSize: 12, fontWeight: "800", letterSpacing: 0.4 },
-  coverageHeadline: { fontSize: 16, lineHeight: 22, fontWeight: "700" },
-  coverageOpen: { fontSize: 12, fontWeight: "700" },
+  coverageSource: { fontSize: 13, fontWeight: "800" },
+  coverageHeadline: { fontSize: 16, lineHeight: 22, fontWeight: "600" },
+  coverageOpen: { fontSize: 12, fontWeight: "700", flexShrink: 0 },
 });
