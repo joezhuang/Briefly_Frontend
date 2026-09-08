@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 
+import type { PodcastAnalysisStatus } from "@/api/briefly";
 import { useBrieflyLanguage } from "@/context/language";
 import { useSavedArticles } from "@/context/saved-articles";
 import { useBrieflyTheme } from "@/context/theme";
@@ -60,6 +61,59 @@ const localizationCopy = {
   },
 } as const;
 
+const podcastCopy = {
+  en: {
+    title: "Podcast analysis",
+    body: "A two-host Deeply analysis generated from the authoritative English Briefly article.",
+    proOnly: "Briefly Pro",
+    signIn: "Sign in to use podcast analysis",
+    generate: "Generate podcast analysis",
+    preparing: "Preparing podcast analysis…",
+    listen: "Listen to analysis",
+    retry: "Retry podcast analysis",
+  },
+  es: {
+    title: "Análisis en pódcast",
+    body: "Un análisis de Deeply con dos presentadores, generado a partir del artículo original de Briefly en inglés.",
+    proOnly: "Briefly Pro",
+    signIn: "Inicia sesión para usar el análisis en pódcast",
+    generate: "Generar análisis en pódcast",
+    preparing: "Preparando el análisis en pódcast…",
+    listen: "Escuchar el análisis",
+    retry: "Reintentar el análisis en pódcast",
+  },
+  ja: {
+    title: "ポッドキャスト分析",
+    body: "Brieflyの権威ある英語記事を基に生成する、Deeplyの2人ホストによる解説です。",
+    proOnly: "Briefly Pro",
+    signIn: "ポッドキャスト分析を利用するにはログインしてください",
+    generate: "ポッドキャスト分析を生成",
+    preparing: "ポッドキャスト分析を準備中…",
+    listen: "分析を聴く",
+    retry: "ポッドキャスト分析を再試行",
+  },
+  "zh-CN": {
+    title: "播客分析",
+    body: "由 Deeply 双主持人根据 Briefly 权威英文原文生成的深度分析。",
+    proOnly: "Briefly Pro",
+    signIn: "登录后使用播客分析",
+    generate: "生成播客分析",
+    preparing: "正在准备播客分析…",
+    listen: "收听分析",
+    retry: "重新生成播客分析",
+  },
+  "zh-TW": {
+    title: "Podcast 分析",
+    body: "由 Deeply 雙主持人根據 Briefly 權威英文原文產生的深度分析。",
+    proOnly: "Briefly Pro",
+    signIn: "登入後使用 Podcast 分析",
+    generate: "產生 Podcast 分析",
+    preparing: "正在準備 Podcast 分析…",
+    listen: "收聽分析",
+    retry: "重新產生 Podcast 分析",
+  },
+} as const;
+
 function formatDate(value: string | null, language: string) {
   if (!value) return null;
   const date = new Date(value);
@@ -74,9 +128,19 @@ function formatDate(value: string | null, language: string) {
 export function ArticleView({
   article,
   immutable = false,
+  podcast = null,
+  podcastBusy = false,
+  podcastPro = false,
+  podcastSignedIn = false,
+  onPodcastAction,
 }: {
   article: CanonicalArticle;
   immutable?: boolean;
+  podcast?: PodcastAnalysisStatus | null;
+  podcastBusy?: boolean;
+  podcastPro?: boolean;
+  podcastSignedIn?: boolean;
+  onPodcastAction?: () => void;
 }) {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
@@ -95,6 +159,7 @@ export function ArticleView({
   const translationPending = article.translation_status === "pending";
   const experimentalTranslation = article.experimental_localization === true;
   const localizationText = localizationCopy[language] ?? localizationCopy.en;
+  const podcastText = podcastCopy[language] ?? podcastCopy.en;
 
   const share = async () => {
     const webBase =
@@ -133,6 +198,22 @@ export function ArticleView({
       </View>
     );
   };
+
+  let podcastAction = podcastText.generate;
+  let podcastDisabled = podcastBusy;
+
+  if (!podcastSignedIn) {
+    podcastAction = podcastText.signIn;
+  } else if (!podcastPro) {
+    podcastAction = podcastText.proOnly;
+  } else if (podcastBusy || podcast?.status === "processing") {
+    podcastAction = podcastText.preparing;
+    podcastDisabled = true;
+  } else if (podcast?.status === "ready") {
+    podcastAction = podcastText.listen;
+  } else if (podcast?.status === "failed") {
+    podcastAction = podcastText.retry;
+  }
 
   return (
     <ScrollView
@@ -265,6 +346,37 @@ export function ArticleView({
             </Text>
           </Pressable>
         </View>
+
+        {!!onPodcastAction && !immutable && (
+          <View
+            style={[
+              styles.podcastCard,
+              { backgroundColor: colors.surfaceMuted, borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.podcastCopy}>
+              <Text style={[styles.podcastTitle, { color: colors.text }]}>
+                {podcastText.title}
+              </Text>
+              <Text style={[styles.podcastBody, { color: colors.textMuted }]}>
+                {podcastText.body}
+              </Text>
+            </View>
+            <Pressable
+              disabled={podcastDisabled}
+              onPress={onPodcastAction}
+              style={[
+                styles.podcastButton,
+                { backgroundColor: colors.text },
+                podcastDisabled && styles.podcastButtonDisabled,
+              ]}
+            >
+              <Text style={[styles.podcastButtonText, { color: colors.background }]}>
+                {podcastAction}
+              </Text>
+            </Pressable>
+          </View>
+        )}
 
         <View
           style={[styles.briefCard, { backgroundColor: colors.surfaceMuted }]}
@@ -403,6 +515,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   actionText: { fontWeight: "800" },
+  podcastCard: {
+    marginTop: 24,
+    padding: 18,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 16,
+  },
+  podcastCopy: { gap: 5 },
+  podcastTitle: { fontSize: 18, fontWeight: "900" },
+  podcastBody: { fontSize: 14, lineHeight: 21 },
+  podcastButton: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: 999,
+  },
+  podcastButtonDisabled: { opacity: 0.55 },
+  podcastButtonText: { fontSize: 14, fontWeight: "900" },
   briefCard: {
     marginTop: 34,
     padding: 24,
