@@ -37,4 +37,5 @@ export const layout = {
   pageMax: 1320,
   articleMax: 860,
   pagePadding: 20,
+  pagePaddingCompact: 14,
 } as const;
