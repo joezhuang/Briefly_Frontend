@@ -71,7 +71,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.page}>
+        <View style={[styles.page, width < 480 && styles.pageCompact]}>
           <AppHeader />
 
           <View style={styles.header}>
@@ -171,6 +171,9 @@ const styles = StyleSheet.create({
     maxWidth: layout.pageMax,
     paddingHorizontal: layout.pagePadding,
     paddingBottom: 80,
+  },
+  pageCompact: {
+    paddingHorizontal: layout.pagePaddingCompact,
   },
   header: { paddingTop: 28, paddingBottom: 24 },
   title: {
