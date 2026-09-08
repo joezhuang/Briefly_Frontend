@@ -27,7 +27,6 @@ export default function UpgradeScreen() {
 
   const [busy, setBusy] = useState<BrieflyPlan | "restore" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -39,8 +38,6 @@ export default function UpgradeScreen() {
     if (!user || payment !== "success") return;
 
     let active = true;
-    setConfirmingPayment(true);
-    setError(null);
 
     const confirm = async () => {
       for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -48,7 +45,6 @@ export default function UpgradeScreen() {
         if (!active) return;
 
         if (next?.translation_entitled) {
-          setConfirmingPayment(false);
           router.replace("/");
           return;
         }
@@ -56,9 +52,7 @@ export default function UpgradeScreen() {
         await new Promise((resolve) => setTimeout(resolve, 1200));
       }
 
-      if (active) {
-        setConfirmingPayment(false);
-      }
+      return;
     };
 
     void confirm();
@@ -104,6 +98,7 @@ export default function UpgradeScreen() {
   };
 
   const isPro = account?.translation_entitled === true;
+  const confirmingPayment = payment === "success" && !isPro;
 
   return (
     <SafeAreaView
