@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -35,6 +36,7 @@ const copy = {
     latest: "Latest",
     count: "developments",
     live: "Live event timeline",
+    current: "View current story",
     close: "Close",
   },
   es: {
@@ -43,6 +45,7 @@ const copy = {
     latest: "Último",
     count: "novedades",
     live: "Cronología del evento en vivo",
+    current: "Ver historia actual",
     close: "Cerrar",
   },
   ja: {
@@ -51,6 +54,7 @@ const copy = {
     latest: "最新",
     count: "件の動き",
     live: "最新のイベント経緯",
+    current: "現在の記事を見る",
     close: "閉じる",
   },
   "zh-CN": {
@@ -59,6 +63,7 @@ const copy = {
     latest: "最新",
     count: "个进展",
     live: "实时事件时间线",
+    current: "查看最新报道",
     close: "关闭",
   },
   "zh-TW": {
@@ -67,6 +72,7 @@ const copy = {
     latest: "最新",
     count: "個進展",
     live: "即時事件時間線",
+    current: "查看最新報導",
     close: "關閉",
   },
 } as const;
@@ -74,9 +80,11 @@ const copy = {
 export function EventTimeline({
   eventId,
   liveContext = false,
+  liveStoryHref,
 }: {
   eventId: string;
   liveContext?: boolean;
+  liveStoryHref?: string;
 }) {
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
@@ -118,6 +126,12 @@ export function EventTimeline({
       active = false;
     };
   }, [eventId]);
+
+  const openLiveStory = () => {
+    if (!liveStoryHref) return;
+    setOpen(false);
+    router.push(liveStoryHref as never);
+  };
 
   if (loading) {
     return (
@@ -190,6 +204,32 @@ export function EventTimeline({
             <ScrollView contentContainerStyle={styles.timeline}>
               {items.map((item, index) => {
                 const latest = index === items.length - 1;
+                const actionable = latest && !!liveStoryHref;
+                const content = (
+                  <>
+                    <View style={styles.timeRow}>
+                      {!!item.time && (
+                        <Text style={[styles.time, { color: colors.textMuted }]}>
+                          {item.time}
+                        </Text>
+                      )}
+                      {latest && (
+                        <Text style={[styles.latest, { color: colors.accent }]}>
+                          {labels.latest}
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={[styles.itemTitle, { color: colors.text }]}>
+                      {item.title}
+                    </Text>
+                    {actionable && (
+                      <Text style={[styles.currentLink, { color: colors.accent }]}>
+                        {labels.current} →
+                      </Text>
+                    )}
+                  </>
+                );
+
                 return (
                   <View key={item.id || `${index}`} style={styles.row}>
                     <View style={styles.rail}>
@@ -206,23 +246,23 @@ export function EventTimeline({
                         <View style={[styles.line, { backgroundColor: colors.border }]} />
                       )}
                     </View>
-                    <View style={styles.itemCopy}>
-                      <View style={styles.timeRow}>
-                        {!!item.time && (
-                          <Text style={[styles.time, { color: colors.textMuted }]}>
-                            {item.time}
-                          </Text>
-                        )}
-                        {latest && (
-                          <Text style={[styles.latest, { color: colors.accent }]}>
-                            {labels.latest}
-                          </Text>
-                        )}
-                      </View>
-                      <Text style={[styles.itemTitle, { color: colors.text }]}>
-                        {item.title}
-                      </Text>
-                    </View>
+                    {actionable ? (
+                      <Pressable
+                        accessibilityRole="link"
+                        accessibilityLabel={labels.current}
+                        onPress={openLiveStory}
+                        style={({ pressed }) => [
+                          styles.itemCopy,
+                          styles.actionableItem,
+                          { borderColor: colors.border },
+                          pressed && styles.itemPressed,
+                        ]}
+                      >
+                        {content}
+                      </Pressable>
+                    ) : (
+                      <View style={styles.itemCopy}>{content}</View>
+                    )}
                   </View>
                 );
               })}
@@ -294,10 +334,19 @@ const styles = StyleSheet.create({
   dot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, marginTop: 5 },
   line: { width: 1, flex: 1, marginTop: 3 },
   itemCopy: { flex: 1, paddingLeft: 10, paddingBottom: 22, gap: 5 },
+  actionableItem: {
+    marginLeft: 4,
+    padding: 12,
+    marginBottom: 14,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  itemPressed: { opacity: 0.65 },
   timeRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   time: { fontSize: 12, fontWeight: "600" },
   latest: { fontSize: 11, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.7 },
   itemTitle: { fontSize: 17, lineHeight: 24, fontWeight: "700" },
+  currentLink: { fontSize: 13, fontWeight: "800", marginTop: 3 },
   closeButton: {
     alignSelf: "flex-end",
     marginTop: 14,
