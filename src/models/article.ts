@@ -17,6 +17,11 @@ export type CanonicalArticle = {
   requested_language?: string;
   translation_available?: boolean;
   translation_entitled?: boolean;
+  translation_status?: "not_requested" | "pending" | "ready";
+  experimental_localization?: boolean;
+  authoritative_language?: string;
+  authoritative_article_version_id?: number | null;
+  localization_warning?: string | null;
   status: string;
   slug: string;
   headline: string;
