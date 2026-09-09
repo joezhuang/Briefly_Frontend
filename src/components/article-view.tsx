@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { createElement, useState } from "react";
+import { createElement } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -172,7 +172,6 @@ export function ArticleView({
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const { isSaved, toggleSaved } = useSavedArticles();
-  const [openedPodcastUrl, setOpenedPodcastUrl] = useState<string | null>(null);
 
   const saved = isSaved(article);
   const sourceCount = article.source_count ?? article.sources_used?.length ?? 0;
@@ -189,16 +188,9 @@ export function ArticleView({
   const podcastText = podcastCopy[language] ?? podcastCopy.en;
   const coverageText = coverageCopy[language] ?? coverageCopy.en;
   const podcastProcessing = podcastBusy || podcast?.status === "processing";
-  const webPodcastReady =
-    Platform.OS === "web" &&
-    podcast?.status === "ready" &&
-    !!podcast.audio_url;
-  const nativePodcastReady =
-    Platform.OS !== "web" &&
-    podcast?.status === "ready" &&
-    !!podcast.audio_url;
-  const nativePlayerOpen =
-    nativePodcastReady && openedPodcastUrl === podcast?.audio_url;
+  const podcastReady = podcast?.status === "ready" && !!podcast.audio_url;
+  const webPodcastReady = Platform.OS === "web" && podcastReady;
+  const nativePodcastReady = Platform.OS !== "web" && podcastReady;
 
   const share = async () => {
     const webBase =
@@ -247,8 +239,6 @@ export function ArticleView({
   } else if (podcastProcessing) {
     podcastAction = podcastText.preparing;
     podcastDisabled = true;
-  } else if (podcast?.status === "ready") {
-    podcastAction = podcastText.listen;
   } else if (podcast?.status === "failed") {
     podcastAction = podcastText.retry;
   }
@@ -405,7 +395,7 @@ export function ArticleView({
               </Text>
             </View>
 
-            {nativePlayerOpen && podcast?.audio_url
+            {nativePodcastReady && podcast?.audio_url
               ? <PodcastInlinePlayer source={podcast.audio_url} />
               : webPodcastReady
                 ? createElement("audio", {
@@ -423,11 +413,7 @@ export function ArticleView({
                 : (
                   <Pressable
                     disabled={podcastDisabled}
-                    onPress={
-                      nativePodcastReady && podcast?.audio_url
-                        ? () => setOpenedPodcastUrl(podcast.audio_url)
-                        : onPodcastAction
-                    }
+                    onPress={onPodcastAction}
                     style={[
                       styles.podcastButton,
                       { backgroundColor: colors.text },
