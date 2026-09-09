@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -12,22 +12,27 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
+import { safeReturnTo } from "@/navigation/return-to";
 
 type Provider = "google" | "apple";
 
 export default function SignInScreen() {
+  const { returnTo } = useLocalSearchParams<{
+    returnTo?: string | string[];
+  }>();
   const { signInWithProvider, user } = useBrieflyAuth();
   const { t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
 
   const [provider, setProvider] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const returnPath = safeReturnTo(returnTo);
 
   useEffect(() => {
     if (user) {
-      router.replace("/");
+      router.replace(returnPath as never);
     }
-  }, [user]);
+  }, [returnPath, user]);
 
   if (user) return null;
 
@@ -36,7 +41,7 @@ export default function SignInScreen() {
     setError(null);
 
     try {
-      await signInWithProvider(nextProvider);
+      await signInWithProvider(nextProvider, returnPath);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t.signInFailed);
     } finally {
