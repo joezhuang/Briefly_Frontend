@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   AppState,
+  FlatList,
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -31,7 +31,6 @@ const REFRESH_FRESHNESS_MS = 2 * 60 * 1000;
 const DEFAULT_COUNTRY = "Australia";
 const DEFAULT_CITY = "Sydney";
 const PAGE_SIZE = 20;
-const LOAD_MORE_THRESHOLD = 800;
 
 const feedCopy = {
   en: { top: "Top", national: "National", local: "Local", refresh: "Refresh" },
@@ -58,6 +57,17 @@ function mergeUnique(
     output.push(article);
   }
   return output;
+}
+
+function chunkArticles(
+  articles: CanonicalArticle[],
+  columns: number,
+): CanonicalArticle[][] {
+  const rows: CanonicalArticle[][] = [];
+  for (let index = 0; index < articles.length; index += columns) {
+    rows.push(articles.slice(index, index + columns));
+  }
+  return rows;
 }
 
 export default function HomeScreen() {
@@ -176,30 +186,13 @@ export default function HomeScreen() {
     return () => subscription.remove();
   }, [refreshIfStale]);
 
-  const handleScroll = useCallback(
-    (event: {
-      nativeEvent: {
-        layoutMeasurement: { height: number };
-        contentOffset: { y: number };
-        contentSize: { height: number };
-      };
-    }) => {
-      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-      const distanceFromBottom =
-        contentSize.height - (layoutMeasurement.height + contentOffset.y);
-      if (distanceFromBottom <= LOAD_MORE_THRESHOLD) {
-        void loadFeed("more");
-      }
-    },
-    [loadFeed],
-  );
-
   const desktop = width >= 1000;
   const tablet = width >= 700 && width < 1000;
   const mobileHeader = width < 480;
+  const feedColumns = desktop ? 3 : tablet ? 2 : 1;
   const lead = articles[0];
   const secondary = articles.slice(1, 3);
-  const remaining = articles.slice(3);
+  const remainingRows = chunkArticles(articles.slice(3), feedColumns);
 
   const scopeControls = (
     <View style={[styles.scopeTabs, !mobileHeader && styles.scopeTabsWide]}>
@@ -232,12 +225,124 @@ export default function HomeScreen() {
     </View>
   );
 
+  const header = (
+    <View style={[styles.page, width < 480 && styles.pageCompact]}>
+      <AppHeader />
+
+      <View style={styles.header}>
+        <View style={styles.headingRow}>
+          <View style={styles.headingCopy}>
+            <View style={styles.titleRow}>
+              <Text style={[styles.title, { color: colors.text }]}>{t.topStories}</Text>
+              {Platform.OS === "web" && (
+                <Pressable
+                  onPress={() => void loadFeed("refresh")}
+                  disabled={refreshing}
+                  style={({ pressed }) => [
+                    styles.refreshButton,
+                    { borderColor: colors.border },
+                    refreshing && styles.refreshDisabled,
+                    pressed && styles.refreshPressed,
+                  ]}
+                >
+                  <Text style={[styles.refreshText, { color: colors.textMuted }]}>
+                    {copy.refresh}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+            <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t.subtitle}</Text>
+          </View>
+
+          {!mobileHeader && scopeControls}
+        </View>
+
+        {mobileHeader && scopeControls}
+      </View>
+
+      {loading && <ScreenState loading message={t.loadingStories} />}
+
+      {!loading && error && (
+        <ScreenState
+          title={t.unableLoad}
+          message={error}
+          onRetry={() => void loadFeed("initial")}
+        />
+      )}
+
+      {!loading && !error && !lead && (
+        <ScreenState
+          title={t.noStories}
+          message={t.noStoriesMessage}
+          onRetry={() => void loadFeed("refresh")}
+        />
+      )}
+
+      {!loading && !error && lead && (
+        <>
+          {desktop ? (
+            <View style={styles.heroGrid}>
+              <View style={styles.heroColumn}>
+                <StoryTile article={lead} size="hero" />
+              </View>
+              <View style={styles.secondaryColumn}>
+                {secondary.map((article) => (
+                  <StoryTile key={storyKey(article)} article={article} size="secondary" />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.stack}>
+              <StoryTile article={lead} size="hero" />
+              <View style={tablet ? styles.twoColumnGrid : styles.stack}>
+                {secondary.map((article) => (
+                  <View key={storyKey(article)} style={tablet ? styles.half : undefined}>
+                    <StoryTile article={article} size="secondary" />
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {remainingRows.length > 0 && <View style={styles.feedStartSpacer} />}
+        </>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-      <ScrollView
+      <FlatList
+        data={remainingRows}
+        key={feedColumns}
+        keyExtractor={(row) => row.map(storyKey).join(":")}
+        ListHeaderComponent={header}
+        renderItem={({ item: row }) => (
+          <View style={[styles.page, width < 480 && styles.pageCompact, styles.feedRowPage]}>
+            <View style={[styles.feedRow, feedColumns > 1 && styles.feedRowWide]}>
+              {row.map((article) => (
+                <View
+                  key={storyKey(article)}
+                  style={desktop ? styles.third : tablet ? styles.half : styles.full}
+                >
+                  <StoryTile article={article} />
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={styles.loadMoreIndicator}>
+              <ActivityIndicator color={colors.textMuted} />
+            </View>
+          ) : hasMore ? (
+            <View style={styles.loadMoreSpacer} />
+          ) : null
+        }
         contentContainerStyle={styles.scrollContent}
-        onScroll={handleScroll}
-        scrollEventThrottle={200}
+        onEndReached={() => void loadFeed("more")}
+        onEndReachedThreshold={0.8}
         refreshControl={
           Platform.OS === "web" ? undefined : (
             <RefreshControl
@@ -246,119 +351,22 @@ export default function HomeScreen() {
             />
           )
         }
-      >
-        <View style={[styles.page, width < 480 && styles.pageCompact]}>
-          <AppHeader />
-
-          <View style={styles.header}>
-            <View style={styles.headingRow}>
-              <View style={styles.headingCopy}>
-                <View style={styles.titleRow}>
-                  <Text style={[styles.title, { color: colors.text }]}>{t.topStories}</Text>
-                  {Platform.OS === "web" && (
-                    <Pressable
-                      onPress={() => void loadFeed("refresh")}
-                      disabled={refreshing}
-                      style={({ pressed }) => [
-                        styles.refreshButton,
-                        { borderColor: colors.border },
-                        refreshing && styles.refreshDisabled,
-                        pressed && styles.refreshPressed,
-                      ]}
-                    >
-                      <Text style={[styles.refreshText, { color: colors.textMuted }]}>
-                        {copy.refresh}
-                      </Text>
-                    </Pressable>
-                  )}
-                </View>
-                <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t.subtitle}</Text>
-              </View>
-
-              {!mobileHeader && scopeControls}
-            </View>
-
-            {mobileHeader && scopeControls}
-          </View>
-
-          {loading && <ScreenState loading message={t.loadingStories} />}
-
-          {!loading && error && (
-            <ScreenState
-              title={t.unableLoad}
-              message={error}
-              onRetry={() => void loadFeed("initial")}
-            />
-          )}
-
-          {!loading && !error && !lead && (
-            <ScreenState
-              title={t.noStories}
-              message={t.noStoriesMessage}
-              onRetry={() => void loadFeed("refresh")}
-            />
-          )}
-
-          {!loading && !error && lead && (
-            <>
-              {desktop ? (
-                <View style={styles.heroGrid}>
-                  <View style={styles.heroColumn}>
-                    <StoryTile article={lead} size="hero" />
-                  </View>
-                  <View style={styles.secondaryColumn}>
-                    {secondary.map((article) => (
-                      <StoryTile key={storyKey(article)} article={article} size="secondary" />
-                    ))}
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.stack}>
-                  <StoryTile article={lead} size="hero" />
-                  <View style={tablet ? styles.twoColumnGrid : styles.stack}>
-                    {secondary.map((article) => (
-                      <View key={storyKey(article)} style={tablet ? styles.half : undefined}>
-                        <StoryTile article={article} size="secondary" />
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              <View style={[styles.feedGrid, (desktop || tablet) && styles.feedGridWide]}>
-                {remaining.map((article) => (
-                  <View
-                    key={storyKey(article)}
-                    style={desktop ? styles.third : tablet ? styles.half : styles.full}
-                  >
-                    <StoryTile article={article} />
-                  </View>
-                ))}
-              </View>
-
-              {loadingMore && (
-                <View style={styles.loadMoreIndicator}>
-                  <ActivityIndicator color={colors.textMuted} />
-                </View>
-              )}
-
-              {!loadingMore && hasMore && <View style={styles.loadMoreSpacer} />}
-            </>
-          )}
-        </View>
-      </ScrollView>
+        removeClippedSubviews={Platform.OS === "android"}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  scrollContent: { alignItems: "center" },
+  scrollContent: { alignItems: "center", paddingBottom: 80 },
   page: {
     width: "100%",
     maxWidth: layout.pageMax,
     paddingHorizontal: layout.pagePadding,
-    paddingBottom: 80,
   },
   pageCompact: { paddingHorizontal: layout.pagePaddingCompact },
   header: { paddingTop: 28, paddingBottom: 24, gap: 20 },
@@ -409,8 +417,10 @@ const styles = StyleSheet.create({
   secondaryColumn: { flex: 1, gap: 8 },
   stack: { gap: 10 },
   twoColumnGrid: { flexDirection: "row", gap: 10 },
-  feedGrid: { marginTop: 10, gap: 10 },
-  feedGridWide: { flexDirection: "row", flexWrap: "wrap" },
+  feedStartSpacer: { height: 10 },
+  feedRowPage: { paddingBottom: 10 },
+  feedRow: { width: "100%" },
+  feedRowWide: { flexDirection: "row", gap: 10 },
   third: { flexBasis: "31%", flexGrow: 1, minWidth: 0 },
   half: { flexBasis: "48%", flexGrow: 1, minWidth: 0 },
   full: { width: "100%" },
