@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { createElement } from "react";
+import { createElement, type ReactNode, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -128,6 +128,44 @@ const coverageCopy = {
   "zh-TW": { title: "相關報導", open: "開啟原文" },
 } as const;
 
+const exploreCopy = {
+  en: {
+    title: "More about this story",
+    uncertainties: "What we don't know",
+    sources: "Sources used",
+    coverage: "Coverage",
+    podcast: "Listen to analysis",
+  },
+  es: {
+    title: "Más sobre esta historia",
+    uncertainties: "Lo que no sabemos",
+    sources: "Fuentes utilizadas",
+    coverage: "Cobertura",
+    podcast: "Escuchar el análisis",
+  },
+  ja: {
+    title: "このニュースをさらに詳しく",
+    uncertainties: "まだ分かっていないこと",
+    sources: "使用した情報源",
+    coverage: "関連記事",
+    podcast: "分析を聴く",
+  },
+  "zh-CN": {
+    title: "更多关于这篇报道",
+    uncertainties: "尚不确定",
+    sources: "使用的来源",
+    coverage: "相关报道",
+    podcast: "收听分析",
+  },
+  "zh-TW": {
+    title: "更多關於這篇報導",
+    uncertainties: "尚不確定",
+    sources: "使用的來源",
+    coverage: "相關報導",
+    podcast: "收聽分析",
+  },
+} as const;
+
 function formatDate(value: string | null | undefined, language: string) {
   if (!value) return null;
   const date = new Date(value);
@@ -187,6 +225,10 @@ export function ArticleView({
   const localizationText = localizationCopy[language] ?? localizationCopy.en;
   const podcastText = podcastCopy[language] ?? podcastCopy.en;
   const coverageText = coverageCopy[language] ?? coverageCopy.en;
+  const exploreText = exploreCopy[language] ?? exploreCopy.en;
+  const [openExplore, setOpenExplore] = useState<
+    "uncertainties" | "sources" | "coverage" | "podcast" | null
+  >(null);
   const podcastProcessing = podcastBusy || podcast?.status === "processing";
   const podcastReady = podcast?.status === "ready" && !!podcast.audio_url;
   const webPodcastReady = Platform.OS === "web" && podcastReady;
@@ -374,67 +416,6 @@ export function ArticleView({
           </Pressable>
         </View>
 
-        {!!onPodcastAction && !immutable && (
-          <View
-            style={[
-              styles.podcastCard,
-              { backgroundColor: colors.surfaceMuted, borderColor: colors.border },
-            ]}
-          >
-            <View style={styles.podcastCopy}>
-              <View style={styles.statusTitleRow}>
-                {podcastProcessing && (
-                  <ActivityIndicator size="small" color={colors.accent} />
-                )}
-                <Text style={[styles.podcastTitle, { color: colors.text }]}>
-                  {podcastText.title}
-                </Text>
-              </View>
-              <Text style={[styles.podcastBody, { color: colors.textMuted }]}>
-                {podcastText.body}
-              </Text>
-            </View>
-
-            {nativePodcastReady && podcast?.audio_url
-              ? <PodcastInlinePlayer source={podcast.audio_url} />
-              : webPodcastReady
-                ? createElement("audio", {
-                    controls: true,
-                    preload: "metadata",
-                    src: podcast.audio_url ?? undefined,
-                    onLoadedMetadata: (event: { currentTarget: HTMLAudioElement }) => {
-                      event.currentTarget.volume = readStoredPodcastVolume();
-                    },
-                    onVolumeChange: (event: { currentTarget: HTMLAudioElement }) => {
-                      storePodcastVolume(event.currentTarget.volume);
-                    },
-                    style: { width: "100%" },
-                  })
-                : (
-                  <Pressable
-                    disabled={podcastDisabled}
-                    onPress={onPodcastAction}
-                    style={[
-                      styles.podcastButton,
-                      { backgroundColor: colors.text },
-                      podcastDisabled && styles.podcastButtonDisabled,
-                    ]}
-                  >
-                    <View style={styles.buttonContent}>
-                      <Text
-                        style={[
-                          styles.podcastButtonText,
-                          { color: colors.background },
-                        ]}
-                      >
-                        {podcastAction}
-                      </Text>
-                    </View>
-                  </Pressable>
-                )}
-          </View>
-        )}
-
         <View style={[styles.briefCard, { backgroundColor: colors.surfaceMuted }]}>
           {briefSection(t.whatHappened, article.what_happened)}
           {briefSection(t.whyItMatters, article.why_it_matters)}
@@ -452,7 +433,163 @@ export function ArticleView({
           ))}
         </View>
 
-        {(article.uncertainties ?? []).length > 0 && (
+        {!immutable && (
+          <View style={[styles.exploreGroup, { borderTopColor: colors.border }]}>
+            <Text style={[styles.exploreTitle, { color: colors.text }]}>
+              {exploreText.title}
+            </Text>
+
+            {(article.uncertainties ?? []).length > 0 && (
+              <ExploreRow
+                label={exploreText.uncertainties}
+                meta={String(article.uncertainties.length)}
+                open={openExplore === "uncertainties"}
+                colors={colors}
+                onPress={() =>
+                  setOpenExplore((value) =>
+                    value === "uncertainties" ? null : "uncertainties",
+                  )
+                }
+              >
+                {article.uncertainties.map((item, index) => (
+                  <View key={index} style={styles.bulletRow}>
+                    <Text style={[styles.bullet, { color: colors.accent }]}>•</Text>
+                    <Text style={[styles.bulletText, { color: colors.textMuted }]}>
+                      {item}
+                    </Text>
+                  </View>
+                ))}
+              </ExploreRow>
+            )}
+
+            {(article.sources_used ?? []).length > 0 && (
+              <ExploreRow
+                label={exploreText.sources}
+                meta={String(article.sources_used.length)}
+                open={openExplore === "sources"}
+                colors={colors}
+                onPress={() =>
+                  setOpenExplore((value) => (value === "sources" ? null : "sources"))
+                }
+              >
+                {article.sources_used.map((source, index) => (
+                  <View key={`${source.source}-${index}`} style={styles.source}>
+                    <Text style={[styles.sourceName, { color: colors.text }]}>
+                      {source.source}
+                    </Text>
+                    {!!source.contribution && (
+                      <Text
+                        style={[styles.sourceContribution, { color: colors.textMuted }]}
+                      >
+                        {source.contribution}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </ExploreRow>
+            )}
+
+            {(article.coverage ?? []).length > 0 && (
+              <ExploreRow
+                label={exploreText.coverage}
+                meta={String(article.coverage?.length ?? 0)}
+                open={openExplore === "coverage"}
+                colors={colors}
+                onPress={() =>
+                  setOpenExplore((value) =>
+                    value === "coverage" ? null : "coverage",
+                  )
+                }
+              >
+                {(article.coverage ?? []).map((item, index) => {
+                  const coverageDate = formatDate(item.published_at, language);
+                  return (
+                    <Pressable
+                      key={`${item.evidence_id || item.url}-${index}`}
+                      onPress={() => void openCoverage(item.url)}
+                      style={({ pressed }) => [
+                        styles.coverageRow,
+                        { borderColor: colors.border },
+                        pressed && styles.coveragePressed,
+                      ]}
+                    >
+                      <View style={styles.coverageCopy}>
+                        <Text style={[styles.coverageSource, { color: colors.accent }]}>
+                          {item.source}
+                        </Text>
+                        {!!item.title && (
+                          <Text style={[styles.coverageTitle, { color: colors.text }]}>
+                            {item.title}
+                          </Text>
+                        )}
+                        {!!coverageDate && (
+                          <Text style={[styles.coverageMeta, { color: colors.textMuted }]}>
+                            {coverageDate}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={[styles.coverageOpen, { color: colors.textMuted }]}>
+                        {coverageText.open} ↗
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ExploreRow>
+            )}
+
+            {!!onPodcastAction && (
+              <ExploreRow
+                label={exploreText.podcast}
+                meta={podcastReady ? podcastText.listen : podcastProcessing ? podcastText.preparing : undefined}
+                open={openExplore === "podcast"}
+                colors={colors}
+                onPress={() =>
+                  setOpenExplore((value) => (value === "podcast" ? null : "podcast"))
+                }
+              >
+                <View style={styles.podcastCompact}>
+                  <Text style={[styles.podcastBody, { color: colors.textMuted }]}>
+                    {podcastText.body}
+                  </Text>
+                  {nativePodcastReady && podcast?.audio_url
+                    ? <PodcastInlinePlayer source={podcast.audio_url} />
+                    : webPodcastReady
+                      ? createElement("audio", {
+                          controls: true,
+                          preload: "metadata",
+                          src: podcast.audio_url ?? undefined,
+                          onLoadedMetadata: (event: { currentTarget: HTMLAudioElement }) => {
+                            event.currentTarget.volume = readStoredPodcastVolume();
+                          },
+                          onVolumeChange: (event: { currentTarget: HTMLAudioElement }) => {
+                            storePodcastVolume(event.currentTarget.volume);
+                          },
+                          style: { width: "100%" },
+                        })
+                      : (
+                        <Pressable
+                          disabled={podcastDisabled}
+                          onPress={onPodcastAction}
+                          style={[
+                            styles.podcastButton,
+                            { backgroundColor: colors.text },
+                            podcastDisabled && styles.podcastButtonDisabled,
+                          ]}
+                        >
+                          <Text
+                            style={[styles.podcastButtonText, { color: colors.background }]}
+                          >
+                            {podcastAction}
+                          </Text>
+                        </Pressable>
+                      )}
+                </View>
+              </ExploreRow>
+            )}
+          </View>
+        )}
+
+        {immutable && (article.uncertainties ?? []).length > 0 && (
           <View style={[styles.group, { borderTopColor: colors.border }]}>
             <Text style={[styles.groupTitle, { color: colors.text }]}>
               {t.whatWeDontKnow}
@@ -467,74 +604,50 @@ export function ArticleView({
             ))}
           </View>
         )}
-
-        {(article.sources_used ?? []).length > 0 && (
-          <View style={[styles.group, { borderTopColor: colors.border }]}>
-            <Text style={[styles.groupTitle, { color: colors.text }]}>
-              {t.sources}
-            </Text>
-            {article.sources_used.map((source, index) => (
-              <View key={`${source.source}-${index}`} style={styles.source}>
-                <Text style={[styles.sourceName, { color: colors.text }]}>
-                  {source.source}
-                </Text>
-                {!!source.contribution && (
-                  <Text
-                    style={[
-                      styles.sourceContribution,
-                      { color: colors.textMuted },
-                    ]}
-                  >
-                    {source.contribution}
-                  </Text>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-
-        {(article.coverage ?? []).length > 0 && (
-          <View style={[styles.group, { borderTopColor: colors.border }]}>
-            <Text style={[styles.groupTitle, { color: colors.text }]}>
-              {coverageText.title} · {article.coverage?.length ?? 0}
-            </Text>
-            {(article.coverage ?? []).map((item, index) => {
-              const coverageDate = formatDate(item.published_at, language);
-              return (
-                <Pressable
-                  key={`${item.evidence_id || item.url}-${index}`}
-                  onPress={() => void openCoverage(item.url)}
-                  style={({ pressed }) => [
-                    styles.coverageRow,
-                    { borderColor: colors.border },
-                    pressed && styles.coveragePressed,
-                  ]}
-                >
-                  <View style={styles.coverageCopy}>
-                    <Text style={[styles.coverageSource, { color: colors.accent }]}>
-                      {item.source}
-                    </Text>
-                    {!!item.title && (
-                      <Text style={[styles.coverageTitle, { color: colors.text }]}>
-                        {item.title}
-                      </Text>
-                    )}
-                    {!!coverageDate && (
-                      <Text style={[styles.coverageMeta, { color: colors.textMuted }]}>
-                        {coverageDate}
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={[styles.coverageOpen, { color: colors.textMuted }]}>
-                    {coverageText.open} ↗
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
       </View>
     </ScrollView>
+  );
+}
+
+function ExploreRow({
+  label,
+  meta,
+  open,
+  colors,
+  onPress,
+  children,
+}: {
+  label: string;
+  meta?: string;
+  open: boolean;
+  colors: ReturnType<typeof useBrieflyTheme>["colors"];
+  onPress: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <View style={[styles.exploreRow, { borderColor: colors.border }]}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.exploreTrigger,
+          { opacity: pressed ? 0.68 : 1 },
+        ]}
+      >
+        <Text style={[styles.exploreLabel, { color: colors.text }]}>{label}</Text>
+        <View style={styles.exploreMetaRow}>
+          {!!meta && (
+            <Text style={[styles.exploreMeta, { color: colors.textMuted }]}>
+              {meta}
+            </Text>
+          )}
+          <Text style={[styles.exploreArrow, { color: colors.accent }]}>
+            {open ? "−" : "+"}
+          </Text>
+        </View>
+      </Pressable>
+      {open && <View style={styles.exploreContent}>{children}</View>}
+    </View>
   );
 }
 
@@ -635,6 +748,26 @@ const styles = StyleSheet.create({
   briefText: { fontSize: 18, lineHeight: 28 },
   body: { marginTop: 38, gap: 24 },
   bodyText: { fontSize: 19, lineHeight: 31 },
+  exploreGroup: {
+    marginTop: 42,
+    paddingTop: 26,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  exploreTitle: { fontSize: 23, fontWeight: "900", marginBottom: 10 },
+  exploreRow: { borderBottomWidth: StyleSheet.hairlineWidth },
+  exploreTrigger: {
+    minHeight: 54,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  exploreLabel: { flex: 1, fontSize: 16, fontWeight: "800" },
+  exploreMetaRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  exploreMeta: { fontSize: 12, fontWeight: "700" },
+  exploreArrow: { width: 20, textAlign: "center", fontSize: 20, fontWeight: "700" },
+  exploreContent: { paddingBottom: 18, gap: 10 },
+  podcastCompact: { gap: 12, paddingBottom: 2 },
   group: {
     marginTop: 44,
     paddingTop: 28,
