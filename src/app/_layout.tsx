@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import { AnalysisReadinessProvider } from "@/context/analysis-readiness";
 import { BrieflyAuthProvider } from "@/context/auth";
 import { LanguageProvider } from "@/context/language";
 import { SavedArticlesProvider } from "@/context/saved-articles";
@@ -42,9 +43,11 @@ export default function RootLayout() {
       <LanguageProvider>
         <BrieflyThemeProvider>
           <BrieflyAuthProvider>
-            <SavedArticlesProvider>
-              <AppStack />
-            </SavedArticlesProvider>
+            <AnalysisReadinessProvider>
+              <SavedArticlesProvider>
+                <AppStack />
+              </SavedArticlesProvider>
+            </AnalysisReadinessProvider>
           </BrieflyAuthProvider>
         </BrieflyThemeProvider>
       </LanguageProvider>
