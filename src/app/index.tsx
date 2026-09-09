@@ -196,9 +196,41 @@ export default function HomeScreen() {
 
   const desktop = width >= 1000;
   const tablet = width >= 700 && width < 1000;
+  const mobileHeader = width < 700;
   const lead = articles[0];
   const secondary = articles.slice(1, 3);
   const remaining = articles.slice(3);
+
+  const scopeControls = (
+    <View style={[styles.scopeTabs, !mobileHeader && styles.scopeTabsWide]}>
+      {scopes.map((item) => {
+        const selected = scope === item;
+        return (
+          <Pressable
+            key={item}
+            onPress={() => setScope(item)}
+            style={[
+              styles.scopeTab,
+              {
+                borderColor: selected ? colors.text : colors.border,
+                backgroundColor: selected ? colors.text : "transparent",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.scopeText,
+                { color: selected ? colors.background : colors.textMuted },
+              ]}
+              numberOfLines={1}
+            >
+              {copy[item]}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -221,54 +253,32 @@ export default function HomeScreen() {
           <View style={styles.header}>
             <View style={styles.headingRow}>
               <View style={styles.headingCopy}>
-                <Text style={[styles.title, { color: colors.text }]}>{t.topStories}</Text>
+                <View style={styles.titleRow}>
+                  <Text style={[styles.title, { color: colors.text }]}>{t.topStories}</Text>
+                  {Platform.OS === "web" && (
+                    <Pressable
+                      onPress={() => void loadFeed("refresh")}
+                      disabled={refreshing}
+                      style={({ pressed }) => [
+                        styles.refreshButton,
+                        { borderColor: colors.border },
+                        refreshing && styles.refreshDisabled,
+                        pressed && styles.refreshPressed,
+                      ]}
+                    >
+                      <Text style={[styles.refreshText, { color: colors.textMuted }]}>
+                        {copy.refresh}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
                 <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t.subtitle}</Text>
               </View>
 
-              {Platform.OS === "web" && (
-                <Pressable
-                  onPress={() => void loadFeed("refresh")}
-                  disabled={refreshing}
-                  style={[
-                    styles.refreshButton,
-                    { borderColor: colors.border },
-                    refreshing && styles.refreshDisabled,
-                  ]}
-                >
-                  <Text style={[styles.refreshText, { color: colors.textMuted }]}>
-                    {copy.refresh}
-                  </Text>
-                </Pressable>
-              )}
+              {!mobileHeader && scopeControls}
             </View>
 
-            <View style={styles.scopeTabs}>
-              {scopes.map((item) => {
-                const selected = scope === item;
-                return (
-                  <Pressable
-                    key={item}
-                    onPress={() => setScope(item)}
-                    style={[
-                      styles.scopeTab,
-                      {
-                        borderColor: selected ? colors.text : colors.border,
-                        backgroundColor: selected ? colors.text : "transparent",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.scopeText,
-                        { color: selected ? colors.background : colors.textMuted },
-                      ]}
-                    >
-                      {copy[item]}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            {mobileHeader && scopeControls}
           </View>
 
           {loading && <ScreenState loading message={t.loadingStories} />}
@@ -332,9 +342,7 @@ export default function HomeScreen() {
                 </View>
               )}
 
-              {!loadingMore && hasMore && (
-                <View style={styles.loadMoreSpacer} />
-              )}
+              {!loadingMore && hasMore && <View style={styles.loadMoreSpacer} />}
             </>
           )}
         </View>
@@ -360,7 +368,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 18,
   },
-  headingCopy: { flex: 1 },
+  headingCopy: { flex: 1, minWidth: 0 },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 10,
+  },
   title: {
     fontSize: 43,
     lineHeight: 50,
@@ -369,14 +383,20 @@ const styles = StyleSheet.create({
   },
   subtitle: { marginTop: 6, fontSize: 21, lineHeight: 29 },
   refreshButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
     borderWidth: 1,
   },
   refreshDisabled: { opacity: 0.5 },
-  refreshText: { fontSize: 13, fontWeight: "700" },
+  refreshPressed: { opacity: 0.7 },
+  refreshText: { fontSize: 12, fontWeight: "700" },
   scopeTabs: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  scopeTabsWide: {
+    flexWrap: "nowrap",
+    flexShrink: 0,
+    justifyContent: "flex-end",
+  },
   scopeTab: {
     paddingHorizontal: 16,
     paddingVertical: 9,
