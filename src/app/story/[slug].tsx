@@ -114,7 +114,7 @@ export default function StoryDetailScreen() {
     value: null,
   });
   const [podcastWatchKey, setPodcastWatchKey] = useState("");
-  const [podcastBusy, setPodcastBusy] = useState(false);
+  const [podcastBusyKey, setPodcastBusyKey] = useState("");
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(true);
 
   const isWeb = Platform.OS === "web";
@@ -132,6 +132,8 @@ export default function StoryDetailScreen() {
       : "";
   const podcast =
     podcastState.key === podcastRequestKey ? podcastState.value : null;
+  const podcastBusy =
+    !!podcastRequestKey && podcastBusyKey === podcastRequestKey;
 
   useEffect(() => {
     if (!resolvedSlug) return;
@@ -328,7 +330,8 @@ export default function StoryDetailScreen() {
     }
     if (!podcastSourceVersionId || !podcastRequestKey || podcastBusy) return;
 
-    setPodcastBusy(true);
+    const busyKey = podcastRequestKey;
+    setPodcastBusyKey(busyKey);
     try {
       const next = await requestPodcastAnalysis(
         podcastSourceVersionId,
@@ -339,7 +342,7 @@ export default function StoryDetailScreen() {
         setPodcastWatchKey(podcastRequestKey);
       }
     } finally {
-      setPodcastBusy(false);
+      setPodcastBusyKey((current) => (current === busyKey ? "" : current));
     }
   };
 
