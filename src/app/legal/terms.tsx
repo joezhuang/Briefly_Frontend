@@ -1,0 +1,20 @@
+import { LegalScreen, LegalSection } from "@/components/legal-screen";
+
+export default function TermsScreen() {
+  return (
+    <LegalScreen title="Terms of Use" updated="9 September 2026">
+      <LegalSection title="1. About Briefly">Briefly is a news discovery and analysis service that may use automated systems, including artificial intelligence, to organise, summarise, translate, synthesise, and present information from third-party sources.</LegalSection>
+      <LegalSection title="2. Your account">You are responsible for maintaining the security of your account and for activity carried out through it. You must provide accurate account information and use Briefly only in accordance with applicable law.</LegalSection>
+      <LegalSection title="3. News and AI-generated content">Briefly is designed to help you understand news and related information. Automated summaries, translations, timelines, analysis, forecasts, and audio may contain errors, omissions, or outdated information. They are informational only and are not professional legal, financial, medical, or other regulated advice. Important decisions should be checked against authoritative primary sources.</LegalSection>
+      <LegalSection title="4. Third-party sources and links">Briefly may display headlines, excerpts, links, media, or information derived from third-party publishers and services. Those third parties remain responsible for their own content and services, and their own terms and privacy policies may apply when you leave Briefly.</LegalSection>
+      <LegalSection title="5. Briefly Pro subscriptions">Paid Briefly Pro features may be offered through Apple, Google, Stripe, RevenueCat, or other supported payment providers. Prices, billing periods, trials, renewals, cancellation rules, taxes, and refund rights are shown at purchase time and may depend on the platform used. Subscriptions generally renew automatically until cancelled through the provider that manages the subscription.</LegalSection>
+      <LegalSection title="6. Restore and account deletion">Where supported, you may restore eligible purchases associated with your store or Briefly account. Deleting your Briefly account does not automatically cancel a subscription billed by Apple, Google, Stripe, or another payment provider; you may need to cancel it separately with that provider.</LegalSection>
+      <LegalSection title="7. Acceptable use">You must not misuse Briefly, interfere with its operation, attempt unauthorised access, abuse automated features, violate intellectual-property rights, or use the service to break applicable law.</LegalSection>
+      <LegalSection title="8. Intellectual property">Briefly's software, branding, design, and original service content are protected by applicable intellectual-property laws. Third-party articles, trademarks, images, audio, and other materials remain owned by their respective rights holders.</LegalSection>
+      <LegalSection title="9. Availability and changes">We may modify, suspend, or discontinue features, plans, or parts of Briefly. We may also update these Terms. Material changes will take effect when communicated through the service or otherwise made available to users as required by law.</LegalSection>
+      <LegalSection title="10. Consumer rights and liability">To the maximum extent permitted by law, Briefly is provided on an "as available" basis without guarantees that every item will be complete, accurate, uninterrupted, or error-free. Nothing in these Terms excludes rights or remedies that cannot lawfully be excluded, including applicable consumer guarantees.</LegalSection>
+      <LegalSection title="11. Termination">You may stop using Briefly at any time and may delete your account using the in-app account controls. We may restrict or terminate access where reasonably necessary for security, legal compliance, abuse prevention, or serious breach of these Terms.</LegalSection>
+      <LegalSection title="12. Contact">Questions about these Terms can be sent through the Contact & Support section in Briefly.</LegalSection>
+    </LegalScreen>
+  );
+}
