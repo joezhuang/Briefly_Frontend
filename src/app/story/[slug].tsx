@@ -119,7 +119,7 @@ export default function StoryDetailScreen() {
   });
   const [podcastWatchKey, setPodcastWatchKey] = useState("");
   const [podcastBusyKey, setPodcastBusyKey] = useState("");
-  const [storyToolsExpanded, setStoryToolsExpanded] = useState(true);
+  const [storyToolsExpanded, setStoryToolsExpanded] = useState(false);
   const historyRecordedKey = useRef("");
 
   const isWeb = Platform.OS === "web";
