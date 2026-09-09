@@ -18,6 +18,7 @@ import {
 import { ArticleView } from "@/components/article-view";
 import { EventPreviewView } from "@/components/event-preview-view";
 import { EventTimeline } from "@/components/event-timeline";
+import { RelatedStoriesCarousel } from "@/components/related-stories-carousel";
 import { ScreenState } from "@/components/screen-state";
 import { StaleStoryNotice } from "@/components/stale-story-notice";
 import { WebTranslateButton } from "@/components/web-translate-button";
@@ -534,6 +535,7 @@ export default function StoryDetailScreen() {
         podcastPro={isPro}
         podcastSignedIn={!!user}
         onPodcastAction={() => void handlePodcastAction()}
+        footer={<RelatedStoriesCarousel article={displayedArticle} />}
       />
     </SafeAreaView>
   );
