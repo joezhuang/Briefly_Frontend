@@ -15,6 +15,13 @@ function apiKey() {
   return undefined;
 }
 
+function entitlementIdentifier() {
+  return (
+    process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID?.trim() ||
+    "briefly_pro"
+  );
+}
+
 function packageIdentifier(plan: BrieflyPlan) {
   if (plan === "monthly") {
     return (
@@ -30,6 +37,10 @@ function packageIdentifier(plan: BrieflyPlan) {
 }
 
 async function ensureConfigured(userId: string) {
+  if (Platform.OS !== "ios" && Platform.OS !== "android") {
+    throw new Error("RevenueCat native purchases are only available on iOS and Android.");
+  }
+
   const key = apiKey();
   if (!key) {
     throw new Error("RevenueCat is not configured for this platform.");
@@ -47,6 +58,28 @@ async function ensureConfigured(userId: string) {
   }
 
   configuredUserId = userId;
+}
+
+function hasBrieflyPro(customerInfo: {
+  entitlements: { active: Record<string, unknown> };
+}) {
+  return Boolean(
+    customerInfo.entitlements.active[entitlementIdentifier()],
+  );
+}
+
+export function isRevenueCatPurchaseCancelled(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  return Boolean(
+    "userCancelled" in error &&
+      (error as { userCancelled?: boolean }).userCancelled === true,
+  );
+}
+
+export async function getBrieflySubscriptionStatus(userId: string) {
+  await ensureConfigured(userId);
+  const customerInfo = await Purchases.getCustomerInfo();
+  return hasBrieflyPro(customerInfo);
 }
 
 export async function beginBrieflySubscription(
@@ -73,19 +106,11 @@ export async function beginBrieflySubscription(
   }
 
   const { customerInfo } = await Purchases.purchasePackage(selected);
-  const entitlementId =
-    process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID?.trim() ||
-    "briefly_pro";
-
-  return Boolean(customerInfo.entitlements.active[entitlementId]);
+  return hasBrieflyPro(customerInfo);
 }
 
 export async function restoreBrieflySubscription(userId: string) {
   await ensureConfigured(userId);
   const customerInfo = await Purchases.restorePurchases();
-  const entitlementId =
-    process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID?.trim() ||
-    "briefly_pro";
-
-  return Boolean(customerInfo.entitlements.active[entitlementId]);
+  return hasBrieflyPro(customerInfo);
 }
