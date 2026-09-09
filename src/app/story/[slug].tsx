@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -183,8 +183,6 @@ export default function StoryDetailScreen() {
 
           if (canonical.canonical_stale) {
             result = canonical;
-            // Existing articles are read-only on normal GET. Poll only when an explicit
-            // timeline refresh is already running.
             if (canonical.generation_status === "processing") {
               schedulePoll(LAZY_ARTICLE_POLL_MS);
             }
@@ -280,16 +278,9 @@ export default function StoryDetailScreen() {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [language, podcastRequestKey, podcastSourceVersionId]);
+  }, [language, podcast?.status, podcastRequestKey, podcastSourceVersionId]);
 
   const handlePodcastAction = async () => {
-    if (podcast?.status === "ready" && podcast.audio_url) {
-      if (Platform.OS !== "web") {
-        await Linking.openURL(podcast.audio_url);
-      }
-      return;
-    }
-
     if (!user) {
       router.push("/sign-in");
       return;
