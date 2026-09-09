@@ -365,7 +365,10 @@ export default function StoryDetailScreen() {
   const storyToolsText = storyToolsCopy[language] ?? storyToolsCopy.en;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.surface }}>
+    <SafeAreaView
+      edges={["top"]}
+      style={{ flex: 1, backgroundColor: colors.surface }}
+    >
       <View
         key={resolvedSlug ?? "story-tools"}
         style={[
@@ -427,7 +430,7 @@ export default function StoryDetailScreen() {
         podcastSignedIn={!!user}
         onPodcastAction={() => void handlePodcastAction()}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
