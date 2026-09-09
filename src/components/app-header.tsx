@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -117,13 +118,16 @@ type SettingsRoute =
 
 export function AppHeader() {
   const pathname = usePathname();
+  const { width } = useWindowDimensions();
   const { user, account, signOut } = useBrieflyAuth();
   const { language, setLanguage, t } = useBrieflyLanguage();
   const { mode, setMode, colors } = useBrieflyTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [navExpanded, setNavExpanded] = useState(false);
 
   const labels = settingsCopy[language] ?? settingsCopy.en;
   const isPro = account?.translation_entitled === true;
+  const compactTabletNav = width >= 600 && width < 1000;
 
   const themeLabel = (value: BrieflyThemeMode) => {
     if (value === "light") return t.themeLight;
@@ -141,38 +145,43 @@ export function AppHeader() {
     await signOut();
   };
 
+  const renderNavLinks = !compactTabletNav || navExpanded;
+
   return (
     <View style={[styles.wrap, { borderBottomColor: colors.border }]}>
-      <View style={styles.row}>
+      <View style={[styles.row, compactTabletNav && styles.rowSingle]}>
         <Link href="/" asChild>
           <Pressable>
             <Text style={[styles.logo, { color: colors.accentSoft }]}>BRIEFLY</Text>
           </Pressable>
         </Link>
 
-        <View style={styles.nav}>
-          {nav.map((item) => {
-            const active =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href);
+        <View style={[styles.nav, compactTabletNav && styles.navSingle]}>
+          {renderNavLinks &&
+            nav.map((item) => {
+              const active =
+                item.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(item.href);
 
-            return (
-              <Link href={item.href} key={item.href} asChild>
-                <Pressable>
-                  <Text
-                    style={[
-                      styles.navText,
-                      { color: active ? colors.text : colors.textMuted },
-                      active && styles.active,
-                    ]}
-                  >
-                    {t[item.key]}
-                  </Text>
-                </Pressable>
-              </Link>
-            );
-          })}
+              return (
+                <Link href={item.href} key={item.href} asChild>
+                  <Pressable onPress={() => compactTabletNav && setNavExpanded(false)}>
+                    <Text
+                      style={[
+                        styles.navText,
+                        compactTabletNav && styles.navTextCompact,
+                        { color: active ? colors.text : colors.textMuted },
+                        active && styles.active,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t[item.key]}
+                    </Text>
+                  </Pressable>
+                </Link>
+              );
+            })}
 
           <Pressable
             accessibilityRole="button"
@@ -180,6 +189,7 @@ export function AppHeader() {
             onPress={() => setSettingsOpen(true)}
             style={({ pressed }) => [
               styles.settingsButton,
+              compactTabletNav && styles.compactIconButton,
               {
                 borderColor: colors.border,
                 backgroundColor: colors.surfaceMuted,
@@ -187,11 +197,37 @@ export function AppHeader() {
               },
             ]}
           >
-            {isPro && <Text style={[styles.proBadge, { color: colors.accent }]}>PRO</Text>}
-            <Text style={[styles.settingsText, { color: colors.text }]}>
-              {labels.settings}
-            </Text>
+            {isPro && !compactTabletNav && (
+              <Text style={[styles.proBadge, { color: colors.accent }]}>PRO</Text>
+            )}
+            {compactTabletNav ? (
+              <Text style={[styles.compactIcon, { color: colors.text }]}>⚙</Text>
+            ) : (
+              <Text style={[styles.settingsText, { color: colors.text }]}>
+                {labels.settings}
+              </Text>
+            )}
           </Pressable>
+
+          {compactTabletNav && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={navExpanded ? labels.close : "Navigation"}
+              onPress={() => setNavExpanded((value) => !value)}
+              style={({ pressed }) => [
+                styles.compactIconButton,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surfaceMuted,
+                  opacity: pressed ? 0.68 : 1,
+                },
+              ]}
+            >
+              <Text style={[styles.menuIcon, { color: colors.text }]}>
+                {navExpanded ? "×" : "☰"}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -334,7 +370,9 @@ export function AppHeader() {
                         { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
                       ]}
                     >
-                      <Text style={[styles.actionTitle, { color: colors.text }]}>{labels.manageAccount}</Text>
+                      <Text style={[styles.actionTitle, { color: colors.text }]}>
+                        {labels.manageAccount}
+                      </Text>
                       <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
                     </Pressable>
                     <Pressable
@@ -359,7 +397,9 @@ export function AppHeader() {
               </View>
 
               <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{labels.support}</Text>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                  {labels.support}
+                </Text>
                 <Pressable
                   onPress={() => closeAndNavigate("/support")}
                   style={[
@@ -367,13 +407,17 @@ export function AppHeader() {
                     { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
                   ]}
                 >
-                  <Text style={[styles.actionTitle, { color: colors.text }]}>{labels.contactSupport}</Text>
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>
+                    {labels.contactSupport}
+                  </Text>
                   <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
                 </Pressable>
               </View>
 
               <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{labels.legal}</Text>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                  {labels.legal}
+                </Text>
                 <Pressable
                   onPress={() => closeAndNavigate("/legal/terms")}
                   style={[
@@ -416,6 +460,9 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 14,
   },
+  rowSingle: {
+    flexWrap: "nowrap",
+  },
   logo: {
     fontSize: 24,
     fontWeight: "900",
@@ -427,8 +474,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 18,
   },
+  navSingle: {
+    flexWrap: "nowrap",
+    justifyContent: "flex-end",
+    gap: 12,
+  },
   navText: {
     fontSize: 15,
+  },
+  navTextCompact: {
+    fontSize: 14,
   },
   active: {
     fontWeight: "800",
@@ -444,6 +499,24 @@ const styles = StyleSheet.create({
   },
   settingsText: {
     fontSize: 13,
+    fontWeight: "800",
+  },
+  compactIconButton: {
+    width: 36,
+    height: 36,
+    paddingHorizontal: 0,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  compactIcon: {
+    fontSize: 17,
+    lineHeight: 20,
+  },
+  menuIcon: {
+    fontSize: 19,
+    lineHeight: 22,
     fontWeight: "800",
   },
   proBadge: {
