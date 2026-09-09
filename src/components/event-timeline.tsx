@@ -120,6 +120,7 @@ export function EventTimeline({
   liveStoryHref,
   canonicalStale = false,
   pro = false,
+  returnTo = "/",
   onRefreshStarted,
 }: {
   eventId: string;
@@ -127,6 +128,7 @@ export function EventTimeline({
   liveStoryHref?: string;
   canonicalStale?: boolean;
   pro?: boolean;
+  returnTo?: string;
   onRefreshStarted?: () => void;
 }) {
   const { language } = useBrieflyLanguage();
@@ -188,7 +190,9 @@ export function EventTimeline({
     if (!canonicalStale || refreshing) return;
     if (!pro) {
       setOpen(false);
-      router.push("/upgrade");
+      router.push(
+        `/upgrade?returnTo=${encodeURIComponent(returnTo)}` as never,
+      );
       return;
     }
 
