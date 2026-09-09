@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { createElement } from "react";
+import { createElement, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import {
 } from "react-native";
 
 import type { PodcastAnalysisStatus } from "@/api/briefly";
+import { PodcastInlinePlayer } from "@/components/podcast-inline-player";
 import { useBrieflyLanguage } from "@/context/language";
 import { useSavedArticles } from "@/context/saved-articles";
 import { useBrieflyTheme } from "@/context/theme";
@@ -171,6 +172,7 @@ export function ArticleView({
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const { isSaved, toggleSaved } = useSavedArticles();
+  const [openedPodcastUrl, setOpenedPodcastUrl] = useState<string | null>(null);
 
   const saved = isSaved(article);
   const sourceCount = article.source_count ?? article.sources_used?.length ?? 0;
@@ -191,6 +193,12 @@ export function ArticleView({
     Platform.OS === "web" &&
     podcast?.status === "ready" &&
     !!podcast.audio_url;
+  const nativePodcastReady =
+    Platform.OS !== "web" &&
+    podcast?.status === "ready" &&
+    !!podcast.audio_url;
+  const nativePlayerOpen =
+    nativePodcastReady && openedPodcastUrl === podcast?.audio_url;
 
   const share = async () => {
     const webBase =
@@ -397,41 +405,47 @@ export function ArticleView({
               </Text>
             </View>
 
-            {webPodcastReady
-              ? createElement("audio", {
-                  controls: true,
-                  preload: "metadata",
-                  src: podcast.audio_url ?? undefined,
-                  onLoadedMetadata: (event: { currentTarget: HTMLAudioElement }) => {
-                    event.currentTarget.volume = readStoredPodcastVolume();
-                  },
-                  onVolumeChange: (event: { currentTarget: HTMLAudioElement }) => {
-                    storePodcastVolume(event.currentTarget.volume);
-                  },
-                  style: { width: "100%" },
-                })
-              : (
-                <Pressable
-                  disabled={podcastDisabled}
-                  onPress={onPodcastAction}
-                  style={[
-                    styles.podcastButton,
-                    { backgroundColor: colors.text },
-                    podcastDisabled && styles.podcastButtonDisabled,
-                  ]}
-                >
-                  <View style={styles.buttonContent}>
-                    <Text
-                      style={[
-                        styles.podcastButtonText,
-                        { color: colors.background },
-                      ]}
-                    >
-                      {podcastAction}
-                    </Text>
-                  </View>
-                </Pressable>
-              )}
+            {nativePlayerOpen && podcast?.audio_url
+              ? <PodcastInlinePlayer source={podcast.audio_url} />
+              : webPodcastReady
+                ? createElement("audio", {
+                    controls: true,
+                    preload: "metadata",
+                    src: podcast.audio_url ?? undefined,
+                    onLoadedMetadata: (event: { currentTarget: HTMLAudioElement }) => {
+                      event.currentTarget.volume = readStoredPodcastVolume();
+                    },
+                    onVolumeChange: (event: { currentTarget: HTMLAudioElement }) => {
+                      storePodcastVolume(event.currentTarget.volume);
+                    },
+                    style: { width: "100%" },
+                  })
+                : (
+                  <Pressable
+                    disabled={podcastDisabled}
+                    onPress={
+                      nativePodcastReady && podcast?.audio_url
+                        ? () => setOpenedPodcastUrl(podcast.audio_url)
+                        : onPodcastAction
+                    }
+                    style={[
+                      styles.podcastButton,
+                      { backgroundColor: colors.text },
+                      podcastDisabled && styles.podcastButtonDisabled,
+                    ]}
+                  >
+                    <View style={styles.buttonContent}>
+                      <Text
+                        style={[
+                          styles.podcastButtonText,
+                          { color: colors.background },
+                        ]}
+                      >
+                        {podcastAction}
+                      </Text>
+                    </View>
+                  </Pressable>
+                )}
           </View>
         )}
 
