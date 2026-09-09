@@ -134,6 +134,27 @@ export function getCanonicalArticleByVersionId(
   );
 }
 
+export type CardTranslation = {
+  event_id: string;
+  language: string;
+  headline: string;
+  summary: string;
+  cached: boolean;
+  source_hash: string;
+};
+
+export function requestCardTranslation(
+  eventId: string,
+  language: string,
+  articleVersionId?: number | null,
+) {
+  return postJson<CardTranslation>("/api/card-translations", {
+    event_id: eventId,
+    language,
+    article_version_id: articleVersionId ?? null,
+  });
+}
+
 export type PodcastAnalysisStatus = {
   status: "not_generated" | "processing" | "ready" | "failed";
   language: string;
