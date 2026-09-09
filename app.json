@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.joe.zhuang.briefly"
+      "bundleIdentifier": "com.hybridgalaxy.briefly"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +19,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.joe.zhuang.briefly"
+      "package": "com.hybridgalaxy.briefly"
     },
     "web": {
       "output": "static",
