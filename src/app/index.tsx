@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   AppState,
+  FlatList,
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -32,6 +32,7 @@ const DEFAULT_COUNTRY = "Australia";
 const DEFAULT_CITY = "Sydney";
 const PAGE_SIZE = 20;
 const LOAD_MORE_THRESHOLD = 800;
+const VIRTUAL_BATCH_SIZE = 6;
 
 const feedCopy = {
   en: { top: "Top", national: "National", local: "Local", refresh: "Refresh" },
@@ -58,6 +59,14 @@ function mergeUnique(
     output.push(article);
   }
   return output;
+}
+
+function chunkArticles(articles: CanonicalArticle[]): CanonicalArticle[][] {
+  const batches: CanonicalArticle[][] = [];
+  for (let index = 0; index < articles.length; index += VIRTUAL_BATCH_SIZE) {
+    batches.push(articles.slice(index, index + VIRTUAL_BATCH_SIZE));
+  }
+  return batches;
 }
 
 export default function HomeScreen() {
@@ -200,6 +209,7 @@ export default function HomeScreen() {
   const lead = articles[0];
   const secondary = articles.slice(1, 3);
   const remaining = articles.slice(3);
+  const remainingBatches = chunkArticles(remaining);
 
   const scopeControls = (
     <View style={[styles.scopeTabs, !mobileHeader && styles.scopeTabsWide]}>
@@ -232,9 +242,121 @@ export default function HomeScreen() {
     </View>
   );
 
+  const listHeader = (
+    <View style={[styles.page, styles.pageWithoutBottomPadding, width < 480 && styles.pageCompact]}>
+      <AppHeader />
+
+      <View style={styles.header}>
+        <View style={styles.headingRow}>
+          <View style={styles.headingCopy}>
+            <View style={styles.titleRow}>
+              <Text style={[styles.title, { color: colors.text }]}>{t.topStories}</Text>
+              {Platform.OS === "web" && (
+                <Pressable
+                  onPress={() => void loadFeed("refresh")}
+                  disabled={refreshing}
+                  style={({ pressed }) => [
+                    styles.refreshButton,
+                    { borderColor: colors.border },
+                    refreshing && styles.refreshDisabled,
+                    pressed && styles.refreshPressed,
+                  ]}
+                >
+                  <Text style={[styles.refreshText, { color: colors.textMuted }]}>
+                    {copy.refresh}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+            <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t.subtitle}</Text>
+          </View>
+
+          {!mobileHeader && scopeControls}
+        </View>
+
+        {mobileHeader && scopeControls}
+      </View>
+
+      {loading && <ScreenState loading message={t.loadingStories} />}
+
+      {!loading && error && (
+        <ScreenState
+          title={t.unableLoad}
+          message={error}
+          onRetry={() => void loadFeed("initial")}
+        />
+      )}
+
+      {!loading && !error && !lead && (
+        <ScreenState
+          title={t.noStories}
+          message={t.noStoriesMessage}
+          onRetry={() => void loadFeed("refresh")}
+        />
+      )}
+
+      {!loading && !error && lead && (
+        <>
+          {desktop ? (
+            <View style={styles.heroGrid}>
+              <View style={styles.heroColumn}>
+                <StoryTile article={lead} size="hero" />
+              </View>
+              <View style={styles.secondaryColumn}>
+                {secondary.map((article) => (
+                  <StoryTile key={storyKey(article)} article={article} size="secondary" />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.stack}>
+              <StoryTile article={lead} size="hero" />
+              <View style={tablet ? styles.twoColumnGrid : styles.stack}>
+                {secondary.map((article) => (
+                  <View key={storyKey(article)} style={tablet ? styles.half : undefined}>
+                    <StoryTile article={article} size="secondary" />
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-      <ScrollView
+      <FlatList
+        style={styles.list}
+        data={remainingBatches}
+        keyExtractor={(batch) => batch.map(storyKey).join(":")}
+        ListHeaderComponent={listHeader}
+        renderItem={({ item: batch }) => (
+          <View style={[styles.page, styles.pageWithoutBottomPadding, width < 480 && styles.pageCompact]}>
+            <View style={[styles.feedGrid, (desktop || tablet) && styles.feedGridWide]}>
+              {batch.map((article) => (
+                <View
+                  key={storyKey(article)}
+                  style={desktop ? styles.third : tablet ? styles.half : styles.full}
+                >
+                  <StoryTile article={article} />
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+        ListFooterComponent={
+          <View style={[styles.page, width < 480 && styles.pageCompact]}>
+            {loadingMore && (
+              <View style={styles.loadMoreIndicator}>
+                <ActivityIndicator color={colors.textMuted} />
+              </View>
+            )}
+
+            {!loadingMore && hasMore && <View style={styles.loadMoreSpacer} />}
+          </View>
+        }
         contentContainerStyle={styles.scrollContent}
         onScroll={handleScroll}
         scrollEventThrottle={200}
@@ -246,113 +368,18 @@ export default function HomeScreen() {
             />
           )
         }
-      >
-        <View style={[styles.page, width < 480 && styles.pageCompact]}>
-          <AppHeader />
-
-          <View style={styles.header}>
-            <View style={styles.headingRow}>
-              <View style={styles.headingCopy}>
-                <View style={styles.titleRow}>
-                  <Text style={[styles.title, { color: colors.text }]}>{t.topStories}</Text>
-                  {Platform.OS === "web" && (
-                    <Pressable
-                      onPress={() => void loadFeed("refresh")}
-                      disabled={refreshing}
-                      style={({ pressed }) => [
-                        styles.refreshButton,
-                        { borderColor: colors.border },
-                        refreshing && styles.refreshDisabled,
-                        pressed && styles.refreshPressed,
-                      ]}
-                    >
-                      <Text style={[styles.refreshText, { color: colors.textMuted }]}>
-                        {copy.refresh}
-                      </Text>
-                    </Pressable>
-                  )}
-                </View>
-                <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t.subtitle}</Text>
-              </View>
-
-              {!mobileHeader && scopeControls}
-            </View>
-
-            {mobileHeader && scopeControls}
-          </View>
-
-          {loading && <ScreenState loading message={t.loadingStories} />}
-
-          {!loading && error && (
-            <ScreenState
-              title={t.unableLoad}
-              message={error}
-              onRetry={() => void loadFeed("initial")}
-            />
-          )}
-
-          {!loading && !error && !lead && (
-            <ScreenState
-              title={t.noStories}
-              message={t.noStoriesMessage}
-              onRetry={() => void loadFeed("refresh")}
-            />
-          )}
-
-          {!loading && !error && lead && (
-            <>
-              {desktop ? (
-                <View style={styles.heroGrid}>
-                  <View style={styles.heroColumn}>
-                    <StoryTile article={lead} size="hero" />
-                  </View>
-                  <View style={styles.secondaryColumn}>
-                    {secondary.map((article) => (
-                      <StoryTile key={storyKey(article)} article={article} size="secondary" />
-                    ))}
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.stack}>
-                  <StoryTile article={lead} size="hero" />
-                  <View style={tablet ? styles.twoColumnGrid : styles.stack}>
-                    {secondary.map((article) => (
-                      <View key={storyKey(article)} style={tablet ? styles.half : undefined}>
-                        <StoryTile article={article} size="secondary" />
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              <View style={[styles.feedGrid, (desktop || tablet) && styles.feedGridWide]}>
-                {remaining.map((article) => (
-                  <View
-                    key={storyKey(article)}
-                    style={desktop ? styles.third : tablet ? styles.half : styles.full}
-                  >
-                    <StoryTile article={article} />
-                  </View>
-                ))}
-              </View>
-
-              {loadingMore && (
-                <View style={styles.loadMoreIndicator}>
-                  <ActivityIndicator color={colors.textMuted} />
-                </View>
-              )}
-
-              {!loadingMore && hasMore && <View style={styles.loadMoreSpacer} />}
-            </>
-          )}
-        </View>
-      </ScrollView>
+        removeClippedSubviews={Platform.OS === "android"}
+        initialNumToRender={2}
+        maxToRenderPerBatch={2}
+        windowSize={5}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  list: { flex: 1, width: "100%" },
   scrollContent: { alignItems: "center" },
   page: {
     width: "100%",
@@ -360,6 +387,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.pagePadding,
     paddingBottom: 80,
   },
+  pageWithoutBottomPadding: { paddingBottom: 0 },
   pageCompact: { paddingHorizontal: layout.pagePaddingCompact },
   header: { paddingTop: 28, paddingBottom: 24, gap: 20 },
   headingRow: {
