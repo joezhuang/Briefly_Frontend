@@ -493,7 +493,21 @@ export default function StoryDetailScreen() {
                 canonicalStale={displayedArticle.canonical_stale === true}
                 pro={isPro}
                 returnTo={currentStoryHref}
-                onRefreshStarted={() => setReloadKey((value) => value + 1)}
+                onRefreshStarted={() => {
+                  const baseVersionId =
+                    displayedArticle.authoritative_article_version_id ??
+                    displayedArticle.article_version_id;
+                  if (baseVersionId != null) {
+                    watchAnalysis({
+                      eventId: resolvedEventId,
+                      headline: displayedArticle.headline,
+                      href: currentStoryHref,
+                      kind: "refresh",
+                      baseVersionId,
+                    });
+                  }
+                  setReloadKey((value) => value + 1);
+                }}
               />
             )}
           </View>
