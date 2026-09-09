@@ -95,6 +95,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
     const poll = async () => {
       const completed: ReadyAnalysis[] = [];
+      const terminalFailures: PendingAnalysis[] = [];
 
       await Promise.all(
         entries.map(async (item) => {
@@ -111,6 +112,11 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
             if (ready) {
               completed.push(item);
+            } else if (
+              article.generation_status === "failed" ||
+              article.generation_status === "disabled"
+            ) {
+              terminalFailures.push(item);
             }
           } catch {
             // Keep watching transient request failures.
@@ -120,9 +126,9 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
       if (!active) return;
 
-      if (completed.length > 0) {
+      if (completed.length > 0 || terminalFailures.length > 0) {
         const completedKeys = new Set(
-          completed.map(
+          [...completed, ...terminalFailures].map(
             (item) => `${item.eventId}:${item.baseVersionId ?? "initial"}`,
           ),
         );
