@@ -24,6 +24,7 @@ import { WebTranslateButton } from "@/components/web-translate-button";
 import { useAnalysisReadiness } from "@/context/analysis-readiness";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
+import { useReadingHistory } from "@/context/reading-history";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
 
@@ -102,6 +103,7 @@ export default function StoryDetailScreen() {
   const { colors } = useBrieflyTheme();
   const { user, account } = useBrieflyAuth();
   const { watchAnalysis } = useAnalysisReadiness();
+  const { recordArticle } = useReadingHistory();
 
   const [article, setArticle] = useState<CanonicalArticle | null>(null);
   const [authoritativeArticle, setAuthoritativeArticle] =
@@ -118,6 +120,7 @@ export default function StoryDetailScreen() {
   const [podcastWatchKey, setPodcastWatchKey] = useState("");
   const [podcastBusyKey, setPodcastBusyKey] = useState("");
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(true);
+  const [historyRecordedKey, setHistoryRecordedKey] = useState("");
 
   const isWeb = Platform.OS === "web";
   const articleRequestLanguage = isWeb ? "en" : language;
@@ -278,6 +281,21 @@ export default function StoryDetailScreen() {
     t.storyUnavailable,
     currentStoryHref,
     watchAnalysis,
+  ]);
+
+  useEffect(() => {
+    if (!article || !article.event_id) return;
+
+    const historyKey = `${article.event_id}:${currentStoryHref}`;
+    if (historyRecordedKey === historyKey) return;
+
+    setHistoryRecordedKey(historyKey);
+    void recordArticle(article, currentStoryHref);
+  }, [
+    article,
+    currentStoryHref,
+    historyRecordedKey,
+    recordArticle,
   ]);
 
   useEffect(() => {
