@@ -1,0 +1,187 @@
+import { Image } from "expo-image";
+import { router } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
+
+import { getHomepageArticleFeed } from "@/api/briefly";
+import { useBrieflyLanguage } from "@/context/language";
+import { useBrieflyTheme } from "@/context/theme";
+import type { CanonicalArticle } from "@/models/article";
+
+const copy = {
+  en: { title: "Related stories", sources: "sources" },
+  es: { title: "Historias relacionadas", sources: "fuentes" },
+  ja: { title: "関連ニュース", sources: "件の情報源" },
+  "zh-CN": { title: "相关新闻", sources: "个来源" },
+  "zh-TW": { title: "相關新聞", sources: "個來源" },
+} as const;
+
+function terms(article: CanonicalArticle) {
+  return new Set(
+    `${article.headline} ${article.standfirst} ${article.category ?? ""}`
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .split(/\s+/)
+      .filter((word) => word.length >= 4),
+  );
+}
+
+function relevance(current: CanonicalArticle, candidate: CanonicalArticle) {
+  const a = terms(current);
+  const b = terms(candidate);
+  let overlap = 0;
+  a.forEach((word) => {
+    if (b.has(word)) overlap += 1;
+  });
+  if (current.category && current.category === candidate.category) overlap += 2;
+  return overlap;
+}
+
+export function RelatedStoriesCarousel({
+  article,
+}: {
+  article: CanonicalArticle;
+}) {
+  const { width } = useWindowDimensions();
+  const { language } = useBrieflyLanguage();
+  const { colors } = useBrieflyTheme();
+  const labels = copy[language] ?? copy.en;
+  const [candidates, setCandidates] = useState<CanonicalArticle[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+
+    getHomepageArticleFeed({
+      scope: "top",
+      includeDraft: process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true",
+      language: Platform.OS === "web" ? "en" : language,
+      limit: 30,
+      offset: 0,
+    })
+      .then((result) => {
+        if (active) setCandidates(result.articles ?? []);
+      })
+      .catch(() => {
+        if (active) setCandidates([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [language]);
+
+  const related = useMemo(
+    () =>
+      candidates
+        .filter((candidate) => candidate.event_id !== article.event_id)
+        .map((candidate) => ({
+          article: candidate,
+          score: relevance(article, candidate),
+        }))
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map((item) => item.article),
+    [article, candidates],
+  );
+
+  if (loading) {
+    return (
+      <View style={[styles.section, { borderTopColor: colors.border }]}>
+        <ActivityIndicator size="small" color={colors.accent} />
+      </View>
+    );
+  }
+
+  if (related.length === 0) return null;
+
+  const cardWidth = width < 480 ? Math.min(width * 0.76, 300) : width < 900 ? 300 : 320;
+
+  return (
+    <View style={[styles.section, { borderTopColor: colors.border }]}>
+      <Text style={[styles.title, { color: colors.text }]}>{labels.title}</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.track}
+      >
+        {related.map((item) => {
+          const params = new URLSearchParams({
+            eventId: item.event_id,
+            previewHeadline: item.headline,
+          });
+          if (item.image_url) params.set("imageUrl", item.image_url);
+          const href = `/story/${item.slug}?${params.toString()}`;
+          const sourceCount = item.source_count ?? item.sources_used?.length ?? 0;
+
+          return (
+            <Pressable
+              key={item.event_id}
+              onPress={() => router.push(href as never)}
+              style={[
+                styles.card,
+                {
+                  width: cardWidth,
+                  backgroundColor: colors.surfaceMuted,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              {item.image_url ? (
+                <Image source={{ uri: item.image_url }} style={styles.image} contentFit="cover" />
+              ) : (
+                <View style={[styles.image, { backgroundColor: colors.imageFallback }]} />
+              )}
+              <View style={styles.copy}>
+                {!!item.category && (
+                  <Text style={[styles.category, { color: colors.accent }]} numberOfLines={1}>
+                    {item.category.toUpperCase()}
+                  </Text>
+                )}
+                <Text style={[styles.headline, { color: colors.text }]} numberOfLines={3}>
+                  {item.headline}
+                </Text>
+                <Text style={[styles.meta, { color: colors.textMuted }]}>
+                  {sourceCount} {labels.sources}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  section: {
+    marginTop: 44,
+    paddingTop: 26,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  title: { fontSize: 23, fontWeight: "900", marginBottom: 16 },
+  track: { gap: 12, paddingRight: 20 },
+  card: {
+    overflow: "hidden",
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  image: { width: "100%", aspectRatio: 16 / 9 },
+  copy: { padding: 14, gap: 7 },
+  category: { fontSize: 10, fontWeight: "900", letterSpacing: 0.8 },
+  headline: { fontSize: 17, lineHeight: 22, fontWeight: "800" },
+  meta: { fontSize: 11, fontWeight: "600" },
+});
