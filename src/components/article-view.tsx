@@ -197,6 +197,7 @@ export function ArticleView({
   podcastPro = false,
   podcastSignedIn = false,
   onPodcastAction,
+  footer,
 }: {
   article: CanonicalArticle;
   immutable?: boolean;
@@ -205,6 +206,7 @@ export function ArticleView({
   podcastPro?: boolean;
   podcastSignedIn?: boolean;
   onPodcastAction?: () => void;
+  footer?: ReactNode;
 }) {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
@@ -604,6 +606,8 @@ export function ArticleView({
             ))}
           </View>
         )}
+
+        {footer}
       </View>
     </ScrollView>
   );
