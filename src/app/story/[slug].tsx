@@ -298,8 +298,18 @@ export default function StoryDetailScreen() {
           language,
         );
         if (!active) return;
+
+        if (next.status === "not_generated") {
+          setPodcastState({
+            key: podcastRequestKey,
+            value: { ...next, status: "processing" },
+          });
+          timer = setTimeout(() => void poll(), PODCAST_POLL_MS);
+          return;
+        }
+
         setPodcastState({ key: podcastRequestKey, value: next });
-        if (next.status === "processing" || next.status === "not_generated") {
+        if (next.status === "processing") {
           timer = setTimeout(() => void poll(), PODCAST_POLL_MS);
         } else {
           setPodcastWatchKey("");
