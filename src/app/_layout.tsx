@@ -7,6 +7,7 @@ import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { AnalysisReadinessProvider } from "@/context/analysis-readiness";
 import { BrieflyAuthProvider } from "@/context/auth";
 import { LanguageProvider } from "@/context/language";
+import { ReadingHistoryProvider } from "@/context/reading-history";
 import { SavedArticlesProvider } from "@/context/saved-articles";
 import {
   BrieflyThemeProvider,
@@ -26,6 +27,7 @@ function AppStack() {
         <Stack.Screen name="index" />
         <Stack.Screen name="saved/index" />
         <Stack.Screen name="saved/[snapshotId]" />
+        <Stack.Screen name="history" />
         <Stack.Screen name="search" />
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="upgrade" />
@@ -44,9 +46,11 @@ export default function RootLayout() {
         <BrieflyThemeProvider>
           <BrieflyAuthProvider>
             <AnalysisReadinessProvider>
-              <SavedArticlesProvider>
-                <AppStack />
-              </SavedArticlesProvider>
+              <ReadingHistoryProvider>
+                <SavedArticlesProvider>
+                  <AppStack />
+                </SavedArticlesProvider>
+              </ReadingHistoryProvider>
             </AnalysisReadinessProvider>
           </BrieflyAuthProvider>
         </BrieflyThemeProvider>
