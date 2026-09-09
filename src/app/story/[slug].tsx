@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -120,7 +120,7 @@ export default function StoryDetailScreen() {
   const [podcastWatchKey, setPodcastWatchKey] = useState("");
   const [podcastBusyKey, setPodcastBusyKey] = useState("");
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(true);
-  const [historyRecordedKey, setHistoryRecordedKey] = useState("");
+  const historyRecordedKey = useRef("");
 
   const isWeb = Platform.OS === "web";
   const articleRequestLanguage = isWeb ? "en" : language;
@@ -287,16 +287,11 @@ export default function StoryDetailScreen() {
     if (!article || !article.event_id) return;
 
     const historyKey = `${article.event_id}:${currentStoryHref}`;
-    if (historyRecordedKey === historyKey) return;
+    if (historyRecordedKey.current === historyKey) return;
 
-    setHistoryRecordedKey(historyKey);
+    historyRecordedKey.current = historyKey;
     void recordArticle(article, currentStoryHref);
-  }, [
-    article,
-    currentStoryHref,
-    historyRecordedKey,
-    recordArticle,
-  ]);
+  }, [article, currentStoryHref, recordArticle]);
 
   useEffect(() => {
     if (!podcastRequestKey || !podcastSourceVersionId) return;
