@@ -128,6 +128,7 @@ export function AppHeader() {
   const labels = settingsCopy[language] ?? settingsCopy.en;
   const isPro = account?.translation_entitled === true;
   const compactNav = width < 1200;
+  const phoneNav = width < 600;
 
   const themeLabel = (value: BrieflyThemeMode) => {
     if (value === "light") return t.themeLight;
@@ -145,7 +146,7 @@ export function AppHeader() {
     await signOut();
   };
 
-  const renderNavLinks = !compactNav || navExpanded;
+  const renderNavLinks = !compactNav || (!phoneNav && navExpanded);
 
   return (
     <View style={[styles.wrap, { borderBottomColor: colors.border }]}>
@@ -183,31 +184,33 @@ export function AppHeader() {
               );
             })}
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={labels.settings}
-            onPress={() => setSettingsOpen(true)}
-            style={({ pressed }) => [
-              styles.settingsButton,
-              compactNav && styles.compactIconButton,
-              {
-                borderColor: colors.border,
-                backgroundColor: colors.surfaceMuted,
-                opacity: pressed ? 0.68 : 1,
-              },
-            ]}
-          >
-            {isPro && !compactNav && (
-              <Text style={[styles.proBadge, { color: colors.accent }]}>PRO</Text>
-            )}
-            {compactNav ? (
-              <Text style={[styles.compactIcon, { color: colors.text }]}>⚙</Text>
-            ) : (
-              <Text style={[styles.settingsText, { color: colors.text }]}> 
-                {labels.settings}
-              </Text>
-            )}
-          </Pressable>
+          {!phoneNav && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={labels.settings}
+              onPress={() => setSettingsOpen(true)}
+              style={({ pressed }) => [
+                styles.settingsButton,
+                compactNav && styles.compactIconButton,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surfaceMuted,
+                  opacity: pressed ? 0.68 : 1,
+                },
+              ]}
+            >
+              {isPro && !compactNav && (
+                <Text style={[styles.proBadge, { color: colors.accent }]}>PRO</Text>
+              )}
+              {compactNav ? (
+                <Text style={[styles.compactIcon, { color: colors.text }]}>⚙</Text>
+              ) : (
+                <Text style={[styles.settingsText, { color: colors.text }]}> 
+                  {labels.settings}
+                </Text>
+              )}
+            </Pressable>
+          )}
 
           {compactNav && (
             <Pressable
@@ -230,6 +233,55 @@ export function AppHeader() {
           )}
         </View>
       </View>
+
+      {phoneNav && navExpanded && (
+        <View
+          style={[
+            styles.phoneMenu,
+            { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
+          ]}
+        >
+          {nav.map((item) => {
+            const active =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href);
+
+            return (
+              <Link href={item.href} key={item.href} asChild>
+                <Pressable
+                  onPress={() => setNavExpanded(false)}
+                  style={styles.phoneMenuItem}
+                >
+                  <Text
+                    style={[
+                      styles.phoneMenuText,
+                      { color: active ? colors.text : colors.textMuted },
+                      active && styles.active,
+                    ]}
+                  >
+                    {t[item.key]}
+                  </Text>
+                </Pressable>
+              </Link>
+            );
+          })}
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={labels.settings}
+            onPress={() => {
+              setNavExpanded(false);
+              setSettingsOpen(true);
+            }}
+            style={styles.phoneMenuItem}
+          >
+            <Text style={[styles.phoneMenuText, { color: colors.text }]}> 
+              {labels.settings}
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       <Modal
         visible={settingsOpen}
@@ -513,6 +565,21 @@ const styles = StyleSheet.create({
   menuIcon: {
     fontSize: 19,
     lineHeight: 22,
+    fontWeight: "800",
+  },
+  phoneMenu: {
+    marginTop: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  phoneMenuItem: {
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+  phoneMenuText: {
+    fontSize: 14,
     fontWeight: "800",
   },
   proBadge: {
