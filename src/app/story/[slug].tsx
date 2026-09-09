@@ -113,6 +113,7 @@ export default function StoryDetailScreen() {
     key: "",
     value: null,
   });
+  const [podcastWatchKey, setPodcastWatchKey] = useState("");
   const [podcastBusy, setPodcastBusy] = useState(false);
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(true);
 
@@ -252,9 +253,8 @@ export default function StoryDetailScreen() {
     if (!podcastRequestKey || !podcastSourceVersionId) return;
 
     let active = true;
-    let timer: ReturnType<typeof setTimeout> | null = null;
 
-    const loadStatus = async () => {
+    const loadInitialStatus = async () => {
       try {
         const next = await getPodcastAnalysisStatus(
           podcastSourceVersionId,
@@ -262,23 +262,60 @@ export default function StoryDetailScreen() {
         );
         if (!active) return;
         setPodcastState({ key: podcastRequestKey, value: next });
-        if (next.status === "processing") {
-          timer = setTimeout(() => void loadStatus(), PODCAST_POLL_MS);
-        }
+        setPodcastWatchKey(next.status === "processing" ? podcastRequestKey : "");
       } catch {
         if (active) {
           setPodcastState({ key: podcastRequestKey, value: null });
+          setPodcastWatchKey("");
         }
       }
     };
 
-    void loadStatus();
+    void loadInitialStatus();
+    return () => {
+      active = false;
+    };
+  }, [language, podcastRequestKey, podcastSourceVersionId]);
+
+  useEffect(() => {
+    if (
+      !podcastRequestKey ||
+      !podcastSourceVersionId ||
+      podcastWatchKey !== podcastRequestKey
+    ) {
+      return;
+    }
+
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const poll = async () => {
+      try {
+        const next = await getPodcastAnalysisStatus(
+          podcastSourceVersionId,
+          language,
+        );
+        if (!active) return;
+        setPodcastState({ key: podcastRequestKey, value: next });
+        if (next.status === "processing" || next.status === "not_generated") {
+          timer = setTimeout(() => void poll(), PODCAST_POLL_MS);
+        } else {
+          setPodcastWatchKey("");
+        }
+      } catch {
+        if (active) {
+          timer = setTimeout(() => void poll(), PODCAST_POLL_MS);
+        }
+      }
+    };
+
+    timer = setTimeout(() => void poll(), PODCAST_POLL_MS);
 
     return () => {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [language, podcast?.status, podcastRequestKey, podcastSourceVersionId]);
+  }, [language, podcastRequestKey, podcastSourceVersionId, podcastWatchKey]);
 
   const handlePodcastAction = async () => {
     if (!user) {
@@ -298,6 +335,9 @@ export default function StoryDetailScreen() {
         language,
       );
       setPodcastState({ key: podcastRequestKey, value: next });
+      if (next.status === "processing") {
+        setPodcastWatchKey(podcastRequestKey);
+      }
     } finally {
       setPodcastBusy(false);
     }
