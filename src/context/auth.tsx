@@ -29,7 +29,10 @@ type AuthContextValue = {
   user: User | null;
   account: BrieflyAccountState | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signInWithProvider: (provider: "google" | "apple") => Promise<void>;
+  signInWithProvider: (
+    provider: "google" | "apple",
+    returnTo?: string,
+  ) => Promise<void>;
   refreshAccount: () => Promise<BrieflyAccountState | null>;
   signOut: () => Promise<void>;
 };
@@ -111,6 +114,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
 
   const signInWithProvider = async (
     provider: "google" | "apple",
+    returnTo = "/",
   ) => {
     if (!supabase) {
       throw new Error("Supabase authentication is not configured.");
@@ -118,7 +122,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
 
     const redirectTo =
       Platform.OS === "web"
-        ? `${window.location.origin}/auth/callback`
+        ? `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
         : BRIEFLY_MOBILE_AUTH_CALLBACK;
 
     if (Platform.OS === "web") {
