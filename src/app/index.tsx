@@ -246,11 +246,19 @@ export default function HomeScreen() {
     <View style={[styles.page, styles.pageWithoutBottomPadding, width < 480 && styles.pageCompact]}>
       <AppHeader />
 
-      <View style={styles.header}>
+      <View style={[styles.header, mobileHeader && styles.headerCompact]}>
         <View style={styles.headingRow}>
           <View style={styles.headingCopy}>
             <View style={styles.titleRow}>
-              <Text style={[styles.title, { color: colors.text }]}>{t.topStories}</Text>
+              <Text
+                style={[
+                  styles.title,
+                  mobileHeader && styles.titleCompact,
+                  { color: colors.text },
+                ]}
+              >
+                {t.topStories}
+              </Text>
               {Platform.OS === "web" && (
                 <Pressable
                   onPress={() => void loadFeed("refresh")}
@@ -268,7 +276,15 @@ export default function HomeScreen() {
                 </Pressable>
               )}
             </View>
-            <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t.subtitle}</Text>
+            <Text
+              style={[
+                styles.subtitle,
+                mobileHeader && styles.subtitleCompact,
+                { color: colors.textMuted },
+              ]}
+            >
+              {t.subtitle}
+            </Text>
           </View>
 
           {!mobileHeader && scopeControls}
@@ -391,6 +407,7 @@ const styles = StyleSheet.create({
   pageWithoutBottomPadding: { paddingBottom: 0 },
   pageCompact: { paddingHorizontal: layout.pagePaddingCompact },
   header: { paddingTop: 28, paddingBottom: 24, gap: 20 },
+  headerCompact: { paddingTop: 16, paddingBottom: 14, gap: 12 },
   headingRow: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -410,7 +427,9 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: -1.1,
   },
+  titleCompact: { fontSize: 31, lineHeight: 36, letterSpacing: -0.6 },
   subtitle: { marginTop: 6, fontSize: 21, lineHeight: 29 },
+  subtitleCompact: { marginTop: 4, fontSize: 15, lineHeight: 20 },
   refreshButton: {
     paddingHorizontal: 10,
     paddingVertical: 5,
