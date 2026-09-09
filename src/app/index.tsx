@@ -318,7 +318,7 @@ export default function HomeScreen() {
         keyExtractor={(row) => row.map(storyKey).join(":")}
         ListHeaderComponent={header}
         renderItem={({ item: row }) => (
-          <View style={[styles.page, width < 480 && styles.pageCompact, styles.feedRowPage]}>
+          <View style={[styles.page, width < 480 && styles.pageCompact]}>
             <View style={[styles.feedRow, feedColumns > 1 && styles.feedRowWide]}>
               {row.map((article) => (
                 <View
@@ -331,6 +331,7 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
+        ItemSeparatorComponent={() => <View style={styles.feedRowSeparator} />}
         ListFooterComponent={
           loadingMore ? (
             <View style={styles.loadMoreIndicator}>
@@ -418,9 +419,9 @@ const styles = StyleSheet.create({
   stack: { gap: 10 },
   twoColumnGrid: { flexDirection: "row", gap: 10 },
   feedStartSpacer: { height: 10 },
-  feedRowPage: { paddingBottom: 10 },
   feedRow: { width: "100%" },
   feedRowWide: { flexDirection: "row", gap: 10 },
+  feedRowSeparator: { height: 10 },
   third: { flexBasis: "31%", flexGrow: 1, minWidth: 0 },
   half: { flexBasis: "48%", flexGrow: 1, minWidth: 0 },
   full: { width: "100%" },
