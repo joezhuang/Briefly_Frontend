@@ -135,58 +135,62 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   }, [pending]);
 
   const value = useMemo(() => ({ watchAnalysis }), [watchAnalysis]);
-  const latestReady = ready[ready.length - 1];
+  const visibleReady = ready.slice(-3).reverse();
 
-  const openReady = () => {
-    if (!latestReady) return;
+  const openReady = (item: ReadyAnalysis) => {
     setReady((current) =>
-      current.filter((item) => item.eventId !== latestReady.eventId),
+      current.filter((candidate) => candidate.eventId !== item.eventId),
     );
-    router.push(latestReady.href as never);
+    router.push(item.href as never);
   };
 
   return (
     <AnalysisReadinessContext.Provider value={value}>
       {children}
 
-      {latestReady ? (
+      {visibleReady.length > 0 ? (
         <View pointerEvents="box-none" style={styles.overlay}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={openReady}
-            style={({ pressed }) => [
-              styles.bubble,
+          <View
+            style={[
+              styles.tray,
               {
                 backgroundColor: colors.text,
                 borderColor: colors.border,
-                opacity: pressed ? 0.86 : 1,
               },
             ]}
           >
-            <View style={styles.copy}>
-              <Text
-                style={[styles.kicker, { color: colors.background }]}
-                numberOfLines={1}
+            <Text style={[styles.kicker, { color: colors.background }]}>
+              {visibleReady.length === 1
+                ? labels.ready
+                : `${ready.length} ${labels.more}`}
+            </Text>
+
+            {visibleReady.map((item) => (
+              <Pressable
+                key={item.eventId}
+                accessibilityRole="button"
+                onPress={() => openReady(item)}
+                style={({ pressed }) => [
+                  styles.readyRow,
+                  { opacity: pressed ? 0.76 : 1 },
+                ]}
               >
-                {labels.ready}
-              </Text>
-              <Text
-                style={[styles.headline, { color: colors.background }]}
-                numberOfLines={2}
-              >
-                {latestReady.headline}
-              </Text>
-              {ready.length > 1 ? (
                 <Text
-                  style={[styles.more, { color: colors.background }]}
-                  numberOfLines={1}
+                  style={[styles.headline, { color: colors.background }]}
+                  numberOfLines={2}
                 >
-                  +{ready.length - 1} {labels.more}
+                  {item.headline}
                 </Text>
-              ) : null}
-            </View>
-            <Text style={[styles.arrow, { color: colors.background }]}>→</Text>
-          </Pressable>
+                <Text style={[styles.arrow, { color: colors.background }]}>→</Text>
+              </Pressable>
+            ))}
+
+            {ready.length > visibleReady.length ? (
+              <Text style={[styles.more, { color: colors.background }]}>
+                +{ready.length - visibleReady.length} {labels.more}
+              </Text>
+            ) : null}
+          </View>
         </View>
       ) : null}
     </AnalysisReadinessContext.Provider>
@@ -211,21 +215,23 @@ const styles = StyleSheet.create({
     bottom: 18,
     alignItems: "center",
   },
-  bubble: {
+  tray: {
     width: "100%",
     maxWidth: 520,
-    minHeight: 72,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 13,
+    gap: 8,
+  },
+  kicker: { fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+  readyRow: {
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 12,
   },
-  copy: { flex: 1, minWidth: 0, gap: 2 },
-  kicker: { fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
-  headline: { fontSize: 15, lineHeight: 20, fontWeight: "800" },
+  headline: { flex: 1, minWidth: 0, fontSize: 15, lineHeight: 20, fontWeight: "800" },
   more: { marginTop: 2, fontSize: 11, opacity: 0.78 },
   arrow: { fontSize: 22, fontWeight: "700" },
 });
