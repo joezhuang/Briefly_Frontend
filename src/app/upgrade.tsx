@@ -18,6 +18,7 @@ import {
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
+import { safeReturnTo } from "@/navigation/return-to";
 import {
   beginBrieflySubscription,
   restoreBrieflySubscription,
@@ -139,13 +140,19 @@ const proCopy = {
 
 export default function UpgradeScreen() {
   const { user, account, refreshAccount } = useBrieflyAuth();
-  const { payment, session_id: sessionId } = useLocalSearchParams<{
+  const {
+    payment,
+    session_id: sessionId,
+    returnTo,
+  } = useLocalSearchParams<{
     payment?: string;
     session_id?: string;
+    returnTo?: string | string[];
   }>();
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const currentProCopy = proCopy[language] ?? proCopy.en;
+  const returnPath = safeReturnTo(returnTo);
 
   const [busy, setBusy] = useState<BrieflyPlan | "restore" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -153,9 +160,11 @@ export default function UpgradeScreen() {
 
   useEffect(() => {
     if (!user) {
-      router.replace("/sign-in");
+      router.replace(
+        `/sign-in?returnTo=${encodeURIComponent(returnPath)}` as never,
+      );
     }
-  }, [user]);
+  }, [returnPath, user]);
 
   useEffect(() => {
     if (!user || Platform.OS !== "web" || stripeSynced) return;
@@ -190,7 +199,7 @@ export default function UpgradeScreen() {
           const confirmation = await confirmBrieflyWebCheckout(sessionId);
           if (confirmation.translation_entitled) {
             await refreshAccount().catch(() => null);
-            if (active) router.replace("/");
+            if (active) router.replace(returnPath as never);
             return;
           }
         } catch {
@@ -201,7 +210,7 @@ export default function UpgradeScreen() {
       const synced = await syncBrieflyWebSubscription().catch(() => null);
       if (synced?.translation_entitled) {
         await refreshAccount().catch(() => null);
-        if (active) router.replace("/");
+        if (active) router.replace(returnPath as never);
         return;
       }
 
@@ -209,7 +218,7 @@ export default function UpgradeScreen() {
         const next = await refreshAccount().catch(() => null);
         if (!active) return;
         if (next?.translation_entitled) {
-          router.replace("/");
+          router.replace(returnPath as never);
           return;
         }
         await new Promise((resolve) => setTimeout(resolve, 1200));
@@ -221,7 +230,7 @@ export default function UpgradeScreen() {
     return () => {
       active = false;
     };
-  }, [payment, refreshAccount, sessionId, t.purchaseFailed, user]);
+  }, [payment, refreshAccount, returnPath, sessionId, t.purchaseFailed, user]);
 
   if (!user) return null;
 
@@ -233,7 +242,7 @@ export default function UpgradeScreen() {
       const active = await beginBrieflySubscription(plan, user.id);
       if (active) {
         await refreshAccount();
-        router.replace("/");
+        router.replace(returnPath as never);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t.purchaseFailed);
