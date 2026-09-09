@@ -127,7 +127,7 @@ export function AppHeader() {
 
   const labels = settingsCopy[language] ?? settingsCopy.en;
   const isPro = account?.translation_entitled === true;
-  const compactTabletNav = width >= 600 && width < 1000;
+  const compactNav = width < 1200;
 
   const themeLabel = (value: BrieflyThemeMode) => {
     if (value === "light") return t.themeLight;
@@ -145,18 +145,18 @@ export function AppHeader() {
     await signOut();
   };
 
-  const renderNavLinks = !compactTabletNav || navExpanded;
+  const renderNavLinks = !compactNav || navExpanded;
 
   return (
     <View style={[styles.wrap, { borderBottomColor: colors.border }]}>
-      <View style={[styles.row, compactTabletNav && styles.rowSingle]}>
+      <View style={styles.row}>
         <Link href="/" asChild>
           <Pressable>
             <Text style={[styles.logo, { color: colors.accentSoft }]}>BRIEFLY</Text>
           </Pressable>
         </Link>
 
-        <View style={[styles.nav, compactTabletNav && styles.navSingle]}>
+        <View style={[styles.nav, compactNav && styles.navSingle]}>
           {renderNavLinks &&
             nav.map((item) => {
               const active =
@@ -166,11 +166,11 @@ export function AppHeader() {
 
               return (
                 <Link href={item.href} key={item.href} asChild>
-                  <Pressable onPress={() => compactTabletNav && setNavExpanded(false)}>
+                  <Pressable onPress={() => compactNav && setNavExpanded(false)}>
                     <Text
                       style={[
                         styles.navText,
-                        compactTabletNav && styles.navTextCompact,
+                        compactNav && styles.navTextCompact,
                         { color: active ? colors.text : colors.textMuted },
                         active && styles.active,
                       ]}
@@ -189,7 +189,7 @@ export function AppHeader() {
             onPress={() => setSettingsOpen(true)}
             style={({ pressed }) => [
               styles.settingsButton,
-              compactTabletNav && styles.compactIconButton,
+              compactNav && styles.compactIconButton,
               {
                 borderColor: colors.border,
                 backgroundColor: colors.surfaceMuted,
@@ -197,19 +197,19 @@ export function AppHeader() {
               },
             ]}
           >
-            {isPro && !compactTabletNav && (
+            {isPro && !compactNav && (
               <Text style={[styles.proBadge, { color: colors.accent }]}>PRO</Text>
             )}
-            {compactTabletNav ? (
+            {compactNav ? (
               <Text style={[styles.compactIcon, { color: colors.text }]}>⚙</Text>
             ) : (
-              <Text style={[styles.settingsText, { color: colors.text }]}>
+              <Text style={[styles.settingsText, { color: colors.text }]}> 
                 {labels.settings}
               </Text>
             )}
           </Pressable>
 
-          {compactTabletNav && (
+          {compactNav && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={navExpanded ? labels.close : "Navigation"}
@@ -223,7 +223,7 @@ export function AppHeader() {
                 },
               ]}
             >
-              <Text style={[styles.menuIcon, { color: colors.text }]}>
+              <Text style={[styles.menuIcon, { color: colors.text }]}> 
                 {navExpanded ? "×" : "☰"}
               </Text>
             </Pressable>
@@ -249,7 +249,7 @@ export function AppHeader() {
             ]}
           >
             <View style={styles.panelHeader}>
-              <Text style={[styles.panelTitle, { color: colors.text }]}>
+              <Text style={[styles.panelTitle, { color: colors.text }]}> 
                 {labels.settings}
               </Text>
               <Pressable
@@ -267,7 +267,7 @@ export function AppHeader() {
               contentContainerStyle={styles.panelContent}
             >
               <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}> 
                   {labels.language}
                 </Text>
                 <View style={styles.options}>
@@ -300,7 +300,7 @@ export function AppHeader() {
               </View>
 
               <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}> 
                   {labels.appearance}
                 </Text>
                 <View style={styles.options}>
@@ -335,7 +335,7 @@ export function AppHeader() {
               </View>
 
               <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}> 
                   {labels.pro}
                 </Text>
                 <Pressable
@@ -346,7 +346,7 @@ export function AppHeader() {
                   ]}
                 >
                   <View style={styles.actionCopy}>
-                    <Text style={[styles.actionTitle, { color: colors.text }]}>
+                    <Text style={[styles.actionTitle, { color: colors.text }]}> 
                       {isPro ? labels.managePro : labels.getPro}
                     </Text>
                     {isPro && (
@@ -358,7 +358,7 @@ export function AppHeader() {
               </View>
 
               <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}> 
                   {labels.account}
                 </Text>
                 {user ? (
@@ -370,7 +370,7 @@ export function AppHeader() {
                         { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
                       ]}
                     >
-                      <Text style={[styles.actionTitle, { color: colors.text }]}>
+                      <Text style={[styles.actionTitle, { color: colors.text }]}> 
                         {labels.manageAccount}
                       </Text>
                       <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
@@ -379,7 +379,7 @@ export function AppHeader() {
                       onPress={() => void handleSignOut()}
                       style={[styles.accountButton, { borderColor: colors.border }]}
                     >
-                      <Text style={[styles.accountText, { color: colors.text }]}>
+                      <Text style={[styles.accountText, { color: colors.text }]}> 
                         {t.signOut}
                       </Text>
                     </Pressable>
@@ -389,7 +389,7 @@ export function AppHeader() {
                     onPress={() => closeAndNavigate("/sign-in")}
                     style={[styles.accountButton, { borderColor: colors.border }]}
                   >
-                    <Text style={[styles.accountText, { color: colors.text }]}>
+                    <Text style={[styles.accountText, { color: colors.text }]}> 
                       {t.signIn}
                     </Text>
                   </Pressable>
@@ -397,7 +397,7 @@ export function AppHeader() {
               </View>
 
               <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}> 
                   {labels.support}
                 </Text>
                 <Pressable
@@ -407,7 +407,7 @@ export function AppHeader() {
                     { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
                   ]}
                 >
-                  <Text style={[styles.actionTitle, { color: colors.text }]}>
+                  <Text style={[styles.actionTitle, { color: colors.text }]}> 
                     {labels.contactSupport}
                   </Text>
                   <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
@@ -415,7 +415,7 @@ export function AppHeader() {
               </View>
 
               <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}> 
                   {labels.legal}
                 </Text>
                 <Pressable
@@ -457,26 +457,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    flexWrap: "wrap",
     gap: 14,
   },
-  rowSingle: {
-    flexWrap: "nowrap",
-  },
   logo: {
+    flexShrink: 0,
     fontSize: 24,
     fontWeight: "900",
     letterSpacing: 3,
   },
   nav: {
+    flexShrink: 1,
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
+    justifyContent: "flex-end",
     gap: 18,
   },
   navSingle: {
-    flexWrap: "nowrap",
-    justifyContent: "flex-end",
     gap: 12,
   },
   navText: {
