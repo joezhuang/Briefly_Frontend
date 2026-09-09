@@ -380,12 +380,13 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   list: { flex: 1, width: "100%" },
-  scrollContent: { alignItems: "center" },
+  scrollContent: {},
   page: {
     width: "100%",
     maxWidth: layout.pageMax,
     paddingHorizontal: layout.pagePadding,
     paddingBottom: 80,
+    alignSelf: "center",
   },
   pageWithoutBottomPadding: { paddingBottom: 0 },
   pageCompact: { paddingHorizontal: layout.pagePaddingCompact },
