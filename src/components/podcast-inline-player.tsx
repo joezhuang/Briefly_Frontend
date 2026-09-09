@@ -18,6 +18,7 @@ export function PodcastInlinePlayer({ source }: { source: string }) {
   const duration = status.duration || 0;
   const currentTime = status.currentTime || 0;
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
+  const progressWidth = `${progress * 100}%` as `${number}%`;
 
   const togglePlayback = () => {
     if (status.playing) {
@@ -31,7 +32,8 @@ export function PodcastInlinePlayer({ source }: { source: string }) {
   };
 
   const seekBy = (seconds: number) => {
-    const next = Math.max(0, Math.min(duration || currentTime + seconds, currentTime + seconds));
+    const upperBound = duration > 0 ? duration : currentTime + Math.max(seconds, 0);
+    const next = Math.max(0, Math.min(upperBound, currentTime + seconds));
     void player.seekTo(next);
   };
 
@@ -49,7 +51,7 @@ export function PodcastInlinePlayer({ source }: { source: string }) {
           onPress={togglePlayback}
           style={[styles.primaryButton, { backgroundColor: colors.text }]}
         >
-          <Text style={[styles.primaryText, { color: colors.background }]}> 
+          <Text style={[styles.primaryText, { color: colors.background }]}>
             {status.playing ? "Pause" : "Play"}
           </Text>
         </Pressable>
@@ -77,7 +79,7 @@ export function PodcastInlinePlayer({ source }: { source: string }) {
         <View
           style={[
             styles.progress,
-            { backgroundColor: colors.accent, width: `${progress * 100}%` },
+            { backgroundColor: colors.accent, width: progressWidth },
           ]}
         />
       </View>
