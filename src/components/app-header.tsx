@@ -141,19 +141,6 @@ export function AppHeader() {
     await signOut();
   };
 
-  const SettingsAction = ({ label, href }: { label: string; href: SettingsRoute }) => (
-    <Pressable
-      onPress={() => closeAndNavigate(href)}
-      style={[
-        styles.actionRow,
-        { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
-      ]}
-    >
-      <Text style={[styles.actionTitle, { color: colors.text }]}>{label}</Text>
-      <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
-    </Pressable>
-  );
-
   return (
     <View style={[styles.wrap, { borderBottomColor: colors.border }]}>
       <View style={styles.row}>
@@ -340,7 +327,16 @@ export function AppHeader() {
                 </Text>
                 {user ? (
                   <>
-                    <SettingsAction label={labels.manageAccount} href="/account" />
+                    <Pressable
+                      onPress={() => closeAndNavigate("/account")}
+                      style={[
+                        styles.actionRow,
+                        { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
+                      ]}
+                    >
+                      <Text style={[styles.actionTitle, { color: colors.text }]}>{labels.manageAccount}</Text>
+                      <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
+                    </Pressable>
                     <Pressable
                       onPress={() => void handleSignOut()}
                       style={[styles.accountButton, { borderColor: colors.border }]}
@@ -364,13 +360,40 @@ export function AppHeader() {
 
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{labels.support}</Text>
-                <SettingsAction label={labels.contactSupport} href="/support" />
+                <Pressable
+                  onPress={() => closeAndNavigate("/support")}
+                  style={[
+                    styles.actionRow,
+                    { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
+                  ]}
+                >
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>{labels.contactSupport}</Text>
+                  <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
+                </Pressable>
               </View>
 
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{labels.legal}</Text>
-                <SettingsAction label={labels.terms} href="/legal/terms" />
-                <SettingsAction label={labels.privacy} href="/legal/privacy" />
+                <Pressable
+                  onPress={() => closeAndNavigate("/legal/terms")}
+                  style={[
+                    styles.actionRow,
+                    { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
+                  ]}
+                >
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>{labels.terms}</Text>
+                  <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => closeAndNavigate("/legal/privacy")}
+                  style={[
+                    styles.actionRow,
+                    { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
+                  ]}
+                >
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>{labels.privacy}</Text>
+                  <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
+                </Pressable>
               </View>
             </ScrollView>
           </View>
