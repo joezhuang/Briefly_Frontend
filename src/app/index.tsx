@@ -196,7 +196,7 @@ export default function HomeScreen() {
 
   const desktop = width >= 1000;
   const tablet = width >= 700 && width < 1000;
-  const mobileHeader = width < 600;
+  const mobileHeader = width < 480;
   const lead = articles[0];
   const secondary = articles.slice(1, 3);
   const remaining = articles.slice(3);
