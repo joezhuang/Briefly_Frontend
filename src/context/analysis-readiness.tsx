@@ -22,6 +22,8 @@ type PendingAnalysis = {
   eventId: string;
   headline: string;
   href: string;
+  kind?: "initial" | "refresh";
+  baseVersionId?: number | null;
 };
 
 type ReadyAnalysis = PendingAnalysis;
@@ -36,22 +38,27 @@ const AnalysisReadinessContext =
 const copy = {
   en: {
     ready: "Ready to read",
+    updated: "Updated analysis ready",
     more: "more analyses are ready",
   },
   es: {
     ready: "Listo para leer",
+    updated: "Análisis actualizado listo",
     more: "análisis más están listos",
   },
   ja: {
     ready: "読めるようになりました",
+    updated: "更新版の分析ができました",
     more: "件の分析も準備できました",
   },
   "zh-CN": {
     ready: "已可阅读",
+    updated: "更新分析已准备好",
     more: "篇分析也已准备好",
   },
   "zh-TW": {
     ready: "已可閱讀",
+    updated: "更新分析已準備好",
     more: "篇分析也已準備好",
   },
 } as const;
@@ -65,15 +72,17 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   const [ready, setReady] = useState<ReadyAnalysis[]>([]);
 
   const watchAnalysis = useCallback((item: PendingAnalysis) => {
+    const key = `${item.eventId}:${item.baseVersionId ?? "initial"}`;
     setPending((current) => {
-      const existing = current[item.eventId];
+      const existing = current[key];
       if (
         existing?.headline === item.headline &&
-        existing?.href === item.href
+        existing?.href === item.href &&
+        existing?.kind === item.kind
       ) {
         return current;
       }
-      return { ...current, [item.eventId]: item };
+      return { ...current, [key]: item };
     });
   }, []);
 
@@ -94,7 +103,13 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               includeDraft: PREVIEW_DRAFTS,
               language: "en",
             });
-            if (article.article_version_id != null) {
+            const nextVersionId = article.article_version_id;
+            const ready =
+              item.baseVersionId != null
+                ? nextVersionId != null && nextVersionId !== item.baseVersionId
+                : nextVersionId != null;
+
+            if (ready) {
               completed.push(item);
             }
           } catch {
@@ -106,19 +121,32 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       if (!active) return;
 
       if (completed.length > 0) {
-        const completedIds = new Set(completed.map((item) => item.eventId));
+        const completedKeys = new Set(
+          completed.map(
+            (item) => `${item.eventId}:${item.baseVersionId ?? "initial"}`,
+          ),
+        );
         setPending((current) =>
           Object.fromEntries(
             Object.entries(current).filter(
-              ([eventId]) => !completedIds.has(eventId),
+              ([key]) => !completedKeys.has(key),
             ),
           ),
         );
         setReady((current) => {
-          const known = new Set(current.map((item) => item.eventId));
+          const known = new Set(
+            current.map(
+              (item) => `${item.eventId}:${item.baseVersionId ?? "initial"}`,
+            ),
+          );
           return [
             ...current,
-            ...completed.filter((item) => !known.has(item.eventId)),
+            ...completed.filter(
+              (item) =>
+                !known.has(
+                  `${item.eventId}:${item.baseVersionId ?? "initial"}`,
+                ),
+            ),
           ];
         });
       }
@@ -139,7 +167,13 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
   const openReady = (item: ReadyAnalysis) => {
     setReady((current) =>
-      current.filter((candidate) => candidate.eventId !== item.eventId),
+      current.filter(
+        (candidate) =>
+          !(
+            candidate.eventId === item.eventId &&
+            candidate.baseVersionId === item.baseVersionId
+          ),
+      ),
     );
     router.push(item.href as never);
   };
@@ -167,7 +201,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
             {visibleReady.map((item) => (
               <Pressable
-                key={item.eventId}
+                key={`${item.eventId}:${item.baseVersionId ?? "initial"}`}
                 accessibilityRole="button"
                 onPress={() => openReady(item)}
                 style={({ pressed }) => [
@@ -175,12 +209,20 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                   { opacity: pressed ? 0.76 : 1 },
                 ]}
               >
-                <Text
-                  style={[styles.headline, { color: colors.background }]}
-                  numberOfLines={2}
-                >
-                  {item.headline}
-                </Text>
+                <View style={styles.readyCopy}>
+                  <Text
+                    style={[styles.rowKicker, { color: colors.background }]}
+                    numberOfLines={1}
+                  >
+                    {item.kind === "refresh" ? labels.updated : labels.ready}
+                  </Text>
+                  <Text
+                    style={[styles.headline, { color: colors.background }]}
+                    numberOfLines={2}
+                  >
+                    {item.headline}
+                  </Text>
+                </View>
                 <Text style={[styles.arrow, { color: colors.background }]}>→</Text>
               </Pressable>
             ))}
@@ -231,7 +273,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  headline: { flex: 1, minWidth: 0, fontSize: 15, lineHeight: 20, fontWeight: "800" },
+  readyCopy: { flex: 1, minWidth: 0, gap: 2 },
+  rowKicker: {
+    fontSize: 10,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    opacity: 0.78,
+  },
+  headline: { fontSize: 15, lineHeight: 20, fontWeight: "800" },
   more: { marginTop: 2, fontSize: 11, opacity: 0.78 },
   arrow: { fontSize: 22, fontWeight: "700" },
 });
