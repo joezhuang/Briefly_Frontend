@@ -40,6 +40,7 @@ const settingsCopy = {
     legal: "Legal",
     terms: "Terms of Use",
     privacy: "Privacy Policy",
+    history: "Reading history",
     close: "Close",
   },
   es: {
@@ -56,6 +57,7 @@ const settingsCopy = {
     legal: "Legal",
     terms: "Términos de uso",
     privacy: "Política de privacidad",
+    history: "Historial de lectura",
     close: "Cerrar",
   },
   ja: {
@@ -72,6 +74,7 @@ const settingsCopy = {
     legal: "法的情報",
     terms: "利用規約",
     privacy: "プライバシーポリシー",
+    history: "閲覧履歴",
     close: "閉じる",
   },
   "zh-CN": {
@@ -88,6 +91,7 @@ const settingsCopy = {
     legal: "法律信息",
     terms: "使用条款",
     privacy: "隐私政策",
+    history: "阅读历史",
     close: "关闭",
   },
   "zh-TW": {
@@ -104,6 +108,7 @@ const settingsCopy = {
     legal: "法律資訊",
     terms: "使用條款",
     privacy: "隱私權政策",
+    history: "閱讀歷史",
     close: "關閉",
   },
 } as const;
@@ -113,6 +118,7 @@ type SettingsRoute =
   | "/sign-in"
   | "/account"
   | "/support"
+  | "/history"
   | "/legal/terms"
   | "/legal/privacy";
 
@@ -446,6 +452,24 @@ export function AppHeader() {
                     </Text>
                   </Pressable>
                 )}
+              </View>
+
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                  {labels.history}
+                </Text>
+                <Pressable
+                  onPress={() => closeAndNavigate("/history")}
+                  style={[
+                    styles.actionRow,
+                    { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
+                  ]}
+                >
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>
+                    {labels.history}
+                  </Text>
+                  <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
+                </Pressable>
               </View>
 
               <View style={styles.section}>
