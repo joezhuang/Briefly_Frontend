@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { BrieflyAuthProvider } from "@/context/auth";
@@ -37,14 +38,16 @@ function AppStack() {
 
 export default function RootLayout() {
   return (
-    <LanguageProvider>
-      <BrieflyThemeProvider>
-        <BrieflyAuthProvider>
-          <SavedArticlesProvider>
-            <AppStack />
-          </SavedArticlesProvider>
-        </BrieflyAuthProvider>
-      </BrieflyThemeProvider>
-    </LanguageProvider>
+    <SafeAreaProvider>
+      <LanguageProvider>
+        <BrieflyThemeProvider>
+          <BrieflyAuthProvider>
+            <SavedArticlesProvider>
+              <AppStack />
+            </SavedArticlesProvider>
+          </BrieflyAuthProvider>
+        </BrieflyThemeProvider>
+      </LanguageProvider>
+    </SafeAreaProvider>
   );
 }
