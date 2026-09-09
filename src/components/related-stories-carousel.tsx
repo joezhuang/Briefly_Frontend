@@ -60,8 +60,6 @@ export function RelatedStoriesCarousel({
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-
     getHomepageArticleFeed({
       scope: "top",
       includeDraft: process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true",
