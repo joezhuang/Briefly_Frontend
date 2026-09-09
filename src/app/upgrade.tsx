@@ -256,8 +256,6 @@ export default function UpgradeScreen() {
     }
   };
 
-  // Legacy API field; it now represents Briefly Pro account state. Experimental
-  // localization is free and does not consult this flag.
   const isPro = account?.translation_entitled === true;
   const confirmingPayment = payment === "success" && !isPro;
 
@@ -397,6 +395,16 @@ export default function UpgradeScreen() {
             </Text>
           ) : null}
 
+          <View style={styles.legalLinks}>
+            <Pressable onPress={() => router.push("/legal/terms")}>
+              <Text style={[styles.legalLink, { color: colors.accent }]}>Terms of Use</Text>
+            </Pressable>
+            <Text style={[styles.legalDivider, { color: colors.textMuted }]}>·</Text>
+            <Pressable onPress={() => router.push("/legal/privacy")}>
+              <Text style={[styles.legalLink, { color: colors.accent }]}>Privacy Policy</Text>
+            </Pressable>
+          </View>
+
           {!!error && (
             <Text style={[styles.error, { color: colors.error }]}>{error}</Text>
           )}
@@ -535,6 +543,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     textAlign: "center",
+  },
+  legalLinks: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  legalLink: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  legalDivider: {
+    fontSize: 12,
   },
   error: {
     fontSize: 14,
