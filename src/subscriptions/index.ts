@@ -105,8 +105,13 @@ export async function beginBrieflySubscription(
     );
   }
 
-  const { customerInfo } = await Purchases.purchasePackage(selected);
-  return hasBrieflyPro(customerInfo);
+  try {
+    const { customerInfo } = await Purchases.purchasePackage(selected);
+    return hasBrieflyPro(customerInfo);
+  } catch (error: unknown) {
+    if (isRevenueCatPurchaseCancelled(error)) return false;
+    throw error;
+  }
 }
 
 export async function restoreBrieflySubscription(userId: string) {
