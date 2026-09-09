@@ -21,6 +21,7 @@ import { EventTimeline } from "@/components/event-timeline";
 import { ScreenState } from "@/components/screen-state";
 import { StaleStoryNotice } from "@/components/stale-story-notice";
 import { WebTranslateButton } from "@/components/web-translate-button";
+import { useAnalysisReadiness } from "@/context/analysis-readiness";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -100,6 +101,7 @@ export default function StoryDetailScreen() {
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const { user, account } = useBrieflyAuth();
+  const { watchAnalysis } = useAnalysisReadiness();
 
   const [article, setArticle] = useState<CanonicalArticle | null>(null);
   const [authoritativeArticle, setAuthoritativeArticle] =
@@ -119,6 +121,22 @@ export default function StoryDetailScreen() {
 
   const isWeb = Platform.OS === "web";
   const articleRequestLanguage = isWeb ? "en" : language;
+  const currentStoryHref = useMemo(() => {
+    if (!resolvedSlug) return "/";
+    const params = new URLSearchParams();
+    if (resolvedEventId) params.set("eventId", resolvedEventId);
+    if (resolvedImageUrl) params.set("imageUrl", resolvedImageUrl);
+    if (resolvedPreviewHeadline) {
+      params.set("previewHeadline", resolvedPreviewHeadline);
+    }
+    const query = params.toString();
+    return `/story/${encodeURIComponent(resolvedSlug)}${query ? `?${query}` : ""}`;
+  }, [
+    resolvedEventId,
+    resolvedImageUrl,
+    resolvedPreviewHeadline,
+    resolvedSlug,
+  ]);
   const webTranslateSourceUrl = isWeb && language !== "en" ? getWebStoryUrl() : null;
   const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${language}:${reloadKey}`;
   const loading = loadingKey !== requestKey && !error && !article;
@@ -173,10 +191,19 @@ export default function StoryDetailScreen() {
           if (!active) return;
 
           if (canonical.article_version_id == null) {
-            setArticle(preferredPreviewHeadline(canonical, resolvedPreviewHeadline));
+            const preview = preferredPreviewHeadline(
+              canonical,
+              resolvedPreviewHeadline,
+            );
+            setArticle(preview);
             setLoadingKey(requestKey);
             setError(null);
             if (canonical.generation_status === "processing") {
+              watchAnalysis({
+                eventId: resolvedEventId,
+                headline: preview.headline,
+                href: currentStoryHref,
+              });
               schedulePoll(LAZY_ARTICLE_POLL_MS);
             }
             return;
@@ -249,6 +276,8 @@ export default function StoryDetailScreen() {
     reloadKey,
     requestKey,
     t.storyUnavailable,
+    currentStoryHref,
+    watchAnalysis,
   ]);
 
   useEffect(() => {
@@ -331,11 +360,15 @@ export default function StoryDetailScreen() {
 
   const handlePodcastAction = async () => {
     if (!user) {
-      router.push("/sign-in");
+      router.push(
+        `/sign-in?returnTo=${encodeURIComponent(currentStoryHref)}` as never,
+      );
       return;
     }
     if (!isPro) {
-      router.push("/upgrade");
+      router.push(
+        `/upgrade?returnTo=${encodeURIComponent(currentStoryHref)}` as never,
+      );
       return;
     }
     if (!podcastSourceVersionId || !podcastRequestKey || podcastBusy) return;
@@ -459,6 +492,7 @@ export default function StoryDetailScreen() {
                 eventId={resolvedEventId}
                 canonicalStale={displayedArticle.canonical_stale === true}
                 pro={isPro}
+                returnTo={currentStoryHref}
                 onRefreshStarted={() => setReloadKey((value) => value + 1)}
               />
             )}
