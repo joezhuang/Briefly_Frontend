@@ -30,9 +30,15 @@ const settingsCopy = {
     language: "Language",
     appearance: "Appearance",
     account: "Account",
+    manageAccount: "Manage account & purchases",
     pro: "Briefly Pro",
     managePro: "Manage Briefly Pro",
     getPro: "Get Briefly Pro",
+    support: "Support",
+    contactSupport: "Contact & Support",
+    legal: "Legal",
+    terms: "Terms of Use",
+    privacy: "Privacy Policy",
     close: "Close",
   },
   es: {
@@ -40,9 +46,15 @@ const settingsCopy = {
     language: "Idioma",
     appearance: "Apariencia",
     account: "Cuenta",
+    manageAccount: "Gestionar cuenta y compras",
     pro: "Briefly Pro",
     managePro: "Gestionar Briefly Pro",
     getPro: "Obtener Briefly Pro",
+    support: "Ayuda",
+    contactSupport: "Contacto y soporte",
+    legal: "Legal",
+    terms: "Términos de uso",
+    privacy: "Política de privacidad",
     close: "Cerrar",
   },
   ja: {
@@ -50,9 +62,15 @@ const settingsCopy = {
     language: "言語",
     appearance: "外観",
     account: "アカウント",
+    manageAccount: "アカウントと購入を管理",
     pro: "Briefly Pro",
     managePro: "Briefly Proを管理",
     getPro: "Briefly Proを利用",
+    support: "サポート",
+    contactSupport: "お問い合わせ・サポート",
+    legal: "法的情報",
+    terms: "利用規約",
+    privacy: "プライバシーポリシー",
     close: "閉じる",
   },
   "zh-CN": {
@@ -60,9 +78,15 @@ const settingsCopy = {
     language: "语言",
     appearance: "外观",
     account: "账户",
+    manageAccount: "管理账户与购买",
     pro: "Briefly Pro",
     managePro: "管理 Briefly Pro",
     getPro: "开通 Briefly Pro",
+    support: "支持",
+    contactSupport: "联系与支持",
+    legal: "法律信息",
+    terms: "使用条款",
+    privacy: "隐私政策",
     close: "关闭",
   },
   "zh-TW": {
@@ -70,12 +94,26 @@ const settingsCopy = {
     language: "語言",
     appearance: "外觀",
     account: "帳戶",
+    manageAccount: "管理帳戶與購買",
     pro: "Briefly Pro",
     managePro: "管理 Briefly Pro",
     getPro: "升級 Briefly Pro",
+    support: "支援",
+    contactSupport: "聯絡與支援",
+    legal: "法律資訊",
+    terms: "使用條款",
+    privacy: "隱私權政策",
     close: "關閉",
   },
 } as const;
+
+type SettingsRoute =
+  | "/upgrade"
+  | "/sign-in"
+  | "/account"
+  | "/support"
+  | "/legal/terms"
+  | "/legal/privacy";
 
 export function AppHeader() {
   const pathname = usePathname();
@@ -93,7 +131,7 @@ export function AppHeader() {
     return t.themeSystem;
   };
 
-  const closeAndNavigate = (href: "/upgrade" | "/sign-in") => {
+  const closeAndNavigate = (href: SettingsRoute) => {
     setSettingsOpen(false);
     router.push(href);
   };
@@ -102,6 +140,19 @@ export function AppHeader() {
     setSettingsOpen(false);
     await signOut();
   };
+
+  const SettingsAction = ({ label, href }: { label: string; href: SettingsRoute }) => (
+    <Pressable
+      onPress={() => closeAndNavigate(href)}
+      style={[
+        styles.actionRow,
+        { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
+      ]}
+    >
+      <Text style={[styles.actionTitle, { color: colors.text }]}>{label}</Text>
+      <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
+    </Pressable>
+  );
 
   return (
     <View style={[styles.wrap, { borderBottomColor: colors.border }]}>
@@ -288,14 +339,17 @@ export function AppHeader() {
                   {labels.account}
                 </Text>
                 {user ? (
-                  <Pressable
-                    onPress={() => void handleSignOut()}
-                    style={[styles.accountButton, { borderColor: colors.border }]}
-                  >
-                    <Text style={[styles.accountText, { color: colors.text }]}>
-                      {t.signOut}
-                    </Text>
-                  </Pressable>
+                  <>
+                    <SettingsAction label={labels.manageAccount} href="/account" />
+                    <Pressable
+                      onPress={() => void handleSignOut()}
+                      style={[styles.accountButton, { borderColor: colors.border }]}
+                    >
+                      <Text style={[styles.accountText, { color: colors.text }]}>
+                        {t.signOut}
+                      </Text>
+                    </Pressable>
+                  </>
                 ) : (
                   <Pressable
                     onPress={() => closeAndNavigate("/sign-in")}
@@ -306,6 +360,17 @@ export function AppHeader() {
                     </Text>
                   </Pressable>
                 )}
+              </View>
+
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{labels.support}</Text>
+                <SettingsAction label={labels.contactSupport} href="/support" />
+              </View>
+
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{labels.legal}</Text>
+                <SettingsAction label={labels.terms} href="/legal/terms" />
+                <SettingsAction label={labels.privacy} href="/legal/privacy" />
               </View>
             </ScrollView>
           </View>
@@ -442,6 +507,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionTitle: {
+    flex: 1,
     fontSize: 14,
     fontWeight: "800",
   },
