@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -6,17 +6,23 @@ import { ScreenState } from "@/components/screen-state";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
+import { safeReturnTo } from "@/navigation/return-to";
 
 export default function AuthCallbackScreen() {
+  const { returnTo } = useLocalSearchParams<{
+    returnTo?: string | string[];
+  }>();
   const { ready, user } = useBrieflyAuth();
   const { t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
 
+  const returnPath = safeReturnTo(returnTo);
+
   useEffect(() => {
     if (ready && user) {
-      router.replace("/");
+      router.replace(returnPath as never);
     }
-  }, [ready, user]);
+  }, [ready, returnPath, user]);
 
   return (
     <SafeAreaView
