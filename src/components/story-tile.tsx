@@ -1,15 +1,39 @@
 import { Image } from "expo-image";
-import { Link } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { router } from "expo-router";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
+import {
+  requestCardTranslation,
+  type CardTranslation,
+} from "@/api/briefly";
 import { useBrieflyLanguage } from "@/context/language";
 import type { CanonicalArticle } from "@/models/article";
 
 type TileSize = "hero" | "secondary" | "standard";
 type Props = { article: CanonicalArticle; size?: TileSize; href?: string };
 
+const translationCopy: Record<string, { translate: string; original: string; retry: string }> = {
+  en: { translate: "Translate", original: "Original", retry: "Retry" },
+  es: { translate: "Traducir", original: "Original", retry: "Reintentar" },
+  ja: { translate: "翻訳", original: "原文", retry: "再試行" },
+  "zh-CN": { translate: "翻译", original: "原文", retry: "重试" },
+  "zh-TW": { translate: "翻譯", original: "原文", retry: "重試" },
+};
+
 export function StoryTile({ article, size = "standard", href }: Props) {
-  const { t } = useBrieflyLanguage();
+  const { language, t } = useBrieflyLanguage();
+  const [translation, setTranslation] = useState<CardTranslation | null>(null);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [translationFailed, setTranslationFailed] = useState(false);
+
   const height = size === "hero" ? 520 : size === "secondary" ? 252 : 270;
   const headlineStyle =
     size === "hero"
@@ -27,54 +51,119 @@ export function StoryTile({ article, size = "standard", href }: Props) {
     return `/story/${article.slug}?${params.toString()}`;
   })();
 
+  const currentTranslation =
+    translation?.language === language ? translation : null;
+  const translated = showTranslation && currentTranslation !== null;
+  const displayedHeadline = translated
+    ? currentTranslation.headline
+    : article.headline;
+  const displayedStandfirst = translated
+    ? currentTranslation.summary
+    : article.standfirst;
+  const copy = translationCopy[language] ?? translationCopy.en;
+
+  const handleTranslation = async () => {
+    if (translating || language === "en") return;
+
+    if (currentTranslation) {
+      setShowTranslation((value) => !value);
+      setTranslationFailed(false);
+      return;
+    }
+
+    setTranslating(true);
+    setTranslationFailed(false);
+    try {
+      const result = await requestCardTranslation(
+        article.event_id,
+        language,
+        article.article_version_id,
+      );
+      setTranslation(result);
+      setShowTranslation(true);
+    } catch {
+      setTranslationFailed(true);
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   return (
-    <Link href={storyHref as never} asChild>
-      <Pressable style={StyleSheet.flatten([styles.tile, { height }])}>
-        {article.image_url ? (
-          <Image
-            source={{ uri: article.image_url }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            transition={180}
-          />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, styles.imageFallback]} />
-        )}
+    <Pressable
+      onPress={() => router.push(storyHref as never)}
+      style={StyleSheet.flatten([styles.tile, { height }])}
+    >
+      {article.image_url ? (
+        <Image
+          source={{ uri: article.image_url }}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={180}
+        />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, styles.imageFallback]} />
+      )}
 
-        <View style={[StyleSheet.absoluteFill, styles.overlay]} />
+      <View style={[StyleSheet.absoluteFill, styles.overlay]} />
 
-        <View style={styles.content}>
-          <Text style={styles.category}>
-            {(article.category ?? t.topStory).toUpperCase()}
+      <View style={styles.content}>
+        <Text style={styles.category}>
+          {(article.category ?? t.topStory).toUpperCase()}
+        </Text>
+
+        <View style={styles.bottom}>
+          <Text
+            style={[styles.headline, headlineStyle]}
+            numberOfLines={size === "hero" ? 4 : 3}
+          >
+            {displayedHeadline}
           </Text>
 
-          <View style={styles.bottom}>
-            <Text
-              style={[styles.headline, headlineStyle]}
-              numberOfLines={size === "hero" ? 4 : 3}
-            >
-              {article.headline}
+          {size === "hero" && !!displayedStandfirst && (
+            <Text style={styles.standfirst} numberOfLines={3}>
+              {displayedStandfirst}
             </Text>
+          )}
 
-            {size === "hero" && !!article.standfirst && (
-              <Text style={styles.standfirst} numberOfLines={3}>
-                {article.standfirst}
-              </Text>
-            )}
+          {language !== "en" && (
+            <Pressable
+              accessibilityRole="button"
+              disabled={translating}
+              onPress={(event) => {
+                event.stopPropagation();
+                void handleTranslation();
+              }}
+              style={({ pressed }) => [
+                styles.translateButton,
+                pressed && styles.translateButtonPressed,
+              ]}
+            >
+              {translating ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.translateText}>
+                  {translationFailed
+                    ? copy.retry
+                    : translated
+                      ? copy.original
+                      : copy.translate}
+                </Text>
+              )}
+            </Pressable>
+          )}
 
-            <View style={styles.metaRow}>
-              <Text style={styles.meta}>
-                {sourceCount}{" "}
-                {sourceCount === 1 ? t.source : t.sourcesPlural}
-              </Text>
-              <View style={styles.arrow}>
-                <Text style={styles.arrowText}>→</Text>
-              </View>
+          <View style={styles.metaRow}>
+            <Text style={styles.meta}>
+              {sourceCount}{" "}
+              {sourceCount === 1 ? t.source : t.sourcesPlural}
+            </Text>
+            <View style={styles.arrow}>
+              <Text style={styles.arrowText}>→</Text>
             </View>
           </View>
         </View>
-      </Pressable>
-    </Link>
+      </View>
+    </Pressable>
   );
 }
 
@@ -110,6 +199,24 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.88)",
     fontSize: 16,
     lineHeight: 23,
+  },
+  translateButton: {
+    alignSelf: "flex-start",
+    minHeight: 30,
+    minWidth: 72,
+    paddingHorizontal: 11,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.55)",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  translateButtonPressed: { opacity: 0.72 },
+  translateText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
   },
   metaRow: {
     flexDirection: "row",
