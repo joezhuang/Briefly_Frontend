@@ -219,6 +219,10 @@ export function ArticleView({
     language !== "en" && contentLanguage === "en";
   const translationPending = article.translation_status === "pending";
   const experimentalTranslation = article.experimental_localization === true;
+  const translatedContent =
+    language !== "en" &&
+    contentLanguage !== "en" &&
+    contentLanguage === language;
   const localizationText = localizationCopy[language] ?? localizationCopy.en;
   const podcastText = podcastCopy[language] ?? podcastCopy.en;
   const coverageText = coverageCopy[language] ?? coverageCopy.en;
@@ -352,7 +356,7 @@ export function ArticleView({
           </Text>
         )}
 
-        {(translationPending || experimentalTranslation) && (
+        {(translationPending || experimentalTranslation || translatedContent) && (
           <View
             style={[
               styles.localizationNotice,
