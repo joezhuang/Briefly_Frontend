@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -57,6 +57,7 @@ export function RelatedStoriesCarousel({
   const labels = copy[language] ?? copy.en;
   const [candidates, setCandidates] = useState<CanonicalArticle[]>([]);
   const [loading, setLoading] = useState(true);
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     let active = true;
@@ -108,11 +109,67 @@ export function RelatedStoriesCarousel({
   if (related.length === 0) return null;
 
   const cardWidth = width < 480 ? Math.min(width * 0.76, 300) : width < 900 ? 300 : 320;
+  const scrollStep = cardWidth + 12;
+
+  const scrollBy = (direction: -1 | 1) => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const node = scrollRef.current as unknown as {
+        getScrollableNode?: () => HTMLElement;
+      };
+      const element = node?.getScrollableNode?.();
+      if (element?.scrollBy) {
+        element.scrollBy({ left: direction * scrollStep, behavior: "smooth" });
+        return;
+      }
+    }
+
+    scrollRef.current?.scrollTo({
+      x: Math.max(0, direction > 0 ? scrollStep : 0),
+      animated: true,
+    });
+  };
 
   return (
     <View style={[styles.section, { borderTopColor: colors.border }]}>
-      <Text style={[styles.title, { color: colors.text }]}>{labels.title}</Text>
+      <View style={styles.headingRow}>
+        <Text style={[styles.title, { color: colors.text }]}>{labels.title}</Text>
+        {Platform.OS === "web" && related.length > 1 ? (
+          <View style={styles.controls}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Scroll related stories left"
+              onPress={() => scrollBy(-1)}
+              style={({ pressed }) => [
+                styles.control,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surfaceMuted,
+                  opacity: pressed ? 0.65 : 1,
+                },
+              ]}
+            >
+              <Text style={[styles.controlText, { color: colors.text }]}>←</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Scroll related stories right"
+              onPress={() => scrollBy(1)}
+              style={({ pressed }) => [
+                styles.control,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surfaceMuted,
+                  opacity: pressed ? 0.65 : 1,
+                },
+              ]}
+            >
+              <Text style={[styles.controlText, { color: colors.text }]}>→</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.track}
@@ -171,7 +228,24 @@ const styles = StyleSheet.create({
     paddingTop: 26,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  title: { fontSize: 23, fontWeight: "900", marginBottom: 16 },
+  headingRow: {
+    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  title: { flex: 1, fontSize: 23, fontWeight: "900" },
+  controls: { flexDirection: "row", gap: 8 },
+  control: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  controlText: { fontSize: 20, fontWeight: "800" },
   track: { gap: 12, paddingRight: 20 },
   card: {
     overflow: "hidden",
