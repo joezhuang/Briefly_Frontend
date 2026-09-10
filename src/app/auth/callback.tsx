@@ -45,7 +45,7 @@ export default function AuthCallbackScreen() {
   useEffect(() => {
     if (user && returnPathLoaded) {
       void clearAuthReturnPath();
-      router.replace(returnPath as never);
+      router.dismissTo(returnPath as never);
       return;
     }
 
