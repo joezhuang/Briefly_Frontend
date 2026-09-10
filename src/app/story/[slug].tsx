@@ -4,12 +4,14 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
+  getBrieflyAppConfig,
   getCanonicalArticleByEventId,
   getCanonicalArticleBySlug,
   getExperimentalArticleByEventId,
   getLazyCanonicalArticleByEventId,
   getPodcastAnalysisStatus,
   requestPodcastAnalysis,
+  type BrieflyAppConfig,
   type PodcastAnalysisStatus,
 } from "@/api/briefly";
 import {
@@ -22,6 +24,9 @@ import { EventTimeline } from "@/components/event-timeline";
 import { RelatedStoriesCarousel } from "@/components/related-stories-carousel";
 import { ScreenState } from "@/components/screen-state";
 import { StaleStoryNotice } from "@/components/stale-story-notice";
+// Metro resolves the platform-specific .native/.web implementation at runtime.
+// eslint-disable-next-line import/no-unresolved
+import { StoryAdSlot } from "@/components/story-ad-slot";
 import { WebTranslateButton } from "@/components/web-translate-button";
 import { useAnalysisReadiness } from "@/context/analysis-readiness";
 import { useBrieflyAuth } from "@/context/auth";
@@ -115,6 +120,7 @@ export default function StoryDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [appConfig, setAppConfig] = useState<BrieflyAppConfig | null>(null);
   const [podcastState, setPodcastState] = useState<PodcastState>({
     key: "",
     value: null,
@@ -146,6 +152,12 @@ export default function StoryDetailScreen() {
   const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${language}:${reloadKey}`;
   const loading = loadingKey !== requestKey && !error && !article;
   const isPro = account?.translation_entitled === true;
+  const showStoryAd =
+    !isWeb &&
+    appConfig?.ads_enabled === true &&
+    appConfig.story_ad_enabled === true &&
+    appConfig.ad_provider === "admob" &&
+    !(appConfig.ads_free_for_pro && isPro);
   const podcastSourceVersionId = article
     ? article.authoritative_article_version_id ?? article.article_version_id
     : null;
@@ -157,6 +169,14 @@ export default function StoryDetailScreen() {
     podcastState.key === podcastRequestKey ? podcastState.value : null;
   const podcastBusy =
     !!podcastRequestKey && podcastBusyKey === podcastRequestKey;
+
+  useEffect(() => {
+    if (!authReady) return;
+
+    void getBrieflyAppConfig()
+      .then(setAppConfig)
+      .catch(() => setAppConfig(null));
+  }, [authReady]);
 
   useEffect(() => {
     if (!resolvedSlug || !authReady) return;
@@ -582,7 +602,12 @@ export default function StoryDetailScreen() {
         podcastPro={isPro}
         podcastSignedIn={!!user}
         onPodcastAction={() => void handlePodcastAction()}
-        footer={<RelatedStoriesCarousel article={displayedArticle} />}
+        footer={
+          <>
+            {showStoryAd && <StoryAdSlot />}
+            <RelatedStoriesCarousel article={displayedArticle} />
+          </>
+        }
       />
     </SafeAreaView>
   );
