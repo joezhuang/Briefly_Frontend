@@ -24,11 +24,13 @@ export function HomeAdSlot() {
 
 const styles = StyleSheet.create({
   container: {
+    width: 728,
+    height: 90,
+    maxWidth: "100%",
     alignSelf: "center",
-    minHeight: 60,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
+    paddingVertical: 0,
     paddingHorizontal: 0,
     backgroundColor: "rgba(0, 0, 0, 0.12)",
     borderRadius: 12,
