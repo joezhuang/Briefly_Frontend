@@ -4,6 +4,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
+  getCanonicalArticleByEventId,
   getCanonicalArticleBySlug,
   getExperimentalArticleByEventId,
   getLazyCanonicalArticleByEventId,
@@ -215,15 +216,10 @@ export default function StoryDetailScreen() {
 
           setAuthoritativeArticle(canonical);
 
-          if (canonical.canonical_stale) {
-            result = canonical;
-            if (canonical.generation_status === "processing") {
-              schedulePoll(LAZY_ARTICLE_POLL_MS);
-            }
-          } else if (language !== "en") {
+          if (language !== "en") {
             if (isWeb) {
-              // Web never creates translations. It may, however, consume an approved
-              // translation that was already generated elsewhere (for example mobile).
+              // Web never creates translations. It may consume any approved cached
+              // translation for the currently stored English canonical version.
               try {
                 const localized = await getCanonicalArticleByEventId(
                   resolvedEventId,
@@ -234,15 +230,21 @@ export default function StoryDetailScreen() {
                 );
                 result =
                   localized.content_language === language
-                    ? preferredImage(
-                        localized,
-                        resolvedImageUrl ?? canonical.image_url ?? undefined,
-                      )
+                    ? {
+                        ...preferredImage(
+                          localized,
+                          resolvedImageUrl ?? canonical.image_url ?? undefined,
+                        ),
+                        canonical_stale: canonical.canonical_stale,
+                        latest_evidence_at: canonical.latest_evidence_at,
+                        stale_refresh_entitled: canonical.stale_refresh_entitled,
+                        generation_status: canonical.generation_status,
+                      }
                     : canonical;
               } catch {
                 result = canonical;
               }
-            } else {
+            } else if (!canonical.canonical_stale) {
               const localized = await getExperimentalArticleByEventId(
                 resolvedEventId,
                 {
@@ -254,9 +256,18 @@ export default function StoryDetailScreen() {
                 localized,
                 resolvedImageUrl ?? canonical.image_url ?? undefined,
               );
+            } else {
+              result = canonical;
             }
           } else {
             result = canonical;
+          }
+
+          if (
+            canonical.canonical_stale &&
+            canonical.generation_status === "processing"
+          ) {
+            schedulePoll(LAZY_ARTICLE_POLL_MS);
           }
         } else {
           const canonicalBySlug = await getCanonicalArticleBySlug(resolvedSlug, {
