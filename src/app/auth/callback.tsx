@@ -23,6 +23,7 @@ export default function AuthCallbackScreen() {
   const { colors } = useBrieflyTheme();
 
   const [storedReturnTo, setStoredReturnTo] = useState<string | undefined>(undefined);
+  const [returnPathLoaded, setReturnPathLoaded] = useState(returnTo !== undefined);
   const returnPath = useMemo(
     () => safeReturnTo(returnTo ?? storedReturnTo),
     [returnTo, storedReturnTo],
@@ -35,11 +36,14 @@ export default function AuthCallbackScreen() {
       : null;
 
   useEffect(() => {
-    void readAuthReturnPath().then(setStoredReturnTo);
+    void readAuthReturnPath().then((value) => {
+      setStoredReturnTo(value);
+      setReturnPathLoaded(true);
+    });
   }, []);
 
   useEffect(() => {
-    if (user) {
+    if (user && returnPathLoaded) {
       void clearAuthReturnPath();
       router.replace(returnPath as never);
       return;
@@ -56,7 +60,7 @@ export default function AuthCallbackScreen() {
         setExchangeError(exchangeError.message || t.signInFailed);
       }
     });
-  }, [code, returnPath, t.signInFailed, user]);
+  }, [code, returnPath, returnPathLoaded, t.signInFailed, user]);
 
   const error =
     exchangeError ??
