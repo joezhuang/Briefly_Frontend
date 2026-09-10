@@ -123,7 +123,7 @@ type SettingsRoute =
 export function AppHeader() {
   const pathname = usePathname();
   const { width } = useWindowDimensions();
-  const { user, account, signOut } = useBrieflyAuth();
+  const { user, account } = useBrieflyAuth();
   const { language, setLanguage, t } = useBrieflyLanguage();
   const { mode, setMode, colors } = useBrieflyTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -143,11 +143,6 @@ export function AppHeader() {
   const closeAndNavigate = (href: SettingsRoute) => {
     setSettingsOpen(false);
     router.push(href);
-  };
-
-  const handleSignOut = async () => {
-    setSettingsOpen(false);
-    await signOut();
   };
 
   const renderNavLinks = !compactNav || (!phoneNav && navExpanded);
