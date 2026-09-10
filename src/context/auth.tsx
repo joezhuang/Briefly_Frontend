@@ -126,6 +126,10 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
         : BRIEFLY_MOBILE_AUTH_CALLBACK;
 
     if (Platform.OS === "web") {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("briefly.auth.returnTo", returnTo);
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider as Provider,
         options: { redirectTo },
