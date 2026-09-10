@@ -20,6 +20,7 @@ import {
 import { AppHeader } from "@/components/app-header";
 import { ScreenState } from "@/components/screen-state";
 import { StoryTile } from "@/components/story-tile";
+import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
@@ -72,6 +73,7 @@ function chunkArticles(articles: CanonicalArticle[]): CanonicalArticle[][] {
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
+  const { ready: authReady } = useBrieflyAuth();
   const { colors } = useBrieflyTheme();
 
   const [scope, setScope] = useState<HomepageFeedScope>("top");
@@ -107,6 +109,8 @@ export default function HomeScreen() {
 
   const loadFeed = useCallback(
     async (mode: "initial" | "refresh" | "more" = "initial") => {
+      if (!authReady) return;
+
       if (mode === "more") {
         if (loadingMoreRef.current || !hasMoreRef.current) return;
         loadingMoreRef.current = true;
@@ -155,7 +159,15 @@ export default function HomeScreen() {
         }
       }
     },
-    [appendArticles, language, replaceArticles, scope, t.unableLoad, updateHasMore],
+    [
+      appendArticles,
+      authReady,
+      language,
+      replaceArticles,
+      scope,
+      t.unableLoad,
+      updateHasMore,
+    ],
   );
 
   const refreshIfStale = useCallback(() => {
@@ -164,10 +176,12 @@ export default function HomeScreen() {
   }, [loadFeed]);
 
   useEffect(() => {
+    if (!authReady) return;
+
     articlesRef.current = [];
     hasMoreRef.current = false;
     Promise.resolve().then(() => void loadFeed("initial"));
-  }, [loadFeed, language, scope]);
+  }, [authReady, loadFeed, language, scope]);
 
   useEffect(() => {
     if (Platform.OS === "web") {
@@ -293,9 +307,11 @@ export default function HomeScreen() {
         {mobileHeader && scopeControls}
       </View>
 
-      {loading && <ScreenState loading message={t.loadingStories} />}
+      {(!authReady || loading) && (
+        <ScreenState loading message={t.loadingStories} />
+      )}
 
-      {!loading && error && (
+      {authReady && !loading && error && (
         <ScreenState
           title={t.unableLoad}
           message={error}
@@ -303,7 +319,7 @@ export default function HomeScreen() {
         />
       )}
 
-      {!loading && !error && !lead && (
+      {authReady && !loading && !error && !lead && (
         <ScreenState
           title={t.noStories}
           message={t.noStoriesMessage}
@@ -311,7 +327,7 @@ export default function HomeScreen() {
         />
       )}
 
-      {!loading && !error && lead && (
+      {authReady && !loading && !error && lead && (
         <>
           {desktop ? (
             <View style={styles.heroGrid}>
