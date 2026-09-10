@@ -1,10 +1,47 @@
 import {
   clearBrieflyAccessToken,
   getBrieflyAccessToken,
+  setBrieflyAccessToken,
 } from "@/auth/session";
+import { supabase } from "@/auth/supabase";
 import type { CanonicalArticle } from "@/models/article";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
+
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshBrieflyAccessToken() {
+  if (!supabase) {
+    clearBrieflyAccessToken();
+    return null;
+  }
+
+  if (!refreshPromise) {
+    refreshPromise = supabase.auth
+      .refreshSession()
+      .then(({ data, error }) => {
+        if (error || !data.session?.access_token) {
+          clearBrieflyAccessToken();
+          void supabase.auth.signOut({ scope: "local" }).catch(() => null);
+          return null;
+        }
+
+        setBrieflyAccessToken(data.session.access_token);
+        return data.session.access_token;
+      })
+      .catch(() => {
+        clearBrieflyAccessToken();
+        void supabase.auth.signOut({ scope: "local" }).catch(() => null);
+        return null;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+}
+
 
 function requireApiBaseUrl() {
   if (!API_BASE_URL) throw new Error("Missing EXPO_PUBLIC_BRIEFLY_API_URL");
@@ -42,11 +79,18 @@ async function getJson<T>(path: string): Promise<T> {
     headers: requestHeaders(),
   });
 
-  if (response.status === 401 && accessToken && isPublicContentPath(path)) {
-    clearBrieflyAccessToken();
-    response = await fetch(`${requireApiBaseUrl()}${path}`, {
-      headers: requestHeaders({ includeAuth: false }),
-    });
+  if (response.status === 401 && accessToken) {
+    const refreshedToken = await refreshBrieflyAccessToken();
+
+    if (refreshedToken) {
+      response = await fetch(`${requireApiBaseUrl()}${path}`, {
+        headers: requestHeaders(),
+      });
+    } else if (isPublicContentPath(path)) {
+      response = await fetch(`${requireApiBaseUrl()}${path}`, {
+        headers: requestHeaders({ includeAuth: false }),
+      });
+    }
   }
 
   if (!response.ok) {
@@ -59,14 +103,25 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${requireApiBaseUrl()}${path}`, {
-    method: "POST",
-    headers: {
-      ...requestHeaders(),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const request = () =>
+    fetch(`${requireApiBaseUrl()}${path}`, {
+      method: "POST",
+      headers: {
+        ...requestHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+  const accessToken = getBrieflyAccessToken();
+  let response = await request();
+
+  if (response.status === 401 && accessToken) {
+    const refreshedToken = await refreshBrieflyAccessToken();
+    if (refreshedToken) {
+      response = await request();
+    }
+  }
 
   if (!response.ok) {
     const message = await response.text().catch(() => "");
