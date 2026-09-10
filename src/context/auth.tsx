@@ -126,7 +126,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
         : BRIEFLY_MOBILE_AUTH_CALLBACK;
 
     if (Platform.OS === "web") {
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && window.sessionStorage) {
         window.sessionStorage.setItem("briefly.auth.returnTo", returnTo);
       }
 
