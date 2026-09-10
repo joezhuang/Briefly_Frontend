@@ -30,8 +30,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 10,
     paddingHorizontal: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.12)",
-    borderRadius: 12,
-    overflow: "hidden",
   },
 });
