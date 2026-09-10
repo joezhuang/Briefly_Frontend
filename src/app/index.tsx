@@ -34,6 +34,9 @@ const DEFAULT_CITY = "Sydney";
 const PAGE_SIZE = 20;
 const LOAD_MORE_THRESHOLD = 800;
 const VIRTUAL_BATCH_SIZE = 6;
+const SHOW_TOP_BUTTON_OFFSET = 700;
+
+let rememberedHomeScrollOffset = 0;
 
 const feedCopy = {
   en: { top: "Top", national: "National", local: "Local", refresh: "Refresh" },
@@ -82,10 +85,15 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [showTopButton, setShowTopButton] = useState(
+    rememberedHomeScrollOffset > SHOW_TOP_BUTTON_OFFSET,
+  );
   const [error, setError] = useState<string | null>(null);
   const lastFetchedAt = useRef(0);
   const activeRequest = useRef(0);
   const articlesRef = useRef<CanonicalArticle[]>([]);
+  const listRef = useRef<FlatList<CanonicalArticle[]>>(null);
+  const restoredScrollRef = useRef(false);
   const loadingMoreRef = useRef(false);
   const hasMoreRef = useRef(false);
 
@@ -208,6 +216,8 @@ export default function HomeScreen() {
       };
     }) => {
       const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      rememberedHomeScrollOffset = Math.max(0, contentOffset.y);
+      setShowTopButton(contentOffset.y > SHOW_TOP_BUTTON_OFFSET);
       const distanceFromBottom =
         contentSize.height - (layoutMeasurement.height + contentOffset.y);
       if (distanceFromBottom <= LOAD_MORE_THRESHOLD) {
@@ -357,9 +367,17 @@ export default function HomeScreen() {
     </View>
   );
 
+  const scrollToTop = () => {
+    rememberedHomeScrollOffset = 0;
+    restoredScrollRef.current = true;
+    setShowTopButton(false);
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
+
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
       <FlatList
+        ref={listRef}
         style={styles.list}
         data={remainingBatches}
         keyExtractor={(batch) => batch.map(storyKey).join(":")}
@@ -390,6 +408,23 @@ export default function HomeScreen() {
           </View>
         }
         contentContainerStyle={styles.scrollContent}
+        onContentSizeChange={() => {
+          if (
+            restoredScrollRef.current ||
+            rememberedHomeScrollOffset <= 0 ||
+            articlesRef.current.length === 0
+          ) {
+            return;
+          }
+
+          restoredScrollRef.current = true;
+          requestAnimationFrame(() => {
+            listRef.current?.scrollToOffset({
+              offset: rememberedHomeScrollOffset,
+              animated: false,
+            });
+          });
+        }}
         onScroll={handleScroll}
         scrollEventThrottle={200}
         refreshControl={
@@ -405,6 +440,24 @@ export default function HomeScreen() {
         maxToRenderPerBatch={2}
         windowSize={5}
       />
+
+      {showTopButton && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back to top"
+          onPress={scrollToTop}
+          style={({ pressed }) => [
+            styles.topButton,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              opacity: pressed ? 0.72 : 0.94,
+            },
+          ]}
+        >
+          <Text style={[styles.topButtonText, { color: colors.text }]}>↑</Text>
+        </Pressable>
+      )}
     </SafeAreaView>
   );
 }
@@ -484,4 +537,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   loadMoreSpacer: { height: 32 },
+  topButton: {
+    position: "absolute",
+    right: 18,
+    bottom: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topButtonText: {
+    fontSize: 24,
+    lineHeight: 26,
+    fontWeight: "900",
+  },
 });
