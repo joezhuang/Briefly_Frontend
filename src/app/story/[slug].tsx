@@ -103,7 +103,7 @@ export default function StoryDetailScreen() {
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const { user, account } = useBrieflyAuth();
-  const { watchAnalysis } = useAnalysisReadiness();
+  const { watchAnalysis, watchPodcast } = useAnalysisReadiness();
   const { recordArticle } = useReadingHistory();
 
   const [article, setArticle] = useState<CanonicalArticle | null>(null);
@@ -396,6 +396,12 @@ export default function StoryDetailScreen() {
       );
       setPodcastState({ key: podcastRequestKey, value: next });
       if (next.status === "processing") {
+        watchPodcast({
+          articleVersionId: podcastSourceVersionId,
+          language,
+          headline: article?.headline ?? resolvedPreviewHeadline ?? resolvedSlug ?? "Briefly",
+          href: currentStoryHref,
+        });
         setPodcastWatchKey(podcastRequestKey);
       }
     } finally {
