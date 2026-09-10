@@ -257,17 +257,6 @@ export default function HomeScreen() {
     !(appConfig.ads_free_for_pro && userIsPro);
   const homeAdInterval = Math.max(1, appConfig?.home_ad_interval ?? 8);
 
-  useEffect(() => {
-    if (Platform.OS === "web") return;
-    console.log("[Briefly Ads] gate", {
-      platform: Platform.OS,
-      appConfig,
-      userIsPro,
-      showHomeAds,
-      homeAdInterval,
-    });
-  }, [appConfig, homeAdInterval, showHomeAds, userIsPro]);
-
   const scopeControls = (
     <View style={[styles.scopeTabs, !mobileHeader && styles.scopeTabsWide]}>
       {scopes.map((item) => {
