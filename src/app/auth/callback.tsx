@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ScreenState } from "@/components/screen-state";
@@ -18,7 +19,9 @@ export default function AuthCallbackScreen() {
   const { colors } = useBrieflyTheme();
 
   const fallbackReturnTo =
-    typeof window !== "undefined"
+    Platform.OS === "web" &&
+    typeof window !== "undefined" &&
+    window.sessionStorage
       ? window.sessionStorage.getItem("briefly.auth.returnTo") ?? undefined
       : undefined;
   const returnPath = useMemo(
@@ -28,20 +31,24 @@ export default function AuthCallbackScreen() {
   const exchangeStarted = useRef(false);
   const [exchangeError, setExchangeError] = useState<string | null>(null);
   const code =
-    typeof window !== "undefined"
+    Platform.OS === "web" && typeof window !== "undefined"
       ? new URL(window.location.href).searchParams.get("code")
       : null;
 
   useEffect(() => {
     if (user) {
-      if (typeof window !== "undefined") {
+      if (
+        Platform.OS === "web" &&
+        typeof window !== "undefined" &&
+        window.sessionStorage
+      ) {
         window.sessionStorage.removeItem("briefly.auth.returnTo");
       }
       router.replace(returnPath as never);
       return;
     }
 
-    if (exchangeStarted.current || !supabase) return;
+    if (Platform.OS !== "web" || exchangeStarted.current || !supabase) return;
 
     if (!code) return;
 
@@ -54,7 +61,9 @@ export default function AuthCallbackScreen() {
     });
   }, [code, returnPath, t.signInFailed, user]);
 
-  const error = exchangeError ?? (!user && !code ? t.signInFailed : null);
+  const error =
+    exchangeError ??
+    (Platform.OS === "web" && !user && !code ? t.signInFailed : null);
 
   return (
     <SafeAreaView
