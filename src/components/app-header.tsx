@@ -116,8 +116,6 @@ const settingsCopy = {
 
 type SettingsRoute =
   | "/upgrade"
-  | "/sign-in"
-  | "/account"
   | "/support"
   | "/legal/terms"
   | "/legal/privacy";
@@ -189,6 +187,28 @@ export function AppHeader() {
                 </Link>
               );
             })}
+
+          {!phoneNav && (
+            <Link href={user ? "/account" : "/sign-in"} asChild>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.accountNavButton,
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: colors.surfaceMuted,
+                    opacity: pressed ? 0.68 : 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={[styles.accountNavText, { color: colors.text }]}
+                  numberOfLines={1}
+                >
+                  {user?.email ?? t.signIn}
+                </Text>
+              </Pressable>
+            </Link>
+          )}
 
           {!phoneNav && (
             <Pressable
@@ -272,6 +292,20 @@ export function AppHeader() {
               </Link>
             );
           })}
+
+          <Link href={user ? "/account" : "/sign-in"} asChild>
+            <Pressable
+              onPress={() => setNavExpanded(false)}
+              style={styles.phoneMenuItem}
+            >
+              <Text
+                style={[styles.phoneMenuText, { color: colors.text }]}
+                numberOfLines={1}
+              >
+                {user?.email ?? t.signIn}
+              </Text>
+            </Pressable>
+          </Link>
 
           <Pressable
             accessibilityRole="button"
@@ -417,45 +451,6 @@ export function AppHeader() {
 
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.textMuted }]}> 
-                  {labels.account}
-                </Text>
-                {user ? (
-                  <>
-                    <Pressable
-                      onPress={() => closeAndNavigate("/account")}
-                      style={[
-                        styles.actionRow,
-                        { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
-                      ]}
-                    >
-                      <Text style={[styles.actionTitle, { color: colors.text }]}> 
-                        {labels.manageAccount}
-                      </Text>
-                      <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => void handleSignOut()}
-                      style={[styles.accountButton, { borderColor: colors.border }]}
-                    >
-                      <Text style={[styles.accountText, { color: colors.text }]}> 
-                        {t.signOut}
-                      </Text>
-                    </Pressable>
-                  </>
-                ) : (
-                  <Pressable
-                    onPress={() => closeAndNavigate("/sign-in")}
-                    style={[styles.accountButton, { borderColor: colors.border }]}
-                  >
-                    <Text style={[styles.accountText, { color: colors.text }]}> 
-                      {t.signIn}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-
-              <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}> 
                   {labels.support}
                 </Text>
                 <Pressable
@@ -540,6 +535,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   active: {
+    fontWeight: "800",
+  },
+  accountNavButton: {
+    maxWidth: 220,
+    minHeight: 36,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  accountNavText: {
+    maxWidth: 190,
+    fontSize: 13,
     fontWeight: "800",
   },
   settingsButton: {
