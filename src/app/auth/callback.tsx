@@ -26,7 +26,11 @@ export default function AuthCallbackScreen() {
     [fallbackReturnTo, returnTo],
   );
   const exchangeStarted = useRef(false);
-  const [error, setError] = useState<string | null>(null);
+  const [exchangeError, setExchangeError] = useState<string | null>(null);
+  const code =
+    typeof window !== "undefined"
+      ? new URL(window.location.href).searchParams.get("code")
+      : null;
 
   useEffect(() => {
     if (user) {
@@ -39,24 +43,18 @@ export default function AuthCallbackScreen() {
 
     if (exchangeStarted.current || !supabase) return;
 
-    const code =
-      typeof window !== "undefined"
-        ? new URL(window.location.href).searchParams.get("code")
-        : null;
-
-    if (!code) {
-      setError(t.signInFailed);
-      return;
-    }
+    if (!code) return;
 
     exchangeStarted.current = true;
 
     void supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
       if (exchangeError) {
-        setError(exchangeError.message || t.signInFailed);
+        setExchangeError(exchangeError.message || t.signInFailed);
       }
     });
-  }, [returnPath, t.signInFailed, user]);
+  }, [code, returnPath, t.signInFailed, user]);
+
+  const error = exchangeError ?? (!user && !code ? t.signInFailed : null);
 
   return (
     <SafeAreaView
