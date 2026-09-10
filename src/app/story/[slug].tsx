@@ -103,7 +103,7 @@ export default function StoryDetailScreen() {
 
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
-  const { user, account } = useBrieflyAuth();
+  const { ready: authReady, user, account } = useBrieflyAuth();
   const { watchAnalysis, watchPodcast } = useAnalysisReadiness();
   const { recordArticle } = useReadingHistory();
 
@@ -159,7 +159,7 @@ export default function StoryDetailScreen() {
     !!podcastRequestKey && podcastBusyKey === podcastRequestKey;
 
   useEffect(() => {
-    if (!resolvedSlug) return;
+    if (!resolvedSlug || !authReady) return;
 
     let active = true;
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -310,6 +310,7 @@ export default function StoryDetailScreen() {
       if (pollTimer) clearTimeout(pollTimer);
     };
   }, [
+    authReady,
     resolvedSlug,
     resolvedEventId,
     resolvedImageUrl,
@@ -449,7 +450,7 @@ export default function StoryDetailScreen() {
     }
   };
 
-  if (loading) {
+  if (!authReady || loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <ScreenState loading message={t.loadingStory} />
