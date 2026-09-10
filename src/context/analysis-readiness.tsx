@@ -10,7 +10,10 @@ import {
 } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { getLazyCanonicalArticleByEventId } from "@/api/briefly";
+import {
+  getLazyCanonicalArticleByEventId,
+  getPodcastAnalysisStatus,
+} from "@/api/briefly";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 
@@ -18,18 +21,32 @@ const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
 const POLL_MS = 5000;
 
-type PendingAnalysis = {
-  eventId: string;
-  headline: string;
-  href: string;
-  kind?: "initial" | "refresh";
-  baseVersionId?: number | null;
-};
+type PendingAnalysis =
+  | {
+      type: "article";
+      eventId: string;
+      headline: string;
+      href: string;
+      kind?: "initial" | "refresh";
+      baseVersionId?: number | null;
+    }
+  | {
+      type: "podcast";
+      articleVersionId: number;
+      language: string;
+      headline: string;
+      href: string;
+    };
 
 type ReadyAnalysis = PendingAnalysis;
 
 type AnalysisReadinessContextValue = {
-  watchAnalysis: (item: PendingAnalysis) => void;
+  watchAnalysis: (
+    item: Omit<Extract<PendingAnalysis, { type: "article" }>, "type">,
+  ) => void;
+  watchPodcast: (
+    item: Omit<Extract<PendingAnalysis, { type: "podcast" }>, "type">,
+  ) => void;
 };
 
 const AnalysisReadinessContext =
@@ -39,27 +56,32 @@ const copy = {
   en: {
     ready: "Ready to read",
     updated: "Updated analysis ready",
-    more: "more analyses are ready",
+    podcast: "Podcast ready",
+    more: "more items are ready",
   },
   es: {
     ready: "Listo para leer",
     updated: "Análisis actualizado listo",
-    more: "análisis más están listos",
+    podcast: "Pódcast listo",
+    more: "elementos más están listos",
   },
   ja: {
     ready: "読めるようになりました",
     updated: "更新版の分析ができました",
-    more: "件の分析も準備できました",
+    podcast: "ポッドキャストの準備ができました",
+    more: "件の項目も準備できました",
   },
   "zh-CN": {
     ready: "已可阅读",
     updated: "更新分析已准备好",
-    more: "篇分析也已准备好",
+    podcast: "播客已准备好",
+    more: "项内容也已准备好",
   },
   "zh-TW": {
     ready: "已可閱讀",
     updated: "更新分析已準備好",
-    more: "篇分析也已準備好",
+    podcast: "Podcast 已準備好",
+    more: "項內容也已準備好",
   },
 } as const;
 
@@ -71,20 +93,41 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   const [pending, setPending] = useState<Record<string, PendingAnalysis>>({});
   const [ready, setReady] = useState<ReadyAnalysis[]>([]);
 
-  const watchAnalysis = useCallback((item: PendingAnalysis) => {
-    const key = `${item.eventId}:${item.baseVersionId ?? "initial"}`;
-    setPending((current) => {
-      const existing = current[key];
-      if (
-        existing?.headline === item.headline &&
-        existing?.href === item.href &&
-        existing?.kind === item.kind
-      ) {
-        return current;
-      }
-      return { ...current, [key]: item };
-    });
+  const keyFor = useCallback((item: PendingAnalysis) => {
+    return item.type === "podcast"
+      ? `podcast:${item.articleVersionId}:${item.language}`
+      : `article:${item.eventId}:${item.baseVersionId ?? "initial"}`;
   }, []);
+
+  const watchAnalysis = useCallback(
+    (item: Omit<Extract<PendingAnalysis, { type: "article" }>, "type">) => {
+      const next: PendingAnalysis = { ...item, type: "article" };
+      const key = keyFor(next);
+      setPending((current) => {
+        const existing = current[key];
+        if (existing?.headline === next.headline && existing?.href === next.href) {
+          return current;
+        }
+        return { ...current, [key]: next };
+      });
+    },
+    [keyFor],
+  );
+
+  const watchPodcast = useCallback(
+    (item: Omit<Extract<PendingAnalysis, { type: "podcast" }>, "type">) => {
+      const next: PendingAnalysis = { ...item, type: "podcast" };
+      const key = keyFor(next);
+      setPending((current) => {
+        const existing = current[key];
+        if (existing?.headline === next.headline && existing?.href === next.href) {
+          return current;
+        }
+        return { ...current, [key]: next };
+      });
+    },
+    [keyFor],
+  );
 
   useEffect(() => {
     const entries = Object.values(pending);
@@ -100,6 +143,16 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       await Promise.all(
         entries.map(async (item) => {
           try {
+            if (item.type === "podcast") {
+              const podcast = await getPodcastAnalysisStatus(
+                item.articleVersionId,
+                item.language,
+              );
+              if (podcast.status === "ready") completed.push(item);
+              else if (podcast.status === "failed") terminalFailures.push(item);
+              return;
+            }
+
             const article = await getLazyCanonicalArticleByEventId(item.eventId, {
               includeDraft: PREVIEW_DRAFTS,
               language: "en",
@@ -128,9 +181,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
       if (completed.length > 0 || terminalFailures.length > 0) {
         const completedKeys = new Set(
-          [...completed, ...terminalFailures].map(
-            (item) => `${item.eventId}:${item.baseVersionId ?? "initial"}`,
-          ),
+          [...completed, ...terminalFailures].map(keyFor),
         );
         setPending((current) =>
           Object.fromEntries(
@@ -140,18 +191,12 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
           ),
         );
         setReady((current) => {
-          const known = new Set(
-            current.map(
-              (item) => `${item.eventId}:${item.baseVersionId ?? "initial"}`,
-            ),
-          );
+          const known = new Set(current.map(keyFor));
           return [
             ...current,
             ...completed.filter(
               (item) =>
-                !known.has(
-                  `${item.eventId}:${item.baseVersionId ?? "initial"}`,
-                ),
+                !known.has(keyFor(item)),
             ),
           ];
         });
@@ -166,19 +211,19 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [pending]);
+  }, [keyFor, pending]);
 
-  const value = useMemo(() => ({ watchAnalysis }), [watchAnalysis]);
+  const value = useMemo(
+    () => ({ watchAnalysis, watchPodcast }),
+    [watchAnalysis, watchPodcast],
+  );
   const visibleReady = ready.slice(-3).reverse();
 
   const openReady = (item: ReadyAnalysis) => {
     setReady((current) =>
       current.filter(
         (candidate) =>
-          !(
-            candidate.eventId === item.eventId &&
-            candidate.baseVersionId === item.baseVersionId
-          ),
+          keyFor(candidate) !== keyFor(item),
       ),
     );
     router.push(item.href as never);
@@ -207,7 +252,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
             {visibleReady.map((item) => (
               <Pressable
-                key={`${item.eventId}:${item.baseVersionId ?? "initial"}`}
+                key={keyFor(item)}
                 accessibilityRole="button"
                 onPress={() => openReady(item)}
                 style={({ pressed }) => [
@@ -220,7 +265,11 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                     style={[styles.rowKicker, { color: colors.background }]}
                     numberOfLines={1}
                   >
-                    {item.kind === "refresh" ? labels.updated : labels.ready}
+                    {item.type === "podcast"
+                      ? labels.podcast
+                      : item.kind === "refresh"
+                        ? labels.updated
+                        : labels.ready}
                   </Text>
                   <Text
                     style={[styles.headline, { color: colors.background }]}
