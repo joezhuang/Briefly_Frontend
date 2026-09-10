@@ -20,7 +20,9 @@ import {
   type HomepageFeedScope,
 } from "@/api/briefly";
 import { AppHeader } from "@/components/app-header";
-import { HomeAdSlot } from "@/components/home-ad-slot.web";
+// Metro resolves the platform-specific .native/.web implementation at runtime.
+// eslint-disable-next-line import/no-unresolved
+import { HomeAdSlot } from "@/components/home-ad-slot";
 import { ScreenState } from "@/components/screen-state";
 import { StoryTile } from "@/components/story-tile";
 import { useBrieflyAuth } from "@/context/auth";
