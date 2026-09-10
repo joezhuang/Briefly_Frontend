@@ -20,7 +20,7 @@ import {
   type HomepageFeedScope,
 } from "@/api/briefly";
 import { AppHeader } from "@/components/app-header";
-import { HomeAdSlot } from "@/components/home-ad-slot";
+import { HomeAdSlot } from "@/components/home-ad-slot.web";
 import { ScreenState } from "@/components/screen-state";
 import { StoryTile } from "@/components/story-tile";
 import { useBrieflyAuth } from "@/context/auth";
