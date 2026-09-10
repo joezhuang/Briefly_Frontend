@@ -14,10 +14,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
+  getBrieflyAppConfig,
   getHomepageArticleFeed,
+  type BrieflyAppConfig,
   type HomepageFeedScope,
 } from "@/api/briefly";
 import { AppHeader } from "@/components/app-header";
+import { HomeAdSlot } from "@/components/home-ad-slot";
 import { ScreenState } from "@/components/screen-state";
 import { StoryTile } from "@/components/story-tile";
 import { useBrieflyAuth } from "@/context/auth";
@@ -76,10 +79,11 @@ function chunkArticles(articles: CanonicalArticle[]): CanonicalArticle[][] {
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
-  const { ready: authReady } = useBrieflyAuth();
+  const { ready: authReady, account } = useBrieflyAuth();
   const { colors } = useBrieflyTheme();
 
   const [scope, setScope] = useState<HomepageFeedScope>("top");
+  const [appConfig, setAppConfig] = useState<BrieflyAppConfig | null>(null);
   const [articles, setArticles] = useState<CanonicalArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -186,6 +190,14 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!authReady) return;
 
+    void getBrieflyAppConfig()
+      .then(setAppConfig)
+      .catch(() => setAppConfig(null));
+  }, [authReady]);
+
+  useEffect(() => {
+    if (!authReady) return;
+
     articlesRef.current = [];
     hasMoreRef.current = false;
     Promise.resolve().then(() => void loadFeed("initial"));
@@ -234,6 +246,14 @@ export default function HomeScreen() {
   const secondary = articles.slice(1, 3);
   const remaining = articles.slice(3);
   const remainingBatches = chunkArticles(remaining);
+  const userIsPro = account?.translation_entitled === true;
+  const showHomeAds =
+    Platform.OS !== "web" &&
+    appConfig?.ads_enabled === true &&
+    appConfig.home_ad_enabled === true &&
+    appConfig.ad_provider === "admob" &&
+    !(appConfig.ads_free_for_pro && userIsPro);
+  const homeAdInterval = Math.max(1, appConfig?.home_ad_interval ?? 8);
 
   const scopeControls = (
     <View style={[styles.scopeTabs, !mobileHeader && styles.scopeTabsWide]}>
@@ -382,20 +402,41 @@ export default function HomeScreen() {
         data={remainingBatches}
         keyExtractor={(batch) => batch.map(storyKey).join(":")}
         ListHeaderComponent={listHeader}
-        renderItem={({ item: batch }) => (
-          <View style={[styles.page, styles.pageWithoutBottomPadding, width < 480 && styles.pageCompact]}>
-            <View style={[styles.feedGrid, (desktop || tablet) && styles.feedGridWide]}>
-              {batch.map((article) => (
-                <View
-                  key={storyKey(article)}
-                  style={desktop ? styles.third : tablet ? styles.half : styles.full}
-                >
-                  <StoryTile article={article} />
-                </View>
-              ))}
+        renderItem={({ item: batch, index }) => {
+          const storiesBeforeBatch = 3 + index * VIRTUAL_BATCH_SIZE;
+          const storiesAfterBatch = storiesBeforeBatch + batch.length;
+          const crossedAdBoundary =
+            Math.floor(storiesAfterBatch / homeAdInterval) >
+            Math.floor(storiesBeforeBatch / homeAdInterval);
+
+          return (
+            <View
+              style={[
+                styles.page,
+                styles.pageWithoutBottomPadding,
+                width < 480 && styles.pageCompact,
+              ]}
+            >
+              <View
+                style={[
+                  styles.feedGrid,
+                  (desktop || tablet) && styles.feedGridWide,
+                ]}
+              >
+                {batch.map((article) => (
+                  <View
+                    key={storyKey(article)}
+                    style={desktop ? styles.third : tablet ? styles.half : styles.full}
+                  >
+                    <StoryTile article={article} />
+                  </View>
+                ))}
+              </View>
+
+              {showHomeAds && crossedAdBoundary && <HomeAdSlot />}
             </View>
-          </View>
-        )}
+          );
+        }
         ListFooterComponent={
           <View style={[styles.page, width < 480 && styles.pageCompact]}>
             {loadingMore && (
