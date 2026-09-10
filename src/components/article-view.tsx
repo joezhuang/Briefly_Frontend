@@ -134,35 +134,30 @@ const exploreCopy = {
     uncertainties: "What we don't know",
     sources: "Sources used",
     coverage: "Coverage",
-    podcast: "Listen to analysis",
   },
   es: {
     title: "Más sobre esta historia",
     uncertainties: "Lo que no sabemos",
     sources: "Fuentes utilizadas",
     coverage: "Cobertura",
-    podcast: "Escuchar el análisis",
   },
   ja: {
     title: "このニュースをさらに詳しく",
     uncertainties: "まだ分かっていないこと",
     sources: "使用した情報源",
     coverage: "関連記事",
-    podcast: "分析を聴く",
   },
   "zh-CN": {
     title: "更多关于这篇报道",
     uncertainties: "尚不确定",
     sources: "使用的来源",
     coverage: "相关报道",
-    podcast: "收听分析",
   },
   "zh-TW": {
     title: "更多關於這篇報導",
     uncertainties: "尚不確定",
     sources: "使用的來源",
     coverage: "相關報導",
-    podcast: "收聽分析",
   },
 } as const;
 
@@ -229,7 +224,7 @@ export function ArticleView({
   const coverageText = coverageCopy[language] ?? coverageCopy.en;
   const exploreText = exploreCopy[language] ?? exploreCopy.en;
   const [openExplore, setOpenExplore] = useState<
-    "uncertainties" | "sources" | "coverage" | "podcast" | null
+    "uncertainties" | "sources" | "coverage" | null
   >(null);
   const podcastProcessing = podcastBusy || podcast?.status === "processing";
   const podcastReady = podcast?.status === "ready" && !!podcast.audio_url;
@@ -424,6 +419,71 @@ export function ArticleView({
           {briefSection(t.whatNext, article.what_next)}
         </View>
 
+        {!!onPodcastAction && !immutable && (
+          <View
+            style={[
+              styles.podcastFeature,
+              {
+                backgroundColor: colors.surfaceMuted,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <View style={styles.podcastFeatureCopy}>
+              <View style={styles.podcastFeatureTitleRow}>
+                <Text style={[styles.podcastFeatureTitle, { color: colors.text }]}>
+                  {podcastText.title}
+                </Text>
+                <Text style={[styles.podcastProBadge, { color: colors.accent }]}>
+                  PRO
+                </Text>
+              </View>
+              <Text style={[styles.podcastFeatureBody, { color: colors.textMuted }]}>
+                {podcastText.body}
+              </Text>
+            </View>
+
+            {nativePodcastReady && podcast?.audio_url
+              ? <PodcastInlinePlayer source={podcast.audio_url} />
+              : webPodcastReady
+                ? createElement("audio", {
+                    controls: true,
+                    preload: "metadata",
+                    src: podcast.audio_url ?? undefined,
+                    onLoadedMetadata: (event: { currentTarget: HTMLAudioElement }) => {
+                      event.currentTarget.volume = readStoredPodcastVolume();
+                    },
+                    onVolumeChange: (event: { currentTarget: HTMLAudioElement }) => {
+                      storePodcastVolume(event.currentTarget.volume);
+                    },
+                    style: { width: "100%" },
+                  })
+                : (
+                  <Pressable
+                    disabled={podcastDisabled}
+                    onPress={onPodcastAction}
+                    style={[
+                      styles.podcastFeatureButton,
+                      { backgroundColor: colors.text },
+                      podcastDisabled && styles.podcastButtonDisabled,
+                    ]}
+                  >
+                    {podcastProcessing && (
+                      <ActivityIndicator size="small" color={colors.background} />
+                    )}
+                    <Text
+                      style={[
+                        styles.podcastButtonText,
+                        { color: colors.background },
+                      ]}
+                    >
+                      {podcastAction}
+                    </Text>
+                  </Pressable>
+                )}
+          </View>
+        )}
+
         <View style={styles.body}>
           {(article.body ?? []).map((paragraph, index) => (
             <Text
@@ -539,55 +599,7 @@ export function ArticleView({
               </ExploreRow>
             )}
 
-            {!!onPodcastAction && (
-              <ExploreRow
-                label={exploreText.podcast}
-                meta={podcastReady ? podcastText.listen : podcastProcessing ? podcastText.preparing : undefined}
-                open={openExplore === "podcast"}
-                colors={colors}
-                onPress={() =>
-                  setOpenExplore((value) => (value === "podcast" ? null : "podcast"))
-                }
-              >
-                <View style={styles.podcastCompact}>
-                  <Text style={[styles.podcastBody, { color: colors.textMuted }]}>
-                    {podcastText.body}
-                  </Text>
-                  {nativePodcastReady && podcast?.audio_url
-                    ? <PodcastInlinePlayer source={podcast.audio_url} />
-                    : webPodcastReady
-                      ? createElement("audio", {
-                          controls: true,
-                          preload: "metadata",
-                          src: podcast.audio_url ?? undefined,
-                          onLoadedMetadata: (event: { currentTarget: HTMLAudioElement }) => {
-                            event.currentTarget.volume = readStoredPodcastVolume();
-                          },
-                          onVolumeChange: (event: { currentTarget: HTMLAudioElement }) => {
-                            storePodcastVolume(event.currentTarget.volume);
-                          },
-                          style: { width: "100%" },
-                        })
-                      : (
-                        <Pressable
-                          disabled={podcastDisabled}
-                          onPress={onPodcastAction}
-                          style={[
-                            styles.podcastButton,
-                            { backgroundColor: colors.text },
-                            podcastDisabled && styles.podcastButtonDisabled,
-                          ]}
-                        >
-                          <Text
-                            style={[styles.podcastButtonText, { color: colors.background }]}
-                          >
-                            {podcastAction}
-                          </Text>
-                        </Pressable>
-                      )}
-                </View>
-              </ExploreRow>
-            )}
+
           </View>
         )}
 
@@ -750,6 +762,37 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   briefText: { fontSize: 18, lineHeight: 28 },
+  podcastFeature: {
+    marginTop: 22,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+  },
+  podcastFeatureCopy: { gap: 4 },
+  podcastFeatureTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  podcastFeatureTitle: { fontSize: 17, fontWeight: "900" },
+  podcastProBadge: {
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  podcastFeatureBody: { fontSize: 13, lineHeight: 19 },
+  podcastFeatureButton: {
+    alignSelf: "flex-start",
+    minHeight: 40,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
   body: { marginTop: 38, gap: 24 },
   bodyText: { fontSize: 19, lineHeight: 31 },
   exploreGroup: {
