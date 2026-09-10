@@ -17,6 +17,12 @@ export function HomeAdSlot() {
         unitId={configuredUnit?.trim() || TestIds.BANNER}
         size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
         requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+        onAdLoaded={() => {
+          console.log("[Briefly Ads] banner loaded");
+        }}
+        onAdFailedToLoad={(error) => {
+          console.warn("[Briefly Ads] banner failed", error);
+        }}
       />
     </View>
   );
