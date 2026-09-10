@@ -4,6 +4,10 @@ import { Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ScreenState } from "@/components/screen-state";
+import {
+  clearAuthReturnPath,
+  readAuthReturnPath,
+} from "@/auth/return-path";
 import { supabase } from "@/auth/supabase";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
@@ -18,15 +22,10 @@ export default function AuthCallbackScreen() {
   const { t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
 
-  const fallbackReturnTo =
-    Platform.OS === "web" &&
-    typeof window !== "undefined" &&
-    window.sessionStorage
-      ? window.sessionStorage.getItem("briefly.auth.returnTo") ?? undefined
-      : undefined;
+  const [storedReturnTo, setStoredReturnTo] = useState<string | undefined>(undefined);
   const returnPath = useMemo(
-    () => safeReturnTo(returnTo ?? fallbackReturnTo),
-    [fallbackReturnTo, returnTo],
+    () => safeReturnTo(returnTo ?? storedReturnTo),
+    [returnTo, storedReturnTo],
   );
   const exchangeStarted = useRef(false);
   const [exchangeError, setExchangeError] = useState<string | null>(null);
@@ -36,14 +35,12 @@ export default function AuthCallbackScreen() {
       : null;
 
   useEffect(() => {
+    void readAuthReturnPath().then(setStoredReturnTo);
+  }, []);
+
+  useEffect(() => {
     if (user) {
-      if (
-        Platform.OS === "web" &&
-        typeof window !== "undefined" &&
-        window.sessionStorage
-      ) {
-        window.sessionStorage.removeItem("briefly.auth.returnTo");
-      }
+      void clearAuthReturnPath();
       router.replace(returnPath as never);
       return;
     }
