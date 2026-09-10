@@ -68,6 +68,14 @@ const localizationCopy = {
   },
 } as const;
 
+const imageFitCopy = {
+  en: { fill: "Fill", full: "Full image", fillLabel: "Fill image frame", fullLabel: "Show full image" },
+  es: { fill: "Rellenar", full: "Imagen completa", fillLabel: "Rellenar el marco de la imagen", fullLabel: "Mostrar imagen completa" },
+  ja: { fill: "画面に合わせる", full: "全体表示", fillLabel: "画像を枠いっぱいに表示", fullLabel: "画像全体を表示" },
+  "zh-CN": { fill: "填满", full: "完整图片", fillLabel: "填满图片区域", fullLabel: "显示完整图片" },
+  "zh-TW": { fill: "填滿", full: "完整圖片", fillLabel: "填滿圖片區域", fullLabel: "顯示完整圖片" },
+} as const;
+
 const podcastCopy = {
   en: {
     title: "Podcast analysis",
@@ -225,6 +233,7 @@ export function ArticleView({
     contentLanguage !== "en" &&
     contentLanguage === language;
   const localizationText = localizationCopy[language] ?? localizationCopy.en;
+  const imageFitText = imageFitCopy[language] ?? imageFitCopy.en;
   const podcastText = podcastCopy[language] ?? podcastCopy.en;
   const coverageText = coverageCopy[language] ?? coverageCopy.en;
   const exploreText = exploreCopy[language] ?? exploreCopy.en;
@@ -318,7 +327,7 @@ export function ArticleView({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={
-                  heroFit === "contain" ? "Fill image frame" : "Show full image"
+                  heroFit === "contain" ? imageFitText.fillLabel : imageFitText.fullLabel
                 }
                 onPress={() =>
                   setHeroFit((value) => (value === "contain" ? "cover" : "contain"))
@@ -333,7 +342,7 @@ export function ArticleView({
                 ]}
               >
                 <Text style={[styles.heroFitButtonText, { color: colors.text }]}>
-                  {heroFit === "contain" ? "Fill" : "Full image"}
+                  {heroFit === "contain" ? imageFitText.fill : imageFitText.full}
                 </Text>
               </Pressable>
             )}
