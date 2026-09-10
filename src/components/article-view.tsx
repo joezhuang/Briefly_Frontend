@@ -226,6 +226,7 @@ export function ArticleView({
   const [openExplore, setOpenExplore] = useState<
     "uncertainties" | "sources" | "coverage" | null
   >(null);
+  const [heroFit, setHeroFit] = useState<"contain" | "cover">("contain");
   const podcastProcessing = podcastBusy || podcast?.status === "processing";
   const podcastReady = podcast?.status === "ready" && !!podcast.audio_url;
   const webPodcastReady = Platform.OS === "web" && podcastReady;
@@ -289,12 +290,42 @@ export function ArticleView({
     >
       <View style={[styles.page, width < 480 && styles.pageCompact]}>
         {!!article.image_url && (
-          <Image
-            source={{ uri: article.image_url }}
-            style={[styles.heroImage, { backgroundColor: colors.imageFallback }]}
-            contentFit="contain"
-            transition={180}
-          />
+          <View
+            style={[
+              styles.heroFrame,
+              { backgroundColor: colors.imageFallback },
+            ]}
+          >
+            <Image
+              source={{ uri: article.image_url }}
+              style={styles.heroImage}
+              contentFit={heroFit}
+              transition={180}
+            />
+            {!immutable && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  heroFit === "contain" ? "Fill image frame" : "Show full image"
+                }
+                onPress={() =>
+                  setHeroFit((value) => (value === "contain" ? "cover" : "contain"))
+                }
+                style={({ pressed }) => [
+                  styles.heroFitButton,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.72 : 0.92,
+                  },
+                ]}
+              >
+                <Text style={[styles.heroFitButtonText, { color: colors.text }]}>
+                  {heroFit === "contain" ? "Fill" : "Full image"}
+                </Text>
+              </Pressable>
+            )}
+          </View>
         )}
 
         <Text style={[styles.brand, { color: colors.accent }]}>BRIEFLY</Text>
@@ -678,11 +709,31 @@ const styles = StyleSheet.create({
     paddingBottom: 72,
   },
   pageCompact: { paddingHorizontal: 14, paddingTop: 18 },
-  heroImage: {
+  heroFrame: {
     width: "100%",
     aspectRatio: 16 / 9,
     borderRadius: 18,
+    overflow: "hidden",
     marginBottom: 28,
+  },
+  heroImage: {
+    width: "100%",
+    height: "100%",
+  },
+  heroFitButton: {
+    position: "absolute",
+    right: 10,
+    bottom: 10,
+    minHeight: 34,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroFitButtonText: {
+    fontSize: 12,
+    fontWeight: "800",
   },
   brand: {
     fontSize: 13,
