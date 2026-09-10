@@ -244,7 +244,7 @@ export default function StoryDetailScreen() {
               } catch {
                 result = canonical;
               }
-            } else if (!canonical.canonical_stale) {
+            } else {
               const localized = await getExperimentalArticleByEventId(
                 resolvedEventId,
                 {
@@ -252,12 +252,16 @@ export default function StoryDetailScreen() {
                   language,
                 },
               );
-              result = preferredImage(
-                localized,
-                resolvedImageUrl ?? canonical.image_url ?? undefined,
-              );
-            } else {
-              result = canonical;
+              result = {
+                ...preferredImage(
+                  localized,
+                  resolvedImageUrl ?? canonical.image_url ?? undefined,
+                ),
+                canonical_stale: canonical.canonical_stale,
+                latest_evidence_at: canonical.latest_evidence_at,
+                stale_refresh_entitled: canonical.stale_refresh_entitled,
+                generation_status: canonical.generation_status,
+              };
             }
           } else {
             result = canonical;
@@ -284,7 +288,6 @@ export default function StoryDetailScreen() {
         setError(null);
 
         if (
-          !result.canonical_stale &&
           !isWeb &&
           language !== "en" &&
           resolvedEventId &&
