@@ -28,18 +28,22 @@ export default function SignInScreen() {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [storedReturnTo, setStoredReturnTo] = useState<string | undefined>(undefined);
+  const [returnPathLoaded, setReturnPathLoaded] = useState(returnTo !== undefined);
   const returnPath = safeReturnTo(returnTo ?? storedReturnTo);
 
   useEffect(() => {
-    void readAuthReturnPath().then(setStoredReturnTo);
+    void readAuthReturnPath().then((value) => {
+      setStoredReturnTo(value);
+      setReturnPathLoaded(true);
+    });
   }, []);
 
   useEffect(() => {
-    if (user) {
+    if (user && returnPathLoaded) {
       void clearAuthReturnPath();
       router.replace(returnPath as never);
     }
-  }, [returnPath, user]);
+  }, [returnPath, returnPathLoaded, user]);
 
   if (user) return null;
 
