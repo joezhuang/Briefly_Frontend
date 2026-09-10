@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { createElement, type ReactNode, useState } from "react";
 import {
   ActivityIndicator,
@@ -231,6 +232,7 @@ export function ArticleView({
     "uncertainties" | "sources" | "coverage" | null
   >(null);
   const [heroFit, setHeroFit] = useState<"contain" | "cover">("contain");
+  const [showFloatingBack, setShowFloatingBack] = useState(false);
   const podcastProcessing = podcastBusy || podcast?.status === "processing";
   const podcastReady = podcast?.status === "ready" && !!podcast.audio_url;
   const webPodcastReady = Platform.OS === "web" && podcastReady;
@@ -288,11 +290,17 @@ export function ArticleView({
   }
 
   return (
-    <ScrollView
-      style={[styles.screen, { backgroundColor: colors.surface }]}
-      contentContainerStyle={styles.scrollContent}
-    >
-      <View style={[styles.page, width < 480 && styles.pageCompact]}>
+    <View style={[styles.articleRoot, { backgroundColor: colors.surface }]}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.scrollContent}
+        onScroll={(event) => {
+          if (immutable) return;
+          setShowFloatingBack(event.nativeEvent.contentOffset.y > 420);
+        }}
+        scrollEventThrottle={120}
+      >
+        <View style={[styles.page, width < 480 && styles.pageCompact]}>
         {!!article.image_url && (
           <View
             style={[
@@ -655,8 +663,27 @@ export function ArticleView({
         )}
 
         {footer}
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+
+      {!immutable && showFloatingBack && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          onPress={() => router.back()}
+          style={({ pressed }) => [
+            styles.floatingBack,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              opacity: pressed ? 0.72 : 0.94,
+            },
+          ]}
+        >
+          <Text style={[styles.floatingBackText, { color: colors.text }]}>←</Text>
+        </Pressable>
+      )}
+    </View>
   );
 }
 
@@ -703,6 +730,7 @@ function ExploreRow({
 }
 
 const styles = StyleSheet.create({
+  articleRoot: { flex: 1 },
   screen: { flex: 1 },
   scrollContent: { alignItems: "center" },
   page: {
@@ -713,6 +741,22 @@ const styles = StyleSheet.create({
     paddingBottom: 72,
   },
   pageCompact: { paddingHorizontal: 14, paddingTop: 18 },
+  floatingBack: {
+    position: "absolute",
+    left: 14,
+    top: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  floatingBackText: {
+    fontSize: 24,
+    lineHeight: 26,
+    fontWeight: "900",
+  },
   heroFrame: {
     width: "100%",
     aspectRatio: 16 / 9,
