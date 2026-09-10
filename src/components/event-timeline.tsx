@@ -25,7 +25,9 @@ export type EventTimelineItem = {
 
 type TimelineResponse = {
   event_id: string;
+  background?: EventTimelineItem[];
   timeline: EventTimelineItem[];
+  upcoming?: EventTimelineItem[];
   count: number;
   synthesis_version: number | null;
   timeline_updated_at?: string | null;
@@ -37,7 +39,10 @@ const copy = {
     title: "How this story developed",
     latest: "Latest",
     latestBriefly: "Latest in Briefly",
-    count: "developments",
+    background: "Background",
+    currentSection: "How this story developed",
+    upcoming: "What’s next",
+    count: "items",
     live: "Latest stored Briefly timeline",
     current: "View latest Briefly version",
     updated: "Updated",
@@ -51,7 +56,10 @@ const copy = {
     title: "Cómo evolucionó esta historia",
     latest: "Último",
     latestBriefly: "Último en Briefly",
-    count: "novedades",
+    background: "Antecedentes",
+    currentSection: "Cómo evolucionó esta historia",
+    upcoming: "Qué sigue",
+    count: "elementos",
     live: "Última cronología guardada en Briefly",
     current: "Ver la última versión de Briefly",
     updated: "Actualizado",
@@ -65,7 +73,10 @@ const copy = {
     title: "このニュースの経緯",
     latest: "最新",
     latestBriefly: "Briefly内の最新",
-    count: "件の動き",
+    background: "背景",
+    currentSection: "このニュースの経緯",
+    upcoming: "今後の予定",
+    count: "件",
     live: "Brieflyに保存された最新の経緯",
     current: "Brieflyの最新記事を見る",
     updated: "更新",
@@ -79,7 +90,10 @@ const copy = {
     title: "事件如何发展",
     latest: "最新",
     latestBriefly: "Briefly 中的最新进展",
-    count: "个进展",
+    background: "背景",
+    currentSection: "事件如何发展",
+    upcoming: "接下来",
+    count: "项",
     live: "Briefly 已保存的最新时间线",
     current: "查看 Briefly 最新版本",
     updated: "更新时间",
@@ -93,7 +107,10 @@ const copy = {
     title: "事件如何發展",
     latest: "最新",
     latestBriefly: "Briefly 中的最新進展",
-    count: "個進展",
+    background: "背景",
+    currentSection: "事件如何發展",
+    upcoming: "接下來",
+    count: "項",
     live: "Briefly 已儲存的最新時間線",
     current: "查看 Briefly 最新版本",
     updated: "更新時間",
@@ -112,6 +129,101 @@ function formatUpdatedAt(value: string | null, language: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function TimelineSection({
+  title,
+  items,
+  colors,
+  latestLabel,
+  currentLinkLabel,
+  liveStoryHref,
+  onOpenLiveStory,
+  upcoming = false,
+}: {
+  title: string;
+  items: EventTimelineItem[];
+  colors: ReturnType<typeof useBrieflyTheme>["colors"];
+  latestLabel?: string;
+  currentLinkLabel?: string;
+  liveStoryHref?: string;
+  onOpenLiveStory?: () => void;
+  upcoming?: boolean;
+}) {
+  return (
+    <View style={styles.sectionBlock}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+      {items.map((item, index) => {
+        const latest = !upcoming && !!latestLabel && index === items.length - 1;
+        const actionable = latest && !!liveStoryHref && !!onOpenLiveStory;
+        const content = (
+          <>
+            <View style={styles.timeRow}>
+              {!!item.time && (
+                <Text style={[styles.time, { color: colors.textMuted }]}>
+                  {item.time}
+                </Text>
+              )}
+              {latest && (
+                <Text style={[styles.latest, { color: colors.accent }]}>
+                  {latestLabel}
+                </Text>
+              )}
+            </View>
+            <Text
+              style={[
+                styles.itemTitle,
+                { color: upcoming ? colors.textMuted : colors.text },
+              ]}
+            >
+              {item.title}
+            </Text>
+            {actionable && !!currentLinkLabel && (
+              <Text style={[styles.currentLink, { color: colors.accent }]}>
+                {currentLinkLabel} →
+              </Text>
+            )}
+          </>
+        );
+
+        return (
+          <View key={item.id || `${title}-${index}`} style={styles.row}>
+            <View style={styles.rail}>
+              <View
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor: latest ? colors.accent : colors.surface,
+                    borderColor: latest ? colors.accent : colors.textMuted,
+                  },
+                ]}
+              />
+              {index < items.length - 1 && (
+                <View style={[styles.line, { backgroundColor: colors.border }]} />
+              )}
+            </View>
+            {actionable ? (
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel={currentLinkLabel}
+                onPress={onOpenLiveStory}
+                style={({ pressed }) => [
+                  styles.itemCopy,
+                  styles.actionableItem,
+                  { borderColor: colors.border },
+                  pressed && styles.itemPressed,
+                ]}
+              >
+                {content}
+              </Pressable>
+            ) : (
+              <View style={styles.itemCopy}>{content}</View>
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
 }
 
 export function EventTimeline({
@@ -134,7 +246,9 @@ export function EventTimeline({
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const labels = copy[language] ?? copy.en;
+  const [backgroundItems, setBackgroundItems] = useState<EventTimelineItem[]>([]);
   const [items, setItems] = useState<EventTimelineItem[]>([]);
+  const [upcomingItems, setUpcomingItems] = useState<EventTimelineItem[]>([]);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -161,12 +275,20 @@ export function EventTimeline({
         if (!response.ok) throw new Error(`Timeline request failed: ${response.status}`);
         const payload = (await response.json()) as TimelineResponse;
         if (active) {
+          setBackgroundItems(
+            Array.isArray(payload.background) ? payload.background : [],
+          );
           setItems(Array.isArray(payload.timeline) ? payload.timeline : []);
+          setUpcomingItems(
+            Array.isArray(payload.upcoming) ? payload.upcoming : [],
+          );
           setUpdatedAt(payload.timeline_updated_at ?? null);
         }
       } catch {
         if (active) {
+          setBackgroundItems([]);
           setItems([]);
+          setUpcomingItems([]);
           setUpdatedAt(null);
         }
       } finally {
@@ -218,7 +340,9 @@ export function EventTimeline({
     );
   }
 
-  if (items.length < 2) return null;
+  const totalItems =
+    backgroundItems.length + items.length + upcomingItems.length;
+  if (totalItems < 2) return null;
 
   const formattedUpdatedAt = formatUpdatedAt(updatedAt, language);
 
@@ -243,7 +367,7 @@ export function EventTimeline({
             </Text>
             <Text style={[styles.triggerMeta, { color: colors.textMuted }]}>
               {liveContext ? `${labels.live} · ` : ""}
-              {items.length} {labels.count}
+              {totalItems} {labels.count}
               {liveContext && formattedUpdatedAt
                 ? ` · ${labels.updated} ${formattedUpdatedAt}`
                 : ""}
@@ -287,70 +411,34 @@ export function EventTimeline({
             </View>
 
             <ScrollView contentContainerStyle={styles.timeline}>
-              {items.map((item, index) => {
-                const latest = index === items.length - 1;
-                const actionable = latest && !!liveStoryHref;
-                const content = (
-                  <>
-                    <View style={styles.timeRow}>
-                      {!!item.time && (
-                        <Text style={[styles.time, { color: colors.textMuted }]}>
-                          {item.time}
-                        </Text>
-                      )}
-                      {latest && (
-                        <Text style={[styles.latest, { color: colors.accent }]}>
-                          {liveContext ? labels.latestBriefly : labels.latest}
-                        </Text>
-                      )}
-                    </View>
-                    <Text style={[styles.itemTitle, { color: colors.text }]}>
-                      {item.title}
-                    </Text>
-                    {actionable && (
-                      <Text style={[styles.currentLink, { color: colors.accent }]}>
-                        {labels.current} →
-                      </Text>
-                    )}
-                  </>
-                );
+              {backgroundItems.length > 0 && (
+                <TimelineSection
+                  title={labels.background}
+                  items={backgroundItems}
+                  colors={colors}
+                />
+              )}
 
-                return (
-                  <View key={item.id || `${index}`} style={styles.row}>
-                    <View style={styles.rail}>
-                      <View
-                        style={[
-                          styles.dot,
-                          {
-                            backgroundColor: latest ? colors.accent : colors.surface,
-                            borderColor: latest ? colors.accent : colors.textMuted,
-                          },
-                        ]}
-                      />
-                      {index < items.length - 1 && (
-                        <View style={[styles.line, { backgroundColor: colors.border }]} />
-                      )}
-                    </View>
-                    {actionable ? (
-                      <Pressable
-                        accessibilityRole="link"
-                        accessibilityLabel={labels.current}
-                        onPress={openLiveStory}
-                        style={({ pressed }) => [
-                          styles.itemCopy,
-                          styles.actionableItem,
-                          { borderColor: colors.border },
-                          pressed && styles.itemPressed,
-                        ]}
-                      >
-                        {content}
-                      </Pressable>
-                    ) : (
-                      <View style={styles.itemCopy}>{content}</View>
-                    )}
-                  </View>
-                );
-              })}
+              {items.length > 0 && (
+                <TimelineSection
+                  title={labels.currentSection}
+                  items={items}
+                  colors={colors}
+                  latestLabel={liveContext ? labels.latestBriefly : labels.latest}
+                  currentLinkLabel={labels.current}
+                  liveStoryHref={liveStoryHref}
+                  onOpenLiveStory={openLiveStory}
+                />
+              )}
+
+              {upcomingItems.length > 0 && (
+                <TimelineSection
+                  title={labels.upcoming}
+                  items={upcomingItems}
+                  colors={colors}
+                  upcoming
+                />
+              )}
             </ScrollView>
 
             {canonicalStale && (
@@ -436,7 +524,15 @@ const styles = StyleSheet.create({
   sheetTitle: { fontSize: 25, fontWeight: "900" },
   sheetMeta: { fontSize: 12, fontWeight: "700" },
   close: { fontSize: 30, lineHeight: 30, paddingLeft: 14 },
-  timeline: { paddingBottom: 4 },
+  timeline: { paddingBottom: 4, gap: 8 },
+  sectionBlock: { marginBottom: 8 },
+  sectionTitle: {
+    marginBottom: 12,
+    fontSize: 14,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
+  },
   row: { flexDirection: "row", minHeight: 78 },
   rail: { width: 28, alignItems: "center" },
   dot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, marginTop: 5 },
