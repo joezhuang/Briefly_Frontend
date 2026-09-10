@@ -21,6 +21,7 @@ const nav = [
   { href: "/", key: "home" },
   { href: "/saved", key: "saved" },
   { href: "/search", key: "search" },
+  { href: "/history", key: "history" },
 ] as const;
 
 const themeModes: BrieflyThemeMode[] = ["system", "light", "dark"];
@@ -118,7 +119,6 @@ type SettingsRoute =
   | "/sign-in"
   | "/account"
   | "/support"
-  | "/history"
   | "/legal/terms"
   | "/legal/privacy";
 
@@ -452,24 +452,6 @@ export function AppHeader() {
                     </Text>
                   </Pressable>
                 )}
-              </View>
-
-              <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-                  {labels.history}
-                </Text>
-                <Pressable
-                  onPress={() => closeAndNavigate("/history")}
-                  style={[
-                    styles.actionRow,
-                    { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
-                  ]}
-                >
-                  <Text style={[styles.actionTitle, { color: colors.text }]}>
-                    {labels.history}
-                  </Text>
-                  <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
-                </Pressable>
               </View>
 
               <View style={styles.section}>
