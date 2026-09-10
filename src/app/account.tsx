@@ -21,10 +21,25 @@ import { useBrieflyTheme } from "@/context/theme";
 import { restoreBrieflySubscription } from "@/subscriptions";
 
 export default function AccountScreen() {
-  const { user, account, refreshAccount } = useBrieflyAuth();
+  const { user, account, refreshAccount, signOut } = useBrieflyAuth();
   const { colors } = useBrieflyTheme();
-  const [busy, setBusy] = useState<"restore" | "delete" | null>(null);
+  const [busy, setBusy] = useState<"restore" | "delete" | "signout" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const handleSignOut = async () => {
+    if (!user || busy !== null) return;
+
+    setBusy("signout");
+    setMessage(null);
+    try {
+      await signOut();
+      router.replace("/");
+    } catch (error: unknown) {
+      setMessage(error instanceof Error ? error.message : "Sign out failed.");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const restore = async () => {
     if (!user) {
@@ -102,6 +117,28 @@ export default function AccountScreen() {
           {account?.translation_entitled ? (
             <Text style={[styles.pro, { color: colors.accent }]}>Briefly Pro active</Text>
           ) : null}
+        </View>
+
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Account access</Text>
+          <Text style={[styles.body, { color: colors.textMuted }]}>
+            Sign out of Briefly on this device.
+          </Text>
+          <Pressable
+            disabled={!user || busy !== null}
+            onPress={() => void handleSignOut()}
+            style={[
+              styles.button,
+              { borderColor: colors.border },
+              (!user || busy !== null) && styles.disabled,
+            ]}
+          >
+            {busy === "signout" ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <Text style={[styles.buttonText, { color: colors.text }]}>Sign out</Text>
+            )}
+          </Pressable>
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
