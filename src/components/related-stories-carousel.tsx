@@ -83,20 +83,22 @@ export function RelatedStoriesCarousel({
     };
   }, [language]);
 
-  const related = useMemo(
-    () =>
-      candidates
-        .filter((candidate) => candidate.event_id !== article.event_id)
-        .map((candidate) => ({
-          article: candidate,
-          score: relevance(article, candidate),
-        }))
-        .filter((item) => item.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5)
-        .map((item) => item.article),
-    [article, candidates],
-  );
+  const related = useMemo(() => {
+    const ranked = candidates
+      .filter((candidate) => candidate.event_id !== article.event_id)
+      .map((candidate) => ({
+        article: candidate,
+        score: relevance(article, candidate),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    const strong = ranked.filter((item) => item.score > 0);
+    const fallback = ranked.filter((item) => item.score === 0);
+
+    return [...strong, ...fallback]
+      .slice(0, 5)
+      .map((item) => item.article);
+  }, [article, candidates]);
 
   if (loading) {
     return (
