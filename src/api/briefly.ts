@@ -385,6 +385,12 @@ export function syncBrieflyWebSubscription() {
 export type BrieflyAppConfig = {
   email_password_login_enabled: boolean;
   reviewer_email: string | null;
+  ads_enabled: boolean;
+  ads_free_for_pro: boolean;
+  home_ad_enabled: boolean;
+  home_ad_interval: number;
+  story_ad_enabled: boolean;
+  ad_provider: string;
 };
 
 export function getBrieflyAppConfig() {
