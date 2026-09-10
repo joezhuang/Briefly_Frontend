@@ -379,3 +379,13 @@ export function syncBrieflyWebSubscription() {
     briefly_pro_platform?: string | null;
   }>("/api/subscriptions/web/sync", {});
 }
+
+
+export type BrieflyAppConfig = {
+  email_password_login_enabled: boolean;
+  reviewer_email: string | null;
+};
+
+export function getBrieflyAppConfig() {
+  return getJson<BrieflyAppConfig>("/api/app-config");
+}
