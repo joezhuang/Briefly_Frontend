@@ -436,7 +436,7 @@ export default function HomeScreen() {
               {showHomeAds && crossedAdBoundary && <HomeAdSlot />}
             </View>
           );
-        }
+        }}
         ListFooterComponent={
           <View style={[styles.page, width < 480 && styles.pageCompact]}>
             {loadingMore && (
