@@ -1,24 +1,42 @@
-import { Platform, StyleSheet, useWindowDimensions, View } from "react-native";
+import { useState } from "react";
+import { Platform, StyleSheet, View } from "react-native";
 import {
   BannerAd,
   BannerAdSize,
   TestIds,
 } from "react-native-google-mobile-ads";
 
+type AdDimensions = { width: number; height: number };
+
 export function StoryAdSlot() {
-  const { width } = useWindowDimensions();
+  const [adDimensions, setAdDimensions] = useState<AdDimensions | null>(null);
   const configuredUnit =
     Platform.OS === "ios"
       ? process.env.EXPO_PUBLIC_ADMOB_IOS_STORY_BANNER_UNIT_ID
       : process.env.EXPO_PUBLIC_ADMOB_ANDROID_STORY_BANNER_UNIT_ID;
-  const compact = width < 600;
+
+  const handleSize = ({ width, height }: AdDimensions) => {
+    if (width > 0 && height > 0) {
+      setAdDimensions({ width, height });
+    }
+  };
 
   return (
-    <View style={[styles.container, compact ? styles.phone : styles.tablet]}>
+    <View
+      style={[
+        styles.container,
+        adDimensions && {
+          width: adDimensions.width,
+          height: adDimensions.height,
+        },
+      ]}
+    >
       <BannerAd
         unitId={configuredUnit?.trim() || TestIds.BANNER}
         size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
         requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+        onAdLoaded={handleSize}
+        onSizeChange={handleSize}
       />
     </View>
   );
@@ -26,22 +44,11 @@ export function StoryAdSlot() {
 
 const styles = StyleSheet.create({
   container: {
-    maxWidth: "100%",
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 0,
-    paddingHorizontal: 0,
     backgroundColor: "rgba(0, 0, 0, 0.12)",
     borderRadius: 12,
     overflow: "hidden",
-  },
-  phone: {
-    width: 320,
-    height: 50,
-  },
-  tablet: {
-    width: 728,
-    height: 90,
   },
 });
