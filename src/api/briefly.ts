@@ -65,6 +65,7 @@ function requestHeaders(options?: { includeAuth?: boolean }) {
 
 function isPublicContentPath(path: string) {
   return (
+    path.startsWith("/api/app-config") ||
     path.startsWith("/api/article-feed") ||
     path.startsWith("/api/articles") ||
     path.startsWith("/api/lazy-articles") ||
