@@ -1,4 +1,7 @@
-import { getBrieflyAccessToken } from "@/auth/session";
+import {
+  clearBrieflyAccessToken,
+  getBrieflyAccessToken,
+} from "@/auth/session";
 import type { CanonicalArticle } from "@/models/article";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
@@ -8,11 +11,11 @@ function requireApiBaseUrl() {
   return API_BASE_URL;
 }
 
-function requestHeaders() {
+function requestHeaders(options?: { includeAuth?: boolean }) {
   const headers: Record<string, string> = {};
   const accessToken = getBrieflyAccessToken();
 
-  if (accessToken) {
+  if (options?.includeAuth !== false && accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
@@ -23,10 +26,29 @@ function requestHeaders() {
   return headers;
 }
 
+function isPublicContentPath(path: string) {
+  return (
+    path.startsWith("/api/article-feed") ||
+    path.startsWith("/api/articles") ||
+    path.startsWith("/api/lazy-articles") ||
+    path.startsWith("/api/event-timeline") ||
+    path.startsWith("/api/search")
+  );
+}
+
 async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${requireApiBaseUrl()}${path}`, {
+  const accessToken = getBrieflyAccessToken();
+  let response = await fetch(`${requireApiBaseUrl()}${path}`, {
     headers: requestHeaders(),
   });
+
+  if (response.status === 401 && accessToken && isPublicContentPath(path)) {
+    clearBrieflyAccessToken();
+    response = await fetch(`${requireApiBaseUrl()}${path}`, {
+      headers: requestHeaders({ includeAuth: false }),
+    });
+  }
+
   if (!response.ok) {
     const message = await response.text().catch(() => "");
     throw new Error(
