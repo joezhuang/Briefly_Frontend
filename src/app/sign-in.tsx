@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { clearAuthReturnPath, readAuthReturnPath } from "@/auth/return-path";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -26,10 +27,16 @@ export default function SignInScreen() {
 
   const [provider, setProvider] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const returnPath = safeReturnTo(returnTo);
+  const [storedReturnTo, setStoredReturnTo] = useState<string | undefined>(undefined);
+  const returnPath = safeReturnTo(returnTo ?? storedReturnTo);
+
+  useEffect(() => {
+    void readAuthReturnPath().then(setStoredReturnTo);
+  }, []);
 
   useEffect(() => {
     if (user) {
+      void clearAuthReturnPath();
       router.replace(returnPath as never);
     }
   }, [returnPath, user]);
