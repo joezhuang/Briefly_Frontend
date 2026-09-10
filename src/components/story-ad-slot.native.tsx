@@ -24,12 +24,15 @@ export function StoryAdSlot() {
 
 const styles = StyleSheet.create({
   container: {
-    width: "100%",
+    alignSelf: "center",
     minHeight: 60,
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 18,
     paddingBottom: 8,
     paddingHorizontal: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.12)",
+    borderRadius: 12,
+    overflow: "hidden",
   },
 });
