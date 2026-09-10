@@ -41,7 +41,7 @@ export default function SignInScreen() {
   useEffect(() => {
     if (user && returnPathLoaded) {
       void clearAuthReturnPath();
-      router.replace(returnPath as never);
+      router.dismissTo(returnPath as never);
     }
   }, [returnPath, returnPathLoaded, user]);
 
