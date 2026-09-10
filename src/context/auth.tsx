@@ -19,6 +19,7 @@ import {
   getCurrentBrieflyAccount,
   type BrieflyAccountState,
 } from "@/api/briefly";
+import { saveAuthReturnPath } from "@/auth/return-path";
 import { supabase } from "@/auth/supabase";
 
 const BRIEFLY_MOBILE_AUTH_CALLBACK = "briefly://auth/callback";
@@ -119,6 +120,8 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
     if (!supabase) {
       throw new Error("Supabase authentication is not configured.");
     }
+
+    await saveAuthReturnPath(returnTo);
 
     const redirectTo =
       Platform.OS === "web"
