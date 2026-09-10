@@ -124,7 +124,7 @@ export default function StoryDetailScreen() {
   const historyRecordedKey = useRef("");
 
   const isWeb = Platform.OS === "web";
-  const articleRequestLanguage = isWeb ? "en" : language;
+  const articleRequestLanguage = language;
   const currentStoryHref = useMemo(() => {
     if (!resolvedSlug) return "/";
     const params = new URLSearchParams();
@@ -220,15 +220,41 @@ export default function StoryDetailScreen() {
             if (canonical.generation_status === "processing") {
               schedulePoll(LAZY_ARTICLE_POLL_MS);
             }
-          } else if (!isWeb && language !== "en") {
-            const localized = await getExperimentalArticleByEventId(resolvedEventId, {
-              includeDraft: PREVIEW_DRAFTS,
-              language,
-            });
-            result = preferredImage(
-              localized,
-              resolvedImageUrl ?? canonical.image_url ?? undefined,
-            );
+          } else if (language !== "en") {
+            if (isWeb) {
+              // Web never creates translations. It may, however, consume an approved
+              // translation that was already generated elsewhere (for example mobile).
+              try {
+                const localized = await getCanonicalArticleByEventId(
+                  resolvedEventId,
+                  {
+                    includeDraft: PREVIEW_DRAFTS,
+                    language,
+                  },
+                );
+                result =
+                  localized.content_language === language
+                    ? preferredImage(
+                        localized,
+                        resolvedImageUrl ?? canonical.image_url ?? undefined,
+                      )
+                    : canonical;
+              } catch {
+                result = canonical;
+              }
+            } else {
+              const localized = await getExperimentalArticleByEventId(
+                resolvedEventId,
+                {
+                  includeDraft: PREVIEW_DRAFTS,
+                  language,
+                },
+              );
+              result = preferredImage(
+                localized,
+                resolvedImageUrl ?? canonical.image_url ?? undefined,
+              );
+            }
           } else {
             result = canonical;
           }
