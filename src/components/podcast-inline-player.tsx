@@ -12,10 +12,10 @@ function formatTime(value: number) {
 
 export function PodcastInlinePlayer({
   source,
-  title,
+  title = "Briefly Podcast Analysis",
 }: {
   source: string;
-  title: string;
+  title?: string;
 }) {
   const { colors } = useBrieflyTheme();
   const { currentTrack, status, toggle, seekBy } = usePodcastPlayer();
@@ -44,7 +44,7 @@ export function PodcastInlinePlayer({
           onPress={() => toggle(track)}
           style={[styles.primaryButton, { backgroundColor: colors.text }]}
         >
-          <Text style={[styles.primaryText, { color: colors.background }]}> 
+          <Text style={[styles.primaryText, { color: colors.background }]}>
             {isPlaying ? "Pause" : "Play"}
           </Text>
         </Pressable>
@@ -88,10 +88,10 @@ export function PodcastInlinePlayer({
       </View>
 
       <View style={styles.timeRow}>
-        <Text style={[styles.timeText, { color: colors.textMuted }]}> 
+        <Text style={[styles.timeText, { color: colors.textMuted }]}>
           {formatTime(currentTime)}
         </Text>
-        <Text style={[styles.timeText, { color: colors.textMuted }]}> 
+        <Text style={[styles.timeText, { color: colors.textMuted }]}>
           {formatTime(duration)}
         </Text>
       </View>
