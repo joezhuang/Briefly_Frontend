@@ -158,9 +158,11 @@ export default function StoryDetailScreen() {
     appConfig.story_ad_enabled === true &&
     appConfig.ad_provider === "admob" &&
     !(appConfig.ads_free_for_pro && isPro);
-  const podcastSourceVersionId = article
-    ? article.authoritative_article_version_id ?? article.article_version_id
-    : null;
+  const podcastSourceVersionId =
+    authoritativeArticle?.article_version_id ??
+    article?.authoritative_article_version_id ??
+    article?.article_version_id ??
+    null;
   const podcastRequestKey =
     isPro && podcastSourceVersionId
       ? `${podcastSourceVersionId}:${language}`
