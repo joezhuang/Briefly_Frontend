@@ -18,11 +18,11 @@ import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
 
 const copy = {
-  en: { title: "Related stories", sources: "sources" },
-  es: { title: "Historias relacionadas", sources: "fuentes" },
-  ja: { title: "関連ニュース", sources: "件の情報源" },
-  "zh-CN": { title: "相关新闻", sources: "个来源" },
-  "zh-TW": { title: "相關新聞", sources: "個來源" },
+  en: { title: "You might also like", sources: "sources" },
+  es: { title: "También te puede interesar", sources: "fuentes" },
+  ja: { title: "こちらもおすすめ", sources: "件の情報源" },
+  "zh-CN": { title: "你可能也喜欢", sources: "个来源" },
+  "zh-TW": { title: "你可能也喜歡", sources: "個來源" },
 } as const;
 
 function terms(article: CanonicalArticle) {
@@ -139,7 +139,7 @@ export function RelatedStoriesCarousel({
           <View style={styles.controls}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Scroll related stories left"
+              accessibilityLabel="Scroll recommendations left"
               onPress={() => scrollBy(-1)}
               style={({ pressed }) => [
                 styles.control,
@@ -154,7 +154,7 @@ export function RelatedStoriesCarousel({
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Scroll related stories right"
+              accessibilityLabel="Scroll recommendations right"
               onPress={() => scrollBy(1)}
               style={({ pressed }) => [
                 styles.control,
