@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { usePodcastPlayer } from "@/context/podcast-player";
@@ -13,6 +14,7 @@ function formatTime(value: number) {
 export function GlobalPodcastPlayer() {
   const { colors } = useBrieflyTheme();
   const { currentTrack, status, toggle, seekBy, close } = usePodcastPlayer();
+  const [minimized, setMinimized] = useState(false);
 
   if (!currentTrack) return null;
 
@@ -20,6 +22,53 @@ export function GlobalPodcastPlayer() {
   const currentTime = status.currentTime || 0;
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
   const progressWidth = `${progress * 100}%` as `${number}%`;
+
+  if (minimized) {
+    return (
+      <View pointerEvents="box-none" style={styles.minimizedOverlay}>
+        <View
+          style={[
+            styles.minimizedPlayer,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Expand podcast player"
+            onPress={() => setMinimized(false)}
+            hitSlop={8}
+            style={styles.miniButton}
+          >
+            <Text style={[styles.miniIcon, { color: colors.textMuted }]}>↗</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={status.playing ? "Pause podcast" : "Play podcast"}
+            onPress={() => toggle()}
+            style={[styles.miniPlayButton, { backgroundColor: colors.text }]}
+          >
+            <Text style={[styles.miniPlayText, { color: colors.background }]}> 
+              {status.playing ? "❚❚" : "▶"}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close podcast player"
+            onPress={close}
+            hitSlop={8}
+            style={styles.miniButton}
+          >
+            <Text style={[styles.miniClose, { color: colors.textMuted }]}>×</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View pointerEvents="box-none" style={styles.overlay}>
@@ -39,6 +88,16 @@ export function GlobalPodcastPlayer() {
               {currentTrack.title}
             </Text>
           </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Minimize podcast player"
+            onPress={() => setMinimized(true)}
+            hitSlop={10}
+          >
+            <Text style={[styles.minimize, { color: colors.textMuted }]}>⌄</Text>
+          </Pressable>
+
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close podcast player"
@@ -110,6 +169,12 @@ const styles = StyleSheet.create({
     bottom: 14,
     alignItems: "center",
   },
+  minimizedOverlay: {
+    position: "absolute",
+    right: 14,
+    bottom: 18,
+    alignItems: "flex-end",
+  },
   player: {
     width: "100%",
     maxWidth: 520,
@@ -124,6 +189,20 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 8,
   },
+  minimizedPlayer: {
+    minHeight: 50,
+    paddingHorizontal: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 8,
+  },
   topRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -132,7 +211,24 @@ const styles = StyleSheet.create({
   copy: { flex: 1, minWidth: 0 },
   kicker: { fontSize: 10, fontWeight: "900", letterSpacing: 1.1 },
   title: { marginTop: 2, fontSize: 14, fontWeight: "800" },
+  minimize: { fontSize: 26, lineHeight: 26, fontWeight: "700" },
   close: { fontSize: 26, lineHeight: 26, fontWeight: "500" },
+  miniButton: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  miniIcon: { fontSize: 18, lineHeight: 20, fontWeight: "800" },
+  miniClose: { fontSize: 24, lineHeight: 24, fontWeight: "500" },
+  miniPlayButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  miniPlayText: { fontSize: 13, lineHeight: 16, fontWeight: "900" },
   controls: {
     flexDirection: "row",
     alignItems: "center",
