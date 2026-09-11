@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import {
   createContext,
@@ -14,12 +15,14 @@ import {
   getLazyCanonicalArticleByEventId,
   getPodcastAnalysisStatus,
 } from "@/api/briefly";
+import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 
 const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
 const POLL_MS = 5000;
+const STORAGE_KEY_PREFIX = "briefly.generation-notifications.v1";
 
 type PendingAnalysis =
   | {
@@ -39,6 +42,11 @@ type PendingAnalysis =
     };
 
 type ReadyAnalysis = PendingAnalysis;
+
+type StoredNotifications = {
+  pending: Record<string, PendingAnalysis>;
+  ready: ReadyAnalysis[];
+};
 
 type AnalysisReadinessContextValue = {
   watchAnalysis: (
@@ -100,20 +108,87 @@ const copy = {
   },
 } as const;
 
+function storageKey(ownerKey: string) {
+  return `${STORAGE_KEY_PREFIX}:${ownerKey}`;
+}
+
+async function readStoredNotifications(
+  ownerKey: string,
+): Promise<StoredNotifications> {
+  const raw = await AsyncStorage.getItem(storageKey(ownerKey));
+  if (!raw) return { pending: {}, ready: [] };
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<StoredNotifications>;
+    return {
+      pending:
+        parsed.pending && typeof parsed.pending === "object"
+          ? parsed.pending
+          : {},
+      ready: Array.isArray(parsed.ready) ? parsed.ready : [],
+    };
+  } catch {
+    return { pending: {}, ready: [] };
+  }
+}
+
+async function writeStoredNotifications(
+  ownerKey: string,
+  pending: Record<string, PendingAnalysis>,
+  ready: ReadyAnalysis[],
+) {
+  await AsyncStorage.setItem(
+    storageKey(ownerKey),
+    JSON.stringify({ pending, ready } satisfies StoredNotifications),
+  );
+}
+
 export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
+  const { ready: authReady, user } = useBrieflyAuth();
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const labels = copy[language] ?? copy.en;
+  const ownerKey = user ? `user:${user.id}` : "guest";
 
   const [pending, setPending] = useState<Record<string, PendingAnalysis>>({});
   const [ready, setReady] = useState<ReadyAnalysis[]>([]);
   const [expanded, setExpanded] = useState(false);
+  const [storageReady, setStorageReady] = useState(false);
 
   const keyFor = useCallback((item: PendingAnalysis) => {
     return item.type === "podcast"
       ? `podcast:${item.articleVersionId}:${item.language}`
       : `article:${item.eventId}:${item.baseVersionId ?? "initial"}`;
   }, []);
+
+  useEffect(() => {
+    if (!authReady) return;
+
+    let active = true;
+    setStorageReady(false);
+    setPending({});
+    setReady([]);
+    setExpanded(false);
+
+    readStoredNotifications(ownerKey)
+      .then((stored) => {
+        if (!active) return;
+        setPending(stored.pending);
+        setReady(stored.ready);
+      })
+      .finally(() => {
+        if (active) setStorageReady(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authReady, ownerKey]);
+
+  useEffect(() => {
+    if (!storageReady) return;
+    void writeStoredNotifications(ownerKey, pending, ready);
+  }, [ownerKey, pending, ready, storageReady]);
 
   const watchAnalysis = useCallback(
     (item: Omit<Extract<PendingAnalysis, { type: "article" }>, "type">) => {
@@ -146,6 +221,8 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   );
 
   useEffect(() => {
+    if (!storageReady) return;
+
     const entries = Object.values(pending);
     if (entries.length === 0) return;
 
@@ -224,7 +301,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [keyFor, pending]);
+  }, [keyFor, pending, storageReady]);
 
   const value = useMemo(
     () => ({ watchAnalysis, watchPodcast }),
