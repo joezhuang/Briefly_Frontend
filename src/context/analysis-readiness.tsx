@@ -189,9 +189,21 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   }, [authReady, ownerKey]);
 
   const storageReady = authReady && state.ownerKey === ownerKey;
-  const pending = storageReady ? state.pending : {};
-  const ready = storageReady ? state.ready : [];
-  const expanded = storageReady ? state.expanded : false;
+  const { pending, ready, expanded } = useMemo(
+    () =>
+      storageReady
+        ? {
+            pending: state.pending,
+            ready: state.ready,
+            expanded: state.expanded,
+          }
+        : {
+            pending: {} as Record<string, PendingAnalysis>,
+            ready: [] as ReadyAnalysis[],
+            expanded: false,
+          },
+    [state.expanded, state.pending, state.ready, storageReady],
+  );
 
   useEffect(() => {
     if (!storageReady) return;
