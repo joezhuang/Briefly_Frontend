@@ -1,6 +1,8 @@
 import { Platform } from "react-native";
 import Purchases from "react-native-purchases";
 
+import { syncBrieflyNativeSubscription } from "@/api/account";
+
 export type BrieflyPlan = "monthly" | "yearly";
 
 let purchasesConfigured = false;
@@ -71,6 +73,14 @@ function hasBrieflyPro(customerInfo: {
   );
 }
 
+async function syncActivePurchaseWithBackend(active: boolean) {
+  if (!active) return;
+
+  // RevenueCat webhooks remain the durable source of truth. This signed-in
+  // reconciliation removes the normal webhook delay after purchase/restore.
+  await syncBrieflyNativeSubscription().catch(() => null);
+}
+
 export function isRevenueCatPurchaseCancelled(error: unknown) {
   if (!error || typeof error !== "object") return false;
   return Boolean(
@@ -82,7 +92,9 @@ export function isRevenueCatPurchaseCancelled(error: unknown) {
 export async function getBrieflySubscriptionStatus(userId: string) {
   await ensureConfigured(userId);
   const customerInfo = await Purchases.getCustomerInfo();
-  return hasBrieflyPro(customerInfo);
+  const active = hasBrieflyPro(customerInfo);
+  await syncActivePurchaseWithBackend(active);
+  return active;
 }
 
 export async function beginBrieflySubscription(
@@ -110,7 +122,9 @@ export async function beginBrieflySubscription(
 
   try {
     const { customerInfo } = await Purchases.purchasePackage(selected);
-    return hasBrieflyPro(customerInfo);
+    const active = hasBrieflyPro(customerInfo);
+    await syncActivePurchaseWithBackend(active);
+    return active;
   } catch (error: unknown) {
     if (isRevenueCatPurchaseCancelled(error)) return false;
     throw error;
@@ -120,7 +134,9 @@ export async function beginBrieflySubscription(
 export async function restoreBrieflySubscription(userId: string) {
   await ensureConfigured(userId);
   const customerInfo = await Purchases.restorePurchases();
-  return hasBrieflyPro(customerInfo);
+  const active = hasBrieflyPro(customerInfo);
+  await syncActivePurchaseWithBackend(active);
+  return active;
 }
 
 export async function disconnectBrieflySubscriptionUser() {
