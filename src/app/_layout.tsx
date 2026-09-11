@@ -4,9 +4,11 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import { GlobalPodcastPlayer } from "@/components/global-podcast-player";
 import { AnalysisReadinessProvider } from "@/context/analysis-readiness";
 import { BrieflyAuthProvider } from "@/context/auth";
 import { LanguageProvider } from "@/context/language";
+import { PodcastPlayerProvider } from "@/context/podcast-player";
 import { ReadingHistoryProvider } from "@/context/reading-history";
 import { SavedArticlesProvider } from "@/context/saved-articles";
 import {
@@ -35,6 +37,7 @@ function AppStack() {
         <Stack.Screen name="story/[slug]" />
         <Stack.Screen name="share/[versionId]" />
       </Stack>
+      <GlobalPodcastPlayer />
     </>
   );
 }
@@ -45,13 +48,15 @@ export default function RootLayout() {
       <LanguageProvider>
         <BrieflyThemeProvider>
           <BrieflyAuthProvider>
-            <AnalysisReadinessProvider>
-              <ReadingHistoryProvider>
-                <SavedArticlesProvider>
-                  <AppStack />
-                </SavedArticlesProvider>
-              </ReadingHistoryProvider>
-            </AnalysisReadinessProvider>
+            <PodcastPlayerProvider>
+              <AnalysisReadinessProvider>
+                <ReadingHistoryProvider>
+                  <SavedArticlesProvider>
+                    <AppStack />
+                  </SavedArticlesProvider>
+                </ReadingHistoryProvider>
+              </AnalysisReadinessProvider>
+            </PodcastPlayerProvider>
           </BrieflyAuthProvider>
         </BrieflyThemeProvider>
       </LanguageProvider>
