@@ -21,6 +21,7 @@ import {
 } from "@/api/briefly";
 import { saveAuthReturnPath } from "@/auth/return-path";
 import { supabase } from "@/auth/supabase";
+import { disconnectBrieflySubscriptionUser } from "@/subscriptions";
 
 const BRIEFLY_MOBILE_AUTH_CALLBACK = "briefly://auth/callback";
 
@@ -195,6 +196,10 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
   }, [session]);
 
   const signOut = async () => {
+    if (Platform.OS === "ios" || Platform.OS === "android") {
+      await disconnectBrieflySubscriptionUser().catch(() => null);
+    }
+
     if (!supabase) {
       clearBrieflyAccessToken();
       setSession(null);
