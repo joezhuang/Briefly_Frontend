@@ -70,15 +70,15 @@ function preferredPreviewHeadline(
   return { ...article, headline: previewHeadline };
 }
 
-function getWebStoryUrl(): string | null {
-  if (Platform.OS !== "web" || typeof window === "undefined") return null;
-
+function getStoryUrl(currentStoryHref: string): string | null {
   const configuredBase = process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, "");
-  if (configuredBase) {
-    return `${configuredBase}${window.location.pathname}${window.location.search}`;
+  if (configuredBase) return `${configuredBase}${currentStoryHref}`;
+
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    return window.location.href;
   }
 
-  return window.location.href;
+  return null;
 }
 
 export default function StoryDetailScreen() {
@@ -148,7 +148,7 @@ export default function StoryDetailScreen() {
     resolvedPreviewHeadline,
     resolvedSlug,
   ]);
-  const webTranslateSourceUrl = isWeb && language !== "en" ? getWebStoryUrl() : null;
+  const translateSourceUrl = getStoryUrl(currentStoryHref);
   const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${language}:${reloadKey}`;
   const loading = loadingKey !== requestKey && !error && !article;
   const isPro = account?.translation_entitled === true;
@@ -564,8 +564,8 @@ export default function StoryDetailScreen() {
                 onChange={setLanguageMode}
               />
             )}
-            {webTranslateSourceUrl && (
-              <WebTranslateButton sourceUrl={webTranslateSourceUrl} />
+            {translateSourceUrl && (
+              <WebTranslateButton sourceUrl={translateSourceUrl} />
             )}
             <StaleStoryNotice article={displayedArticle} />
             {!!resolvedEventId && (
