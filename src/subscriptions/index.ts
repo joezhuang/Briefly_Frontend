@@ -3,6 +3,7 @@ import Purchases from "react-native-purchases";
 
 export type BrieflyPlan = "monthly" | "yearly";
 
+let purchasesConfigured = false;
 let configuredUserId: string | null = null;
 
 function apiKey() {
@@ -46,17 +47,19 @@ async function ensureConfigured(userId: string) {
     throw new Error("RevenueCat is not configured for this platform.");
   }
 
-  if (configuredUserId === userId) return;
+  if (purchasesConfigured && configuredUserId === userId) return;
 
-  if (configuredUserId === null) {
+  if (!purchasesConfigured) {
     Purchases.configure({
       apiKey: key,
       appUserID: userId,
     });
-  } else {
-    await Purchases.logIn(userId);
+    purchasesConfigured = true;
+    configuredUserId = userId;
+    return;
   }
 
+  await Purchases.logIn(userId);
   configuredUserId = userId;
 }
 
@@ -118,4 +121,17 @@ export async function restoreBrieflySubscription(userId: string) {
   await ensureConfigured(userId);
   const customerInfo = await Purchases.restorePurchases();
   return hasBrieflyPro(customerInfo);
+}
+
+export async function disconnectBrieflySubscriptionUser() {
+  if (
+    (Platform.OS !== "ios" && Platform.OS !== "android") ||
+    !purchasesConfigured ||
+    configuredUserId === null
+  ) {
+    return;
+  }
+
+  await Purchases.logOut();
+  configuredUserId = null;
 }
