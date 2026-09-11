@@ -17,6 +17,7 @@ import {
 
 import type { PodcastAnalysisStatus } from "@/api/briefly";
 import { PodcastInlinePlayer } from "@/components/podcast-inline-player";
+import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useSavedArticles } from "@/context/saved-articles";
 import { useBrieflyTheme } from "@/context/theme";
@@ -30,6 +31,11 @@ const localizationCopy = {
     readyTitle: "Experimental translation",
     readyText: "This AI-generated translation may contain inaccuracies or awkward wording. Refer to the original English article for authoritative content.",
     availableText: "AI translation is available in other supported languages. Existing translations can be read by everyone; Briefly Pro can generate one when it is not yet available.",
+    signIn: "Sign in",
+    proOnly: "Briefly Pro",
+    preparing: "Preparing translation…",
+    translated: "Translated",
+    unavailable: "Translation unavailable",
   },
   es: {
     pendingTitle: "Traducción experimental en preparación",
@@ -37,6 +43,11 @@ const localizationCopy = {
     readyTitle: "Traducción experimental",
     readyText: "Esta traducción generada por IA puede contener errores o expresiones poco naturales. Consulta el artículo original en inglés como fuente de referencia.",
     availableText: "La traducción por IA está disponible en otros idiomas compatibles. Todos pueden leer las traducciones existentes; Briefly Pro puede generar una cuando aún no esté disponible.",
+    signIn: "Iniciar sesión",
+    proOnly: "Briefly Pro",
+    preparing: "Preparando traducción…",
+    translated: "Traducido",
+    unavailable: "Traducción no disponible",
   },
   ja: {
     pendingTitle: "実験的な翻訳を準備しています",
@@ -44,6 +55,11 @@ const localizationCopy = {
     readyTitle: "実験的な翻訳",
     readyText: "このAI生成翻訳には誤りや不自然な表現が含まれる可能性があります。正確な内容は英語の原文を参照してください。",
     availableText: "AI翻訳は他の対応言語でも利用できます。既存の翻訳は誰でも閲覧でき、まだない翻訳はBriefly Proで生成できます。",
+    signIn: "ログイン",
+    proOnly: "Briefly Pro",
+    preparing: "翻訳を準備中…",
+    translated: "翻訳済み",
+    unavailable: "翻訳を利用できません",
   },
   "zh-CN": {
     pendingTitle: "正在准备实验性翻译",
@@ -51,6 +67,11 @@ const localizationCopy = {
     readyTitle: "实验性翻译",
     readyText: "此翻译由 AI 生成，可能包含错误或不自然的表述。权威内容请以英文原文为准。",
     availableText: "AI 翻译支持其他语言。已有翻译所有用户均可阅读；如果尚无对应翻译，Briefly Pro 可生成翻译。",
+    signIn: "登录",
+    proOnly: "Briefly Pro",
+    preparing: "正在准备翻译…",
+    translated: "已翻译",
+    unavailable: "翻译暂不可用",
   },
   "zh-TW": {
     pendingTitle: "正在準備實驗性翻譯",
@@ -58,6 +79,11 @@ const localizationCopy = {
     readyTitle: "實驗性翻譯",
     readyText: "此翻譯由 AI 產生，可能包含錯誤或不自然的表述。權威內容請以英文原文為準。",
     availableText: "AI 翻譯支援其他語言。已有翻譯所有使用者均可閱讀；如果尚無對應翻譯，Briefly Pro 可產生翻譯。",
+    signIn: "登入",
+    proOnly: "Briefly Pro",
+    preparing: "正在準備翻譯…",
+    translated: "已翻譯",
+    unavailable: "翻譯暫不可用",
   },
 } as const;
 
@@ -96,7 +122,7 @@ function formatDate(value: string | null | undefined, language: string) {
 }
 
 export function ArticleView({ article, immutable = false, podcast = null, podcastBusy = false, podcastPro = false, podcastSignedIn = false, onPodcastAction, translationAction, footer }: { article: CanonicalArticle; immutable?: boolean; podcast?: PodcastAnalysisStatus | null; podcastBusy?: boolean; podcastPro?: boolean; podcastSignedIn?: boolean; onPodcastAction?: () => void; translationAction?: ReactNode; footer?: ReactNode; }) {
-  const { width } = useWindowDimensions(); const { language, t } = useBrieflyLanguage(); const { colors } = useBrieflyTheme(); const { isSaved, toggleSaved } = useSavedArticles();
+  const { width } = useWindowDimensions(); const { language, t } = useBrieflyLanguage(); const { colors } = useBrieflyTheme(); const { isSaved, toggleSaved } = useSavedArticles(); const { user, account } = useBrieflyAuth();
   const saved = isSaved(article); const sourceCount = article.source_count ?? article.sources_used?.length ?? 0; const timestamp = formatDate(article.published_at ?? article.generated_at, language);
   const contentLanguage = article.content_language ?? article.language; const showingEnglishFallback = language !== "en" && contentLanguage === "en"; const translationPending = article.translation_status === "pending"; const experimentalTranslation = article.experimental_localization === true; const translatedContent = language !== "en" && contentLanguage !== "en" && contentLanguage === language;
   const localizationText = localizationCopy[language] ?? localizationCopy.en; const imageFitText = imageFitCopy[language] ?? imageFitCopy.en; const podcastText = podcastCopy[language] ?? podcastCopy.en; const coverageText = coverageCopy[language] ?? coverageCopy.en; const exploreText = exploreCopy[language] ?? exploreCopy.en;
@@ -109,12 +135,30 @@ export function ArticleView({ article, immutable = false, podcast = null, podcas
   const hasLocalizationStatus = translationPending || experimentalTranslation || translatedContent;
   const showLocalizationNotice = hasLocalizationStatus || (Platform.OS !== "web" && language !== "en");
   const localizationBody = translationPending ? localizationText.pendingText : translatedContent || experimentalTranslation ? localizationText.readyText : localizationText.availableText;
+  const translationPro = account?.translation_entitled === true;
+  let localizationAction = localizationText.translated;
+  let localizationDisabled = true;
+  let localizationPress: (() => void) | undefined;
+  if (translationPending) localizationAction = localizationText.preparing;
+  else if (!(translatedContent || experimentalTranslation)) {
+    if (!user) {
+      localizationAction = localizationText.signIn;
+      localizationDisabled = false;
+      localizationPress = () => router.push("/sign-in" as never);
+    } else if (!translationPro) {
+      localizationAction = localizationText.proOnly;
+      localizationDisabled = false;
+      localizationPress = () => router.push("/upgrade" as never);
+    } else {
+      localizationAction = localizationText.unavailable;
+    }
+  }
 
   return <View style={[styles.articleRoot, { backgroundColor: colors.surface }]}><ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} onScroll={(event) => { if (!immutable) setShowFloatingBack(event.nativeEvent.contentOffset.y > 420); }} scrollEventThrottle={120}><View style={[styles.page, width < 480 && styles.pageCompact]}>
     {!!article.image_url && <View style={[styles.heroFrame, { backgroundColor: colors.imageFallback }]}><Image source={{ uri: article.image_url }} style={styles.heroImage} contentFit={heroFit} transition={180} />{!immutable && <Pressable accessibilityRole="button" accessibilityLabel={heroFit === "contain" ? imageFitText.fillLabel : imageFitText.fullLabel} onPress={() => setHeroFit(v => v === "contain" ? "cover" : "contain")} style={({pressed}) => [styles.heroFitButton, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? .72 : .92 }]}><Text style={[styles.heroFitButtonText,{color:colors.text}]}>{heroFit === "contain" ? imageFitText.fill : imageFitText.full}</Text></Pressable>}</View>}
     <Text style={[styles.brand,{color:colors.accent}]}>BRIEFLY</Text><Text style={[styles.headline,width<480&&styles.headlineCompact,{color:colors.text}]}>{article.headline}</Text>{!!article.standfirst&&<Text style={[styles.standfirst,width<480&&styles.standfirstCompact,{color:colors.textMuted}]}>{article.standfirst}</Text>}
     {!!translationAction && <View style={styles.translationAction}>{translationAction}</View>}
-    {showLocalizationNotice && <View style={[styles.localizationNotice,{backgroundColor:colors.surfaceMuted,borderColor:colors.border}]}><View style={styles.statusTitleRow}>{translationPending&&<ActivityIndicator size="small" color={colors.accent}/>}<Text style={[styles.localizationNoticeTitle,{color:colors.text}]}>{translationPending?localizationText.pendingTitle:localizationText.readyTitle}</Text></View><Text style={[styles.localizationNoticeText,{color:colors.textMuted}]}>{localizationBody}</Text></View>}
+    {showLocalizationNotice && <View style={[styles.podcastFeature,{backgroundColor:colors.surfaceMuted,borderColor:colors.border}]}><View style={styles.podcastFeatureCopy}><View style={styles.podcastFeatureTitleRow}>{translationPending&&<ActivityIndicator size="small" color={colors.accent}/>}<Text style={[styles.podcastFeatureTitle,{color:colors.text}]}>{translationPending?localizationText.pendingTitle:localizationText.readyTitle}</Text><Text style={[styles.podcastProBadge,{color:colors.accent}]}>AI</Text></View><Text style={[styles.podcastFeatureBody,{color:colors.textMuted}]}>{localizationBody}</Text></View><Pressable disabled={localizationDisabled} onPress={localizationPress} style={[styles.podcastFeatureButton,{backgroundColor:colors.text},localizationDisabled&&styles.podcastButtonDisabled]}>{translationPending&&<ActivityIndicator size="small" color={colors.background}/>}<Text style={[styles.podcastButtonText,{color:colors.background}]}>{localizationAction}</Text></Pressable></View>}
     <View style={styles.meta}>{!!article.category&&<Text style={[styles.metaText,{color:colors.textMuted}]}>{article.category}</Text>}{!!timestamp&&<Text style={[styles.metaText,{color:colors.textMuted}]}>{timestamp}</Text>}{showingEnglishFallback&&<Text style={[styles.languageBadge,{color:colors.textMuted}]}>{t.articleContentEnglish}</Text>}<Text style={[styles.metaText,{color:colors.textMuted}]}>{sourceCount} {sourceCount===1?t.source:t.sourcesPlural}</Text>{immutable&&<Text style={[styles.snapshotBadge,{color:colors.accent}]}>{t.savedVersion}</Text>}</View>
     <View style={styles.actions}><Pressable onPress={()=>void toggleSaved(article)} style={[styles.action,{borderColor:colors.border},saved&&{backgroundColor:colors.text,borderColor:colors.text}]}><Text style={[styles.actionText,{color:saved?colors.background:colors.text}]}>{saved?t.savedAction:t.save}</Text></Pressable><Pressable onPress={()=>void share()} style={[styles.action,{borderColor:colors.border}]}><Text style={[styles.actionText,{color:colors.text}]}>{t.share}</Text></Pressable></View>
     <View style={[styles.briefCard,{backgroundColor:colors.surfaceMuted}]}>{briefSection(t.whatHappened,article.what_happened)}{briefSection(t.whyItMatters,article.why_it_matters)}{briefSection(t.whatNext,article.what_next)}</View>
