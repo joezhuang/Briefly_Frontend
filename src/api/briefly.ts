@@ -225,11 +225,15 @@ export function requestCardTranslation(
   eventId: string,
   language: string,
   articleVersionId?: number | null,
+  sourceHeadline?: string,
+  sourceSummary?: string,
 ) {
   return postJson<CardTranslation>("/api/card-translations", {
     event_id: eventId,
     language,
     article_version_id: articleVersionId ?? null,
+    source_headline: sourceHeadline ?? null,
+    source_summary: sourceSummary ?? null,
   });
 }
 
@@ -356,7 +360,7 @@ export function createBrieflyWebCheckout(
 }
 
 export function createBrieflyWebPortal(returnUrl: string) {
-  return postJson<{ portal_url: string }>(
+  return postJson<{ checkout_url: string }>(
     "/api/subscriptions/web/portal",
     { return_url: returnUrl },
   );
