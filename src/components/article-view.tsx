@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +17,7 @@ import {
 
 import type { PodcastAnalysisStatus } from "@/api/briefly";
 import { PodcastInlinePlayer } from "@/components/podcast-inline-player";
+import { useAnalysisReadiness } from "@/context/analysis-readiness";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useSavedArticles } from "@/context/saved-articles";
@@ -122,12 +123,45 @@ function formatDate(value: string | null | undefined, language: string) {
 }
 
 export function ArticleView({ article, immutable = false, podcast = null, podcastBusy = false, podcastPro = false, podcastSignedIn = false, onPodcastAction, translationAction, footer }: { article: CanonicalArticle; immutable?: boolean; podcast?: PodcastAnalysisStatus | null; podcastBusy?: boolean; podcastPro?: boolean; podcastSignedIn?: boolean; onPodcastAction?: () => void; translationAction?: ReactNode; footer?: ReactNode; }) {
-  const { width } = useWindowDimensions(); const { language, t } = useBrieflyLanguage(); const { colors } = useBrieflyTheme(); const { isSaved, toggleSaved } = useSavedArticles(); const { user, account } = useBrieflyAuth();
+  const { width } = useWindowDimensions(); const { language, t } = useBrieflyLanguage(); const { colors } = useBrieflyTheme(); const { isSaved, toggleSaved } = useSavedArticles(); const { user, account } = useBrieflyAuth(); const { watchTranslation } = useAnalysisReadiness();
   const saved = isSaved(article); const sourceCount = article.source_count ?? article.sources_used?.length ?? 0; const timestamp = formatDate(article.published_at ?? article.generated_at, language);
   const contentLanguage = article.content_language ?? article.language; const showingEnglishFallback = language !== "en" && contentLanguage === "en"; const translationPending = article.translation_status === "pending"; const experimentalTranslation = article.experimental_localization === true; const translatedContent = language !== "en" && contentLanguage !== "en" && contentLanguage === language;
   const localizationText = localizationCopy[language] ?? localizationCopy.en; const imageFitText = imageFitCopy[language] ?? imageFitCopy.en; const podcastText = podcastCopy[language] ?? podcastCopy.en; const coverageText = coverageCopy[language] ?? coverageCopy.en; const exploreText = exploreCopy[language] ?? exploreCopy.en;
   const [openExplore, setOpenExplore] = useState<"uncertainties" | "sources" | "coverage" | null>(null); const [heroFit, setHeroFit] = useState<"contain" | "cover">("contain"); const [showFloatingBack, setShowFloatingBack] = useState(false);
   const podcastProcessing = podcastBusy || podcast?.status === "processing"; const podcastReady = podcast?.status === "ready" && !!podcast.audio_url;
+
+  useEffect(() => {
+    if (
+      immutable ||
+      Platform.OS === "web" ||
+      language === "en" ||
+      !translationPending ||
+      !article.event_id
+    ) {
+      return;
+    }
+
+    const params = new URLSearchParams({ eventId: article.event_id });
+    watchTranslation({
+      eventId: article.event_id,
+      language,
+      headline: article.headline,
+      href: `/story/${encodeURIComponent(article.slug)}?${params.toString()}`,
+      articleVersionId:
+        article.authoritative_article_version_id ?? article.article_version_id,
+    });
+  }, [
+    article.article_version_id,
+    article.authoritative_article_version_id,
+    article.event_id,
+    article.headline,
+    article.slug,
+    immutable,
+    language,
+    translationPending,
+    watchTranslation,
+  ]);
+
   const share = async () => { const webBase = process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, ""); if (!webBase) { Alert.alert("Briefly", t.shareConfigMissing); return; } const url = `${webBase}/share/${article.article_version_id}`; await Share.share(Platform.OS === "ios" ? { message: article.headline, url } : { message: `${article.headline}\n${url}` }); };
   const openCoverage = async (url: string) => { if (Platform.OS === "web" && typeof window !== "undefined") { window.open(url, "_blank", "noopener,noreferrer"); return; } await Linking.openURL(url); };
   const briefSection = (title: string, text: string) => text ? <View style={styles.briefSection}><Text style={[styles.briefTitle, { color: colors.accent }]}>{title}</Text><Text style={[styles.briefText, { color: colors.text }]}>{text}</Text></View> : null;
