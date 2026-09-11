@@ -45,10 +45,20 @@ let rememberedHomeScrollOffset = 0;
 
 const feedCopy = {
   en: { top: "Top", national: "National", local: "Local", refresh: "Refresh" },
-  es: { top: "Principal", national: "Nacional", local: "Local", refresh: "Actualizar" },
+  es: {
+    top: "Principal",
+    national: "Nacional",
+    local: "Local",
+    refresh: "Actualizar",
+  },
   ja: { top: "トップ", national: "国内", local: "地域", refresh: "更新" },
   "zh-CN": { top: "头条", national: "全国", local: "本地", refresh: "刷新" },
-  "zh-TW": { top: "頭條", national: "全國", local: "本地", refresh: "重新整理" },
+  "zh-TW": {
+    top: "頭條",
+    national: "全國",
+    local: "本地",
+    refresh: "重新整理",
+  },
 } as const;
 
 const scopes: HomepageFeedScope[] = ["top", "national", "local"];
@@ -212,7 +222,8 @@ export default function HomeScreen() {
         if (document.visibilityState === "visible") refreshIfStale();
       };
       document.addEventListener("visibilitychange", onVisibility);
-      return () => document.removeEventListener("visibilitychange", onVisibility);
+      return () =>
+        document.removeEventListener("visibilitychange", onVisibility);
     }
 
     const subscription = AppState.addEventListener("change", (nextState) => {
@@ -229,7 +240,8 @@ export default function HomeScreen() {
         contentSize: { height: number };
       };
     }) => {
-      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      const { layoutMeasurement, contentOffset, contentSize } =
+        event.nativeEvent;
       rememberedHomeScrollOffset = Math.max(0, contentOffset.y);
       setShowTopButton(contentOffset.y > SHOW_TOP_BUTTON_OFFSET);
       const distanceFromBottom =
@@ -289,7 +301,13 @@ export default function HomeScreen() {
   );
 
   const listHeader = (
-    <View style={[styles.page, styles.pageWithoutBottomPadding, width < 480 && styles.pageCompact]}>
+    <View
+      style={[
+        styles.page,
+        styles.pageWithoutBottomPadding,
+        width < 480 && styles.pageCompact,
+      ]}
+    >
       <AppHeader />
 
       <View style={[styles.header, mobileHeader && styles.headerCompact]}>
@@ -316,7 +334,9 @@ export default function HomeScreen() {
                     pressed && styles.refreshPressed,
                   ]}
                 >
-                  <Text style={[styles.refreshText, { color: colors.textMuted }]}>
+                  <Text
+                    style={[styles.refreshText, { color: colors.textMuted }]}
+                  >
                     {copy.refresh}
                   </Text>
                 </Pressable>
@@ -328,6 +348,8 @@ export default function HomeScreen() {
                 mobileHeader && styles.subtitleCompact,
                 { color: colors.textMuted },
               ]}
+              adjustsFontSizeToFit
+              numberOfLines={1}
             >
               {t.subtitle}
             </Text>
@@ -368,7 +390,11 @@ export default function HomeScreen() {
               </View>
               <View style={styles.secondaryColumn}>
                 {secondary.map((article) => (
-                  <StoryTile key={storyKey(article)} article={article} size="secondary" />
+                  <StoryTile
+                    key={storyKey(article)}
+                    article={article}
+                    size="secondary"
+                  />
                 ))}
               </View>
             </View>
@@ -377,7 +403,10 @@ export default function HomeScreen() {
               <StoryTile article={lead} size="hero" />
               <View style={tablet ? styles.twoColumnGrid : styles.stack}>
                 {secondary.map((article) => (
-                  <View key={storyKey(article)} style={tablet ? styles.half : undefined}>
+                  <View
+                    key={storyKey(article)}
+                    style={tablet ? styles.half : undefined}
+                  >
                     <StoryTile article={article} size="secondary" />
                   </View>
                 ))}
@@ -397,7 +426,9 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.screen, { backgroundColor: colors.background }]}
+    >
       <FlatList
         ref={listRef}
         style={styles.list}
@@ -428,7 +459,13 @@ export default function HomeScreen() {
                 {batch.map((article) => (
                   <View
                     key={storyKey(article)}
-                    style={desktop ? styles.third : tablet ? styles.half : styles.full}
+                    style={
+                      desktop
+                        ? styles.third
+                        : tablet
+                          ? styles.half
+                          : styles.full
+                    }
                   >
                     <StoryTile article={article} />
                   </View>

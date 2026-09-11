@@ -25,7 +25,7 @@ const copy = {
     saved: "Saved",
     search: "Search",
     history: "History",
-    topStories: "Today’s top stories",
+    topStories: "Top Stories",
     subtitle: "A deeper understanding of what’s happening in the world.",
     loadingStories: "Loading stories…",
     unableLoad: "Unable to load Briefly",
@@ -41,7 +41,8 @@ const copy = {
       "Save a story and Briefly will keep an immutable local snapshot of that article version.",
     loadingSavedStory: "Loading saved story…",
     savedUnavailable: "Saved story unavailable",
-    savedUnavailableMessage: "This snapshot is no longer stored on this device.",
+    savedUnavailableMessage:
+      "This snapshot is no longer stored on this device.",
     searchPlaceholder: "Search current Briefly stories",
     searchUnavailable: "Search unavailable",
     noMatches: "No matches",
@@ -68,7 +69,8 @@ const copy = {
       "Set EXPO_PUBLIC_BRIEFLY_WEB_URL to your public Briefly web address before sharing.",
     articleContentEnglish: "Article content is currently in English.",
     pageNotFound: "Page not found",
-    pageNotFoundMessage: "This Briefly link is unavailable or no longer exists.",
+    pageNotFoundMessage:
+      "This Briefly link is unavailable or no longer exists.",
     backHome: "Back to home",
     signIn: "Sign in",
     signOut: "Sign out",
@@ -83,11 +85,13 @@ const copy = {
     completingSignIn: "Completing sign in…",
     upgrade: "Upgrade",
     upgradeTitle: "Upgrade to Briefly Pro",
-    upgradeSubtitle: "Unlock multilingual news now, with more Briefly Pro intelligence features coming next.",
+    upgradeSubtitle:
+      "Unlock multilingual news now, with more Briefly Pro intelligence features coming next.",
     proTranslationFeature: "Read Briefly in supported languages",
     proFutureFeature: "More Pro intelligence features as they launch",
     trialIncluded: "Includes a 7-day free trial",
-    cancelTrial: "Cancel anytime before the trial ends and you won’t be charged.",
+    cancelTrial:
+      "Cancel anytime before the trial ends and you won’t be charged.",
     confirmingSubscription: "Confirming your Briefly Pro subscription…",
     monthly: "Monthly",
     yearly: "Yearly",
@@ -122,7 +126,8 @@ const copy = {
       "Guarda una noticia y Briefly conservará una copia inmutable de esa versión.",
     loadingSavedStory: "Cargando noticia guardada…",
     savedUnavailable: "Noticia guardada no disponible",
-    savedUnavailableMessage: "Esta copia ya no está almacenada en este dispositivo.",
+    savedUnavailableMessage:
+      "Esta copia ya no está almacenada en este dispositivo.",
     searchPlaceholder: "Buscar noticias actuales en Briefly",
     searchUnavailable: "Búsqueda no disponible",
     noMatches: "Sin resultados",
@@ -147,9 +152,11 @@ const copy = {
     invalidSharedLink: "Enlace compartido no válido.",
     shareConfigMissing:
       "Configura EXPO_PUBLIC_BRIEFLY_WEB_URL con la dirección pública de Briefly antes de compartir.",
-    articleContentEnglish: "El contenido del artículo está actualmente en inglés.",
+    articleContentEnglish:
+      "El contenido del artículo está actualmente en inglés.",
     pageNotFound: "Página no encontrada",
-    pageNotFoundMessage: "Este enlace de Briefly no está disponible o ya no existe.",
+    pageNotFoundMessage:
+      "Este enlace de Briefly no está disponible o ya no existe.",
     backHome: "Volver al inicio",
     signIn: "Iniciar sesión",
     signOut: "Cerrar sesión",
@@ -164,7 +171,8 @@ const copy = {
     completingSignIn: "Completando el inicio de sesión…",
     upgrade: "Mejorar",
     upgradeTitle: "Mejora a Briefly Pro",
-    upgradeSubtitle: "Desbloquea noticias multilingües ahora, con más funciones inteligentes de Briefly Pro próximamente.",
+    upgradeSubtitle:
+      "Desbloquea noticias multilingües ahora, con más funciones inteligentes de Briefly Pro próximamente.",
     proTranslationFeature: "Lee Briefly en los idiomas compatibles",
     proFutureFeature: "Más funciones Pro a medida que se lancen",
     trialIncluded: "Incluye una prueba gratuita de 7 días",
@@ -245,11 +253,13 @@ const copy = {
     completingSignIn: "ログインを完了しています…",
     upgrade: "アップグレード",
     upgradeTitle: "Briefly Proにアップグレード",
-    upgradeSubtitle: "多言語ニュースを今すぐ利用。Briefly Proの高度な機能も順次追加予定です。",
+    upgradeSubtitle:
+      "多言語ニュースを今すぐ利用。Briefly Proの高度な機能も順次追加予定です。",
     proTranslationFeature: "対応言語でBrieflyを読む",
     proFutureFeature: "今後追加されるProインテリジェンス機能",
     trialIncluded: "7日間の無料トライアル付き",
-    cancelTrial: "トライアル終了前ならいつでもキャンセルでき、料金はかかりません。",
+    cancelTrial:
+      "トライアル終了前ならいつでもキャンセルでき、料金はかかりません。",
     confirmingSubscription: "Briefly Proの購読を確認しています…",
     monthly: "月額",
     yearly: "年額",
@@ -305,7 +315,8 @@ const copy = {
     loadingSharedStory: "正在加载分享文章…",
     sharedUnavailable: "分享文章不可用",
     invalidSharedLink: "分享链接无效。",
-    shareConfigMissing: "分享前请将 EXPO_PUBLIC_BRIEFLY_WEB_URL 设置为 Briefly 的公开网址。",
+    shareConfigMissing:
+      "分享前请将 EXPO_PUBLIC_BRIEFLY_WEB_URL 设置为 Briefly 的公开网址。",
     articleContentEnglish: "文章内容目前以英文显示。",
     pageNotFound: "页面未找到",
     pageNotFoundMessage: "此 Briefly 链接不可用或已不存在。",
@@ -323,7 +334,8 @@ const copy = {
     completingSignIn: "正在完成登录…",
     upgrade: "升级",
     upgradeTitle: "升级到 Briefly Pro",
-    upgradeSubtitle: "立即解锁多语言新闻，更多 Briefly Pro 智能功能将陆续推出。",
+    upgradeSubtitle:
+      "立即解锁多语言新闻，更多 Briefly Pro 智能功能将陆续推出。",
     proTranslationFeature: "使用支持的语言阅读 Briefly",
     proFutureFeature: "后续推出更多 Pro 智能功能",
     trialIncluded: "包含 7 天免费试用",
@@ -383,7 +395,8 @@ const copy = {
     loadingSharedStory: "正在載入分享文章…",
     sharedUnavailable: "分享文章無法使用",
     invalidSharedLink: "分享連結無效。",
-    shareConfigMissing: "分享前請將 EXPO_PUBLIC_BRIEFLY_WEB_URL 設為 Briefly 的公開網址。",
+    shareConfigMissing:
+      "分享前請將 EXPO_PUBLIC_BRIEFLY_WEB_URL 設為 Briefly 的公開網址。",
     articleContentEnglish: "文章內容目前以英文顯示。",
     pageNotFound: "找不到頁面",
     pageNotFoundMessage: "此 Briefly 連結無法使用或已不存在。",
@@ -401,7 +414,8 @@ const copy = {
     completingSignIn: "正在完成登入…",
     upgrade: "升級",
     upgradeTitle: "升級至 Briefly Pro",
-    upgradeSubtitle: "立即解鎖多語言新聞，更多 Briefly Pro 智慧功能將陸續推出。",
+    upgradeSubtitle:
+      "立即解鎖多語言新聞，更多 Briefly Pro 智慧功能將陸續推出。",
     proTranslationFeature: "使用支援的語言閱讀 Briefly",
     proFutureFeature: "後續推出更多 Pro 智慧功能",
     trialIncluded: "包含 7 天免費試用",
