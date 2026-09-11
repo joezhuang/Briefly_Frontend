@@ -360,7 +360,7 @@ export function createBrieflyWebCheckout(
 }
 
 export function createBrieflyWebPortal(returnUrl: string) {
-  return postJson<{ checkout_url: string }>(
+  return postJson<{ portal_url: string }>(
     "/api/subscriptions/web/portal",
     { return_url: returnUrl },
   );
