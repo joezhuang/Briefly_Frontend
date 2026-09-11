@@ -31,7 +31,7 @@ type PendingAnalysis =
       eventId: string;
       headline: string;
       href: string;
-      kind?: "initial" | "refresh";
+      kind?: "initial" | "refresh" | "translation";
       baseVersionId?: number | null;
       targetLanguage?: string | null;
     }
@@ -59,6 +59,13 @@ type AnalysisReadinessContextValue = {
   watchAnalysis: (
     item: Omit<Extract<PendingAnalysis, { type: "article" }>, "type">,
   ) => void;
+  watchTranslation: (item: {
+    eventId: string;
+    language: string;
+    headline: string;
+    href: string;
+    articleVersionId?: number | null;
+  }) => void;
   watchPodcast: (
     item: Omit<Extract<PendingAnalysis, { type: "podcast" }>, "type">,
   ) => void;
@@ -71,6 +78,7 @@ const copy = {
   en: {
     ready: "Ready to read",
     updated: "Updated analysis ready",
+    translation: "Translation ready",
     podcast: "Podcast ready",
     more: "more items are ready",
     notifications: "Generation notifications",
@@ -80,6 +88,7 @@ const copy = {
   es: {
     ready: "Listo para leer",
     updated: "Análisis actualizado listo",
+    translation: "Traducción lista",
     podcast: "Pódcast listo",
     more: "elementos más están listos",
     notifications: "Notificaciones de generación",
@@ -89,6 +98,7 @@ const copy = {
   ja: {
     ready: "読めるようになりました",
     updated: "更新版の分析ができました",
+    translation: "翻訳の準備ができました",
     podcast: "ポッドキャストの準備ができました",
     more: "件の項目も準備できました",
     notifications: "生成通知",
@@ -98,6 +108,7 @@ const copy = {
   "zh-CN": {
     ready: "已可阅读",
     updated: "更新分析已准备好",
+    translation: "翻译已准备好",
     podcast: "播客已准备好",
     more: "项内容也已准备好",
     notifications: "生成通知",
@@ -107,6 +118,7 @@ const copy = {
   "zh-TW": {
     ready: "已可閱讀",
     updated: "更新分析已準備好",
+    translation: "翻譯已準備好",
     podcast: "Podcast 已準備好",
     more: "項內容也已準備好",
     notifications: "產生通知",
@@ -165,9 +177,10 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   });
 
   const keyFor = useCallback((item: PendingAnalysis) => {
-    return item.type === "podcast"
-      ? `podcast:${item.articleVersionId}:${item.language}`
-      : `article:${item.eventId}:${item.baseVersionId ?? "initial"}:${item.targetLanguage ?? "canonical"}`;
+    if (item.type === "podcast") {
+      return `podcast:${item.articleVersionId}:${item.language}`;
+    }
+    return `article:${item.kind ?? "initial"}:${item.eventId}:${item.baseVersionId ?? "initial"}:${item.targetLanguage ?? "canonical"}`;
   }, []);
 
   useEffect(() => {
@@ -239,6 +252,55 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
     [keyFor, language, ownerKey, storageReady],
   );
 
+  const watchTranslation = useCallback(
+    (item: {
+      eventId: string;
+      language: string;
+      headline: string;
+      href: string;
+      articleVersionId?: number | null;
+    }) => {
+      if (!storageReady || item.language === "en") return;
+
+      const next: PendingAnalysis = {
+        type: "article",
+        kind: "translation",
+        eventId: item.eventId,
+        headline: item.headline,
+        href: item.href,
+        baseVersionId: item.articleVersionId ?? null,
+        targetLanguage: item.language,
+      };
+      const key = keyFor(next);
+
+      setState((current) => {
+        if (current.ownerKey !== ownerKey) return current;
+
+        const refreshAlreadyTracksLocalization = Object.values(
+          current.pending,
+        ).some(
+          (candidate) =>
+            candidate.type === "article" &&
+            candidate.kind === "refresh" &&
+            candidate.eventId === item.eventId &&
+            candidate.targetLanguage === item.language,
+        );
+        if (refreshAlreadyTracksLocalization) return current;
+
+        const existing = current.pending[key];
+        if (existing?.headline === next.headline && existing?.href === next.href) {
+          return current;
+        }
+
+        return {
+          ...current,
+          pending: { ...current.pending, [key]: next },
+        };
+      });
+    },
+    [keyFor, ownerKey, storageReady],
+  );
+
   const watchPodcast = useCallback(
     (item: Omit<Extract<PendingAnalysis, { type: "podcast" }>, "type">) => {
       if (!storageReady) return;
@@ -292,14 +354,18 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
             });
             const nextVersionId = article.article_version_id;
             const canonicalReady =
-              item.baseVersionId != null
-                ? nextVersionId != null && nextVersionId !== item.baseVersionId
-                : nextVersionId != null;
+              item.kind === "translation"
+                ? nextVersionId != null &&
+                  (item.baseVersionId == null || nextVersionId === item.baseVersionId)
+                : item.baseVersionId != null
+                  ? nextVersionId != null && nextVersionId !== item.baseVersionId
+                  : nextVersionId != null;
 
             if (!canonicalReady) {
               if (
-                article.generation_status === "failed" ||
-                article.generation_status === "disabled"
+                item.kind !== "translation" &&
+                (article.generation_status === "failed" ||
+                  article.generation_status === "disabled")
               ) {
                 terminalFailures.push(item);
               }
@@ -310,8 +376,6 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               !!item.targetLanguage && item.targetLanguage !== "en";
 
             if (wantsLocalization && user && account == null) {
-              // Auth is ready before the account/entitlement fetch necessarily is.
-              // Keep the notification pending until we know whether this user is Pro.
               return;
             }
 
@@ -344,6 +408,11 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               } else if (translationStatus === "failed") {
                 terminalFailures.push(item);
               }
+              return;
+            }
+
+            if (item.kind === "translation") {
+              terminalFailures.push(item);
               return;
             }
 
@@ -390,8 +459,8 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   }, [account, keyFor, ownerKey, pending, storageReady, user]);
 
   const value = useMemo(
-    () => ({ watchAnalysis, watchPodcast }),
-    [watchAnalysis, watchPodcast],
+    () => ({ watchAnalysis, watchTranslation, watchPodcast }),
+    [watchAnalysis, watchPodcast, watchTranslation],
   );
   const visibleReady = ready.slice(-4).reverse();
 
@@ -482,9 +551,11 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                     >
                       {item.type === "podcast"
                         ? labels.podcast
-                        : item.kind === "refresh"
-                          ? labels.updated
-                          : labels.ready}
+                        : item.kind === "translation"
+                          ? labels.translation
+                          : item.kind === "refresh"
+                            ? labels.updated
+                            : labels.ready}
                     </Text>
                     <Text
                       style={[styles.headline, { color: colors.background }]}
