@@ -238,8 +238,6 @@ export default function StoryDetailScreen() {
 
           if (language !== "en") {
             if (isWeb) {
-              // Web never creates translations. It may consume any approved cached
-              // translation for the currently stored English canonical version.
               try {
                 const localized = await getCanonicalArticleByEventId(
                   resolvedEventId,
@@ -564,9 +562,6 @@ export default function StoryDetailScreen() {
                 onChange={setLanguageMode}
               />
             )}
-            {translateSourceUrl && (
-              <WebTranslateButton sourceUrl={translateSourceUrl} />
-            )}
             <StaleStoryNotice article={displayedArticle} />
             {!!resolvedEventId && (
               <EventTimeline
@@ -602,6 +597,11 @@ export default function StoryDetailScreen() {
         podcastPro={isPro}
         podcastSignedIn={!!user}
         onPodcastAction={() => void handlePodcastAction()}
+        translationAction={
+          isWeb && translateSourceUrl ? (
+            <WebTranslateButton sourceUrl={translateSourceUrl} />
+          ) : undefined
+        }
         footer={
           <>
             {showStoryAd && <StoryAdSlot />}
