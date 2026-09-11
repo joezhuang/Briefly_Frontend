@@ -57,7 +57,10 @@ export function ReadingHistoryProvider({ children }: PropsWithChildren) {
   }, [authReady, ownerKey]);
 
   const ready = authReady && state.ownerKey === ownerKey;
-  const items = ready ? state.items : [];
+  const items = useMemo(
+    () => (ready ? state.items : [] as ReadingHistoryItem[]),
+    [ready, state.items],
+  );
 
   const recordArticle = useCallback(
     async (article: CanonicalArticle, href: string) => {
