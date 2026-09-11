@@ -123,6 +123,84 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
     [player, status.currentTime, status.duration],
   );
 
+  useEffect(() => {
+    if (
+      Platform.OS !== "web" ||
+      !currentTrack ||
+      typeof navigator === "undefined" ||
+      !("mediaSession" in navigator)
+    ) {
+      return;
+    }
+
+    const mediaSession = navigator.mediaSession;
+    if (typeof window !== "undefined" && "MediaMetadata" in window) {
+      mediaSession.metadata = new window.MediaMetadata({
+        title: currentTrack.title || "Briefly podcast analysis",
+        artist: "Briefly",
+        album: "Briefly Podcast Analysis",
+      });
+    }
+
+    const setHandler = (
+      action: MediaSessionAction,
+      handler: MediaSessionActionHandler | null,
+    ) => {
+      try {
+        mediaSession.setActionHandler(action, handler);
+      } catch {
+        // Some browsers expose Media Session but do not support every action.
+      }
+    };
+
+    setHandler("play", () => player.play());
+    setHandler("pause", () => player.pause());
+    setHandler("seekbackward", (details) =>
+      seekBy(-(details.seekOffset ?? 15)),
+    );
+    setHandler("seekforward", (details) =>
+      seekBy(details.seekOffset ?? 15),
+    );
+    setHandler("seekto", (details) => {
+      if (typeof details.seekTime === "number") {
+        void player.seekTo(details.seekTime);
+      }
+    });
+
+    return () => {
+      setHandler("play", null);
+      setHandler("pause", null);
+      setHandler("seekbackward", null);
+      setHandler("seekforward", null);
+      setHandler("seekto", null);
+    };
+  }, [currentTrack, player, seekBy]);
+
+  useEffect(() => {
+    if (
+      Platform.OS !== "web" ||
+      !currentTrack ||
+      typeof navigator === "undefined" ||
+      !("mediaSession" in navigator)
+    ) {
+      return;
+    }
+
+    const duration = status.duration || 0;
+    const position = status.currentTime || 0;
+    if (duration <= 0 || position < 0 || position > duration) return;
+
+    try {
+      navigator.mediaSession.setPositionState({
+        duration,
+        playbackRate: 1,
+        position,
+      });
+    } catch {
+      // Position state is optional and not implemented by every browser.
+    }
+  }, [currentTrack, status.currentTime, status.duration]);
+
   const close = useCallback(() => {
     player.pause();
     if (Platform.OS !== "web") {
@@ -131,6 +209,8 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
       } catch {
         // The player can already have been detached by the OS.
       }
+    } else if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+      navigator.mediaSession.metadata = null;
     }
     setCurrentTrack(null);
   }, [player]);
