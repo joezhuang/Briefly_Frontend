@@ -1,6 +1,6 @@
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { usePodcastPlayer } from "@/context/podcast-player";
 import { useBrieflyTheme } from "@/context/theme";
 
 function formatTime(value: number) {
@@ -10,32 +10,25 @@ function formatTime(value: number) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-export function PodcastInlinePlayer({ source }: { source: string }) {
+export function PodcastInlinePlayer({
+  source,
+  title,
+}: {
+  source: string;
+  title: string;
+}) {
   const { colors } = useBrieflyTheme();
-  const player = useAudioPlayer(source, { updateInterval: 500 });
-  const status = useAudioPlayerStatus(player);
+  const { currentTrack, status, toggle, seekBy } = usePodcastPlayer();
+  const trackId = source;
+  const isCurrentTrack = currentTrack?.id === trackId;
 
-  const duration = status.duration || 0;
-  const currentTime = status.currentTime || 0;
+  const duration = isCurrentTrack ? status.duration || 0 : 0;
+  const currentTime = isCurrentTrack ? status.currentTime || 0 : 0;
+  const isPlaying = isCurrentTrack && status.playing;
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
   const progressWidth = `${progress * 100}%` as `${number}%`;
 
-  const togglePlayback = () => {
-    if (status.playing) {
-      player.pause();
-      return;
-    }
-    if (duration > 0 && currentTime >= duration - 0.25) {
-      void player.seekTo(0);
-    }
-    player.play();
-  };
-
-  const seekBy = (seconds: number) => {
-    const upperBound = duration > 0 ? duration : currentTime + Math.max(seconds, 0);
-    const next = Math.max(0, Math.min(upperBound, currentTime + seconds));
-    void player.seekTo(next);
-  };
+  const track = { id: trackId, title, source };
 
   return (
     <View
@@ -47,20 +40,25 @@ export function PodcastInlinePlayer({ source }: { source: string }) {
       <View style={styles.controls}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={status.playing ? "Pause podcast" : "Play podcast"}
-          onPress={togglePlayback}
+          accessibilityLabel={isPlaying ? "Pause podcast" : "Play podcast"}
+          onPress={() => toggle(track)}
           style={[styles.primaryButton, { backgroundColor: colors.text }]}
         >
-          <Text style={[styles.primaryText, { color: colors.background }]}>
-            {status.playing ? "Pause" : "Play"}
+          <Text style={[styles.primaryText, { color: colors.background }]}> 
+            {isPlaying ? "Pause" : "Play"}
           </Text>
         </Pressable>
 
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Rewind 15 seconds"
+          disabled={!isCurrentTrack}
           onPress={() => seekBy(-15)}
-          style={[styles.secondaryButton, { borderColor: colors.border }]}
+          style={[
+            styles.secondaryButton,
+            { borderColor: colors.border },
+            !isCurrentTrack && styles.disabled,
+          ]}
         >
           <Text style={[styles.secondaryText, { color: colors.text }]}>−15s</Text>
         </Pressable>
@@ -68,8 +66,13 @@ export function PodcastInlinePlayer({ source }: { source: string }) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Forward 15 seconds"
+          disabled={!isCurrentTrack}
           onPress={() => seekBy(15)}
-          style={[styles.secondaryButton, { borderColor: colors.border }]}
+          style={[
+            styles.secondaryButton,
+            { borderColor: colors.border },
+            !isCurrentTrack && styles.disabled,
+          ]}
         >
           <Text style={[styles.secondaryText, { color: colors.text }]}>+15s</Text>
         </Pressable>
@@ -85,10 +88,10 @@ export function PodcastInlinePlayer({ source }: { source: string }) {
       </View>
 
       <View style={styles.timeRow}>
-        <Text style={[styles.timeText, { color: colors.textMuted }]}>
+        <Text style={[styles.timeText, { color: colors.textMuted }]}> 
           {formatTime(currentTime)}
         </Text>
-        <Text style={[styles.timeText, { color: colors.textMuted }]}>
+        <Text style={[styles.timeText, { color: colors.textMuted }]}> 
           {formatTime(duration)}
         </Text>
       </View>
@@ -127,6 +130,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   secondaryText: { fontSize: 13, fontWeight: "700" },
+  disabled: { opacity: 0.45 },
   track: {
     height: 5,
     borderRadius: 999,
