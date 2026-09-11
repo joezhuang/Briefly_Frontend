@@ -63,7 +63,7 @@ export function StoryTile({ article, size = "standard", href }: Props) {
   const copy = translationCopy[language] ?? translationCopy.en;
 
   const handleTranslation = async () => {
-    if (translating || language === "en") return;
+    if (translating) return;
 
     if (currentTranslation) {
       setShowTranslation((value) => !value);
@@ -125,32 +125,30 @@ export function StoryTile({ article, size = "standard", href }: Props) {
             </Text>
           )}
 
-          {language !== "en" && (
-            <Pressable
-              accessibilityRole="button"
-              disabled={translating}
-              onPress={(event) => {
-                event.stopPropagation();
-                void handleTranslation();
-              }}
-              style={({ pressed }) => [
-                styles.translateButton,
-                pressed && styles.translateButtonPressed,
-              ]}
-            >
-              {translating ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.translateText}>
-                  {translationFailed
-                    ? copy.retry
-                    : translated
-                      ? copy.original
-                      : copy.translate}
-                </Text>
-              )}
-            </Pressable>
-          )}
+          <Pressable
+            accessibilityRole="button"
+            disabled={translating}
+            onPress={(event) => {
+              event.stopPropagation();
+              void handleTranslation();
+            }}
+            style={({ pressed }) => [
+              styles.translateButton,
+              pressed && styles.translateButtonPressed,
+            ]}
+          >
+            {translating ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.translateText}>
+                {translationFailed
+                  ? copy.retry
+                  : translated
+                    ? copy.original
+                    : copy.translate}
+              </Text>
+            )}
+          </Pressable>
 
           <View style={styles.metaRow}>
             <Text style={styles.meta}>
