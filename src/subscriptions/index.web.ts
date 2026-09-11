@@ -26,3 +26,7 @@ export async function restoreBrieflySubscription(_userId: string) {
   window.location.assign(result.portal_url);
   return false;
 }
+
+export async function disconnectBrieflySubscriptionUser() {
+  // Native RevenueCat identity is not used by the web build.
+}
