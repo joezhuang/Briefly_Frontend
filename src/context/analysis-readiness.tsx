@@ -48,6 +48,11 @@ type StoredNotifications = {
   ready: ReadyAnalysis[];
 };
 
+type NotificationState = StoredNotifications & {
+  ownerKey: string | null;
+  expanded: boolean;
+};
+
 type AnalysisReadinessContextValue = {
   watchAnalysis: (
     item: Omit<Extract<PendingAnalysis, { type: "article" }>, "type">,
@@ -150,10 +155,12 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   const labels = copy[language] ?? copy.en;
   const ownerKey = user ? `user:${user.id}` : "guest";
 
-  const [pending, setPending] = useState<Record<string, PendingAnalysis>>({});
-  const [ready, setReady] = useState<ReadyAnalysis[]>([]);
-  const [expanded, setExpanded] = useState(false);
-  const [storageReady, setStorageReady] = useState(false);
+  const [state, setState] = useState<NotificationState>({
+    ownerKey: null,
+    pending: {},
+    ready: [],
+    expanded: false,
+  });
 
   const keyFor = useCallback((item: PendingAnalysis) => {
     return item.type === "podcast"
@@ -165,25 +172,26 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
     if (!authReady) return;
 
     let active = true;
-    setStorageReady(false);
-    setPending({});
-    setReady([]);
-    setExpanded(false);
 
-    readStoredNotifications(ownerKey)
-      .then((stored) => {
-        if (!active) return;
-        setPending(stored.pending);
-        setReady(stored.ready);
-      })
-      .finally(() => {
-        if (active) setStorageReady(true);
+    void readStoredNotifications(ownerKey).then((stored) => {
+      if (!active) return;
+      setState({
+        ownerKey,
+        pending: stored.pending,
+        ready: stored.ready,
+        expanded: false,
       });
+    });
 
     return () => {
       active = false;
     };
   }, [authReady, ownerKey]);
+
+  const storageReady = authReady && state.ownerKey === ownerKey;
+  const pending = storageReady ? state.pending : {};
+  const ready = storageReady ? state.ready : [];
+  const expanded = storageReady ? state.expanded : false;
 
   useEffect(() => {
     if (!storageReady) return;
@@ -192,32 +200,44 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
   const watchAnalysis = useCallback(
     (item: Omit<Extract<PendingAnalysis, { type: "article" }>, "type">) => {
+      if (!storageReady) return;
+
       const next: PendingAnalysis = { ...item, type: "article" };
       const key = keyFor(next);
-      setPending((current) => {
-        const existing = current[key];
+      setState((current) => {
+        if (current.ownerKey !== ownerKey) return current;
+        const existing = current.pending[key];
         if (existing?.headline === next.headline && existing?.href === next.href) {
           return current;
         }
-        return { ...current, [key]: next };
+        return {
+          ...current,
+          pending: { ...current.pending, [key]: next },
+        };
       });
     },
-    [keyFor],
+    [keyFor, ownerKey, storageReady],
   );
 
   const watchPodcast = useCallback(
     (item: Omit<Extract<PendingAnalysis, { type: "podcast" }>, "type">) => {
+      if (!storageReady) return;
+
       const next: PendingAnalysis = { ...item, type: "podcast" };
       const key = keyFor(next);
-      setPending((current) => {
-        const existing = current[key];
+      setState((current) => {
+        if (current.ownerKey !== ownerKey) return current;
+        const existing = current.pending[key];
         if (existing?.headline === next.headline && existing?.href === next.href) {
           return current;
         }
-        return { ...current, [key]: next };
+        return {
+          ...current,
+          pending: { ...current.pending, [key]: next },
+        };
       });
     },
-    [keyFor],
+    [keyFor, ownerKey, storageReady],
   );
 
   useEffect(() => {
@@ -276,19 +296,21 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
         const completedKeys = new Set(
           [...completed, ...terminalFailures].map(keyFor),
         );
-        setPending((current) =>
-          Object.fromEntries(
-            Object.entries(current).filter(
-              ([key]) => !completedKeys.has(key),
-            ),
-          ),
-        );
-        setReady((current) => {
-          const known = new Set(current.map(keyFor));
-          return [
+        setState((current) => {
+          if (current.ownerKey !== ownerKey) return current;
+          const known = new Set(current.ready.map(keyFor));
+          return {
             ...current,
-            ...completed.filter((item) => !known.has(keyFor(item))),
-          ];
+            pending: Object.fromEntries(
+              Object.entries(current.pending).filter(
+                ([key]) => !completedKeys.has(key),
+              ),
+            ),
+            ready: [
+              ...current.ready,
+              ...completed.filter((item) => !known.has(keyFor(item))),
+            ],
+          };
         });
       }
 
@@ -301,7 +323,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [keyFor, pending, storageReady]);
+  }, [keyFor, ownerKey, pending, storageReady]);
 
   const value = useMemo(
     () => ({ watchAnalysis, watchPodcast }),
@@ -310,16 +332,26 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   const visibleReady = ready.slice(-4).reverse();
 
   const openReady = (item: ReadyAnalysis) => {
-    setReady((current) =>
-      current.filter((candidate) => keyFor(candidate) !== keyFor(item)),
-    );
-    if (ready.length <= 1) setExpanded(false);
+    setState((current) => {
+      if (current.ownerKey !== ownerKey) return current;
+      const nextReady = current.ready.filter(
+        (candidate) => keyFor(candidate) !== keyFor(item),
+      );
+      return {
+        ...current,
+        ready: nextReady,
+        expanded: nextReady.length > 0 ? current.expanded : false,
+      };
+    });
     router.push(item.href as never);
   };
 
   const clearReady = () => {
-    setReady([]);
-    setExpanded(false);
+    setState((current) =>
+      current.ownerKey === ownerKey
+        ? { ...current, ready: [], expanded: false }
+        : current,
+    );
   };
 
   return (
@@ -355,7 +387,13 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={labels.collapse}
-                    onPress={() => setExpanded(false)}
+                    onPress={() =>
+                      setState((current) =>
+                        current.ownerKey === ownerKey
+                          ? { ...current, expanded: false }
+                          : current,
+                      )
+                    }
                     style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                   >
                     <Text style={[styles.headerAction, { color: colors.background }]}>↓</Text>
@@ -406,7 +444,13 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`${labels.notifications}: ${ready.length}`}
-            onPress={() => setExpanded((value) => !value)}
+            onPress={() =>
+              setState((current) =>
+                current.ownerKey === ownerKey
+                  ? { ...current, expanded: !current.expanded }
+                  : current,
+              )
+            }
             style={({ pressed }) => [
               styles.bubble,
               {
