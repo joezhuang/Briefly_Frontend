@@ -110,7 +110,8 @@ export function ArticleView({ article, immutable = false, podcast = null, podcas
   const openCoverage = async (url: string) => { if (Platform.OS === "web" && typeof window !== "undefined") { window.open(url, "_blank", "noopener,noreferrer"); return; } await Linking.openURL(url); };
   const briefSection = (title: string, text: string) => text ? <View style={styles.briefSection}><Text style={[styles.briefTitle, { color: colors.accent }]}>{title}</Text><Text style={[styles.briefText, { color: colors.text }]}>{text}</Text></View> : null;
   let podcastAction = podcastText.generate; let podcastDisabled = podcastBusy; if (!podcastSignedIn) podcastAction = podcastText.signIn; else if (!podcastPro) podcastAction = podcastText.proOnly; else if (podcastProcessing) { podcastAction = podcastText.preparing; podcastDisabled = true; } else if (podcast?.status === "failed") podcastAction = podcastText.retry;
-  const showLocalizationNotice = language !== "en" || translationPending || experimentalTranslation || translatedContent;
+  const hasLocalizationStatus = translationPending || experimentalTranslation || translatedContent;
+  const showLocalizationNotice = hasLocalizationStatus || (Platform.OS !== "web" && language !== "en");
   const localizationBody = translationPending ? localizationText.pendingText : translatedContent || experimentalTranslation ? localizationText.readyText : localizationText.availableText;
 
   return <View style={[styles.articleRoot, { backgroundColor: colors.surface }]}><ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} onScroll={(event) => { if (!immutable) setShowFloatingBack(event.nativeEvent.contentOffset.y > 420); }} scrollEventThrottle={120}><View style={[styles.page, width < 480 && styles.pageCompact]}>
