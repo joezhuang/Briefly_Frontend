@@ -58,30 +58,45 @@ const copy = {
     updated: "Updated analysis ready",
     podcast: "Podcast ready",
     more: "more items are ready",
+    notifications: "Generation notifications",
+    clear: "Clear",
+    collapse: "Collapse",
   },
   es: {
     ready: "Listo para leer",
     updated: "Análisis actualizado listo",
     podcast: "Pódcast listo",
     more: "elementos más están listos",
+    notifications: "Notificaciones de generación",
+    clear: "Borrar",
+    collapse: "Ocultar",
   },
   ja: {
     ready: "読めるようになりました",
     updated: "更新版の分析ができました",
     podcast: "ポッドキャストの準備ができました",
     more: "件の項目も準備できました",
+    notifications: "生成通知",
+    clear: "クリア",
+    collapse: "閉じる",
   },
   "zh-CN": {
     ready: "已可阅读",
     updated: "更新分析已准备好",
     podcast: "播客已准备好",
     more: "项内容也已准备好",
+    notifications: "生成通知",
+    clear: "清除",
+    collapse: "收起",
   },
   "zh-TW": {
     ready: "已可閱讀",
     updated: "更新分析已準備好",
     podcast: "Podcast 已準備好",
     more: "項內容也已準備好",
+    notifications: "產生通知",
+    clear: "清除",
+    collapse: "收起",
   },
 } as const;
 
@@ -92,6 +107,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
   const [pending, setPending] = useState<Record<string, PendingAnalysis>>({});
   const [ready, setReady] = useState<ReadyAnalysis[]>([]);
+  const [expanded, setExpanded] = useState(false);
 
   const keyFor = useCallback((item: PendingAnalysis) => {
     return item.type === "podcast"
@@ -158,12 +174,12 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               language: "en",
             });
             const nextVersionId = article.article_version_id;
-            const ready =
+            const isReady =
               item.baseVersionId != null
                 ? nextVersionId != null && nextVersionId !== item.baseVersionId
                 : nextVersionId != null;
 
-            if (ready) {
+            if (isReady) {
               completed.push(item);
             } else if (
               article.generation_status === "failed" ||
@@ -194,10 +210,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
           const known = new Set(current.map(keyFor));
           return [
             ...current,
-            ...completed.filter(
-              (item) =>
-                !known.has(keyFor(item)),
-            ),
+            ...completed.filter((item) => !known.has(keyFor(item))),
           ];
         });
       }
@@ -217,77 +230,120 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
     () => ({ watchAnalysis, watchPodcast }),
     [watchAnalysis, watchPodcast],
   );
-  const visibleReady = ready.slice(-3).reverse();
+  const visibleReady = ready.slice(-4).reverse();
 
   const openReady = (item: ReadyAnalysis) => {
     setReady((current) =>
-      current.filter(
-        (candidate) =>
-          keyFor(candidate) !== keyFor(item),
-      ),
+      current.filter((candidate) => keyFor(candidate) !== keyFor(item)),
     );
+    if (ready.length <= 1) setExpanded(false);
     router.push(item.href as never);
+  };
+
+  const clearReady = () => {
+    setReady([]);
+    setExpanded(false);
   };
 
   return (
     <AnalysisReadinessContext.Provider value={value}>
       {children}
 
-      {visibleReady.length > 0 ? (
+      {ready.length > 0 ? (
         <View pointerEvents="box-none" style={styles.overlay}>
-          <View
-            style={[
-              styles.tray,
+          {expanded ? (
+            <View
+              style={[
+                styles.tray,
+                {
+                  backgroundColor: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <View style={styles.trayHeader}>
+                <Text style={[styles.kicker, { color: colors.background }]}>
+                  {labels.notifications}
+                </Text>
+                <View style={styles.headerActions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={clearReady}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                  >
+                    <Text style={[styles.headerAction, { color: colors.background }]}>
+                      {labels.clear}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={labels.collapse}
+                    onPress={() => setExpanded(false)}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                  >
+                    <Text style={[styles.headerAction, { color: colors.background }]}>↓</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {visibleReady.map((item) => (
+                <Pressable
+                  key={keyFor(item)}
+                  accessibilityRole="button"
+                  onPress={() => openReady(item)}
+                  style={({ pressed }) => [
+                    styles.readyRow,
+                    { opacity: pressed ? 0.76 : 1 },
+                  ]}
+                >
+                  <View style={styles.readyCopy}>
+                    <Text
+                      style={[styles.rowKicker, { color: colors.background }]}
+                      numberOfLines={1}
+                    >
+                      {item.type === "podcast"
+                        ? labels.podcast
+                        : item.kind === "refresh"
+                          ? labels.updated
+                          : labels.ready}
+                    </Text>
+                    <Text
+                      style={[styles.headline, { color: colors.background }]}
+                      numberOfLines={2}
+                    >
+                      {item.headline}
+                    </Text>
+                  </View>
+                  <Text style={[styles.arrow, { color: colors.background }]}>→</Text>
+                </Pressable>
+              ))}
+
+              {ready.length > visibleReady.length ? (
+                <Text style={[styles.more, { color: colors.background }]}>
+                  +{ready.length - visibleReady.length} {labels.more}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${labels.notifications}: ${ready.length}`}
+            onPress={() => setExpanded((value) => !value)}
+            style={({ pressed }) => [
+              styles.bubble,
               {
                 backgroundColor: colors.text,
                 borderColor: colors.border,
+                opacity: pressed ? 0.78 : 1,
               },
             ]}
           >
-            <Text style={[styles.kicker, { color: colors.background }]}>
-              {visibleReady.length === 1
-                ? labels.ready
-                : `${ready.length} ${labels.more}`}
-            </Text>
-
-            {visibleReady.map((item) => (
-              <Pressable
-                key={keyFor(item)}
-                accessibilityRole="button"
-                onPress={() => openReady(item)}
-                style={({ pressed }) => [
-                  styles.readyRow,
-                  { opacity: pressed ? 0.76 : 1 },
-                ]}
-              >
-                <View style={styles.readyCopy}>
-                  <Text
-                    style={[styles.rowKicker, { color: colors.background }]}
-                    numberOfLines={1}
-                  >
-                    {item.type === "podcast"
-                      ? labels.podcast
-                      : item.kind === "refresh"
-                        ? labels.updated
-                        : labels.ready}
-                  </Text>
-                  <Text
-                    style={[styles.headline, { color: colors.background }]}
-                    numberOfLines={2}
-                  >
-                    {item.headline}
-                  </Text>
-                </View>
-                <Text style={[styles.arrow, { color: colors.background }]}>→</Text>
-              </Pressable>
-            ))}
-
-            {ready.length > visibleReady.length ? (
-              <Text style={[styles.more, { color: colors.background }]}>
-                +{ready.length - visibleReady.length} {labels.more}
-              </Text>
-            ) : null}
-          </View>
+            <Text style={styles.bell}>🔔</Text>
+            <View style={[styles.badge, { backgroundColor: colors.accent }]}>
+              <Text style={styles.badgeText}>{ready.length > 99 ? "99+" : ready.length}</Text>
+            </View>
+          </Pressable>
         </View>
       ) : null}
     </AnalysisReadinessContext.Provider>
@@ -308,20 +364,28 @@ const styles = StyleSheet.create({
   overlay: {
     position: "absolute",
     left: 14,
-    right: 14,
     bottom: 18,
-    alignItems: "center",
+    alignItems: "flex-start",
+    gap: 8,
   },
   tray: {
-    width: "100%",
-    maxWidth: 520,
+    width: 360,
+    maxWidth: "92%",
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 13,
     gap: 8,
   },
-  kicker: { fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+  trayHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 14 },
+  headerAction: { fontSize: 12, fontWeight: "900" },
+  kicker: { flex: 1, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
   readyRow: {
     minHeight: 44,
     flexDirection: "row",
@@ -338,4 +402,25 @@ const styles = StyleSheet.create({
   headline: { fontSize: 15, lineHeight: 20, fontWeight: "800" },
   more: { marginTop: 2, fontSize: 11, opacity: 0.78 },
   arrow: { fontSize: 22, fontWeight: "700" },
+  bubble: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bell: { fontSize: 22 },
+  badge: {
+    position: "absolute",
+    right: -4,
+    top: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: { color: "#fff", fontSize: 10, fontWeight: "900" },
 });
