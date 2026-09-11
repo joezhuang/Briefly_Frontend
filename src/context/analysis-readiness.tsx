@@ -217,10 +217,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       if (!storageReady) return;
 
       const targetLanguage =
-        item.targetLanguage ??
-        (account?.translation_entitled === true && language !== "en"
-          ? language
-          : null);
+        item.targetLanguage ?? (language !== "en" ? language : null);
       const next: PendingAnalysis = {
         ...item,
         targetLanguage,
@@ -239,7 +236,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
         };
       });
     },
-    [account?.translation_entitled, keyFor, language, ownerKey, storageReady],
+    [keyFor, language, ownerKey, storageReady],
   );
 
   const watchPodcast = useCallback(
@@ -309,7 +306,20 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               return;
             }
 
-            if (item.targetLanguage && item.targetLanguage !== "en") {
+            const wantsLocalization =
+              !!item.targetLanguage && item.targetLanguage !== "en";
+
+            if (wantsLocalization && user && account == null) {
+              // Auth is ready before the account/entitlement fetch necessarily is.
+              // Keep the notification pending until we know whether this user is Pro.
+              return;
+            }
+
+            if (
+              wantsLocalization &&
+              account?.translation_entitled === true &&
+              item.targetLanguage
+            ) {
               const localized = await getExperimentalArticleByEventId(item.eventId, {
                 includeDraft: PREVIEW_DRAFTS,
                 language: item.targetLanguage,
@@ -377,7 +387,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [keyFor, ownerKey, pending, storageReady]);
+  }, [account, keyFor, ownerKey, pending, storageReady, user]);
 
   const value = useMemo(
     () => ({ watchAnalysis, watchPodcast }),
