@@ -30,7 +30,7 @@ const copy = {
 function googleTranslateUrl(sourceUrl: string, targetLanguage: string) {
   return (
     "https://translate.google.com/translate" +
-    `?sl=en&tl=${encodeURIComponent(targetLanguage)}` +
+    `?sl=auto&tl=${encodeURIComponent(targetLanguage)}` +
     `&u=${encodeURIComponent(sourceUrl)}`
   );
 }
