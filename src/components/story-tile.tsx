@@ -78,6 +78,8 @@ export function StoryTile({ article, size = "standard", href }: Props) {
         article.event_id,
         language,
         article.article_version_id,
+        article.headline,
+        article.standfirst,
       );
       setTranslation(result);
       setShowTranslation(true);
