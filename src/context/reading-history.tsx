@@ -25,34 +25,39 @@ type ReadingHistoryContextValue = {
   clearHistory: () => Promise<void>;
 };
 
+type ReadingHistoryState = {
+  ownerKey: string | null;
+  items: ReadingHistoryItem[];
+};
+
 const ReadingHistoryContext =
   createContext<ReadingHistoryContextValue | null>(null);
 
 export function ReadingHistoryProvider({ children }: PropsWithChildren) {
   const { ready: authReady, user } = useBrieflyAuth();
-  const [items, setItems] = useState<ReadingHistoryItem[]>([]);
-  const [ready, setReady] = useState(false);
   const ownerKey = user ? `user:${user.id}` : "guest";
+  const [state, setState] = useState<ReadingHistoryState>({
+    ownerKey: null,
+    items: [],
+  });
 
   useEffect(() => {
     if (!authReady) return;
 
     let active = true;
-    setReady(false);
-    setItems([]);
 
-    readReadingHistory(ownerKey)
-      .then((next) => {
-        if (active) setItems(next);
-      })
-      .finally(() => {
-        if (active) setReady(true);
-      });
+    void readReadingHistory(ownerKey).then((items) => {
+      if (!active) return;
+      setState({ ownerKey, items });
+    });
 
     return () => {
       active = false;
     };
   }, [authReady, ownerKey]);
+
+  const ready = authReady && state.ownerKey === ownerKey;
+  const items = ready ? state.items : [];
 
   const recordArticle = useCallback(
     async (article: CanonicalArticle, href: string) => {
@@ -71,20 +76,23 @@ export function ReadingHistoryProvider({ children }: PropsWithChildren) {
         href,
       };
 
-      setItems((current) => {
+      setState((current) => {
+        if (current.ownerKey !== ownerKey) return current;
         const next = [
           nextItem,
-          ...current.filter((item) => item.event_id !== article.event_id),
+          ...current.items.filter((item) => item.event_id !== article.event_id),
         ].slice(0, READING_HISTORY_LIMIT);
         void writeReadingHistory(ownerKey, next);
-        return next;
+        return { ownerKey, items: next };
       });
     },
     [ownerKey, ready],
   );
 
   const clearHistory = useCallback(async () => {
-    setItems([]);
+    setState((current) =>
+      current.ownerKey === ownerKey ? { ownerKey, items: [] } : current,
+    );
     await clearReadingHistoryStorage(ownerKey);
   }, [ownerKey]);
 
