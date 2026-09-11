@@ -171,9 +171,10 @@ const styles = StyleSheet.create({
   },
   minimizedOverlay: {
     position: "absolute",
-    right: 14,
+    left: 76,
+    right: 76,
     bottom: 18,
-    alignItems: "flex-end",
+    alignItems: "center",
   },
   player: {
     width: "100%",
