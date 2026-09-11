@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const STORAGE_KEY = "briefly.reading-history.v1";
+const STORAGE_KEY_PREFIX = "briefly.reading-history.v2";
 export const READING_HISTORY_LIMIT = 10;
 
 export type ReadingHistoryItem = {
@@ -16,8 +16,14 @@ export type ReadingHistoryItem = {
   href: string;
 };
 
-export async function readReadingHistory(): Promise<ReadingHistoryItem[]> {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+function storageKey(ownerKey: string) {
+  return `${STORAGE_KEY_PREFIX}:${ownerKey}`;
+}
+
+export async function readReadingHistory(
+  ownerKey: string,
+): Promise<ReadingHistoryItem[]> {
+  const raw = await AsyncStorage.getItem(storageKey(ownerKey));
   if (!raw) return [];
 
   try {
@@ -28,13 +34,16 @@ export async function readReadingHistory(): Promise<ReadingHistoryItem[]> {
   }
 }
 
-export async function writeReadingHistory(items: ReadingHistoryItem[]) {
+export async function writeReadingHistory(
+  ownerKey: string,
+  items: ReadingHistoryItem[],
+) {
   await AsyncStorage.setItem(
-    STORAGE_KEY,
+    storageKey(ownerKey),
     JSON.stringify(items.slice(0, READING_HISTORY_LIMIT)),
   );
 }
 
-export async function clearReadingHistoryStorage() {
-  await AsyncStorage.removeItem(STORAGE_KEY);
+export async function clearReadingHistoryStorage(ownerKey: string) {
+  await AsyncStorage.removeItem(storageKey(ownerKey));
 }
