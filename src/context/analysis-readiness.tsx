@@ -12,6 +12,7 @@ import {
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
+  getExperimentalArticleByEventId,
   getLazyCanonicalArticleByEventId,
   getPodcastAnalysisStatus,
 } from "@/api/briefly";
@@ -32,6 +33,7 @@ type PendingAnalysis =
       href: string;
       kind?: "initial" | "refresh";
       baseVersionId?: number | null;
+      targetLanguage?: string | null;
     }
   | {
       type: "podcast";
@@ -149,7 +151,7 @@ async function writeStoredNotifications(
 }
 
 export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
-  const { ready: authReady, user } = useBrieflyAuth();
+  const { ready: authReady, user, account } = useBrieflyAuth();
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const labels = copy[language] ?? copy.en;
@@ -165,7 +167,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   const keyFor = useCallback((item: PendingAnalysis) => {
     return item.type === "podcast"
       ? `podcast:${item.articleVersionId}:${item.language}`
-      : `article:${item.eventId}:${item.baseVersionId ?? "initial"}`;
+      : `article:${item.eventId}:${item.baseVersionId ?? "initial"}:${item.targetLanguage ?? "canonical"}`;
   }, []);
 
   useEffect(() => {
@@ -214,7 +216,16 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
     (item: Omit<Extract<PendingAnalysis, { type: "article" }>, "type">) => {
       if (!storageReady) return;
 
-      const next: PendingAnalysis = { ...item, type: "article" };
+      const targetLanguage =
+        item.targetLanguage ??
+        (account?.translation_entitled === true && language !== "en"
+          ? language
+          : null);
+      const next: PendingAnalysis = {
+        ...item,
+        targetLanguage,
+        type: "article",
+      };
       const key = keyFor(next);
       setState((current) => {
         if (current.ownerKey !== ownerKey) return current;
@@ -228,7 +239,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
         };
       });
     },
-    [keyFor, ownerKey, storageReady],
+    [account?.translation_entitled, keyFor, language, ownerKey, storageReady],
   );
 
   const watchPodcast = useCallback(
@@ -283,21 +294,52 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               language: "en",
             });
             const nextVersionId = article.article_version_id;
-            const isReady =
+            const canonicalReady =
               item.baseVersionId != null
                 ? nextVersionId != null && nextVersionId !== item.baseVersionId
                 : nextVersionId != null;
 
-            if (isReady) {
-              completed.push(item);
-            } else if (
-              article.generation_status === "failed" ||
-              article.generation_status === "disabled"
-            ) {
-              terminalFailures.push(item);
+            if (!canonicalReady) {
+              if (
+                article.generation_status === "failed" ||
+                article.generation_status === "disabled"
+              ) {
+                terminalFailures.push(item);
+              }
+              return;
             }
+
+            if (item.targetLanguage && item.targetLanguage !== "en") {
+              const localized = await getExperimentalArticleByEventId(item.eventId, {
+                includeDraft: PREVIEW_DRAFTS,
+                language: item.targetLanguage,
+              });
+              const localizedLanguage =
+                localized.content_language ?? localized.language;
+              const translationStatus = localized.translation_status as
+                | string
+                | undefined;
+              const matchesCanonical =
+                localized.authoritative_article_version_id == null ||
+                nextVersionId == null ||
+                localized.authoritative_article_version_id === nextVersionId;
+              const localizedReady =
+                localized.article_version_id != null &&
+                localizedLanguage === item.targetLanguage &&
+                translationStatus !== "pending" &&
+                matchesCanonical;
+
+              if (localizedReady) {
+                completed.push(item);
+              } else if (translationStatus === "failed") {
+                terminalFailures.push(item);
+              }
+              return;
+            }
+
+            completed.push(item);
           } catch {
-            // Keep watching transient request failures.
+            // Keep watching transient request failures and localization generation.
           }
         }),
       );
