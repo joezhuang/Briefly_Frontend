@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getLocales } from "expo-localization";
+import { useLocales } from "expo-localization";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -22,9 +22,16 @@ import {
 SplashScreen.preventAutoHideAsync();
 
 const LANGUAGE_STORAGE_KEY = "briefly.language.v1";
+const AUTO_LANGUAGE_STORAGE_KEY = "briefly.language.auto.v1";
 
-function systemBrieflyLanguage() {
-  const locale = getLocales()[0];
+type SupportedLanguage = "en" | "es" | "ja" | "zh-CN" | "zh-TW";
+
+type SystemLocale = {
+  languageCode?: string | null;
+  languageTag?: string | null;
+};
+
+function systemBrieflyLanguage(locale?: SystemLocale): SupportedLanguage {
   const languageCode = locale?.languageCode?.toLowerCase();
   const languageTag = locale?.languageTag?.toLowerCase() ?? "";
 
@@ -43,29 +50,58 @@ function systemBrieflyLanguage() {
 }
 
 function SystemLocaleGate({ children }: PropsWithChildren) {
+  const locales = useLocales();
+  const detectedLanguage = systemBrieflyLanguage(locales[0]);
   const [ready, setReady] = useState(false);
+  const [languageRevision, setLanguageRevision] = useState(0);
 
   useEffect(() => {
     let active = true;
 
-    const initializeLanguage = async () => {
+    const syncSystemLanguage = async () => {
       try {
-        const stored = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-        if (!stored) {
-          await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, systemBrieflyLanguage());
+        const [storedLanguage, lastAutomaticLanguage] = await Promise.all([
+          AsyncStorage.getItem(LANGUAGE_STORAGE_KEY),
+          AsyncStorage.getItem(AUTO_LANGUAGE_STORAGE_KEY),
+        ]);
+
+        // Migration from the first locale implementation: if there is no
+        // auto marker yet, treat the existing stored language as the previous
+        // automatic value. A later explicit language selection will make the
+        // two values differ and therefore becomes a manual override.
+        const previousAutomaticLanguage =
+          lastAutomaticLanguage ?? storedLanguage ?? detectedLanguage;
+
+        const followsSystem =
+          !storedLanguage || storedLanguage === previousAutomaticLanguage;
+
+        if (followsSystem) {
+          const changed = storedLanguage !== detectedLanguage;
+          await AsyncStorage.multiSet([
+            [LANGUAGE_STORAGE_KEY, detectedLanguage],
+            [AUTO_LANGUAGE_STORAGE_KEY, detectedLanguage],
+          ]);
+
+          if (active && changed && ready) {
+            // LanguageProvider reads AsyncStorage when it mounts. Remount the
+            // subtree after a live system-language change so the UI updates.
+            setLanguageRevision((value) => value + 1);
+          }
         }
       } finally {
         if (active) setReady(true);
       }
     };
 
-    void initializeLanguage();
+    void syncSystemLanguage();
     return () => {
       active = false;
     };
-  }, []);
+  }, [detectedLanguage, ready]);
 
-  return ready ? children : null;
+  if (!ready) return null;
+
+  return <React.Fragment key={languageRevision}>{children}</React.Fragment>;
 }
 
 function AppStack() {
