@@ -1,6 +1,9 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getLocales } from "expo-localization";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { PropsWithChildren, useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
@@ -17,6 +20,53 @@ import {
 } from "@/context/theme";
 
 SplashScreen.preventAutoHideAsync();
+
+const LANGUAGE_STORAGE_KEY = "briefly.language.v1";
+
+function systemBrieflyLanguage() {
+  const locale = getLocales()[0];
+  const languageCode = locale?.languageCode?.toLowerCase();
+  const languageTag = locale?.languageTag?.toLowerCase() ?? "";
+
+  if (languageCode === "es") return "es";
+  if (languageCode === "ja") return "ja";
+  if (languageCode === "zh") {
+    const traditional =
+      languageTag.includes("hant") ||
+      languageTag.includes("-tw") ||
+      languageTag.includes("-hk") ||
+      languageTag.includes("-mo");
+    return traditional ? "zh-TW" : "zh-CN";
+  }
+
+  return "en";
+}
+
+function SystemLocaleGate({ children }: PropsWithChildren) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const initializeLanguage = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
+        if (!stored) {
+          await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, systemBrieflyLanguage());
+        }
+      } finally {
+        if (active) setReady(true);
+      }
+    };
+
+    void initializeLanguage();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return ready ? children : null;
+}
 
 function AppStack() {
   const { resolvedMode } = useBrieflyTheme();
@@ -45,21 +95,23 @@ function AppStack() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <LanguageProvider>
-        <BrieflyThemeProvider>
-          <BrieflyAuthProvider>
-            <PodcastPlayerProvider>
-              <AnalysisReadinessProvider>
-                <ReadingHistoryProvider>
-                  <SavedArticlesProvider>
-                    <AppStack />
-                  </SavedArticlesProvider>
-                </ReadingHistoryProvider>
-              </AnalysisReadinessProvider>
-            </PodcastPlayerProvider>
-          </BrieflyAuthProvider>
-        </BrieflyThemeProvider>
-      </LanguageProvider>
+      <SystemLocaleGate>
+        <LanguageProvider>
+          <BrieflyThemeProvider>
+            <BrieflyAuthProvider>
+              <PodcastPlayerProvider>
+                <AnalysisReadinessProvider>
+                  <ReadingHistoryProvider>
+                    <SavedArticlesProvider>
+                      <AppStack />
+                    </SavedArticlesProvider>
+                  </ReadingHistoryProvider>
+                </AnalysisReadinessProvider>
+              </PodcastPlayerProvider>
+            </BrieflyAuthProvider>
+          </BrieflyThemeProvider>
+        </LanguageProvider>
+      </SystemLocaleGate>
     </SafeAreaProvider>
   );
 }
