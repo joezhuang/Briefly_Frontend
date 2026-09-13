@@ -115,6 +115,7 @@ const settingsCopy = {
 } as const;
 
 type SettingsRoute =
+  | "/account"
   | "/upgrade"
   | "/support"
   | "/legal/terms"
@@ -426,7 +427,7 @@ export function AppHeader() {
                   {labels.pro}
                 </Text>
                 <Pressable
-                  onPress={() => closeAndNavigate("/upgrade")}
+                  onPress={() => closeAndNavigate(isPro ? "/account" : "/upgrade")}
                   style={[
                     styles.actionRow,
                     { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
