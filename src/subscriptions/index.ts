@@ -52,6 +52,9 @@ async function ensureConfigured(userId: string) {
   if (purchasesConfigured && configuredUserId === userId) return;
 
   if (!purchasesConfigured) {
+    console.info(
+      `[Briefly RevenueCat] configure platform=${Platform.OS} user=${userId}`,
+    );
     Purchases.configure({
       apiKey: key,
       appUserID: userId,
@@ -61,6 +64,7 @@ async function ensureConfigured(userId: string) {
     return;
   }
 
+  console.info(`[Briefly RevenueCat] logIn user=${userId}`);
   await Purchases.logIn(userId);
   configuredUserId = userId;
 }
@@ -73,12 +77,33 @@ function hasBrieflyPro(customerInfo: {
   );
 }
 
+function activeEntitlementIds(customerInfo: {
+  entitlements: { active: Record<string, unknown> };
+}) {
+  return Object.keys(customerInfo.entitlements.active || {});
+}
+
 async function syncActivePurchaseWithBackend(active: boolean) {
-  if (!active) return;
+  if (!active) {
+    console.info(
+      `[Briefly RevenueCat] ${entitlementIdentifier()} is not active; backend grant sync skipped`,
+    );
+    return;
+  }
 
   // RevenueCat webhooks remain the durable source of truth. This signed-in
   // reconciliation removes the normal webhook delay after purchase/restore.
-  await syncBrieflyNativeSubscription().catch(() => null);
+  try {
+    console.info("[Briefly RevenueCat] syncing active entitlement with backend");
+    const result = await syncBrieflyNativeSubscription();
+    console.info(
+      `[Briefly RevenueCat] backend sync success entitled=${result.translation_entitled} platform=${result.briefly_pro_platform ?? "none"}`,
+    );
+  } catch (error) {
+    // Do not turn a completed App Store / Play Store purchase into a purchase
+    // failure. The webhook may still reconcile it, but keep the failure visible.
+    console.error("[Briefly RevenueCat] backend sync failed", error);
+  }
 }
 
 export function isRevenueCatPurchaseCancelled(error: unknown) {
@@ -93,6 +118,9 @@ export async function getBrieflySubscriptionStatus(userId: string) {
   await ensureConfigured(userId);
   const customerInfo = await Purchases.getCustomerInfo();
   const active = hasBrieflyPro(customerInfo);
+  console.info(
+    `[Briefly RevenueCat] status user=${userId} active=${active} entitlements=${activeEntitlementIds(customerInfo).join(",") || "none"}`,
+  );
   await syncActivePurchaseWithBackend(active);
   return active;
 }
@@ -114,6 +142,10 @@ export async function beginBrieflySubscription(
     (item) => item.identifier === identifier,
   );
 
+  console.info(
+    `[Briefly RevenueCat] purchase requested user=${userId} plan=${plan} package=${identifier} available=${offering.availablePackages.map((item) => item.identifier).join(",") || "none"}`,
+  );
+
   if (!selected) {
     throw new Error(
       `RevenueCat package ${identifier} is not available in the current offering.`,
@@ -123,18 +155,34 @@ export async function beginBrieflySubscription(
   try {
     const { customerInfo } = await Purchases.purchasePackage(selected);
     const active = hasBrieflyPro(customerInfo);
+    console.info(
+      `[Briefly RevenueCat] purchase completed user=${userId} plan=${plan} active=${active} entitlements=${activeEntitlementIds(customerInfo).join(",") || "none"}`,
+    );
     await syncActivePurchaseWithBackend(active);
     return active;
   } catch (error: unknown) {
-    if (isRevenueCatPurchaseCancelled(error)) return false;
+    if (isRevenueCatPurchaseCancelled(error)) {
+      console.info(
+        `[Briefly RevenueCat] purchase cancelled user=${userId} plan=${plan}`,
+      );
+      return false;
+    }
+    console.error(
+      `[Briefly RevenueCat] purchase failed user=${userId} plan=${plan}`,
+      error,
+    );
     throw error;
   }
 }
 
 export async function restoreBrieflySubscription(userId: string) {
   await ensureConfigured(userId);
+  console.info(`[Briefly RevenueCat] restore requested user=${userId}`);
   const customerInfo = await Purchases.restorePurchases();
   const active = hasBrieflyPro(customerInfo);
+  console.info(
+    `[Briefly RevenueCat] restore completed user=${userId} active=${active} entitlements=${activeEntitlementIds(customerInfo).join(",") || "none"}`,
+  );
   await syncActivePurchaseWithBackend(active);
   return active;
 }
@@ -148,6 +196,9 @@ export async function disconnectBrieflySubscriptionUser() {
     return;
   }
 
+  console.info(
+    `[Briefly RevenueCat] logOut user=${configuredUserId} platform=${Platform.OS}`,
+  );
   await Purchases.logOut();
   configuredUserId = null;
 }
