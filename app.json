@@ -34,6 +34,15 @@
     "plugins": [
       "expo-router",
       [
+        "expo-localization",
+        {
+          "supportedLocales": {
+            "ios": ["en", "es", "ja", "zh-Hans", "zh-Hant"],
+            "android": ["en", "es", "ja", "zh-CN", "zh-TW"]
+          }
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
