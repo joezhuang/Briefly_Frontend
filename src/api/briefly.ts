@@ -56,10 +56,6 @@ function requestHeaders(options?: { includeAuth?: boolean }) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
-  if (process.env.EXPO_PUBLIC_BRIEFLY_TEST_SUBSCRIBER === "true") {
-    headers["X-Briefly-Test-Subscriber"] = "1";
-  }
-
   return headers;
 }
 
