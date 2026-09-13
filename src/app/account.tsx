@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -12,19 +13,44 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { deleteBrieflyAccount } from "@/api/account";
-import { syncBrieflyWebSubscription } from "@/api/briefly";
+import {
+  deleteBrieflyAccount,
+  syncBrieflyNativeSubscription,
+} from "@/api/account";
+import {
+  createBrieflyWebPortal,
+  syncBrieflyWebSubscription,
+} from "@/api/briefly";
 import { clearBrieflyAccessToken } from "@/auth/session";
 import { supabase } from "@/auth/supabase";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyTheme } from "@/context/theme";
 import { restoreBrieflySubscription } from "@/subscriptions";
 
+const APPLE_SUBSCRIPTIONS_URL = "https://apps.apple.com/account/subscriptions";
+const GOOGLE_PLAY_SUBSCRIPTIONS_URL =
+  "https://play.google.com/store/account/subscriptions?package=com.hybridgalaxy.briefly";
+const WEB_RETURN_URL =
+  process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, "") ||
+  "https://briefly-news-analysis.vercel.app";
+
+type ProPlatform = "app_store" | "play_store" | "stripe" | null;
+
 export default function AccountScreen() {
   const { user, account, refreshAccount, signOut } = useBrieflyAuth();
   const { colors } = useBrieflyTheme();
-  const [busy, setBusy] = useState<"restore" | "delete" | "signout" | null>(null);
+  const [busy, setBusy] = useState<
+    "manage" | "restore" | "delete" | "signout" | null
+  >(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const notify = (title: string, body: string) => {
+    if (Platform.OS === "web") {
+      setMessage(body);
+      return;
+    }
+    Alert.alert(title, body);
+  };
 
   const handleSignOut = async () => {
     if (!user || busy !== null) return;
@@ -36,6 +62,74 @@ export default function AccountScreen() {
       router.replace("/");
     } catch (error: unknown) {
       setMessage(error instanceof Error ? error.message : "Sign out failed.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const manageSubscription = async () => {
+    if (!user) {
+      router.push("/sign-in");
+      return;
+    }
+
+    setBusy("manage");
+    setMessage(null);
+    try {
+      let platform: ProPlatform;
+
+      if (Platform.OS === "web") {
+        platform =
+          ((account as { briefly_pro_platform?: ProPlatform } | null)
+            ?.briefly_pro_platform ?? null);
+      } else {
+        const result = await syncBrieflyNativeSubscription();
+        platform = result.briefly_pro_platform;
+        await refreshAccount().catch(() => null);
+      }
+
+      if (!platform) {
+        notify(
+          "No active subscription",
+          "No active Briefly Pro billing source was found for this account.",
+        );
+        return;
+      }
+
+      if (platform === "stripe") {
+        const portal = await createBrieflyWebPortal(`${WEB_RETURN_URL}/account`);
+        await Linking.openURL(portal.portal_url);
+        return;
+      }
+
+      if (platform === "app_store") {
+        if (Platform.OS !== "ios") {
+          notify(
+            "Purchased through Apple",
+            "Your Briefly Pro subscription was purchased through Apple. Manage or cancel it using the Apple Account/App Store associated with that purchase.",
+          );
+          return;
+        }
+        await Linking.openURL(APPLE_SUBSCRIPTIONS_URL);
+        return;
+      }
+
+      if (platform === "play_store") {
+        if (Platform.OS !== "android") {
+          notify(
+            "Purchased through Google Play",
+            "Your Briefly Pro subscription was purchased through Google Play. Manage or cancel it in Google Play using the Google Account associated with that purchase.",
+          );
+          return;
+        }
+        await Linking.openURL(GOOGLE_PLAY_SUBSCRIPTIONS_URL);
+      }
+    } catch (error: unknown) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to open subscription management.",
+      );
     } finally {
       setBusy(null);
     }
@@ -96,7 +190,11 @@ export default function AccountScreen() {
 
     Alert.alert("Delete Briefly account?", warning, [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete account", style: "destructive", onPress: () => void performDelete() },
+      {
+        text: "Delete account",
+        style: "destructive",
+        onPress: () => void performDelete(),
+      },
     ]);
   };
 
@@ -119,25 +217,21 @@ export default function AccountScreen() {
           ) : null}
         </View>
 
+        {account?.translation_entitled ? (
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Manage subscription</Text>
+            <Text style={[styles.body, { color: colors.textMuted }]}>Manage billing, renewal, or cancellation through the provider where your Briefly Pro subscription was purchased.</Text>
+            <Pressable disabled={busy !== null} onPress={() => void manageSubscription()} style={[styles.button, { borderColor: colors.border }, busy !== null && styles.disabled]}>
+              {busy === "manage" ? <ActivityIndicator color={colors.text} /> : <Text style={[styles.buttonText, { color: colors.text }]}>Manage subscription</Text>}
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Account access</Text>
-          <Text style={[styles.body, { color: colors.textMuted }]}>
-            Sign out of Briefly on this device.
-          </Text>
-          <Pressable
-            disabled={!user || busy !== null}
-            onPress={() => void handleSignOut()}
-            style={[
-              styles.button,
-              { borderColor: colors.border },
-              (!user || busy !== null) && styles.disabled,
-            ]}
-          >
-            {busy === "signout" ? (
-              <ActivityIndicator color={colors.text} />
-            ) : (
-              <Text style={[styles.buttonText, { color: colors.text }]}>Sign out</Text>
-            )}
+          <Text style={[styles.body, { color: colors.textMuted }]}>Sign out of Briefly on this device.</Text>
+          <Pressable disabled={!user || busy !== null} onPress={() => void handleSignOut()} style={[styles.button, { borderColor: colors.border }, (!user || busy !== null) && styles.disabled]}>
+            {busy === "signout" ? <ActivityIndicator color={colors.text} /> : <Text style={[styles.buttonText, { color: colors.text }]}>Sign out</Text>}
           </Pressable>
         </View>
 
