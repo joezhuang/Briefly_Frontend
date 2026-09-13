@@ -3,7 +3,7 @@ import { useLocales } from "expo-localization";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { PropsWithChildren, useEffect, useState } from "react";
+import { Fragment, PropsWithChildren, useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
@@ -65,10 +65,6 @@ function SystemLocaleGate({ children }: PropsWithChildren) {
           AsyncStorage.getItem(AUTO_LANGUAGE_STORAGE_KEY),
         ]);
 
-        // Migration from the first locale implementation: if there is no
-        // auto marker yet, treat the existing stored language as the previous
-        // automatic value. A later explicit language selection will make the
-        // two values differ and therefore becomes a manual override.
         const previousAutomaticLanguage =
           lastAutomaticLanguage ?? storedLanguage ?? detectedLanguage;
 
@@ -83,8 +79,6 @@ function SystemLocaleGate({ children }: PropsWithChildren) {
           ]);
 
           if (active && changed && ready) {
-            // LanguageProvider reads AsyncStorage when it mounts. Remount the
-            // subtree after a live system-language change so the UI updates.
             setLanguageRevision((value) => value + 1);
           }
         }
@@ -101,7 +95,7 @@ function SystemLocaleGate({ children }: PropsWithChildren) {
 
   if (!ready) return null;
 
-  return <React.Fragment key={languageRevision}>{children}</React.Fragment>;
+  return <Fragment key={languageRevision}>{children}</Fragment>;
 }
 
 function AppStack() {
