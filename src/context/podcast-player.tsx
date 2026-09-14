@@ -27,6 +27,7 @@ type PodcastPlayerContextValue = {
   queue: PodcastTrack[];
   currentIndex: number;
   status: ReturnType<typeof useAudioPlayerStatus>;
+  minimizeRequest: number;
   play: (track: PodcastTrack) => void;
   toggle: (track?: PodcastTrack) => void;
   addToQueue: (track: PodcastTrack) => void;
@@ -59,6 +60,7 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
   const [currentTrack, setCurrentTrack] = useState<PodcastTrack | null>(null);
   const [queue, setQueue] = useState<PodcastTrack[]>([]);
   const [queueHydrated, setQueueHydrated] = useState(false);
+  const [minimizeRequest, setMinimizeRequest] = useState(0);
   const completedTrackIdRef = useRef<string | null>(null);
 
   const currentIndex = currentTrack
@@ -158,13 +160,19 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
           : [...existing, track],
       );
 
-      if (!currentTrack) {
-        player.replace({ uri: track.source });
-        player.pause();
-        setCurrentTrack(track);
+      // A generated podcast becoming ready must never interrupt current audio.
+      // If playback is idle, expose the player in minimized form and wait for
+      // an explicit user action before starting anything.
+      if (!status.playing) {
+        if (!currentTrack) {
+          player.replace({ uri: track.source });
+          player.pause();
+          setCurrentTrack(track);
+        }
+        setMinimizeRequest((value) => value + 1);
       }
     },
-    [currentTrack, player],
+    [currentTrack, player, status.playing],
   );
 
   const playQueueTrack = useCallback(
@@ -370,6 +378,7 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
       queue,
       currentIndex,
       status,
+      minimizeRequest,
       play,
       toggle,
       addToQueue,
@@ -390,6 +399,7 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
       currentIndex,
       currentTrack,
       isQueued,
+      minimizeRequest,
       moveQueueItem,
       play,
       playNext,
