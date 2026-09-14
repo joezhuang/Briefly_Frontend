@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   createContext,
   PropsWithChildren,
@@ -5,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -14,7 +16,7 @@ import {
 } from "expo-audio";
 import { Platform } from "react-native";
 
-type PodcastTrack = {
+export type PodcastTrack = {
   id: string;
   title: string;
   source: string;
@@ -22,19 +24,45 @@ type PodcastTrack = {
 
 type PodcastPlayerContextValue = {
   currentTrack: PodcastTrack | null;
+  queue: PodcastTrack[];
+  currentIndex: number;
   status: ReturnType<typeof useAudioPlayerStatus>;
   play: (track: PodcastTrack) => void;
   toggle: (track?: PodcastTrack) => void;
+  addToQueue: (track: PodcastTrack) => void;
+  playQueueTrack: (index: number) => void;
+  playNext: () => void;
+  playPrevious: () => void;
+  removeFromQueue: (id: string) => void;
+  moveQueueItem: (index: number, direction: -1 | 1) => void;
+  clearQueue: () => void;
+  isQueued: (id: string) => boolean;
   seekBy: (seconds: number) => void;
   close: () => void;
 };
 
+const QUEUE_STORAGE_KEY = "briefly.podcast.queue.v1";
 const PodcastPlayerContext = createContext<PodcastPlayerContextValue | null>(null);
+
+function uniqueTracks(tracks: PodcastTrack[]) {
+  const seen = new Set<string>();
+  return tracks.filter((track) => {
+    if (!track?.id || !track?.source || seen.has(track.id)) return false;
+    seen.add(track.id);
+    return true;
+  });
+}
 
 export function PodcastPlayerProvider({ children }: PropsWithChildren) {
   const player = useAudioPlayer(null, { updateInterval: 500 });
   const status = useAudioPlayerStatus(player);
   const [currentTrack, setCurrentTrack] = useState<PodcastTrack | null>(null);
+  const [queue, setQueue] = useState<PodcastTrack[]>([]);
+  const completedTrackIdRef = useRef<string | null>(null);
+
+  const currentIndex = currentTrack
+    ? queue.findIndex((track) => track.id === currentTrack.id)
+    : -1;
 
   useEffect(() => {
     void setAudioModeAsync({
@@ -42,7 +70,20 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
       shouldPlayInBackground: true,
       interruptionMode: "doNotMix",
     });
+
+    void AsyncStorage.getItem(QUEUE_STORAGE_KEY)
+      .then((stored) => {
+        if (!stored) return;
+        const parsed = JSON.parse(stored) as PodcastTrack[];
+        if (!Array.isArray(parsed)) return;
+        setQueue(uniqueTracks(parsed));
+      })
+      .catch(() => null);
   }, []);
+
+  useEffect(() => {
+    void AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
+  }, [queue]);
 
   const activateLockScreen = useCallback(
     (track: PodcastTrack) => {
@@ -67,24 +108,127 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
     [player],
   );
 
+  const startTrack = useCallback(
+    (track: PodcastTrack) => {
+      player.replace({ uri: track.source });
+      setCurrentTrack(track);
+      completedTrackIdRef.current = null;
+      activateLockScreen(track);
+      player.play();
+    },
+    [activateLockScreen, player],
+  );
+
   const play = useCallback(
     (track: PodcastTrack) => {
-      const isSameTrack = currentTrack?.id === track.id;
+      setQueue((existing) =>
+        existing.some((item) => item.id === track.id)
+          ? existing
+          : [...existing, track],
+      );
 
+      const isSameTrack = currentTrack?.id === track.id;
       if (!isSameTrack) {
-        player.replace({ uri: track.source });
-        setCurrentTrack(track);
-      } else if (
+        startTrack(track);
+        return;
+      }
+
+      if (
         status.duration > 0 &&
         status.currentTime >= status.duration - 0.25
       ) {
         void player.seekTo(0);
+        completedTrackIdRef.current = null;
       }
 
       activateLockScreen(track);
       player.play();
     },
-    [activateLockScreen, currentTrack?.id, player, status.currentTime, status.duration],
+    [activateLockScreen, currentTrack?.id, player, startTrack, status.currentTime, status.duration],
+  );
+
+  const addToQueue = useCallback(
+    (track: PodcastTrack) => {
+      setQueue((existing) =>
+        existing.some((item) => item.id === track.id)
+          ? existing
+          : [...existing, track],
+      );
+
+      // Keep the global queue visible without unexpectedly starting playback.
+      if (!currentTrack) {
+        player.replace({ uri: track.source });
+        player.pause();
+        setCurrentTrack(track);
+      }
+    },
+    [currentTrack, player],
+  );
+
+  const playQueueTrack = useCallback(
+    (index: number) => {
+      const track = queue[index];
+      if (track) startTrack(track);
+    },
+    [queue, startTrack],
+  );
+
+  const playNext = useCallback(() => {
+    if (queue.length === 0) return;
+    const nextIndex = currentIndex >= 0 ? currentIndex + 1 : 0;
+    if (nextIndex < queue.length) startTrack(queue[nextIndex]);
+  }, [currentIndex, queue, startTrack]);
+
+  const playPrevious = useCallback(() => {
+    if (queue.length === 0) return;
+    const previousIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+    const track = queue[previousIndex];
+    if (track) startTrack(track);
+  }, [currentIndex, queue, startTrack]);
+
+  const removeFromQueue = useCallback(
+    (id: string) => {
+      setQueue((existing) => {
+        const removedIndex = existing.findIndex((track) => track.id === id);
+        if (removedIndex < 0) return existing;
+
+        const nextQueue = existing.filter((track) => track.id !== id);
+        if (currentTrack?.id === id) {
+          player.pause();
+          const replacement = nextQueue[Math.min(removedIndex, nextQueue.length - 1)] ?? null;
+          if (replacement) {
+            player.replace({ uri: replacement.source });
+            player.pause();
+          }
+          setCurrentTrack(replacement);
+        }
+        return nextQueue;
+      });
+    },
+    [currentTrack?.id, player],
+  );
+
+  const moveQueueItem = useCallback((index: number, direction: -1 | 1) => {
+    setQueue((existing) => {
+      const target = index + direction;
+      if (index < 0 || target < 0 || index >= existing.length || target >= existing.length) {
+        return existing;
+      }
+      const next = [...existing];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }, []);
+
+  const clearQueue = useCallback(() => {
+    player.pause();
+    setQueue([]);
+    setCurrentTrack(null);
+  }, [player]);
+
+  const isQueued = useCallback(
+    (id: string) => queue.some((track) => track.id === id),
+    [queue],
   );
 
   const toggle = useCallback(
@@ -114,14 +258,23 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
       const currentTime = status.currentTime || 0;
       const upperBound =
         duration > 0 ? duration : currentTime + Math.max(seconds, 0);
-      const next = Math.max(
-        0,
-        Math.min(upperBound, currentTime + seconds),
-      );
+      const next = Math.max(0, Math.min(upperBound, currentTime + seconds));
       void player.seekTo(next);
+      completedTrackIdRef.current = null;
     },
     [player, status.currentTime, status.duration],
   );
+
+  useEffect(() => {
+    if (!currentTrack || status.duration <= 0) return;
+    const finished = status.currentTime >= status.duration - 0.2 && !status.playing;
+    if (!finished || completedTrackIdRef.current === currentTrack.id) return;
+
+    completedTrackIdRef.current = currentTrack.id;
+    if (currentIndex >= 0 && currentIndex + 1 < queue.length) {
+      startTrack(queue[currentIndex + 1]);
+    }
+  }, [currentIndex, currentTrack, queue, startTrack, status.currentTime, status.duration, status.playing]);
 
   useEffect(() => {
     if (
@@ -155,26 +308,24 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
 
     setHandler("play", () => player.play());
     setHandler("pause", () => player.pause());
-    setHandler("seekbackward", (details) =>
-      seekBy(-(details.seekOffset ?? 15)),
-    );
-    setHandler("seekforward", (details) =>
-      seekBy(details.seekOffset ?? 15),
-    );
+    setHandler("previoustrack", playPrevious);
+    setHandler("nexttrack", playNext);
+    setHandler("seekbackward", (details) => seekBy(-(details.seekOffset ?? 15)));
+    setHandler("seekforward", (details) => seekBy(details.seekOffset ?? 15));
     setHandler("seekto", (details) => {
-      if (typeof details.seekTime === "number") {
-        void player.seekTo(details.seekTime);
-      }
+      if (typeof details.seekTime === "number") void player.seekTo(details.seekTime);
     });
 
     return () => {
       setHandler("play", null);
       setHandler("pause", null);
+      setHandler("previoustrack", null);
+      setHandler("nexttrack", null);
       setHandler("seekbackward", null);
       setHandler("seekforward", null);
       setHandler("seekto", null);
     };
-  }, [currentTrack, player, seekBy]);
+  }, [currentTrack, playNext, playPrevious, player, seekBy]);
 
   useEffect(() => {
     if (
@@ -191,11 +342,7 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
     if (duration <= 0 || position < 0 || position > duration) return;
 
     try {
-      navigator.mediaSession.setPositionState({
-        duration,
-        playbackRate: 1,
-        position,
-      });
+      navigator.mediaSession.setPositionState({ duration, playbackRate: 1, position });
     } catch {
       // Position state is optional and not implemented by every browser.
     }
@@ -216,8 +363,42 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
   }, [player]);
 
   const value = useMemo(
-    () => ({ currentTrack, status, play, toggle, seekBy, close }),
-    [close, currentTrack, play, seekBy, status, toggle],
+    () => ({
+      currentTrack,
+      queue,
+      currentIndex,
+      status,
+      play,
+      toggle,
+      addToQueue,
+      playQueueTrack,
+      playNext,
+      playPrevious,
+      removeFromQueue,
+      moveQueueItem,
+      clearQueue,
+      isQueued,
+      seekBy,
+      close,
+    }),
+    [
+      addToQueue,
+      clearQueue,
+      close,
+      currentIndex,
+      currentTrack,
+      isQueued,
+      moveQueueItem,
+      play,
+      playNext,
+      playPrevious,
+      playQueueTrack,
+      queue,
+      removeFromQueue,
+      seekBy,
+      status,
+      toggle,
+    ],
   );
 
   return (
@@ -229,8 +410,6 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
 
 export function usePodcastPlayer() {
   const value = useContext(PodcastPlayerContext);
-  if (!value) {
-    throw new Error("usePodcastPlayer must be used inside PodcastPlayerProvider");
-  }
+  if (!value) throw new Error("usePodcastPlayer must be used inside PodcastPlayerProvider");
   return value;
 }
