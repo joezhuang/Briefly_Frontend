@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -17,6 +18,10 @@ import {
   type ReadingHistoryItem,
   writeReadingHistory,
 } from "@/storage/reading-history";
+import {
+  readSyncedUserState,
+  writeSyncedUserState,
+} from "@/sync/user-state";
 
 type ReadingHistoryContextValue = {
   items: ReadingHistoryItem[];
@@ -33,9 +38,26 @@ type ReadingHistoryState = {
 const ReadingHistoryContext =
   createContext<ReadingHistoryContextValue | null>(null);
 
+function validHistory(value: unknown): ReadingHistoryItem[] | null {
+  if (!Array.isArray(value)) return null;
+  return value
+    .filter(
+      (item): item is ReadingHistoryItem =>
+        !!item &&
+        typeof item === "object" &&
+        typeof (item as ReadingHistoryItem).event_id === "string" &&
+        typeof (item as ReadingHistoryItem).slug === "string" &&
+        typeof (item as ReadingHistoryItem).headline === "string" &&
+        typeof (item as ReadingHistoryItem).opened_at === "string" &&
+        typeof (item as ReadingHistoryItem).href === "string",
+    )
+    .slice(0, READING_HISTORY_LIMIT);
+}
+
 export function ReadingHistoryProvider({ children }: PropsWithChildren) {
   const { ready: authReady, user } = useBrieflyAuth();
   const ownerKey = user ? `user:${user.id}` : "guest";
+  const syncOwnerRef = useRef<string | null>(null);
   const [state, setState] = useState<ReadingHistoryState>({
     ownerKey: null,
     items: [],
@@ -45,22 +67,58 @@ export function ReadingHistoryProvider({ children }: PropsWithChildren) {
     if (!authReady) return;
 
     let active = true;
+    syncOwnerRef.current = null;
 
-    void readReadingHistory(ownerKey).then((items) => {
+    const load = async () => {
+      const localItems = await readReadingHistory(ownerKey);
+      let nextItems = localItems;
+
+      if (user) {
+        try {
+          const remote = await readSyncedUserState<ReadingHistoryItem[]>(
+            user.id,
+            "reading_history",
+          );
+          if (!active) return;
+          syncOwnerRef.current = ownerKey;
+          const remoteItems = validHistory(remote.value);
+          if (remote.exists && remoteItems) {
+            nextItems = remoteItems;
+          }
+        } catch (error) {
+          console.warn("Briefly reading history sync unavailable", error);
+        }
+      }
+
       if (!active) return;
-      setState({ ownerKey, items });
-    });
+      setState({ ownerKey, items: nextItems });
+      await writeReadingHistory(ownerKey, nextItems);
+    };
+
+    void load();
 
     return () => {
       active = false;
     };
-  }, [authReady, ownerKey]);
+  }, [authReady, ownerKey, user]);
 
   const ready = authReady && state.ownerKey === ownerKey;
   const items = useMemo(
     () => (ready ? state.items : [] as ReadingHistoryItem[]),
     [ready, state.items],
   );
+
+  useEffect(() => {
+    if (!ready) return;
+    void writeReadingHistory(ownerKey, items);
+    if (user && syncOwnerRef.current === ownerKey) {
+      void writeSyncedUserState(user.id, "reading_history", items).catch(
+        (error) => {
+          console.warn("Briefly reading history sync failed", error);
+        },
+      );
+    }
+  }, [items, ownerKey, ready, user]);
 
   const recordArticle = useCallback(
     async (article: CanonicalArticle, href: string) => {
@@ -85,7 +143,6 @@ export function ReadingHistoryProvider({ children }: PropsWithChildren) {
           nextItem,
           ...current.items.filter((item) => item.event_id !== article.event_id),
         ].slice(0, READING_HISTORY_LIMIT);
-        void writeReadingHistory(ownerKey, next);
         return { ownerKey, items: next };
       });
     },
