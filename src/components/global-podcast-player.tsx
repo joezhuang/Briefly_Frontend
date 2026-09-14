@@ -34,8 +34,11 @@ export function GlobalPodcastPlayer() {
 
   useEffect(() => {
     if (minimizeRequest <= 0) return;
-    setQueueOpen(false);
-    setMinimized(true);
+    const timer = setTimeout(() => {
+      setQueueOpen(false);
+      setMinimized(true);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [minimizeRequest]);
 
   if (!currentTrack) return null;
