@@ -520,6 +520,13 @@ export default function StoryDetailScreen() {
       : article,
     resolvedImageUrl,
   );
+  const displayedContentLanguage =
+    displayedArticle.content_language ?? displayedArticle.language;
+  const showGoogleTranslate =
+    language !== "en" &&
+    !isPro &&
+    displayedContentLanguage === "en" &&
+    !!translateSourceUrl;
   const storyToolsText = storyToolsCopy[language] ?? storyToolsCopy.en;
 
   return (
@@ -600,7 +607,7 @@ export default function StoryDetailScreen() {
         podcastSignedIn={!!user}
         onPodcastAction={() => void handlePodcastAction()}
         translationAction={
-          isWeb && translateSourceUrl ? (
+          showGoogleTranslate && translateSourceUrl ? (
             <WebTranslateButton sourceUrl={translateSourceUrl} />
           ) : undefined
         }
