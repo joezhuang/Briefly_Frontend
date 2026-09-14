@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { usePodcastPlayer } from "@/context/podcast-player";
@@ -18,6 +18,7 @@ export function GlobalPodcastPlayer() {
     queue,
     currentIndex,
     status,
+    minimizeRequest,
     toggle,
     seekBy,
     playNext,
@@ -30,6 +31,12 @@ export function GlobalPodcastPlayer() {
   } = usePodcastPlayer();
   const [minimized, setMinimized] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
+
+  useEffect(() => {
+    if (minimizeRequest <= 0) return;
+    setQueueOpen(false);
+    setMinimized(true);
+  }, [minimizeRequest]);
 
   if (!currentTrack) return null;
 
