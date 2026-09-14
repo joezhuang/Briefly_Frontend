@@ -18,6 +18,7 @@ import {
 } from "@/api/briefly";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
+import { usePodcastPlayer } from "@/context/podcast-player";
 import { useBrieflyTheme } from "@/context/theme";
 
 const PREVIEW_DRAFTS =
@@ -165,6 +166,7 @@ async function writeStoredNotifications(
 export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   const { ready: authReady, user, account } = useBrieflyAuth();
   const { language } = useBrieflyLanguage();
+  const { addToQueue, isQueued } = usePodcastPlayer();
   const { colors } = useBrieflyTheme();
   const labels = copy[language] ?? copy.en;
   const ownerKey = user ? `user:${user.id}` : "guest";
@@ -343,8 +345,22 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                 item.articleVersionId,
                 item.language,
               );
-              if (podcast.status === "ready") completed.push(item);
-              else if (podcast.status === "failed") terminalFailures.push(item);
+              if (podcast.status === "ready") {
+                completed.push(item);
+                if (
+                  active &&
+                  podcast.audio_url &&
+                  !isQueued(podcast.audio_url)
+                ) {
+                  addToQueue({
+                    id: podcast.audio_url,
+                    title: item.headline,
+                    source: podcast.audio_url,
+                  });
+                }
+              } else if (podcast.status === "failed") {
+                terminalFailures.push(item);
+              }
               return;
             }
 
@@ -456,7 +472,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [account, keyFor, ownerKey, pending, storageReady, user]);
+  }, [account, addToQueue, isQueued, keyFor, ownerKey, pending, storageReady, user]);
 
   const value = useMemo(
     () => ({ watchAnalysis, watchTranslation, watchPodcast }),
