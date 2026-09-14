@@ -281,9 +281,14 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
     if (!finished || completedTrackIdRef.current === currentTrack.id) return;
 
     completedTrackIdRef.current = currentTrack.id;
-    if (currentIndex >= 0 && currentIndex + 1 < queue.length) {
-      startTrack(queue[currentIndex + 1]);
-    }
+    if (currentIndex < 0 || currentIndex + 1 >= queue.length) return;
+
+    const nextTrack = queue[currentIndex + 1];
+    const timer = setTimeout(() => {
+      startTrack(nextTrack);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [currentIndex, currentTrack, queue, startTrack, status.currentTime, status.duration, status.playing]);
 
   useEffect(() => {
