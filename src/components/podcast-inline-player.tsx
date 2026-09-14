@@ -18,7 +18,14 @@ export function PodcastInlinePlayer({
   title?: string;
 }) {
   const { colors } = useBrieflyTheme();
-  const { currentTrack, status, toggle, seekBy } = usePodcastPlayer();
+  const {
+    currentTrack,
+    status,
+    toggle,
+    seekBy,
+    addToQueue,
+    isQueued,
+  } = usePodcastPlayer();
   const trackId = source;
   const isCurrentTrack = currentTrack?.id === trackId;
 
@@ -29,6 +36,7 @@ export function PodcastInlinePlayer({
   const progressWidth = `${progress * 100}%` as `${number}%`;
 
   const track = { id: trackId, title, source };
+  const queued = isQueued(trackId);
 
   return (
     <View
@@ -46,6 +54,22 @@ export function PodcastInlinePlayer({
         >
           <Text style={[styles.primaryText, { color: colors.background }]}>
             {isPlaying ? "Pause" : "Play"}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={queued ? "Podcast already in queue" : "Add podcast to queue"}
+          disabled={queued}
+          onPress={() => addToQueue(track)}
+          style={[
+            styles.secondaryButton,
+            { borderColor: colors.border },
+            queued && styles.disabled,
+          ]}
+        >
+          <Text style={[styles.secondaryText, { color: colors.text }]}>
+            {queued ? "In queue" : "+ Queue"}
           </Text>
         </Pressable>
 
