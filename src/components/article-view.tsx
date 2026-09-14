@@ -164,6 +164,28 @@ export function ArticleView({ article, immutable = false, podcast = null, podcas
 
   const share = async () => { const webBase = process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, ""); if (!webBase) { Alert.alert("Briefly", t.shareConfigMissing); return; } const url = `${webBase}/share/${article.article_version_id}`; await Share.share(Platform.OS === "ios" ? { message: article.headline, url } : { message: `${article.headline}\n${url}` }); };
   const openCoverage = async (url: string) => { if (Platform.OS === "web" && typeof window !== "undefined") { window.open(url, "_blank", "noopener,noreferrer"); return; } await Linking.openURL(url); };
+  const navigateBackOrHome = () => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const referrer = typeof document !== "undefined" ? document.referrer : "";
+      if (referrer) {
+        try {
+          const referrerUrl = new URL(referrer);
+          if (referrerUrl.origin === window.location.origin && window.history.length > 1) {
+            window.history.back();
+            return;
+          }
+        } catch {}
+      }
+      router.replace("/" as never);
+      return;
+    }
+
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/" as never);
+    }
+  };
   const briefSection = (title: string, text: string) => text ? <View style={styles.briefSection}><Text style={[styles.briefTitle, { color: colors.accent }]}>{title}</Text><Text style={[styles.briefText, { color: colors.text }]}>{text}</Text></View> : null;
   let podcastAction: string = podcastText.generate; let podcastDisabled = podcastBusy; if (!podcastSignedIn) podcastAction = podcastText.signIn; else if (!podcastPro) podcastAction = podcastText.proOnly; else if (podcastProcessing) { podcastAction = podcastText.preparing; podcastDisabled = true; } else if (podcast?.status === "failed") podcastAction = podcastText.retry;
   const hasLocalizationStatus = translationPending || experimentalTranslation || translatedContent;
@@ -200,7 +222,7 @@ export function ArticleView({ article, immutable = false, podcast = null, podcas
     <View style={styles.body}>{(article.body??[]).map((p,i)=><Text key={`${p.type}-${i}`} style={[styles.bodyText,{color:colors.text}]}>{p.text}</Text>)}</View>
     {!immutable&&<View style={[styles.exploreGroup,{borderTopColor:colors.border}]}><Text style={[styles.exploreTitle,{color:colors.text}]}>{exploreText.title}</Text>{(article.uncertainties??[]).length>0&&<ExploreRow label={exploreText.uncertainties} meta={String(article.uncertainties.length)} open={openExplore==="uncertainties"} colors={colors} onPress={()=>setOpenExplore(v=>v==="uncertainties"?null:"uncertainties")}>{article.uncertainties.map((item,i)=><View key={i} style={styles.bulletRow}><Text style={[styles.bullet,{color:colors.accent}]}>•</Text><Text style={[styles.bulletText,{color:colors.textMuted}]}>{item}</Text></View>)}</ExploreRow>}{(article.sources_used??[]).length>0&&<ExploreRow label={exploreText.sources} meta={String(article.sources_used.length)} open={openExplore==="sources"} colors={colors} onPress={()=>setOpenExplore(v=>v==="sources"?null:"sources")}>{article.sources_used.map((s,i)=><View key={`${s.source}-${i}`} style={styles.source}><Text style={[styles.sourceName,{color:colors.text}]}>{s.source}</Text>{!!s.contribution&&<Text style={[styles.sourceContribution,{color:colors.textMuted}]}>{s.contribution}</Text>}</View>)}</ExploreRow>}{(article.coverage??[]).length>0&&<ExploreRow label={exploreText.coverage} meta={String(article.coverage?.length??0)} open={openExplore==="coverage"} colors={colors} onPress={()=>setOpenExplore(v=>v==="coverage"?null:"coverage")}>{(article.coverage??[]).map((item,i)=>{const d=formatDate(item.published_at,language);return <Pressable key={`${item.evidence_id||item.url}-${i}`} onPress={()=>void openCoverage(item.url)} style={({pressed})=>[styles.coverageRow,{borderColor:colors.border},pressed&&styles.coveragePressed]}><View style={styles.coverageCopy}><Text style={[styles.coverageSource,{color:colors.accent}]}>{item.source}</Text>{!!item.title&&<Text style={[styles.coverageTitle,{color:colors.text}]}>{item.title}</Text>}{!!d&&<Text style={[styles.coverageMeta,{color:colors.textMuted}]}>{d}</Text>}</View><Text style={[styles.coverageOpen,{color:colors.textMuted}]}>{coverageText.open} ↗</Text></Pressable>;})}</ExploreRow>}</View>}
     {immutable&&(article.uncertainties??[]).length>0&&<View style={[styles.group,{borderTopColor:colors.border}]}><Text style={[styles.groupTitle,{color:colors.text}]}>{t.whatWeDontKnow}</Text>{article.uncertainties.map((item,i)=><View key={i} style={styles.bulletRow}><Text style={[styles.bullet,{color:colors.accent}]}>•</Text><Text style={[styles.bulletText,{color:colors.textMuted}]}>{item}</Text></View>)}</View>}{footer}
-  </View></ScrollView>{!immutable&&showFloatingBack&&<Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={()=>router.back()} style={({pressed})=>[styles.floatingBack,{backgroundColor:colors.surface,borderColor:colors.border,opacity:pressed?.72:.94}]}><Text style={[styles.floatingBackText,{color:colors.text}]}>←</Text></Pressable>}</View>;
+  </View></ScrollView>{!immutable&&showFloatingBack&&<Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={navigateBackOrHome} style={({pressed})=>[styles.floatingBack,{backgroundColor:colors.surface,borderColor:colors.border,opacity:pressed?.72:.94}]}><Text style={[styles.floatingBackText,{color:colors.text}]}>←</Text></Pressable>}</View>;
 }
 
 function ExploreRow({label,meta,open,colors,onPress,children}:{label:string;meta?:string;open:boolean;colors:ReturnType<typeof useBrieflyTheme>["colors"];onPress:()=>void;children:ReactNode;}) { return <View style={[styles.exploreRow,{borderColor:colors.border}]}><Pressable accessibilityRole="button" onPress={onPress} style={({pressed})=>[styles.exploreTrigger,{opacity:pressed?.68:1}]}><Text style={[styles.exploreLabel,{color:colors.text}]}>{label}</Text><View style={styles.exploreMetaRow}>{!!meta&&<Text style={[styles.exploreMeta,{color:colors.textMuted}]}>{meta}</Text>}<Text style={[styles.exploreArrow,{color:colors.accent}]}>{open?"−":"+"}</Text></View></Pressable>{open&&<View style={styles.exploreContent}>{children}</View>}</View>; }
