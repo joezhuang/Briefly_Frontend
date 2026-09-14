@@ -6,23 +6,23 @@ import { useBrieflyTheme } from "@/context/theme";
 
 const copy = {
   en: {
-    label: "Translate this page",
+    label: "Translate with Google",
     localHint: "For local development, use your browser's Translate page option.",
   },
   es: {
-    label: "Traducir esta página",
+    label: "Traducir con Google",
     localHint: "En desarrollo local, usa la opción Traducir página de tu navegador.",
   },
   ja: {
-    label: "このページを翻訳",
+    label: "Googleで翻訳",
     localHint: "ローカル開発では、ブラウザの「ページを翻訳」機能を使用してください。",
   },
   "zh-CN": {
-    label: "翻译此页面",
+    label: "使用 Google 翻译",
     localHint: "本地开发环境请使用浏览器自带的“翻译此页面”功能。",
   },
   "zh-TW": {
-    label: "翻譯此頁面",
+    label: "使用 Google 翻譯",
     localHint: "本機開發環境請使用瀏覽器內建的「翻譯此頁面」功能。",
   },
 } as const;
