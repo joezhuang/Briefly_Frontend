@@ -78,32 +78,40 @@ if (Platform.OS !== "web") {
     });
   }
 
-  const cryptoObject = runtime.crypto ?? {};
+  const cryptoObject = (runtime.crypto ?? {}) as Partial<NativeCryptoBridge>;
 
   if (!cryptoObject.getRandomValues) {
-    cryptoObject.getRandomValues = <T extends IntegerArray>(array: T) =>
-      ExpoCrypto.getRandomValues(array);
+    const getRandomValues = ExpoCrypto.getRandomValues as unknown as <T extends IntegerArray>(array: T) => T;
+    Object.defineProperty(cryptoObject, "getRandomValues", {
+      configurable: true,
+      value: <T extends IntegerArray>(array: T) => getRandomValues(array),
+    });
   }
 
   if (!cryptoObject.subtle) {
-    cryptoObject.subtle = {
-      digest: async (
-        algorithm: string | { name: string },
-        data: ArrayBuffer | ArrayBufferView,
-      ) => {
-        const normalized = normalizeDigestAlgorithm(algorithm);
-        if (normalized !== "SHA-256") {
-          throw new Error(
-            `Native WebCrypto bridge only supports SHA-256 digest, received ${normalized}.`,
-          );
-        }
+    const digest = ExpoCrypto.digest as unknown as (
+      algorithm: ExpoCrypto.CryptoDigestAlgorithm,
+      data: ArrayBuffer | ArrayBufferView,
+    ) => Promise<ArrayBuffer>;
 
-        return ExpoCrypto.digest(
-          ExpoCrypto.CryptoDigestAlgorithm.SHA256,
-          data,
-        );
+    Object.defineProperty(cryptoObject, "subtle", {
+      configurable: true,
+      value: {
+        digest: async (
+          algorithm: string | { name: string },
+          data: ArrayBuffer | ArrayBufferView,
+        ) => {
+          const normalized = normalizeDigestAlgorithm(algorithm);
+          if (normalized !== "SHA-256") {
+            throw new Error(
+              `Native WebCrypto bridge only supports SHA-256 digest, received ${normalized}.`,
+            );
+          }
+
+          return digest(ExpoCrypto.CryptoDigestAlgorithm.SHA256, data);
+        },
       },
-    };
+    });
   }
 
   if (!runtime.crypto) {
