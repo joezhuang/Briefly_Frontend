@@ -16,6 +16,12 @@ import {
 } from "expo-audio";
 import { Platform } from "react-native";
 
+import { useBrieflyAuth } from "@/context/auth";
+import {
+  readSyncedUserState,
+  writeSyncedUserState,
+} from "@/sync/user-state";
+
 export type PodcastTrack = {
   id: string;
   title: string;
@@ -42,8 +48,13 @@ type PodcastPlayerContextValue = {
   close: () => void;
 };
 
-const QUEUE_STORAGE_KEY = "briefly.podcast.queue.v1";
+const QUEUE_STORAGE_KEY_PREFIX = "briefly.podcast.queue.v2";
+const LEGACY_QUEUE_STORAGE_KEY = "briefly.podcast.queue.v1";
 const PodcastPlayerContext = createContext<PodcastPlayerContextValue | null>(null);
+
+function queueStorageKey(ownerKey: string) {
+  return `${QUEUE_STORAGE_KEY_PREFIX}:${ownerKey}`;
+}
 
 function uniqueTracks(tracks: PodcastTrack[]) {
   const seen = new Set<string>();
@@ -54,14 +65,53 @@ function uniqueTracks(tracks: PodcastTrack[]) {
   });
 }
 
+function validTracks(value: unknown): PodcastTrack[] | null {
+  if (!Array.isArray(value)) return null;
+  return uniqueTracks(
+    value.filter(
+      (track): track is PodcastTrack =>
+        !!track &&
+        typeof track === "object" &&
+        typeof (track as PodcastTrack).id === "string" &&
+        typeof (track as PodcastTrack).title === "string" &&
+        typeof (track as PodcastTrack).source === "string",
+    ),
+  );
+}
+
+async function readLocalQueue(ownerKey: string): Promise<PodcastTrack[]> {
+  const key = queueStorageKey(ownerKey);
+  let raw = await AsyncStorage.getItem(key);
+
+  if (!raw) {
+    raw = await AsyncStorage.getItem(LEGACY_QUEUE_STORAGE_KEY);
+    if (raw) {
+      await AsyncStorage.setItem(key, raw);
+      await AsyncStorage.removeItem(LEGACY_QUEUE_STORAGE_KEY);
+    }
+  }
+
+  if (!raw) return [];
+
+  try {
+    return validTracks(JSON.parse(raw)) ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export function PodcastPlayerProvider({ children }: PropsWithChildren) {
+  const { ready: authReady, user } = useBrieflyAuth();
+  const userId = user?.id ?? null;
+  const ownerKey = userId ? `user:${userId}` : "guest";
   const player = useAudioPlayer(null, { updateInterval: 500 });
   const status = useAudioPlayerStatus(player);
   const [currentTrack, setCurrentTrack] = useState<PodcastTrack | null>(null);
   const [queue, setQueue] = useState<PodcastTrack[]>([]);
-  const [queueHydrated, setQueueHydrated] = useState(false);
+  const [queueHydratedOwner, setQueueHydratedOwner] = useState<string | null>(null);
   const [minimizeRequest, setMinimizeRequest] = useState(0);
   const completedTrackIdRef = useRef<string | null>(null);
+  const syncOwnerRef = useRef<string | null>(null);
 
   const currentIndex = currentTrack
     ? queue.findIndex((track) => track.id === currentTrack.id)
@@ -73,22 +123,64 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
       shouldPlayInBackground: true,
       interruptionMode: "doNotMix",
     });
-
-    void AsyncStorage.getItem(QUEUE_STORAGE_KEY)
-      .then((stored) => {
-        if (!stored) return;
-        const parsed = JSON.parse(stored) as PodcastTrack[];
-        if (!Array.isArray(parsed)) return;
-        setQueue(uniqueTracks(parsed));
-      })
-      .catch(() => null)
-      .finally(() => setQueueHydrated(true));
   }, []);
 
   useEffect(() => {
-    if (!queueHydrated) return;
-    void AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
-  }, [queue, queueHydrated]);
+    if (!authReady) return;
+
+    let active = true;
+    syncOwnerRef.current = null;
+    player.pause();
+
+    const load = async () => {
+      const localQueue = await readLocalQueue(ownerKey);
+      let nextQueue = localQueue;
+
+      if (userId) {
+        try {
+          const remote = await readSyncedUserState<PodcastTrack[]>(
+            userId,
+            "podcast_queue",
+          );
+          if (!active) return;
+          syncOwnerRef.current = ownerKey;
+          const remoteQueue = validTracks(remote.value);
+          if (remote.exists && remoteQueue) {
+            nextQueue = remoteQueue;
+          }
+        } catch (error) {
+          console.warn("Briefly podcast queue sync unavailable", error);
+        }
+      }
+
+      if (!active) return;
+      setQueue(nextQueue);
+      setCurrentTrack(null);
+      setQueueHydratedOwner(ownerKey);
+      await AsyncStorage.setItem(
+        queueStorageKey(ownerKey),
+        JSON.stringify(nextQueue),
+      );
+    };
+
+    void load();
+
+    return () => {
+      active = false;
+    };
+  }, [authReady, ownerKey, player, userId]);
+
+  useEffect(() => {
+    if (queueHydratedOwner !== ownerKey) return;
+    void AsyncStorage.setItem(queueStorageKey(ownerKey), JSON.stringify(queue));
+    if (userId && syncOwnerRef.current === ownerKey) {
+      void writeSyncedUserState(userId, "podcast_queue", queue).catch(
+        (error) => {
+          console.warn("Briefly podcast queue sync failed", error);
+        },
+      );
+    }
+  }, [ownerKey, queue, queueHydratedOwner, userId]);
 
   const activateLockScreen = useCallback(
     (track: PodcastTrack) => {
@@ -149,7 +241,14 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
       activateLockScreen(track);
       player.play();
     },
-    [activateLockScreen, currentTrack?.id, player, startTrack, status.currentTime, status.duration],
+    [
+      activateLockScreen,
+      currentTrack?.id,
+      player,
+      startTrack,
+      status.currentTime,
+      status.duration,
+    ],
   );
 
   const addToQueue = useCallback(
@@ -205,7 +304,8 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
         const nextQueue = existing.filter((track) => track.id !== id);
         if (currentTrack?.id === id) {
           player.pause();
-          const replacement = nextQueue[Math.min(removedIndex, nextQueue.length - 1)] ?? null;
+          const replacement =
+            nextQueue[Math.min(removedIndex, nextQueue.length - 1)] ?? null;
           if (replacement) {
             player.replace({ uri: replacement.source });
             player.pause();
@@ -221,7 +321,12 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
   const moveQueueItem = useCallback((index: number, direction: -1 | 1) => {
     setQueue((existing) => {
       const target = index + direction;
-      if (index < 0 || target < 0 || index >= existing.length || target >= existing.length) {
+      if (
+        index < 0 ||
+        target < 0 ||
+        index >= existing.length ||
+        target >= existing.length
+      ) {
         return existing;
       }
       const next = [...existing];
@@ -277,7 +382,8 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!currentTrack || status.duration <= 0) return;
-    const finished = status.currentTime >= status.duration - 0.2 && !status.playing;
+    const finished =
+      status.currentTime >= status.duration - 0.2 && !status.playing;
     if (!finished || completedTrackIdRef.current === currentTrack.id) return;
 
     completedTrackIdRef.current = currentTrack.id;
@@ -289,7 +395,15 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [currentIndex, currentTrack, queue, startTrack, status.currentTime, status.duration, status.playing]);
+  }, [
+    currentIndex,
+    currentTrack,
+    queue,
+    startTrack,
+    status.currentTime,
+    status.duration,
+    status.playing,
+  ]);
 
   useEffect(() => {
     if (
@@ -325,10 +439,14 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
     setHandler("pause", () => player.pause());
     setHandler("previoustrack", playPrevious);
     setHandler("nexttrack", playNext);
-    setHandler("seekbackward", (details) => seekBy(-(details.seekOffset ?? 15)));
+    setHandler("seekbackward", (details) =>
+      seekBy(-(details.seekOffset ?? 15)),
+    );
     setHandler("seekforward", (details) => seekBy(details.seekOffset ?? 15));
     setHandler("seekto", (details) => {
-      if (typeof details.seekTime === "number") void player.seekTo(details.seekTime);
+      if (typeof details.seekTime === "number") {
+        void player.seekTo(details.seekTime);
+      }
     });
 
     return () => {
@@ -357,7 +475,11 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
     if (duration <= 0 || position < 0 || position > duration) return;
 
     try {
-      navigator.mediaSession.setPositionState({ duration, playbackRate: 1, position });
+      navigator.mediaSession.setPositionState({
+        duration,
+        playbackRate: 1,
+        position,
+      });
     } catch {
       // Position state is optional and not implemented by every browser.
     }
@@ -371,7 +493,10 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
       } catch {
         // The player can already have been detached by the OS.
       }
-    } else if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+    } else if (
+      typeof navigator !== "undefined" &&
+      "mediaSession" in navigator
+    ) {
       navigator.mediaSession.metadata = null;
     }
     setCurrentTrack(null);
@@ -427,6 +552,8 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
 
 export function usePodcastPlayer() {
   const value = useContext(PodcastPlayerContext);
-  if (!value) throw new Error("usePodcastPlayer must be used inside PodcastPlayerProvider");
+  if (!value) {
+    throw new Error("usePodcastPlayer must be used inside PodcastPlayerProvider");
+  }
   return value;
 }
