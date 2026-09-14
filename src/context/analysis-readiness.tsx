@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -20,6 +21,10 @@ import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { usePodcastPlayer } from "@/context/podcast-player";
 import { useBrieflyTheme } from "@/context/theme";
+import {
+  readSyncedUserState,
+  writeSyncedUserState,
+} from "@/sync/user-state";
 
 const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
@@ -132,6 +137,17 @@ function storageKey(ownerKey: string) {
   return `${STORAGE_KEY_PREFIX}:${ownerKey}`;
 }
 
+function validStoredNotifications(value: unknown): StoredNotifications | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<StoredNotifications>;
+  if (!candidate.pending || typeof candidate.pending !== "object") return null;
+  if (!Array.isArray(candidate.ready)) return null;
+  return {
+    pending: candidate.pending as Record<string, PendingAnalysis>,
+    ready: candidate.ready as ReadyAnalysis[],
+  };
+}
+
 async function readStoredNotifications(
   ownerKey: string,
 ): Promise<StoredNotifications> {
@@ -139,14 +155,7 @@ async function readStoredNotifications(
   if (!raw) return { pending: {}, ready: [] };
 
   try {
-    const parsed = JSON.parse(raw) as Partial<StoredNotifications>;
-    return {
-      pending:
-        parsed.pending && typeof parsed.pending === "object"
-          ? parsed.pending
-          : {},
-      ready: Array.isArray(parsed.ready) ? parsed.ready : [],
-    };
+    return validStoredNotifications(JSON.parse(raw)) ?? { pending: {}, ready: [] };
   } catch {
     return { pending: {}, ready: [] };
   }
@@ -165,11 +174,13 @@ async function writeStoredNotifications(
 
 export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   const { ready: authReady, user, account } = useBrieflyAuth();
+  const userId = user?.id ?? null;
   const { language } = useBrieflyLanguage();
   const { addToQueue, isQueued } = usePodcastPlayer();
   const { colors } = useBrieflyTheme();
   const labels = copy[language] ?? copy.en;
-  const ownerKey = user ? `user:${user.id}` : "guest";
+  const ownerKey = userId ? `user:${userId}` : "guest";
+  const syncOwnerRef = useRef<string | null>(null);
 
   const [state, setState] = useState<NotificationState>({
     ownerKey: null,
@@ -199,21 +210,45 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
     if (!authReady) return;
 
     let active = true;
+    syncOwnerRef.current = null;
 
-    void readStoredNotifications(ownerKey).then((stored) => {
+    const load = async () => {
+      const local = await readStoredNotifications(ownerKey);
+      let next = local;
+
+      if (userId) {
+        try {
+          const remote = await readSyncedUserState<StoredNotifications>(
+            userId,
+            "notifications",
+          );
+          if (!active) return;
+          syncOwnerRef.current = ownerKey;
+          const remoteState = validStoredNotifications(remote.value);
+          if (remote.exists && remoteState) {
+            next = remoteState;
+          }
+        } catch (error) {
+          console.warn("Briefly notification sync unavailable", error);
+        }
+      }
+
       if (!active) return;
       setState({
         ownerKey,
-        pending: stored.pending,
-        ready: stored.ready,
+        pending: next.pending,
+        ready: next.ready,
         expanded: false,
       });
-    });
+      await writeStoredNotifications(ownerKey, next.pending, next.ready);
+    };
+
+    void load();
 
     return () => {
       active = false;
     };
-  }, [authReady, ownerKey]);
+  }, [authReady, ownerKey, userId]);
 
   const storageReady = authReady && state.ownerKey === ownerKey;
   const { pending, ready, expanded } = useMemo(
@@ -235,7 +270,15 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (!storageReady) return;
     void writeStoredNotifications(ownerKey, pending, ready);
-  }, [ownerKey, pending, ready, storageReady]);
+    if (userId && syncOwnerRef.current === ownerKey) {
+      void writeSyncedUserState<StoredNotifications>(userId, "notifications", {
+        pending,
+        ready,
+      }).catch((error) => {
+        console.warn("Briefly notification sync failed", error);
+      });
+    }
+  }, [ownerKey, pending, ready, storageReady, userId]);
 
   const watchAnalysis = useCallback(
     (item: Omit<Extract<PendingAnalysis, { type: "article" }>, "type">) => {
@@ -399,7 +442,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
             const wantsLocalization =
               !!item.targetLanguage && item.targetLanguage !== "en";
 
-            if (wantsLocalization && user && account == null) {
+            if (wantsLocalization && userId && account == null) {
               return;
             }
 
@@ -499,7 +542,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
     ownerKey,
     pending,
     storageReady,
-    user,
+    userId,
   ]);
 
   const value = useMemo(
@@ -641,7 +684,9 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
           >
             <Text style={styles.bell}>🔔</Text>
             <View style={[styles.badge, { backgroundColor: colors.accent }]}> 
-              <Text style={styles.badgeText}>{ready.length > 99 ? "99+" : ready.length}</Text>
+              <Text style={styles.badgeText}>
+                {ready.length > 99 ? "99+" : ready.length}
+              </Text>
             </View>
           </Pressable>
         </View>
@@ -685,7 +730,12 @@ const styles = StyleSheet.create({
   },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 14 },
   headerAction: { fontSize: 12, fontWeight: "900" },
-  kicker: { flex: 1, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+  kicker: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
   readyRow: {
     minHeight: 44,
     flexDirection: "row",
