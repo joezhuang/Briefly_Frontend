@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { useState } from "react";
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { useBrieflyLanguage } from "@/context/language";
@@ -11,6 +12,9 @@ const previewCopy = {
     preparing: "Briefly is preparing this analysis from the event evidence.",
     waiting: "You do not need to wait here. Keep browsing other stories and Briefly will notify you in the app when this analysis is ready to read.",
     failed: "Briefly could not prepare an authoritative analysis from the available source material.",
+    retry: "Retry",
+    retrying: "Retrying…",
+    retryFailed: "Unable to restart generation. Please try again.",
     coverage: "Coverage",
     open: "Open original",
   },
@@ -18,6 +22,9 @@ const previewCopy = {
     preparing: "Briefly está preparando este análisis a partir de la evidencia del evento.",
     waiting: "No necesitas esperar aquí. Sigue explorando otras noticias y Briefly te avisará dentro de la app cuando el análisis esté listo para leer.",
     failed: "Briefly no pudo preparar un análisis autorizado con las fuentes disponibles.",
+    retry: "Reintentar",
+    retrying: "Reintentando…",
+    retryFailed: "No se pudo reiniciar la generación. Inténtalo de nuevo.",
     coverage: "Cobertura",
     open: "Abrir original",
   },
@@ -25,6 +32,9 @@ const previewCopy = {
     preparing: "イベントの根拠情報からBriefly分析を準備しています。",
     waiting: "ここで待つ必要はありません。他のニュースを見ながらお待ちください。分析が読めるようになったらBriefly内でお知らせします。",
     failed: "利用可能な情報から信頼できるBriefly分析を作成できませんでした。",
+    retry: "再試行",
+    retrying: "再試行中…",
+    retryFailed: "生成を再開できませんでした。もう一度お試しください。",
     coverage: "関連記事",
     open: "元記事を開く",
   },
@@ -32,6 +42,9 @@ const previewCopy = {
     preparing: "Briefly 正在根据事件证据准备这篇分析。",
     waiting: "你不需要停留在这里等待。可以继续浏览其他新闻，分析准备好后 Briefly 会在应用内通知你。",
     failed: "Briefly 无法根据现有来源生成可靠的权威分析。",
+    retry: "重试",
+    retrying: "正在重试…",
+    retryFailed: "无法重新启动生成，请重试。",
     coverage: "相关报道",
     open: "打开原文",
   },
@@ -39,6 +52,9 @@ const previewCopy = {
     preparing: "Briefly 正在根據事件證據準備這篇分析。",
     waiting: "你不需要停留在這裡等待。可以繼續瀏覽其他新聞，分析準備好後 Briefly 會在應用內通知你。",
     failed: "Briefly 無法根據現有來源產生可靠的權威分析。",
+    retry: "重試",
+    retrying: "正在重試…",
+    retryFailed: "無法重新啟動產生，請再試一次。",
     coverage: "相關報導",
     open: "開啟原文",
   },
@@ -57,6 +73,8 @@ export function EventPreviewView({
   const copy = previewCopy[language] ?? previewCopy.en;
   const sourceCount = article.source_count ?? article.coverage?.length ?? 0;
   const failed = article.generation_status === "failed";
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   const openCoverage = async (url: string) => {
     if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -64,6 +82,39 @@ export function EventPreviewView({
       return;
     }
     await Linking.openURL(url);
+  };
+
+  const retryGeneration = async () => {
+    if (!onRetry || retrying || !article.event_id) return;
+
+    const apiBase = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
+    if (!apiBase) {
+      setRetryError(copy.retryFailed);
+      return;
+    }
+
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      const params = new URLSearchParams({
+        include_draft: String(
+          process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true",
+        ),
+      });
+      const response = await fetch(
+        `${apiBase}/api/lazy-articles/event/${encodeURIComponent(article.event_id)}/retry?${params.toString()}`,
+        { method: "POST" },
+      );
+      if (!response.ok) {
+        throw new Error(`Retry failed (${response.status})`);
+      }
+      onRetry();
+    } catch (error) {
+      console.warn("Briefly lazy article retry failed", error);
+      setRetryError(copy.retryFailed);
+    } finally {
+      setRetrying(false);
+    }
   };
 
   return (
@@ -108,9 +159,24 @@ export function EventPreviewView({
             </Text>
           )}
           {failed && onRetry && (
-            <Pressable onPress={onRetry} style={[styles.retryButton, { borderColor: colors.border }]}> 
-              <Text style={[styles.retryText, { color: colors.text }]}>Retry</Text>
+            <Pressable
+              disabled={retrying}
+              onPress={() => void retryGeneration()}
+              style={[
+                styles.retryButton,
+                { borderColor: colors.border },
+                retrying && styles.retryButtonDisabled,
+              ]}
+            > 
+              <Text style={[styles.retryText, { color: colors.text }]}>
+                {retrying ? copy.retrying : copy.retry}
+              </Text>
             </Pressable>
+          )}
+          {!!retryError && (
+            <Text style={[styles.retryError, { color: colors.textMuted }]}>
+              {retryError}
+            </Text>
           )}
         </View>
 
@@ -162,7 +228,9 @@ const styles = StyleSheet.create({
   statusTitle: { fontSize: 16, lineHeight: 23, fontWeight: "800" },
   statusBody: { fontSize: 14, lineHeight: 21 },
   retryButton: { alignSelf: "flex-start", borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  retryButtonDisabled: { opacity: 0.55 },
   retryText: { fontSize: 13, fontWeight: "800" },
+  retryError: { fontSize: 12, lineHeight: 18 },
   coverageSection: { marginTop: 44, paddingTop: 28, gap: 14 },
   coverageTitle: { fontSize: 24, lineHeight: 30, fontWeight: "800" },
   coverageRow: { borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 14, flexDirection: "row", gap: 16, alignItems: "center" },
