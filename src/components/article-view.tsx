@@ -165,12 +165,12 @@ export function ArticleView({ article, immutable = false, podcast = null, podcas
   const share = async () => { const webBase = process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, ""); if (!webBase) { Alert.alert("Briefly", t.shareConfigMissing); return; } const url = `${webBase}/share/${article.article_version_id}`; await Share.share(Platform.OS === "ios" ? { message: article.headline, url } : { message: `${article.headline}\n${url}` }); };
   const openCoverage = async (url: string) => { if (Platform.OS === "web" && typeof window !== "undefined") { window.open(url, "_blank", "noopener,noreferrer"); return; } await Linking.openURL(url); };
   const briefSection = (title: string, text: string) => text ? <View style={styles.briefSection}><Text style={[styles.briefTitle, { color: colors.accent }]}>{title}</Text><Text style={[styles.briefText, { color: colors.text }]}>{text}</Text></View> : null;
-  let podcastAction = podcastText.generate; let podcastDisabled = podcastBusy; if (!podcastSignedIn) podcastAction = podcastText.signIn; else if (!podcastPro) podcastAction = podcastText.proOnly; else if (podcastProcessing) { podcastAction = podcastText.preparing; podcastDisabled = true; } else if (podcast?.status === "failed") podcastAction = podcastText.retry;
+  let podcastAction: string = podcastText.generate; let podcastDisabled = podcastBusy; if (!podcastSignedIn) podcastAction = podcastText.signIn; else if (!podcastPro) podcastAction = podcastText.proOnly; else if (podcastProcessing) { podcastAction = podcastText.preparing; podcastDisabled = true; } else if (podcast?.status === "failed") podcastAction = podcastText.retry;
   const hasLocalizationStatus = translationPending || experimentalTranslation || translatedContent;
   const showLocalizationNotice = hasLocalizationStatus || (Platform.OS !== "web" && language !== "en");
   const localizationBody = translationPending ? localizationText.pendingText : translatedContent || experimentalTranslation ? localizationText.readyText : localizationText.availableText;
   const translationPro = account?.translation_entitled === true;
-  let localizationAction = localizationText.translated;
+  let localizationAction: string = localizationText.translated;
   let localizationDisabled = true;
   let localizationPress: (() => void) | undefined;
   if (translationPending) localizationAction = localizationText.preparing;
