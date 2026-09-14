@@ -185,6 +185,16 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
     return `article:${item.kind ?? "initial"}:${item.eventId}:${item.baseVersionId ?? "initial"}:${item.targetLanguage ?? "canonical"}`;
   }, []);
 
+  const notificationIdentity = useCallback((item: ReadyAnalysis) => {
+    if (item.type === "podcast") {
+      return `podcast:${item.articleVersionId}:${item.language}`;
+    }
+    if (item.kind === "refresh") {
+      return `article:refresh:${item.eventId}:${item.baseVersionId ?? "initial"}:${item.targetLanguage ?? "canonical"}`;
+    }
+    return `article:${item.eventId}:${item.targetLanguage ?? "canonical"}`;
+  }, []);
+
   useEffect(() => {
     if (!authReady) return;
 
@@ -278,16 +288,14 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       setState((current) => {
         if (current.ownerKey !== ownerKey) return current;
 
-        const refreshAlreadyTracksLocalization = Object.values(
-          current.pending,
-        ).some(
+        const alreadyTracksLocalization = Object.values(current.pending).some(
           (candidate) =>
             candidate.type === "article" &&
-            candidate.kind === "refresh" &&
             candidate.eventId === item.eventId &&
-            candidate.targetLanguage === item.language,
+            candidate.targetLanguage === item.language &&
+            candidate.kind !== "translation",
         );
-        if (refreshAlreadyTracksLocalization) return current;
+        if (alreadyTracksLocalization) return current;
 
         const existing = current.pending[key];
         if (existing?.headline === next.headline && existing?.href === next.href) {
@@ -420,7 +428,10 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                 matchesCanonical;
 
               if (localizedReady) {
-                completed.push(item);
+                completed.push({
+                  ...item,
+                  headline: localized.headline || item.headline,
+                });
               } else if (translationStatus === "failed") {
                 terminalFailures.push(item);
               }
@@ -447,7 +458,17 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
         );
         setState((current) => {
           if (current.ownerKey !== ownerKey) return current;
-          const known = new Set(current.ready.map(keyFor));
+
+          const knownIdentities = new Set(
+            current.ready.map(notificationIdentity),
+          );
+          const uniqueCompleted = completed.filter((item) => {
+            const identity = notificationIdentity(item);
+            if (knownIdentities.has(identity)) return false;
+            knownIdentities.add(identity);
+            return true;
+          });
+
           return {
             ...current,
             pending: Object.fromEntries(
@@ -455,10 +476,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                 ([key]) => !completedKeys.has(key),
               ),
             ),
-            ready: [
-              ...current.ready,
-              ...completed.filter((item) => !known.has(keyFor(item))),
-            ],
+            ready: [...current.ready, ...uniqueCompleted],
           };
         });
       }
@@ -472,7 +490,17 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [account, addToQueue, isQueued, keyFor, ownerKey, pending, storageReady, user]);
+  }, [
+    account,
+    addToQueue,
+    isQueued,
+    keyFor,
+    notificationIdentity,
+    ownerKey,
+    pending,
+    storageReady,
+    user,
+  ]);
 
   const value = useMemo(
     () => ({ watchAnalysis, watchTranslation, watchPodcast }),
@@ -529,7 +557,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                     onPress={clearReady}
                     style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                   >
-                    <Text style={[styles.headerAction, { color: colors.background }]}>
+                    <Text style={[styles.headerAction, { color: colors.background }]}> 
                       {labels.clear}
                     </Text>
                   </Pressable>
@@ -567,7 +595,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                     >
                       {item.type === "podcast"
                         ? labels.podcast
-                        : item.kind === "translation"
+                        : item.targetLanguage && item.targetLanguage !== "en"
                           ? labels.translation
                           : item.kind === "refresh"
                             ? labels.updated
@@ -585,7 +613,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               ))}
 
               {ready.length > visibleReady.length ? (
-                <Text style={[styles.more, { color: colors.background }]}>
+                <Text style={[styles.more, { color: colors.background }]}> 
                   +{ready.length - visibleReady.length} {labels.more}
                 </Text>
               ) : null}
@@ -612,7 +640,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
             ]}
           >
             <Text style={styles.bell}>🔔</Text>
-            <View style={[styles.badge, { backgroundColor: colors.accent }]}>
+            <View style={[styles.badge, { backgroundColor: colors.accent }]}> 
               <Text style={styles.badgeText}>{ready.length > 99 ? "99+" : ready.length}</Text>
             </View>
           </Pressable>
