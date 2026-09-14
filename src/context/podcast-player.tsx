@@ -154,8 +154,16 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
       }
 
       if (!active) return;
+      const initialTrack = nextQueue[0] ?? null;
       setQueue(nextQueue);
-      setCurrentTrack(null);
+      if (initialTrack) {
+        player.replace({ uri: initialTrack.source });
+        player.pause();
+      }
+      setCurrentTrack(initialTrack);
+      if (initialTrack) {
+        setMinimizeRequest((value) => value + 1);
+      }
       setQueueHydratedOwner(ownerKey);
       await AsyncStorage.setItem(
         queueStorageKey(ownerKey),
