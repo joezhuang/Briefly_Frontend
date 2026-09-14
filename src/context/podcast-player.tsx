@@ -58,6 +58,7 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
   const status = useAudioPlayerStatus(player);
   const [currentTrack, setCurrentTrack] = useState<PodcastTrack | null>(null);
   const [queue, setQueue] = useState<PodcastTrack[]>([]);
+  const [queueHydrated, setQueueHydrated] = useState(false);
   const completedTrackIdRef = useRef<string | null>(null);
 
   const currentIndex = currentTrack
@@ -78,12 +79,14 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
         if (!Array.isArray(parsed)) return;
         setQueue(uniqueTracks(parsed));
       })
-      .catch(() => null);
+      .catch(() => null)
+      .finally(() => setQueueHydrated(true));
   }, []);
 
   useEffect(() => {
+    if (!queueHydrated) return;
     void AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
-  }, [queue]);
+  }, [queue, queueHydrated]);
 
   const activateLockScreen = useCallback(
     (track: PodcastTrack) => {
@@ -155,7 +158,6 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
           : [...existing, track],
       );
 
-      // Keep the global queue visible without unexpectedly starting playback.
       if (!currentTrack) {
         player.replace({ uri: track.source });
         player.pause();
