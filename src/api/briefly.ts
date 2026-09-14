@@ -11,18 +11,19 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "")
 let refreshPromise: Promise<string | null> | null = null;
 
 async function refreshBrieflyAccessToken() {
-  if (!supabase) {
+  const client = supabase;
+  if (!client) {
     clearBrieflyAccessToken();
     return null;
   }
 
   if (!refreshPromise) {
-    refreshPromise = supabase.auth
+    refreshPromise = client.auth
       .refreshSession()
       .then(({ data, error }) => {
         if (error || !data.session?.access_token) {
           clearBrieflyAccessToken();
-          void supabase.auth.signOut({ scope: "local" }).catch(() => null);
+          void client.auth.signOut({ scope: "local" }).catch(() => null);
           return null;
         }
 
@@ -31,7 +32,7 @@ async function refreshBrieflyAccessToken() {
       })
       .catch(() => {
         clearBrieflyAccessToken();
-        void supabase.auth.signOut({ scope: "local" }).catch(() => null);
+        void client.auth.signOut({ scope: "local" }).catch(() => null);
         return null;
       })
       .finally(() => {
@@ -41,7 +42,6 @@ async function refreshBrieflyAccessToken() {
 
   return refreshPromise;
 }
-
 
 function requireApiBaseUrl() {
   if (!API_BASE_URL) throw new Error("Missing EXPO_PUBLIC_BRIEFLY_API_URL");
@@ -380,7 +380,6 @@ export function syncBrieflyWebSubscription() {
     briefly_pro_platform?: string | null;
   }>("/api/subscriptions/web/sync", {});
 }
-
 
 export type BrieflyAppConfig = {
   email_password_login_enabled: boolean;
