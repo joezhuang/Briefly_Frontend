@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { usePodcastPlayer } from "@/context/podcast-player";
 import { useBrieflyTheme } from "@/context/theme";
@@ -13,8 +13,23 @@ function formatTime(value: number) {
 
 export function GlobalPodcastPlayer() {
   const { colors } = useBrieflyTheme();
-  const { currentTrack, status, toggle, seekBy, close } = usePodcastPlayer();
+  const {
+    currentTrack,
+    queue,
+    currentIndex,
+    status,
+    toggle,
+    seekBy,
+    playNext,
+    playPrevious,
+    playQueueTrack,
+    removeFromQueue,
+    moveQueueItem,
+    clearQueue,
+    close,
+  } = usePodcastPlayer();
   const [minimized, setMinimized] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(false);
 
   if (!currentTrack) return null;
 
@@ -22,6 +37,8 @@ export function GlobalPodcastPlayer() {
   const currentTime = status.currentTime || 0;
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
   const progressWidth = `${progress * 100}%` as `${number}%`;
+  const hasPrevious = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex + 1 < queue.length;
 
   if (minimized) {
     return (
@@ -54,6 +71,18 @@ export function GlobalPodcastPlayer() {
             <Text style={[styles.miniPlayText, { color: colors.background }]}> 
               {status.playing ? "❚❚" : "▶"}
             </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open podcast queue"
+            onPress={() => {
+              setMinimized(false);
+              setQueueOpen(true);
+            }}
+            style={styles.miniQueueButton}
+          >
+            <Text style={[styles.miniQueueText, { color: colors.text }]}>☰ {queue.length}</Text>
           </Pressable>
 
           <Pressable
@@ -91,6 +120,15 @@ export function GlobalPodcastPlayer() {
 
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Open podcast queue"
+            onPress={() => setQueueOpen((value) => !value)}
+            style={[styles.queueButton, { borderColor: colors.border }]}
+          >
+            <Text style={[styles.queueButtonText, { color: colors.text }]}>Queue {queue.length}</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
             accessibilityLabel="Minimize podcast player"
             onPress={() => setMinimized(true)}
             hitSlop={10}
@@ -109,6 +147,20 @@ export function GlobalPodcastPlayer() {
         </View>
 
         <View style={styles.controls}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Previous podcast"
+            disabled={!hasPrevious}
+            onPress={playPrevious}
+            style={[
+              styles.secondaryButton,
+              { borderColor: colors.border },
+              !hasPrevious && styles.disabled,
+            ]}
+          >
+            <Text style={[styles.secondaryText, { color: colors.text }]}>Previous</Text>
+          </Pressable>
+
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Rewind 15 seconds"
@@ -137,6 +189,20 @@ export function GlobalPodcastPlayer() {
           >
             <Text style={[styles.secondaryText, { color: colors.text }]}>+15s</Text>
           </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Next podcast"
+            disabled={!hasNext}
+            onPress={playNext}
+            style={[
+              styles.secondaryButton,
+              { borderColor: colors.border },
+              !hasNext && styles.disabled,
+            ]}
+          >
+            <Text style={[styles.secondaryText, { color: colors.text }]}>Next</Text>
+          </Pressable>
         </View>
 
         <View style={[styles.track, { backgroundColor: colors.border }]}>
@@ -156,6 +222,81 @@ export function GlobalPodcastPlayer() {
             {formatTime(duration)}
           </Text>
         </View>
+
+        {queueOpen && (
+          <View style={[styles.queuePanel, { borderTopColor: colors.border }]}>
+            <View style={styles.queueHeader}>
+              <Text style={[styles.queueTitle, { color: colors.text }]}>Up next</Text>
+              {queue.length > 0 && (
+                <Pressable onPress={clearQueue} hitSlop={8}>
+                  <Text style={[styles.clearText, { color: colors.textMuted }]}>Clear</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {queue.length === 0 ? (
+              <Text style={[styles.emptyQueue, { color: colors.textMuted }]}>No podcasts in queue.</Text>
+            ) : (
+              <ScrollView style={styles.queueScroll} contentContainerStyle={styles.queueList}>
+                {queue.map((track, index) => {
+                  const active = track.id === currentTrack.id;
+                  return (
+                    <View
+                      key={track.id}
+                      style={[
+                        styles.queueRow,
+                        {
+                          borderColor: active ? colors.accent : colors.border,
+                          backgroundColor: active ? colors.surfaceMuted : colors.surface,
+                        },
+                      ]}
+                    >
+                      <Pressable
+                        style={styles.queueTrackCopy}
+                        onPress={() => playQueueTrack(index)}
+                      >
+                        <Text
+                          style={[
+                            styles.queueTrackTitle,
+                            { color: active ? colors.accent : colors.text },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {index + 1}. {track.title}
+                        </Text>
+                        {active && (
+                          <Text style={[styles.nowPlaying, { color: colors.textMuted }]}>Now playing</Text>
+                        )}
+                      </Pressable>
+
+                      <View style={styles.queueActions}>
+                        <Pressable
+                          disabled={index === 0}
+                          onPress={() => moveQueueItem(index, -1)}
+                          hitSlop={6}
+                          style={index === 0 && styles.disabled}
+                        >
+                          <Text style={[styles.queueActionText, { color: colors.textMuted }]}>↑</Text>
+                        </Pressable>
+                        <Pressable
+                          disabled={index === queue.length - 1}
+                          onPress={() => moveQueueItem(index, 1)}
+                          hitSlop={6}
+                          style={index === queue.length - 1 && styles.disabled}
+                        >
+                          <Text style={[styles.queueActionText, { color: colors.textMuted }]}>↓</Text>
+                        </Pressable>
+                        <Pressable onPress={() => removeFromQueue(track.id)} hitSlop={6}>
+                          <Text style={[styles.removeText, { color: colors.textMuted }]}>×</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -171,14 +312,15 @@ const styles = StyleSheet.create({
   },
   minimizedOverlay: {
     position: "absolute",
-    left: 76,
-    right: 76,
+    left: 56,
+    right: 56,
     bottom: 18,
     alignItems: "center",
   },
   player: {
     width: "100%",
-    maxWidth: 520,
+    maxWidth: 620,
+    maxHeight: "78%",
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 18,
     paddingHorizontal: 14,
@@ -207,13 +349,22 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   copy: { flex: 1, minWidth: 0 },
   kicker: { fontSize: 10, fontWeight: "900", letterSpacing: 1.1 },
   title: { marginTop: 2, fontSize: 14, fontWeight: "800" },
   minimize: { fontSize: 26, lineHeight: 26, fontWeight: "700" },
   close: { fontSize: 26, lineHeight: 26, fontWeight: "500" },
+  queueButton: {
+    minHeight: 32,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  queueButtonText: { fontSize: 11, fontWeight: "800" },
   miniButton: {
     width: 34,
     height: 34,
@@ -230,10 +381,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   miniPlayText: { fontSize: 13, lineHeight: 16, fontWeight: "900" },
+  miniQueueButton: {
+    minHeight: 34,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  miniQueueText: { fontSize: 12, fontWeight: "800" },
   controls: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    flexWrap: "wrap",
     gap: 8,
   },
   primaryButton: {
@@ -254,6 +413,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   secondaryText: { fontSize: 12, fontWeight: "700" },
+  disabled: { opacity: 0.35 },
   track: {
     height: 4,
     borderRadius: 999,
@@ -266,4 +426,35 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   timeText: { fontSize: 11, fontVariant: ["tabular-nums"] },
+  queuePanel: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 10,
+    gap: 8,
+  },
+  queueHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  queueTitle: { fontSize: 14, fontWeight: "900" },
+  clearText: { fontSize: 12, fontWeight: "800" },
+  emptyQueue: { fontSize: 13, paddingVertical: 8 },
+  queueScroll: { maxHeight: 240 },
+  queueList: { gap: 7, paddingBottom: 2 },
+  queueRow: {
+    minHeight: 54,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  queueTrackCopy: { flex: 1, minWidth: 0 },
+  queueTrackTitle: { fontSize: 12, fontWeight: "800", lineHeight: 17 },
+  nowPlaying: { marginTop: 2, fontSize: 10, fontWeight: "700" },
+  queueActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  queueActionText: { fontSize: 18, fontWeight: "900" },
+  removeText: { fontSize: 22, lineHeight: 22, fontWeight: "500" },
 });
