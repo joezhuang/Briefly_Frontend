@@ -50,6 +50,8 @@ const copy = {
     refreshing: "Updating story…",
     upgrade: "Upgrade to update this story",
     noTimeline: "No stored timeline is available for this version yet.",
+    timelineUnavailable: "Timeline unavailable",
+    timelineUnavailableHint: "Briefly could not load this story’s timeline. Please try again.",
     newerCoverage: "Newer coverage is available",
     close: "Close",
   },
@@ -69,6 +71,8 @@ const copy = {
     refreshing: "Actualizando la historia…",
     upgrade: "Mejorar para actualizar esta historia",
     noTimeline: "Aún no hay una cronología guardada para esta versión.",
+    timelineUnavailable: "Cronología no disponible",
+    timelineUnavailableHint: "Briefly no pudo cargar la cronología de esta historia. Inténtalo de nuevo.",
     newerCoverage: "Hay cobertura más reciente disponible",
     close: "Cerrar",
   },
@@ -88,6 +92,8 @@ const copy = {
     refreshing: "記事を更新中…",
     upgrade: "Proでこの記事を更新",
     noTimeline: "このバージョンには保存済みのタイムラインがまだありません。",
+    timelineUnavailable: "タイムラインを読み込めません",
+    timelineUnavailableHint: "このニュースのタイムラインを読み込めませんでした。もう一度お試しください。",
     newerCoverage: "より新しい報道があります",
     close: "閉じる",
   },
@@ -107,6 +113,8 @@ const copy = {
     refreshing: "正在更新报道…",
     upgrade: "升级 Pro 以更新这篇报道",
     noTimeline: "此版本暂时没有已保存的时间线。",
+    timelineUnavailable: "时间线暂不可用",
+    timelineUnavailableHint: "Briefly 无法加载这篇报道的时间线，请重试。",
     newerCoverage: "已有更新的报道",
     close: "关闭",
   },
@@ -126,6 +134,8 @@ const copy = {
     refreshing: "正在更新報導…",
     upgrade: "升級 Pro 以更新這篇報導",
     noTimeline: "此版本暫時沒有已儲存的時間線。",
+    timelineUnavailable: "時間線暫不可用",
+    timelineUnavailableHint: "Briefly 無法載入這篇報導的時間線，請重試。",
     newerCoverage: "已有更新的報導",
     close: "關閉",
   },
@@ -170,12 +180,12 @@ function TimelineSection({
           <>
             <View style={styles.timeRow}>
               {!!item.time && (
-                <Text style={[styles.time, { color: colors.textMuted }]}>
+                <Text style={[styles.time, { color: colors.textMuted }]}> 
                   {item.time}
                 </Text>
               )}
               {latest && (
-                <Text style={[styles.latest, { color: colors.accent }]}>
+                <Text style={[styles.latest, { color: colors.accent }]}> 
                   {latestLabel}
                 </Text>
               )}
@@ -189,7 +199,7 @@ function TimelineSection({
               {item.title}
             </Text>
             {actionable && !!currentLinkLabel && (
-              <Text style={[styles.currentLink, { color: colors.accent }]}>
+              <Text style={[styles.currentLink, { color: colors.accent }]}> 
                 {currentLinkLabel} →
               </Text>
             )}
@@ -263,6 +273,7 @@ export function EventTimeline({
   const [upcomingItems, setUpcomingItems] = useState<EventTimelineItem[]>([]);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -271,21 +282,28 @@ export function EventTimeline({
 
     const load = async () => {
       if (!API_BASE_URL) {
-        if (active) setLoading(false);
+        if (active) {
+          setLoadError("Missing EXPO_PUBLIC_BRIEFLY_API_URL");
+          setLoading(false);
+        }
         return;
       }
 
+      const timelineUrl = `${API_BASE_URL}/api/events/${encodeURIComponent(eventId)}/timeline`;
       setLoading(true);
+      setLoadError(null);
       try {
         const headers: Record<string, string> = {};
         const token = getBrieflyAccessToken();
         if (token) headers.Authorization = `Bearer ${token}`;
 
-        const response = await fetch(
-          `${API_BASE_URL}/api/events/${encodeURIComponent(eventId)}/timeline`,
-          { headers },
-        );
-        if (!response.ok) throw new Error(`Timeline request failed: ${response.status}`);
+        const response = await fetch(timelineUrl, { headers });
+        if (!response.ok) {
+          const detail = await response.text().catch(() => "");
+          throw new Error(
+            `Timeline request failed: ${response.status}${detail ? ` ${detail}` : ""}`,
+          );
+        }
         const payload = (await response.json()) as TimelineResponse;
         if (active) {
           setBackgroundItems(
@@ -296,13 +314,21 @@ export function EventTimeline({
             Array.isArray(payload.upcoming) ? payload.upcoming : [],
           );
           setUpdatedAt(payload.timeline_updated_at ?? null);
+          setLoadError(null);
         }
-      } catch {
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Unknown timeline request error";
+        console.warn("[Briefly Timeline] request failed", {
+          eventId,
+          url: timelineUrl,
+          error: message,
+        });
         if (active) {
           setBackgroundItems([]);
           setItems([]);
           setUpcomingItems([]);
           setUpdatedAt(null);
+          setLoadError(message);
         }
       } finally {
         if (active) setLoading(false);
@@ -349,6 +375,29 @@ export function EventTimeline({
     return (
       <View style={styles.loadingWrap}>
         <ActivityIndicator size="small" color={colors.accent} />
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={[styles.triggerWrap, { backgroundColor: colors.surface }]}> 
+        <View
+          style={[
+            styles.errorCard,
+            {
+              borderColor: colors.border,
+              backgroundColor: colors.surfaceMuted,
+            },
+          ]}
+        >
+          <Text style={[styles.errorTitle, { color: colors.text }]}> 
+            {labels.timelineUnavailable}
+          </Text>
+          <Text style={[styles.errorHint, { color: colors.textMuted }]}> 
+            {labels.timelineUnavailableHint}
+          </Text>
+        </View>
       </View>
     );
   }
@@ -518,6 +567,17 @@ export function EventTimeline({
 const styles = StyleSheet.create({
   loadingWrap: { alignItems: "center", paddingVertical: 8 },
   triggerWrap: { alignItems: "center", paddingTop: 10, paddingHorizontal: 14 },
+  errorCard: {
+    width: "100%",
+    maxWidth: 760,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 4,
+  },
+  errorTitle: { fontSize: 14, fontWeight: "800" },
+  errorHint: { fontSize: 12, lineHeight: 17 },
   trigger: {
     width: "100%",
     maxWidth: 760,
