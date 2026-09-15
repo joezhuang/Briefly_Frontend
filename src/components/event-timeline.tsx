@@ -228,6 +228,7 @@ function TimelineSection({
 
 export function EventTimeline({
   eventId,
+  refreshKey,
   liveContext = false,
   liveStoryHref,
   canonicalStale = false,
@@ -236,6 +237,7 @@ export function EventTimeline({
   onRefreshStarted,
 }: {
   eventId: string;
+  refreshKey?: string | number | null;
   liveContext?: boolean;
   liveStoryHref?: string;
   canonicalStale?: boolean;
@@ -263,6 +265,7 @@ export function EventTimeline({
         return;
       }
 
+      setLoading(true);
       try {
         const headers: Record<string, string> = {};
         const token = getBrieflyAccessToken();
@@ -300,7 +303,7 @@ export function EventTimeline({
     return () => {
       active = false;
     };
-  }, [eventId]);
+  }, [eventId, refreshKey]);
 
   const openLiveStory = () => {
     if (!liveStoryHref) return;
@@ -342,13 +345,13 @@ export function EventTimeline({
 
   const totalItems =
     backgroundItems.length + items.length + upcomingItems.length;
-  if (totalItems < 2) return null;
+  if (totalItems < 1) return null;
 
   const formattedUpdatedAt = formatUpdatedAt(updatedAt, language);
 
   return (
     <>
-      <View style={[styles.triggerWrap, { backgroundColor: colors.surface }]}>
+      <View style={[styles.triggerWrap, { backgroundColor: colors.surface }]}> 
         <Pressable
           accessibilityRole="button"
           onPress={() => setOpen(true)}
@@ -362,10 +365,10 @@ export function EventTimeline({
           ]}
         >
           <View style={styles.triggerCopy}>
-            <Text style={[styles.triggerTitle, { color: colors.text }]}>
+            <Text style={[styles.triggerTitle, { color: colors.text }]}> 
               {labels.button}
             </Text>
-            <Text style={[styles.triggerMeta, { color: colors.textMuted }]}>
+            <Text style={[styles.triggerMeta, { color: colors.textMuted }]}> 
               {liveContext ? `${labels.live} · ` : ""}
               {totalItems} {labels.count}
               {liveContext && formattedUpdatedAt
@@ -393,11 +396,11 @@ export function EventTimeline({
           >
             <View style={styles.sheetHeader}>
               <View style={styles.sheetHeadingCopy}>
-                <Text style={[styles.sheetTitle, { color: colors.text }]}>
+                <Text style={[styles.sheetTitle, { color: colors.text }]}> 
                   {labels.title}
                 </Text>
                 {liveContext && (
-                  <Text style={[styles.sheetMeta, { color: colors.textMuted }]}>
+                  <Text style={[styles.sheetMeta, { color: colors.textMuted }]}> 
                     {labels.live}
                     {formattedUpdatedAt
                       ? ` · ${labels.updated} ${formattedUpdatedAt}`
@@ -454,7 +457,7 @@ export function EventTimeline({
                 ]}
               >
                 {refreshing && <ActivityIndicator size="small" color={colors.background} />}
-                <Text style={[styles.refreshButtonText, { color: colors.background }]}>
+                <Text style={[styles.refreshButtonText, { color: colors.background }]}> 
                   {refreshing
                     ? labels.refreshing
                     : pro
@@ -468,7 +471,7 @@ export function EventTimeline({
               onPress={() => setOpen(false)}
               style={[styles.closeButton, { backgroundColor: colors.text }]}
             >
-              <Text style={[styles.closeButtonText, { color: colors.background }]}>
+              <Text style={[styles.closeButtonText, { color: colors.background }]}> 
                 {labels.close}
               </Text>
             </Pressable>
