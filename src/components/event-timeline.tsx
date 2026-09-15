@@ -49,6 +49,8 @@ const copy = {
     refresh: "Generate latest Briefly version",
     refreshing: "Updating story…",
     upgrade: "Upgrade to update this story",
+    noTimeline: "No stored timeline is available for this version yet.",
+    newerCoverage: "Newer coverage is available",
     close: "Close",
   },
   es: {
@@ -66,6 +68,8 @@ const copy = {
     refresh: "Generar la última versión de Briefly",
     refreshing: "Actualizando la historia…",
     upgrade: "Mejorar para actualizar esta historia",
+    noTimeline: "Aún no hay una cronología guardada para esta versión.",
+    newerCoverage: "Hay cobertura más reciente disponible",
     close: "Cerrar",
   },
   ja: {
@@ -83,6 +87,8 @@ const copy = {
     refresh: "Brieflyの最新記事を生成",
     refreshing: "記事を更新中…",
     upgrade: "Proでこの記事を更新",
+    noTimeline: "このバージョンには保存済みのタイムラインがまだありません。",
+    newerCoverage: "より新しい報道があります",
     close: "閉じる",
   },
   "zh-CN": {
@@ -100,6 +106,8 @@ const copy = {
     refresh: "生成 Briefly 最新版本",
     refreshing: "正在更新报道…",
     upgrade: "升级 Pro 以更新这篇报道",
+    noTimeline: "此版本暂时没有已保存的时间线。",
+    newerCoverage: "已有更新的报道",
     close: "关闭",
   },
   "zh-TW": {
@@ -117,6 +125,8 @@ const copy = {
     refresh: "產生 Briefly 最新版本",
     refreshing: "正在更新報導…",
     upgrade: "升級 Pro 以更新這篇報導",
+    noTimeline: "此版本暫時沒有已儲存的時間線。",
+    newerCoverage: "已有更新的報導",
     close: "關閉",
   },
 } as const;
@@ -345,7 +355,7 @@ export function EventTimeline({
 
   const totalItems =
     backgroundItems.length + items.length + upcomingItems.length;
-  if (totalItems < 1) return null;
+  if (totalItems < 1 && !canonicalStale) return null;
 
   const formattedUpdatedAt = formatUpdatedAt(updatedAt, language);
 
@@ -369,11 +379,13 @@ export function EventTimeline({
               {labels.button}
             </Text>
             <Text style={[styles.triggerMeta, { color: colors.textMuted }]}> 
-              {liveContext ? `${labels.live} · ` : ""}
-              {totalItems} {labels.count}
-              {liveContext && formattedUpdatedAt
-                ? ` · ${labels.updated} ${formattedUpdatedAt}`
-                : ""}
+              {totalItems === 0 && canonicalStale
+                ? labels.newerCoverage
+                : `${liveContext ? `${labels.live} · ` : ""}${totalItems} ${labels.count}${
+                    liveContext && formattedUpdatedAt
+                      ? ` · ${labels.updated} ${formattedUpdatedAt}`
+                      : ""
+                  }`}
             </Text>
           </View>
           <Text style={[styles.triggerArrow, { color: colors.accent }]}>→</Text>
@@ -414,6 +426,27 @@ export function EventTimeline({
             </View>
 
             <ScrollView contentContainerStyle={styles.timeline}>
+              {totalItems === 0 && (
+                <View
+                  style={[
+                    styles.emptyState,
+                    {
+                      backgroundColor: colors.surfaceMuted,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.emptyStateText, { color: colors.textMuted }]}> 
+                    {labels.noTimeline}
+                  </Text>
+                  {canonicalStale && (
+                    <Text style={[styles.emptyStateHint, { color: colors.accent }]}> 
+                      {labels.newerCoverage}
+                    </Text>
+                  )}
+                </View>
+              )}
+
               {backgroundItems.length > 0 && (
                 <TimelineSection
                   title={labels.background}
@@ -528,6 +561,15 @@ const styles = StyleSheet.create({
   sheetMeta: { fontSize: 12, fontWeight: "700" },
   close: { fontSize: 30, lineHeight: 30, paddingLeft: 14 },
   timeline: { paddingBottom: 4, gap: 8 },
+  emptyState: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
+    padding: 16,
+    gap: 8,
+    marginBottom: 8,
+  },
+  emptyStateText: { fontSize: 15, lineHeight: 21, fontWeight: "600" },
+  emptyStateHint: { fontSize: 13, lineHeight: 18, fontWeight: "800" },
   sectionBlock: { marginBottom: 8 },
   sectionTitle: {
     marginBottom: 12,
