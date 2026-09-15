@@ -575,7 +575,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       return {
         ...current,
         ready: nextReady,
-        expanded: nextReady.length > 0 ? current.expanded : false,
+        expanded: false,
       };
     });
     router.push(item.href as never);
