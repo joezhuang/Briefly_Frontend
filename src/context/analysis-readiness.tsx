@@ -429,10 +429,16 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                   : nextVersionId != null;
 
             if (!canonicalReady) {
-              if (
+              const staleTranslation =
+                item.kind === "translation" &&
+                item.baseVersionId != null &&
+                nextVersionId != null &&
+                nextVersionId !== item.baseVersionId;
+              const inactiveArticleGeneration =
                 item.kind !== "translation" &&
-                article.generation_status !== "processing"
-              ) {
+                article.generation_status !== "processing";
+
+              if (staleTranslation || inactiveArticleGeneration) {
                 console.warn("[Briefly Notifications] stopped stale article watcher", {
                   eventId: item.eventId,
                   kind: item.kind ?? "initial",
