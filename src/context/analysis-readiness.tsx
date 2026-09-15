@@ -431,9 +431,15 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
             if (!canonicalReady) {
               if (
                 item.kind !== "translation" &&
-                (article.generation_status === "failed" ||
-                  article.generation_status === "disabled")
+                article.generation_status !== "processing"
               ) {
+                console.warn("[Briefly Notifications] stopped stale article watcher", {
+                  eventId: item.eventId,
+                  kind: item.kind ?? "initial",
+                  baseVersionId: item.baseVersionId ?? null,
+                  currentVersionId: nextVersionId ?? null,
+                  generationStatus: article.generation_status ?? null,
+                });
                 terminalFailures.push(item);
               }
               return;
@@ -524,6 +530,9 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
         });
       }
 
+      const terminalCount = completed.length + terminalFailures.length;
+      if (terminalCount >= entries.length) return;
+
       timer = setTimeout(() => void poll(), POLL_MS);
     };
 
@@ -591,7 +600,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               ]}
             >
               <View style={styles.trayHeader}>
-                <Text style={[styles.kicker, { color: colors.background }]}>
+                <Text style={[styles.kicker, { color: colors.background }]}> 
                   {labels.notifications}
                 </Text>
                 <View style={styles.headerActions}>
