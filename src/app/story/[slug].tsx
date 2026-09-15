@@ -575,6 +575,11 @@ export default function StoryDetailScreen() {
             {!!resolvedEventId && (
               <EventTimeline
                 eventId={resolvedEventId}
+                refreshKey={
+                  displayedArticle.authoritative_article_version_id ??
+                  displayedArticle.article_version_id ??
+                  reloadKey
+                }
                 canonicalStale={displayedArticle.canonical_stale === true}
                 pro={isPro}
                 returnTo={currentStoryHref}
