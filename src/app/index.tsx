@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   AppState,
   FlatList,
+  PanResponder,
   Platform,
   Pressable,
   RefreshControl,
@@ -40,8 +41,14 @@ const PAGE_SIZE = 20;
 const LOAD_MORE_THRESHOLD = 800;
 const VIRTUAL_BATCH_SIZE = 6;
 const SHOW_TOP_BUTTON_OFFSET = 700;
+const SWIPE_TRIGGER_DISTANCE = 56;
+const SWIPE_DIRECTION_RATIO = 1.35;
 
-let rememberedHomeScrollOffset = 0;
+const rememberedHomeScrollOffsets: Record<HomepageFeedScope, number> = {
+  top: 0,
+  national: 0,
+  local: 0,
+};
 
 const feedCopy = {
   en: { top: "Top", national: "National", local: "Local", refresh: "Refresh" },
@@ -102,7 +109,7 @@ export default function HomeScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [showTopButton, setShowTopButton] = useState(
-    rememberedHomeScrollOffset > SHOW_TOP_BUTTON_OFFSET,
+    rememberedHomeScrollOffsets.top > SHOW_TOP_BUTTON_OFFSET,
   );
   const [error, setError] = useState<string | null>(null);
   const lastFetchedAt = useRef(0);
@@ -130,6 +137,54 @@ export default function HomeScreen() {
     hasMoreRef.current = value;
     setHasMore(value);
   }, []);
+
+  const switchScope = useCallback(
+    (nextScope: HomepageFeedScope) => {
+      if (nextScope === scope) return;
+      restoredScrollRef.current = false;
+      setShowTopButton(
+        rememberedHomeScrollOffsets[nextScope] > SHOW_TOP_BUTTON_OFFSET,
+      );
+      setScope(nextScope);
+    },
+    [scope],
+  );
+
+  const switchScopeByDirection = useCallback(
+    (direction: 1 | -1) => {
+      const currentIndex = scopes.indexOf(scope);
+      const nextIndex =
+        (currentIndex + direction + scopes.length) % scopes.length;
+      switchScope(scopes[nextIndex]);
+    },
+    [scope, switchScope],
+  );
+
+  const swipeResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          if (Platform.OS === "web") return false;
+          const horizontal = Math.abs(gestureState.dx);
+          const vertical = Math.abs(gestureState.dy);
+          return horizontal > 18 && horizontal > vertical * SWIPE_DIRECTION_RATIO;
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (Platform.OS === "web") return;
+          const horizontal = Math.abs(gestureState.dx);
+          const vertical = Math.abs(gestureState.dy);
+          if (
+            horizontal < SWIPE_TRIGGER_DISTANCE ||
+            horizontal <= vertical * SWIPE_DIRECTION_RATIO
+          ) {
+            return;
+          }
+          switchScopeByDirection(gestureState.dx < 0 ? 1 : -1);
+        },
+        onPanResponderTerminationRequest: () => true,
+      }),
+    [switchScopeByDirection],
+  );
 
   const loadFeed = useCallback(
     async (mode: "initial" | "refresh" | "more" = "initial") => {
@@ -216,6 +271,13 @@ export default function HomeScreen() {
   }, [authReady, loadFeed, language, scope]);
 
   useEffect(() => {
+    restoredScrollRef.current = false;
+    setShowTopButton(
+      rememberedHomeScrollOffsets[scope] > SHOW_TOP_BUTTON_OFFSET,
+    );
+  }, [scope]);
+
+  useEffect(() => {
     if (Platform.OS === "web") {
       if (typeof document === "undefined") return;
       const onVisibility = () => {
@@ -242,7 +304,7 @@ export default function HomeScreen() {
     }) => {
       const { layoutMeasurement, contentOffset, contentSize } =
         event.nativeEvent;
-      rememberedHomeScrollOffset = Math.max(0, contentOffset.y);
+      rememberedHomeScrollOffsets[scope] = Math.max(0, contentOffset.y);
       setShowTopButton(contentOffset.y > SHOW_TOP_BUTTON_OFFSET);
       const distanceFromBottom =
         contentSize.height - (layoutMeasurement.height + contentOffset.y);
@@ -250,7 +312,7 @@ export default function HomeScreen() {
         void loadFeed("more");
       }
     },
-    [loadFeed],
+    [loadFeed, scope],
   );
 
   const desktop = width >= 1000;
@@ -276,7 +338,7 @@ export default function HomeScreen() {
         return (
           <Pressable
             key={item}
-            onPress={() => setScope(item)}
+            onPress={() => switchScope(item)}
             style={[
               styles.scopeTab,
               {
@@ -419,7 +481,7 @@ export default function HomeScreen() {
   );
 
   const scrollToTop = () => {
-    rememberedHomeScrollOffset = 0;
+    rememberedHomeScrollOffsets[scope] = 0;
     restoredScrollRef.current = true;
     setShowTopButton(false);
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
@@ -427,6 +489,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView
+      {...swipeResponder.panHandlers}
       style={[styles.screen, { backgroundColor: colors.background }]}
     >
       <FlatList
@@ -489,9 +552,10 @@ export default function HomeScreen() {
         }
         contentContainerStyle={styles.scrollContent}
         onContentSizeChange={() => {
+          const rememberedOffset = rememberedHomeScrollOffsets[scope];
           if (
             restoredScrollRef.current ||
-            rememberedHomeScrollOffset <= 0 ||
+            rememberedOffset <= 0 ||
             articlesRef.current.length === 0
           ) {
             return;
@@ -500,7 +564,7 @@ export default function HomeScreen() {
           restoredScrollRef.current = true;
           requestAnimationFrame(() => {
             listRef.current?.scrollToOffset({
-              offset: rememberedHomeScrollOffset,
+              offset: rememberedOffset,
               animated: false,
             });
           });
