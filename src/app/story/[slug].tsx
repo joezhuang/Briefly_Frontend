@@ -239,7 +239,7 @@ export default function StoryDetailScreen() {
           setAuthoritativeArticle(canonical);
 
           if (language !== "en") {
-            if (isWeb && !isPro) {
+            if (isWeb) {
               try {
                 const localized = await getCanonicalArticleByEventId(
                   resolvedEventId,
@@ -308,7 +308,7 @@ export default function StoryDetailScreen() {
         setError(null);
 
         if (
-          isPro &&
+          !isWeb &&
           language !== "en" &&
           resolvedEventId &&
           result.translation_status === "pending"
@@ -338,7 +338,6 @@ export default function StoryDetailScreen() {
     language,
     articleRequestLanguage,
     isWeb,
-    isPro,
     reloadKey,
     requestKey,
     t.storyUnavailable,
@@ -521,8 +520,7 @@ export default function StoryDetailScreen() {
       : article,
     resolvedImageUrl,
   );
-  const showGoogleTranslate =
-    isWeb && language !== "en" && !!translateSourceUrl;
+  const showGoogleTranslate = language !== "en" && !!translateSourceUrl;
   const storyToolsText = storyToolsCopy[language] ?? storyToolsCopy.en;
 
   return (
