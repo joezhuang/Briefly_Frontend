@@ -8,6 +8,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "")
 const FLUSH_DELAY_MS = 1500;
 const FLUSH_BATCH_SIZE = 10;
 const MAX_QUEUE_SIZE = 100;
+const MAX_RETRY_DELAY_MS = 60_000;
 
 export type ProductAnalyticsEventName =
   | "feed_view"
@@ -48,13 +49,22 @@ const platform: QueuedAnalyticsEvent["platform"] =
 let queue: QueuedAnalyticsEvent[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let flushPromise: Promise<void> | null = null;
+let consecutiveFailures = 0;
+
+function nextFlushDelay() {
+  if (consecutiveFailures === 0) return FLUSH_DELAY_MS;
+  return Math.min(
+    MAX_RETRY_DELAY_MS,
+    FLUSH_DELAY_MS * 2 ** Math.min(consecutiveFailures, 6),
+  );
+}
 
 function scheduleFlush() {
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = setTimeout(() => {
     flushTimer = null;
     void flushProductAnalytics();
-  }, FLUSH_DELAY_MS);
+  }, nextFlushDelay());
 }
 
 export function trackProductEvent(
@@ -82,7 +92,7 @@ export function trackProductEvent(
     queue = queue.slice(queue.length - MAX_QUEUE_SIZE);
   }
 
-  if (queue.length >= FLUSH_BATCH_SIZE) {
+  if (queue.length >= FLUSH_BATCH_SIZE && consecutiveFailures === 0) {
     void flushProductAnalytics();
     return;
   }
@@ -115,7 +125,9 @@ export async function flushProductAnalytics() {
       if (!response.ok) {
         throw new Error(`Analytics request failed (${response.status})`);
       }
+      consecutiveFailures = 0;
     } catch {
+      consecutiveFailures += 1;
       queue = [...batch, ...queue].slice(0, MAX_QUEUE_SIZE);
     } finally {
       flushPromise = null;
