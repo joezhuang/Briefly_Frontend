@@ -396,6 +396,8 @@ export type BrieflyAppConfig = {
   home_ad_interval: number;
   story_ad_enabled: boolean;
   ad_provider: string;
+  homepage_video_enabled: boolean;
+  story_video_enabled: boolean;
 };
 
 export function getBrieflyAppConfig() {
