@@ -24,13 +24,21 @@ import { AppHeader } from "@/components/app-header";
 // Metro resolves the platform-specific .native/.web implementation at runtime.
 // eslint-disable-next-line import/no-unresolved
 import { HomeAdSlot } from "@/components/home-ad-slot";
+import { NewsLocationGate } from "@/components/news-location-gate";
 import { ScreenState } from "@/components/screen-state";
 import { StoryTile } from "@/components/story-tile";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
-import { getFeedLocation } from "@/services/feed-location";
+import {
+  disableNewsLocation,
+  enableAutoNewsLocation,
+  getNewsLocationPreference,
+  refreshAutoNewsLocation,
+  saveManualFeedLocation,
+  type NewsLocationPreference,
+} from "@/services/feed-location";
 import { layout } from "@/theme/tokens";
 
 const PREVIEW_DRAFTS =
@@ -94,6 +102,17 @@ function chunkArticles(articles: CanonicalArticle[]): CanonicalArticle[][] {
   return batches;
 }
 
+function locationPreferenceKey(preference: NewsLocationPreference) {
+  const location = preference.location;
+  return [
+    preference.mode,
+    location?.country ?? "",
+    location?.countryCode ?? "",
+    location?.region ?? "",
+    location?.city ?? "",
+  ].join("|");
+}
+
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
@@ -111,6 +130,13 @@ export default function HomeScreen() {
     rememberedHomeScrollOffsets.top > SHOW_TOP_BUTTON_OFFSET,
   );
   const [error, setError] = useState<string | null>(null);
+  const [newsLocation, setNewsLocation] = useState<NewsLocationPreference>({
+    mode: "off",
+    location: null,
+  });
+  const [locationReady, setLocationReady] = useState(false);
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const lastFetchedAt = useRef(0);
   const activeRequest = useRef(0);
   const articlesRef = useRef<CanonicalArticle[]>([]);
@@ -140,13 +166,18 @@ export default function HomeScreen() {
   const switchScope = useCallback(
     (nextScope: HomepageFeedScope) => {
       if (nextScope === scope) return;
+      activeRequest.current += 1;
       restoredScrollRef.current = false;
+      replaceArticles([]);
+      updateHasMore(false);
+      setError(null);
+      setLoading(true);
       setShowTopButton(
         rememberedHomeScrollOffsets[nextScope] > SHOW_TOP_BUTTON_OFFSET,
       );
       setScope(nextScope);
     },
-    [scope],
+    [replaceArticles, scope, updateHasMore],
   );
 
   const switchScopeByDirection = useCallback(
@@ -185,9 +216,40 @@ export default function HomeScreen() {
     [switchScopeByDirection],
   );
 
+  const location = newsLocation.location;
+  const localArea = location?.region || location?.city || "";
+  const locationUsable =
+    scope === "top" ||
+    (newsLocation.mode !== "off" &&
+      !!location?.country &&
+      (scope === "national" || !!localArea));
+
   const loadFeed = useCallback(
     async (mode: "initial" | "refresh" | "more" = "initial") => {
       if (!authReady) return;
+      if (scope !== "top" && !locationReady) {
+        setLoading(false);
+        return;
+      }
+
+      const activeLocation = newsLocation.location;
+      const activeLocalArea = activeLocation?.region || activeLocation?.city || "";
+      const canLoad =
+        scope === "top" ||
+        (newsLocation.mode !== "off" &&
+          !!activeLocation?.country &&
+          (scope === "national" || !!activeLocalArea));
+
+      if (!canLoad) {
+        activeRequest.current += 1;
+        replaceArticles([]);
+        updateHasMore(false);
+        setLoading(false);
+        setRefreshing(false);
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+        return;
+      }
 
       if (mode === "more") {
         if (loadingMoreRef.current || !hasMoreRef.current) return;
@@ -205,15 +267,14 @@ export default function HomeScreen() {
       const offset = mode === "more" ? articlesRef.current.length : 0;
 
       try {
-        const location = scope === "top" ? null : await getFeedLocation();
         const result = await getHomepageArticleFeed({
           scope,
           language,
           includeDraft: PREVIEW_DRAFTS,
-          country: location?.country,
-          countryCode: location?.countryCode,
-          city: location?.city,
-          region: location?.region,
+          country: activeLocation?.country,
+          countryCode: activeLocation?.countryCode,
+          city: activeLocation?.city,
+          region: activeLocation?.region,
           limit: PAGE_SIZE,
           offset,
         });
@@ -244,6 +305,8 @@ export default function HomeScreen() {
       appendArticles,
       authReady,
       language,
+      locationReady,
+      newsLocation,
       replaceArticles,
       scope,
       t.unableLoad,
@@ -255,6 +318,79 @@ export default function HomeScreen() {
     if (Date.now() - lastFetchedAt.current < REFRESH_FRESHNESS_MS) return;
     void loadFeed("refresh");
   }, [loadFeed]);
+
+  const handleEnableAutoLocation = useCallback(async () => {
+    if (locationBusy) return;
+    setLocationBusy(true);
+    setLocationError(null);
+    try {
+      const next = await enableAutoNewsLocation();
+      setNewsLocation(next);
+      setLocationReady(true);
+      if (!next.location) {
+        setLocationError(
+          "Location permission is unavailable or was not granted. Choose Manual or Off, or enable location permission in your device settings.",
+        );
+      }
+    } finally {
+      setLocationBusy(false);
+    }
+  }, [locationBusy]);
+
+  const handleSaveManualLocation = useCallback(
+    async (input: { country: string; region: string }) => {
+      if (locationBusy) return;
+      setLocationBusy(true);
+      setLocationError(null);
+      try {
+        const next = await saveManualFeedLocation(input);
+        setNewsLocation(next);
+        setLocationReady(true);
+      } catch (err: unknown) {
+        setLocationError(
+          err instanceof Error ? err.message : "Unable to save news location.",
+        );
+      } finally {
+        setLocationBusy(false);
+      }
+    },
+    [locationBusy],
+  );
+
+  const handleDisableLocation = useCallback(async () => {
+    if (locationBusy) return;
+    setLocationBusy(true);
+    setLocationError(null);
+    try {
+      const next = await disableNewsLocation();
+      setNewsLocation(next);
+      setLocationReady(true);
+      activeRequest.current += 1;
+      replaceArticles([]);
+      updateHasMore(false);
+      setLoading(false);
+    } finally {
+      setLocationBusy(false);
+    }
+  }, [locationBusy, replaceArticles, updateHasMore]);
+
+  useEffect(() => {
+    let active = true;
+    void getNewsLocationPreference()
+      .then((preference) => {
+        if (!active) return;
+        setNewsLocation(preference);
+        setLocationReady(true);
+      })
+      .catch(() => {
+        if (!active) return;
+        setNewsLocation({ mode: "off", location: null });
+        setLocationReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!authReady) return;
@@ -280,10 +416,29 @@ export default function HomeScreen() {
   }, [scope]);
 
   useEffect(() => {
+    const onActive = () => {
+      if (newsLocation.mode !== "auto") {
+        refreshIfStale();
+        return;
+      }
+
+      void refreshAutoNewsLocation()
+        .then((next) => {
+          const changed =
+            locationPreferenceKey(next) !== locationPreferenceKey(newsLocation);
+          if (changed) {
+            setNewsLocation(next);
+            return;
+          }
+          refreshIfStale();
+        })
+        .catch(() => refreshIfStale());
+    };
+
     if (Platform.OS === "web") {
       if (typeof document === "undefined") return;
       const onVisibility = () => {
-        if (document.visibilityState === "visible") refreshIfStale();
+        if (document.visibilityState === "visible") onActive();
       };
       document.addEventListener("visibilitychange", onVisibility);
       return () =>
@@ -291,10 +446,10 @@ export default function HomeScreen() {
     }
 
     const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") refreshIfStale();
+      if (nextState === "active") onActive();
     });
     return () => subscription.remove();
-  }, [refreshIfStale]);
+  }, [newsLocation, refreshIfStale]);
 
   const handleScroll = useCallback(
     (event: {
@@ -391,11 +546,11 @@ export default function HomeScreen() {
               {Platform.OS === "web" && (
                 <Pressable
                   onPress={() => void loadFeed("refresh")}
-                  disabled={refreshing}
+                  disabled={refreshing || !locationUsable}
                   style={({ pressed }) => [
                     styles.refreshButton,
                     { borderColor: colors.border },
-                    refreshing && styles.refreshDisabled,
+                    (refreshing || !locationUsable) && styles.refreshDisabled,
                     pressed && styles.refreshPressed,
                   ]}
                 >
@@ -426,11 +581,28 @@ export default function HomeScreen() {
         {mobileHeader && scopeControls}
       </View>
 
-      {(!authReady || loading) && (
+      {scope !== "top" && locationReady && (
+        <NewsLocationGate
+          scope={scope}
+          mode={newsLocation.mode}
+          location={newsLocation.location}
+          busy={locationBusy}
+          error={locationError}
+          onEnableAuto={() => void handleEnableAutoLocation()}
+          onSaveManual={(input) => void handleSaveManualLocation(input)}
+          onDisable={() => void handleDisableLocation()}
+        />
+      )}
+
+      {(!authReady || (scope !== "top" && !locationReady)) && (
         <ScreenState loading message={t.loadingStories} />
       )}
 
-      {authReady && !loading && error && (
+      {authReady && locationUsable && loading && (
+        <ScreenState loading message={t.loadingStories} />
+      )}
+
+      {authReady && locationUsable && !loading && error && (
         <ScreenState
           title={t.unableLoad}
           message={error}
@@ -438,7 +610,7 @@ export default function HomeScreen() {
         />
       )}
 
-      {authReady && !loading && !error && !lead && (
+      {authReady && locationUsable && !loading && !error && !lead && (
         <ScreenState
           title={t.noStories}
           message={t.noStoriesMessage}
@@ -446,12 +618,16 @@ export default function HomeScreen() {
         />
       )}
 
-      {authReady && !loading && !error && lead && (
+      {authReady && locationUsable && !loading && !error && lead && (
         <>
           {desktop ? (
             <View style={styles.heroGrid}>
               <View style={styles.heroColumn}>
-                <StoryTile article={lead} size="hero" videoEnabled={homepageVideoEnabled} />
+                <StoryTile
+                  article={lead}
+                  size="hero"
+                  videoEnabled={homepageVideoEnabled}
+                />
               </View>
               <View style={styles.secondaryColumn}>
                 {secondary.map((article) => (
@@ -466,7 +642,11 @@ export default function HomeScreen() {
             </View>
           ) : (
             <View style={styles.stack}>
-              <StoryTile article={lead} size="hero" videoEnabled={homepageVideoEnabled} />
+              <StoryTile
+                article={lead}
+                size="hero"
+                videoEnabled={homepageVideoEnabled}
+              />
               <View style={tablet ? styles.twoColumnGrid : styles.stack}>
                 {secondary.map((article) => (
                   <View
@@ -503,7 +683,7 @@ export default function HomeScreen() {
       <FlatList
         ref={listRef}
         style={styles.list}
-        data={remainingBatches}
+        data={locationUsable ? remainingBatches : []}
         keyExtractor={(batch) => batch.map(storyKey).join(":")}
         ListHeaderComponent={listHeader}
         renderItem={({ item: batch, index }) => {
@@ -552,13 +732,15 @@ export default function HomeScreen() {
         }}
         ListFooterComponent={
           <View style={[styles.page, width < 480 && styles.pageCompact]}>
-            {loadingMore && (
+            {locationUsable && loadingMore && (
               <View style={styles.loadMoreIndicator}>
                 <ActivityIndicator color={colors.textMuted} />
               </View>
             )}
 
-            {!loadingMore && hasMore && <View style={styles.loadMoreSpacer} />}
+            {locationUsable && !loadingMore && hasMore && (
+              <View style={styles.loadMoreSpacer} />
+            )}
           </View>
         }
         contentContainerStyle={styles.scrollContent}
@@ -583,7 +765,7 @@ export default function HomeScreen() {
         onScroll={handleScroll}
         scrollEventThrottle={200}
         refreshControl={
-          Platform.OS === "web" ? undefined : (
+          Platform.OS === "web" || !locationUsable ? undefined : (
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => void loadFeed("refresh")}
