@@ -23,10 +23,19 @@ const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
 const SEARCH_DEBOUNCE_MS = 450;
 
+const searchCopy = {
+  en: { subtitle: "Search current Briefly stories and the developments in their timelines." },
+  es: { subtitle: "Busca noticias actuales de Briefly y los acontecimientos de sus cronologías." },
+  ja: { subtitle: "Brieflyの現在の記事と、そのタイムライン上の展開を検索できます。" },
+  "zh-CN": { subtitle: "搜索 Briefly 当前新闻及其时间线中的事件进展。" },
+  "zh-TW": { subtitle: "搜尋 Briefly 當前新聞及其時間線中的事件進展。" },
+} as const;
+
 export default function SearchScreen() {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+  const labels = searchCopy[language] ?? searchCopy.en;
 
   const [query, setQuery] = useState("");
   const [articles, setArticles] = useState<CanonicalArticle[]>([]);
@@ -85,8 +94,8 @@ export default function SearchScreen() {
           <AppHeader />
 
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>
-              {t.search}
+            <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+              {labels.subtitle}
             </Text>
             <View style={styles.inputWrap}>
               <TextInput
@@ -149,8 +158,8 @@ const styles = StyleSheet.create({
   pageCompact: {
     paddingHorizontal: layout.pagePaddingCompact,
   },
-  header: { paddingVertical: 28, gap: 18 },
-  title: { fontSize: 42, fontWeight: "900" },
+  header: { paddingVertical: 28, gap: 14 },
+  subtitle: { maxWidth: 760, fontSize: 18, lineHeight: 27 },
   inputWrap: { position: "relative" },
   input: {
     width: "100%",
