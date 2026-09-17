@@ -106,6 +106,7 @@ function ActivityBar({
 }) {
   const { colors } = useBrieflyTheme();
   const width = max > 0 ? Math.max(4, (value / max) * 100) : 0;
+  const barWidth = (String(width) + "%") as `${number}%`;
   return (
     <View style={styles.activityRow}>
       <View style={styles.activityTop}>
@@ -119,7 +120,7 @@ function ActivityBar({
         <View
           style={[
             styles.fill,
-            { width: String(width) + "%", backgroundColor: colors.accent },
+            { width: barWidth, backgroundColor: colors.accent },
           ]}
         />
       </View>
