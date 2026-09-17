@@ -3,6 +3,8 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -19,13 +21,31 @@ import type { CanonicalArticle } from "@/models/article";
 type TileSize = "hero" | "secondary" | "standard";
 type Props = { article: CanonicalArticle; size?: TileSize; href?: string };
 
-const translationCopy: Record<string, { translate: string; original: string; retry: string }> = {
-  en: { translate: "Translate", original: "Original", retry: "Retry" },
-  es: { translate: "Traducir", original: "Original", retry: "Reintentar" },
-  ja: { translate: "翻訳", original: "原文", retry: "再試行" },
-  "zh-CN": { translate: "翻译", original: "原文", retry: "重试" },
-  "zh-TW": { translate: "翻譯", original: "原文", retry: "重試" },
+const translationCopy: Record<string, { translate: string; original: string; retry: string; play: string }> = {
+  en: { translate: "Translate", original: "Original", retry: "Retry", play: "Play" },
+  es: { translate: "Traducir", original: "Original", retry: "Reintentar", play: "Reproducir" },
+  ja: { translate: "翻訳", original: "原文", retry: "再試行", play: "再生" },
+  "zh-CN": { translate: "翻译", original: "原文", retry: "重试", play: "播放" },
+  "zh-TW": { translate: "翻譯", original: "原文", retry: "重試", play: "播放" },
 };
+
+function looksLikeVideoUrl(value: string | null | undefined) {
+  const url = String(value || "").toLowerCase();
+  return (
+    /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/.test(url) ||
+    url.includes("youtube.com/") ||
+    url.includes("youtu.be/") ||
+    url.includes("vimeo.com/")
+  );
+}
+
+async function openMedia(url: string) {
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+  await Linking.openURL(url);
+}
 
 export function StoryTile({ article, size = "standard", href }: Props) {
   const { language, t } = useBrieflyLanguage();
@@ -42,14 +62,23 @@ export function StoryTile({ article, size = "standard", href }: Props) {
         ? styles.secondaryHeadline
         : styles.standardHeadline;
   const sourceCount = article.source_count ?? article.sources_used?.length ?? 0;
-  const storyHref = href ?? (() => {
-    const params = new URLSearchParams({
-      eventId: article.event_id,
-      previewHeadline: article.headline,
-    });
-    if (article.image_url) params.set("imageUrl", article.image_url);
-    return `/story/${article.slug}?${params.toString()}`;
-  })();
+  const legacyVideoUrl = looksLikeVideoUrl(article.image_url)
+    ? article.image_url
+    : null;
+  const videoUrl = article.video_url || legacyVideoUrl;
+  const imageUrl =
+    article.video_thumbnail_url ||
+    (!looksLikeVideoUrl(article.image_url) ? article.image_url : null);
+  const storyHref =
+    href ??
+    (() => {
+      const params = new URLSearchParams({
+        eventId: article.event_id,
+        previewHeadline: article.headline,
+      });
+      if (imageUrl) params.set("imageUrl", imageUrl);
+      return `/story/${article.slug}?${params.toString()}`;
+    })();
 
   const currentTranslation =
     translation?.language === language ? translation : null;
@@ -95,9 +124,9 @@ export function StoryTile({ article, size = "standard", href }: Props) {
       onPress={() => router.push(storyHref as never)}
       style={StyleSheet.flatten([styles.tile, { height }])}
     >
-      {article.image_url ? (
+      {imageUrl ? (
         <Image
-          source={{ uri: article.image_url }}
+          source={{ uri: imageUrl }}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
           transition={180}
@@ -127,30 +156,49 @@ export function StoryTile({ article, size = "standard", href }: Props) {
             </Text>
           )}
 
-          <Pressable
-            accessibilityRole="button"
-            disabled={translating}
-            onPress={(event) => {
-              event.stopPropagation();
-              void handleTranslation();
-            }}
-            style={({ pressed }) => [
-              styles.translateButton,
-              pressed && styles.translateButtonPressed,
-            ]}
-          >
-            {translating ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.translateText}>
-                {translationFailed
-                  ? copy.retry
-                  : translated
-                    ? copy.original
-                    : copy.translate}
-              </Text>
+          <View style={styles.mediaActions}>
+            {!!videoUrl && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={copy.play}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  void openMedia(videoUrl);
+                }}
+                style={({ pressed }) => [
+                  styles.translateButton,
+                  pressed && styles.translateButtonPressed,
+                ]}
+              >
+                <Text style={styles.translateText}>▶ {copy.play}</Text>
+              </Pressable>
             )}
-          </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              disabled={translating}
+              onPress={(event) => {
+                event.stopPropagation();
+                void handleTranslation();
+              }}
+              style={({ pressed }) => [
+                styles.translateButton,
+                pressed && styles.translateButtonPressed,
+              ]}
+            >
+              {translating ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.translateText}>
+                  {translationFailed
+                    ? copy.retry
+                    : translated
+                      ? copy.original
+                      : copy.translate}
+                </Text>
+              )}
+            </Pressable>
+          </View>
 
           <View style={styles.metaRow}>
             <Text style={styles.meta}>
@@ -199,6 +247,12 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.88)",
     fontSize: 16,
     lineHeight: 23,
+  },
+  mediaActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
   },
   translateButton: {
     alignSelf: "flex-start",
