@@ -232,12 +232,11 @@ export default function BetaDashboardScreen() {
     async (mode: "initial" | "refresh" = "initial") => {
       if (!user) return;
       if (mode === "refresh") setRefreshing(true);
-      else setLoading(true);
-      setError(false);
-      setForbidden(false);
 
       try {
         const next = await getBetaDashboard(days);
+        setError(false);
+        setForbidden(false);
         setSnapshot(next);
       } catch (caught) {
         const message = caught instanceof Error ? caught.message : "";
