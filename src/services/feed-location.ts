@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
+import { Platform } from "react-native";
 
 export type FeedLocation = {
   country: string;
@@ -21,6 +22,7 @@ const DEFAULT_PREFERENCE: NewsLocationPreference = {
   mode: "off",
   location: null,
 };
+const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
 
 let cachedPreference: NewsLocationPreference | undefined;
 let pendingPreference: Promise<NewsLocationPreference> | null = null;
@@ -128,6 +130,40 @@ export async function getNewsLocationPreference(): Promise<NewsLocationPreferenc
   return pendingPreference;
 }
 
+async function reverseGeocodeWeb(
+  latitude: number,
+  longitude: number,
+): Promise<FeedLocation | null> {
+  if (!API_BASE_URL) return null;
+
+  const params = new URLSearchParams({
+    latitude: String(latitude),
+    longitude: String(longitude),
+  });
+  const response = await fetch(
+    `${API_BASE_URL}/api/location/reverse-geocode?${params.toString()}`,
+  );
+  if (!response.ok) return null;
+
+  const payload = (await response.json()) as {
+    country?: string | null;
+    country_code?: string | null;
+    region?: string | null;
+    city?: string | null;
+  };
+  const countryCode = normalizeCountryCode(payload.country_code);
+  const country = canonicalCountryName(countryCode, payload.country);
+  if (!country) return null;
+
+  return {
+    country,
+    countryCode,
+    region: firstText(payload.region) || null,
+    city: firstText(payload.city),
+    source: "device",
+  };
+}
+
 async function resolveDeviceLocation(options: {
   requestPermission: boolean;
 }): Promise<FeedLocation | null> {
@@ -147,6 +183,13 @@ async function resolveDeviceLocation(options: {
         (await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         }));
+
+      if (Platform.OS === "web") {
+        return reverseGeocodeWeb(
+          position.coords.latitude,
+          position.coords.longitude,
+        );
+      }
 
       const places = await Location.reverseGeocodeAsync({
         latitude: position.coords.latitude,
