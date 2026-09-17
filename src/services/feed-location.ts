@@ -11,9 +11,20 @@ export type FeedLocation = {
 const FALLBACK_LOCATION: FeedLocation = {
   country: "Australia",
   countryCode: "AU",
-  city: "Sydney",
+  city: "NSW",
   region: "New South Wales",
   source: "fallback",
+};
+
+const AU_REGION_CODES: Record<string, string> = {
+  "new south wales": "NSW",
+  victoria: "VIC",
+  queensland: "QLD",
+  "south australia": "SA",
+  "western australia": "WA",
+  tasmania: "TAS",
+  "northern territory": "NT",
+  "australian capital territory": "ACT",
 };
 
 let cachedLocation: FeedLocation | null = null;
@@ -48,7 +59,20 @@ function canonicalCountryName(
       if (resolved) return resolved;
     } catch {}
   }
+
+  if (code === "AU") return "Australia";
   return firstText(localizedCountry, FALLBACK_LOCATION.country);
+}
+
+function localScopeName(
+  countryCode: string | null,
+  region: string | null,
+  city: string,
+): string {
+  if (countryCode === "AU" && region) {
+    return AU_REGION_CODES[region.toLowerCase()] || region;
+  }
+  return region || city;
 }
 
 async function resolveOnce(): Promise<FeedLocation> {
@@ -74,11 +98,7 @@ async function resolveOnce(): Promise<FeedLocation> {
 
     const countryCode = firstText(place.isoCountryCode).toUpperCase() || null;
     const country = canonicalCountryName(countryCode, place.country);
-
-    // Android geocoders can return a suburb/district where another platform
-    // returns the metro city. Prefer explicit city, then the broader subregion,
-    // and use district only as the final locality fallback.
-    const city = firstText(
+    const actualCity = firstText(
       place.city,
       place.subregion,
       place.district,
@@ -86,7 +106,18 @@ async function resolveOnce(): Promise<FeedLocation> {
     );
     const region = firstText(place.region, place.subregion) || null;
 
-    return { country, countryCode, city, region, source: "device" };
+    // The feed's Local scope is intentionally state/province/region-level rather
+    // than suburb/city-level. This is more stable across geocoders and gives a
+    // useful news pool (for example NSW rather than a Sydney suburb).
+    const localScope = localScopeName(countryCode, region, actualCity);
+
+    return {
+      country,
+      countryCode,
+      city: localScope,
+      region,
+      source: "device",
+    };
   } catch {
     return FALLBACK_LOCATION;
   }
