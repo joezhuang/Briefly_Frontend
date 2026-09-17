@@ -9,6 +9,7 @@ const FLUSH_DELAY_MS = 1500;
 const FLUSH_BATCH_SIZE = 10;
 const MAX_QUEUE_SIZE = 100;
 const MAX_RETRY_DELAY_MS = 60_000;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type ProductAnalyticsEventName =
   | "feed_view"
@@ -51,6 +52,11 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let flushPromise: Promise<void> | null = null;
 let consecutiveFailures = 0;
 
+function normalizeEventId(value: string | null | undefined) {
+  const candidate = String(value ?? "").trim();
+  return UUID_PATTERN.test(candidate) ? candidate : null;
+}
+
 function nextFlushDelay() {
   if (consecutiveFailures === 0) return FLUSH_DELAY_MS;
   return Math.min(
@@ -80,7 +86,7 @@ export function trackProductEvent(
   queue.push({
     event_name: eventName,
     session_id: sessionId,
-    event_id: options?.eventId ?? null,
+    event_id: normalizeEventId(options?.eventId),
     article_version_id: options?.articleVersionId ?? null,
     platform,
     app_version: appVersion,
