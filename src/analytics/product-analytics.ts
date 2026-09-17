@@ -1,8 +1,8 @@
 import Constants from "expo-constants";
-import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
 
 import { getBrieflyAccessToken } from "@/auth/session";
+import { telemetrySessionId } from "@/telemetry/session";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
 const FLUSH_DELAY_MS = 1500;
@@ -40,7 +40,6 @@ type QueuedAnalyticsEvent = {
   occurred_at: string;
 };
 
-const sessionId = Crypto.randomUUID();
 const appVersion = Constants.expoConfig?.version ?? null;
 const platform: QueuedAnalyticsEvent["platform"] =
   Platform.OS === "web" || Platform.OS === "ios" || Platform.OS === "android"
@@ -83,27 +82,33 @@ export function trackProductEvent(
 ) {
   if (!API_BASE_URL) return;
 
-  queue.push({
-    event_name: eventName,
-    session_id: telemetrySessionId,
-    event_id: normalizeEventId(options?.eventId),
-    article_version_id: options?.articleVersionId ?? null,
-    platform,
-    app_version: appVersion,
-    properties: options?.properties ?? {},
-    occurred_at: new Date().toISOString(),
-  });
+  // Product analytics must always be fail-open: telemetry is never allowed to
+  // interrupt navigation, mutations, reading history, or other user actions.
+  try {
+    queue.push({
+      event_name: eventName,
+      session_id: telemetrySessionId,
+      event_id: normalizeEventId(options?.eventId),
+      article_version_id: options?.articleVersionId ?? null,
+      platform,
+      app_version: appVersion,
+      properties: options?.properties ?? {},
+      occurred_at: new Date().toISOString(),
+    });
 
-  if (queue.length > MAX_QUEUE_SIZE) {
-    queue = queue.slice(queue.length - MAX_QUEUE_SIZE);
+    if (queue.length > MAX_QUEUE_SIZE) {
+      queue = queue.slice(queue.length - MAX_QUEUE_SIZE);
+    }
+
+    if (queue.length >= FLUSH_BATCH_SIZE && consecutiveFailures === 0) {
+      void flushProductAnalytics();
+      return;
+    }
+
+    scheduleFlush();
+  } catch {
+    // Deliberately ignore analytics failures.
   }
-
-  if (queue.length >= FLUSH_BATCH_SIZE && consecutiveFailures === 0) {
-    void flushProductAnalytics();
-    return;
-  }
-
-  scheduleFlush();
 }
 
 export async function flushProductAnalytics() {
