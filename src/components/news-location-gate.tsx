@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -117,7 +118,7 @@ export function NewsLocationGate({
     }
   }, []);
 
-  const openSettings = useCallback(() => {
+  const openSettings = useCallback((forceManual = false) => {
     const countryCode = location?.countryCode ?? null;
     const regionCode = location?.regionCode ?? null;
     setCountry(
@@ -136,7 +137,7 @@ export function NewsLocationGate({
           }
         : null,
     );
-    setManualMode(mode === "manual");
+    setManualMode(forceManual || mode === "manual");
     setPicker(null);
     setSearch("");
     setOptionsError(null);
@@ -251,7 +252,7 @@ export function NewsLocationGate({
             </Text>
             <Pressable
               accessibilityRole="button"
-              onPress={openSettings}
+              onPress={() => openSettings(false)}
               hitSlop={8}
             >
               <Text style={[styles.changeText, { color: colors.accent }]}>Change</Text>
@@ -318,7 +319,7 @@ export function NewsLocationGate({
 
         <View style={styles.modeRow}>
           {modeButton("auto", "Use current location", mode === "auto", onEnableAuto)}
-          {modeButton("manual", "Choose manually", mode === "manual", openSettings)}
+          {modeButton("manual", "Choose manually", mode === "manual", () => openSettings(true))}
           {modeButton("off", "Off", mode === "off", onDisable)}
         </View>
       </View>
@@ -388,7 +389,7 @@ type ModalProps = {
     label: string,
     selected: boolean,
     onPress: () => void,
-  ) => React.ReactNode;
+  ) => ReactNode;
 };
 
 function LocationModal({
