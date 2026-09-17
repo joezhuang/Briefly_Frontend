@@ -42,6 +42,8 @@ const settingsCopy = {
     terms: "Terms of Use",
     privacy: "Privacy Policy",
     history: "Reading history",
+    internal: "Internal",
+    betaDashboard: "Beta dashboard",
     close: "Close",
   },
   es: {
@@ -59,6 +61,8 @@ const settingsCopy = {
     terms: "Términos de uso",
     privacy: "Política de privacidad",
     history: "Historial de lectura",
+    internal: "Internal",
+    betaDashboard: "Beta dashboard",
     close: "Cerrar",
   },
   ja: {
@@ -76,6 +80,8 @@ const settingsCopy = {
     terms: "利用規約",
     privacy: "プライバシーポリシー",
     history: "閲覧履歴",
+    internal: "Internal",
+    betaDashboard: "Beta dashboard",
     close: "閉じる",
   },
   "zh-CN": {
@@ -93,6 +99,8 @@ const settingsCopy = {
     terms: "使用条款",
     privacy: "隐私政策",
     history: "阅读历史",
+    internal: "Internal",
+    betaDashboard: "Beta dashboard",
     close: "关闭",
   },
   "zh-TW": {
@@ -110,6 +118,8 @@ const settingsCopy = {
     terms: "使用條款",
     privacy: "隱私權政策",
     history: "閱讀歷史",
+    internal: "Internal",
+    betaDashboard: "Beta dashboard",
     close: "關閉",
   },
 } as const;
@@ -118,6 +128,7 @@ type SettingsRoute =
   | "/account"
   | "/upgrade"
   | "/support"
+  | "/beta-dashboard"
   | "/legal/terms"
   | "/legal/privacy";
 
@@ -444,6 +455,26 @@ export function AppHeader() {
                   <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
                 </Pressable>
               </View>
+
+              {account?.is_admin === true && (
+                <View style={styles.section}>
+                  <Text style={[styles.sectionTitle, { color: colors.textMuted }]}> 
+                    {labels.internal}
+                  </Text>
+                  <Pressable
+                    onPress={() => closeAndNavigate("/beta-dashboard")}
+                    style={[
+                      styles.actionRow,
+                      { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
+                    ]}
+                  >
+                    <Text style={[styles.actionTitle, { color: colors.text }]}> 
+                      {labels.betaDashboard}
+                    </Text>
+                    <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
+                  </Pressable>
+                </View>
+              )}
 
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.textMuted }]}> 
