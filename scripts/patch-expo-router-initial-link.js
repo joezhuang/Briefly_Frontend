@@ -71,7 +71,11 @@ const guard = `
 
 source = source.replace(stateStatement, stateStatement + guard);
 
-const useLinkingIndex = source.indexOf("useLinking");
+const stateIndex = source.indexOf(stateStatement);
+const useLinkingIndex = source.indexOf(
+  "useLinking",
+  stateIndex + stateStatement.length,
+);
 if (useLinkingIndex === -1) {
   console.warn(
     "[Briefly] Expo Router initial-link patch skipped: useLinking call not found.",
