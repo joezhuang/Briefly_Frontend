@@ -82,8 +82,8 @@ const localizationCopy = {
     availableText: "AI 翻譯支援其他語言。已有翻譯所有使用者均可閱讀；如果尚無對應翻譯，Briefly Pro 可產生翻譯。",
     signIn: "登入",
     proOnly: "Briefly Pro",
-    preparing: "翻譯を準備中…",
-    translated: "翻譯済み",
+    preparing: "正在準備翻譯…",
+    translated: "已翻譯",
     unavailable: "翻譯暫不可用",
   },
 } as const;
