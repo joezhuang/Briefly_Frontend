@@ -9,10 +9,21 @@ export type FeedLocation = {
   source: "device" | "manual";
 };
 
-const STORAGE_KEY = "briefly.news-location.v1";
+export type NewsLocationMode = "auto" | "manual" | "off";
 
-let cachedLocation: FeedLocation | null | undefined;
-let pendingSavedLocation: Promise<FeedLocation | null> | null = null;
+export type NewsLocationPreference = {
+  mode: NewsLocationMode;
+  location: FeedLocation | null;
+};
+
+const STORAGE_KEY = "briefly.news-location.v2";
+const DEFAULT_PREFERENCE: NewsLocationPreference = {
+  mode: "off",
+  location: null,
+};
+
+let cachedPreference: NewsLocationPreference | undefined;
+let pendingPreference: Promise<NewsLocationPreference> | null = null;
 let pendingDeviceLocation: Promise<FeedLocation | null> | null = null;
 
 function firstText(...values: Array<string | null | undefined>) {
@@ -53,62 +64,79 @@ function canonicalCountryName(
   return firstText(localizedCountry);
 }
 
-function validStoredLocation(value: unknown): FeedLocation | null {
+function validLocation(value: unknown): FeedLocation | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Partial<FeedLocation>;
   const country = firstText(candidate.country);
-  const region = firstText(candidate.region) || null;
-  const city = firstText(candidate.city);
   if (!country) return null;
 
   return {
     country,
     countryCode: normalizeCountryCode(candidate.countryCode),
-    region,
-    city,
+    region: firstText(candidate.region) || null,
+    city: firstText(candidate.city),
     source: candidate.source === "device" ? "device" : "manual",
   };
 }
 
-async function persist(location: FeedLocation | null) {
-  cachedLocation = location;
-  if (location) {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(location));
-  } else {
-    await AsyncStorage.removeItem(STORAGE_KEY);
+function validPreference(value: unknown): NewsLocationPreference {
+  if (!value || typeof value !== "object") return DEFAULT_PREFERENCE;
+  const candidate = value as Partial<NewsLocationPreference>;
+  const mode: NewsLocationMode =
+    candidate.mode === "auto" || candidate.mode === "manual"
+      ? candidate.mode
+      : "off";
+  const location = validLocation(candidate.location);
+
+  if (mode === "off") return DEFAULT_PREFERENCE;
+  if (!location) return { mode, location: null };
+  if (mode === "auto" && location.source !== "device") {
+    return { mode, location: { ...location, source: "device" } };
   }
+  if (mode === "manual" && location.source !== "manual") {
+    return { mode, location: { ...location, source: "manual" } };
+  }
+  return { mode, location };
 }
 
-export async function getSavedFeedLocation(): Promise<FeedLocation | null> {
-  if (cachedLocation !== undefined) return cachedLocation;
-  if (!pendingSavedLocation) {
-    pendingSavedLocation = AsyncStorage.getItem(STORAGE_KEY)
+async function persist(preference: NewsLocationPreference) {
+  cachedPreference = preference;
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(preference));
+  return preference;
+}
+
+export async function getNewsLocationPreference(): Promise<NewsLocationPreference> {
+  if (cachedPreference) return cachedPreference;
+  if (!pendingPreference) {
+    pendingPreference = AsyncStorage.getItem(STORAGE_KEY)
       .then((raw) => {
-        if (!raw) return null;
+        if (!raw) return DEFAULT_PREFERENCE;
         try {
-          return validStoredLocation(JSON.parse(raw));
+          return validPreference(JSON.parse(raw));
         } catch {
-          return null;
+          return DEFAULT_PREFERENCE;
         }
       })
-      .then((location) => {
-        cachedLocation = location;
-        return location;
+      .then((preference) => {
+        cachedPreference = preference;
+        return preference;
       })
       .finally(() => {
-        pendingSavedLocation = null;
+        pendingPreference = null;
       });
   }
-  return pendingSavedLocation;
+  return pendingPreference;
 }
 
-export async function requestCurrentFeedLocation(): Promise<FeedLocation | null> {
+async function resolveDeviceLocation(options: {
+  requestPermission: boolean;
+}): Promise<FeedLocation | null> {
   if (pendingDeviceLocation) return pendingDeviceLocation;
 
   pendingDeviceLocation = (async () => {
     try {
       let permission = await Location.getForegroundPermissionsAsync();
-      if (permission.status !== "granted") {
+      if (permission.status !== "granted" && options.requestPermission) {
         if (!permission.canAskAgain) return null;
         permission = await Location.requestForegroundPermissionsAsync();
       }
@@ -133,15 +161,13 @@ export async function requestCurrentFeedLocation(): Promise<FeedLocation | null>
       const city = firstText(place.city, place.subregion, place.district);
       if (!country) return null;
 
-      const location: FeedLocation = {
+      return {
         country,
         countryCode,
         region,
         city,
         source: "device",
       };
-      await persist(location);
-      return location;
     } catch {
       return null;
     }
@@ -152,12 +178,27 @@ export async function requestCurrentFeedLocation(): Promise<FeedLocation | null>
   return pendingDeviceLocation;
 }
 
+export async function enableAutoNewsLocation(): Promise<NewsLocationPreference> {
+  const location = await resolveDeviceLocation({ requestPermission: true });
+  if (!location) return { mode: "auto", location: null };
+  return persist({ mode: "auto", location });
+}
+
+export async function refreshAutoNewsLocation(): Promise<NewsLocationPreference> {
+  const preference = await getNewsLocationPreference();
+  if (preference.mode !== "auto") return preference;
+
+  const location = await resolveDeviceLocation({ requestPermission: false });
+  if (!location) return preference;
+  return persist({ mode: "auto", location });
+}
+
 export async function saveManualFeedLocation(input: {
   country: string;
   countryCode?: string | null;
   region?: string | null;
   city?: string | null;
-}): Promise<FeedLocation> {
+}): Promise<NewsLocationPreference> {
   const country = firstText(input.country);
   if (!country) throw new Error("Country is required.");
 
@@ -168,10 +209,9 @@ export async function saveManualFeedLocation(input: {
     city: firstText(input.city),
     source: "manual",
   };
-  await persist(location);
-  return location;
+  return persist({ mode: "manual", location });
 }
 
-export async function clearFeedLocation() {
-  await persist(null);
+export async function disableNewsLocation(): Promise<NewsLocationPreference> {
+  return persist(DEFAULT_PREFERENCE);
 }
