@@ -326,12 +326,12 @@ export function getHomepageArticleFeed(options?: {
     scope: options?.scope ?? "top",
     language: options?.language ?? "en",
     include_draft: String(options?.includeDraft ?? false),
-    country: options?.country ?? "",
-    city: options?.city ?? "",
     limit: String(options?.limit ?? 20),
     offset: String(options?.offset ?? 0),
   });
+  if (options?.country) params.set("country", options.country);
   if (options?.countryCode) params.set("country_code", options.countryCode);
+  if (options?.city) params.set("city", options.city);
   if (options?.region) params.set("region", options.region);
   return getJson<HomepageArticleFeed>(`/api/article-feed?${params.toString()}`);
 }
