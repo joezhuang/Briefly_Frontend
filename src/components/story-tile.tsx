@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -20,6 +20,21 @@ import type { CanonicalArticle } from "@/models/article";
 type TileSize = "hero" | "secondary" | "standard";
 type Props = { article: CanonicalArticle; size?: TileSize; href?: string };
 
+type ActiveVideoListener = (eventId: string | null) => void;
+let activeVideoEventId: string | null = null;
+const activeVideoListeners = new Set<ActiveVideoListener>();
+
+function setActiveHomepageVideo(eventId: string | null) {
+  activeVideoEventId = eventId;
+  activeVideoListeners.forEach((listener) => listener(eventId));
+}
+
+function subscribeActiveHomepageVideo(listener: ActiveVideoListener) {
+  activeVideoListeners.add(listener);
+  listener(activeVideoEventId);
+  return () => activeVideoListeners.delete(listener);
+}
+
 const translationCopy: Record<string, { translate: string; original: string; retry: string; play: string; close: string }> = {
   en: { translate: "Translate", original: "Original", retry: "Retry", play: "Play", close: "Close video" },
   es: { translate: "Traducir", original: "Original", retry: "Reintentar", play: "Reproducir", close: "Cerrar video" },
@@ -35,6 +50,12 @@ export function StoryTile({ article, size = "standard", href }: Props) {
   const [translating, setTranslating] = useState(false);
   const [translationFailed, setTranslationFailed] = useState(false);
   const [playingVideo, setPlayingVideo] = useState(false);
+
+  useEffect(() => {
+    return subscribeActiveHomepageVideo((eventId) => {
+      setPlayingVideo(eventId === article.event_id);
+    });
+  }, [article.event_id]);
 
   const height = size === "hero" ? 520 : size === "secondary" ? 252 : 270;
   const headlineStyle =
@@ -117,7 +138,9 @@ export function StoryTile({ article, size = "standard", href }: Props) {
             accessibilityLabel={copy.close}
             onPress={(event) => {
               event.stopPropagation();
-              setPlayingVideo(false);
+              if (activeVideoEventId === article.event_id) {
+                setActiveHomepageVideo(null);
+              }
             }}
             style={({ pressed }) => [
               styles.videoClose,
@@ -168,7 +191,7 @@ export function StoryTile({ article, size = "standard", href }: Props) {
                     accessibilityLabel={copy.play}
                     onPress={(event) => {
                       event.stopPropagation();
-                      setPlayingVideo(true);
+                      setActiveHomepageVideo(article.event_id);
                     }}
                     style={({ pressed }) => [
                       styles.translateButton,
