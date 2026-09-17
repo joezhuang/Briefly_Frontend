@@ -17,6 +17,7 @@ import {
   type FollowedEvent,
   type MeaningfulEventUpdate,
 } from "@/api/event-follow";
+import { trackProductEvent } from "@/analytics/product-analytics";
 import { AppHeader } from "@/components/app-header";
 import { ScreenState } from "@/components/screen-state";
 import { useBrieflyAuth } from "@/context/auth";
@@ -136,6 +137,12 @@ export default function FollowingScreen() {
         if (!active) return;
         setEvents(followed.events);
         setUpdates(meaningful.updates);
+        trackProductEvent("following_view", {
+          properties: {
+            followed_count: followed.events.length,
+            update_count: meaningful.updates.length,
+          },
+        });
       })
       .catch(() => {
         if (active) setError(true);
@@ -157,6 +164,14 @@ export default function FollowingScreen() {
     setUpdates((current) =>
       current.filter((item) => item.development_id !== update.development_id),
     );
+    trackProductEvent("event_update_open", {
+      eventId: update.event_id,
+      properties: {
+        update_type: update.update_type,
+        new_evidence_count: update.new_evidence_count ?? 0,
+        new_unique_source_count: update.new_unique_source_count ?? 0,
+      },
+    });
     void acknowledgeEventUpdate(update.event_id, update.development_id).catch(() => null);
     openEvent(update.event_id);
   };
