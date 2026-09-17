@@ -37,7 +37,9 @@ function setActiveHomepageVideo(eventId: string | null) {
 function subscribeActiveHomepageVideo(listener: ActiveVideoListener) {
   activeVideoListeners.add(listener);
   listener(activeVideoEventId);
-  return () => activeVideoListeners.delete(listener);
+  return () => {
+    activeVideoListeners.delete(listener);
+  };
 }
 
 const translationCopy: Record<string, { translate: string; original: string; retry: string; play: string; close: string }> = {
