@@ -52,6 +52,20 @@ export type EventEvidence = {
   is_duplicate?: boolean;
 };
 
+export type EventDevelopment = {
+  development_id: number;
+  observed_at: string;
+  update_type: "new_event" | "meaningful_development" | "evidence_growth" | string;
+  is_meaningful_update: boolean;
+  new_evidence_count: number;
+  new_unique_source_count: number;
+  new_languages: string[];
+  headline_shift: boolean;
+  update_velocity_per_hour?: number;
+  reasons?: string[];
+  representative_title?: string | null;
+};
+
 export type EventIntelligence = {
   event_id: string;
   title?: string | null;
@@ -59,6 +73,7 @@ export type EventIntelligence = {
   last_updated_at?: string | null;
   assessment?: EventAssessment | null;
   evidence?: EventEvidence[];
+  developments?: EventDevelopment[];
 };
 
 function requireApiBaseUrl() {
