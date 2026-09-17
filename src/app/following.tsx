@@ -130,8 +130,6 @@ export default function FollowingScreen() {
     }
 
     let active = true;
-    setLoading(true);
-    setError(false);
 
     Promise.all([getFollowedEvents(), getMeaningfulEventUpdates()])
       .then(([followed, meaningful]) => {
@@ -155,7 +153,7 @@ export default function FollowingScreen() {
     router.push(storyHref(eventId) as never);
   };
 
-  const openUpdate = async (update: MeaningfulEventUpdate) => {
+  const openUpdate = (update: MeaningfulEventUpdate) => {
     setUpdates((current) =>
       current.filter((item) => item.development_id !== update.development_id),
     );
@@ -208,7 +206,7 @@ export default function FollowingScreen() {
                     return (
                       <Pressable
                         key={`${update.event_id}-${update.development_id}`}
-                        onPress={() => void openUpdate(update)}
+                        onPress={() => openUpdate(update)}
                         style={({ pressed }) => [
                           styles.card,
                           {
