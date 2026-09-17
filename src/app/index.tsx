@@ -325,6 +325,7 @@ export default function HomeScreen() {
   const remaining = articles.slice(3);
   const remainingBatches = chunkArticles(remaining);
   const userIsPro = account?.translation_entitled === true;
+  const homepageVideoEnabled = appConfig?.homepage_video_enabled !== false;
   const showHomeAds =
     Platform.OS !== "web" &&
     appConfig?.ads_enabled === true &&
@@ -450,7 +451,7 @@ export default function HomeScreen() {
           {desktop ? (
             <View style={styles.heroGrid}>
               <View style={styles.heroColumn}>
-                <StoryTile article={lead} size="hero" />
+                <StoryTile article={lead} size="hero" videoEnabled={homepageVideoEnabled} />
               </View>
               <View style={styles.secondaryColumn}>
                 {secondary.map((article) => (
@@ -458,20 +459,25 @@ export default function HomeScreen() {
                     key={storyKey(article)}
                     article={article}
                     size="secondary"
+                    videoEnabled={homepageVideoEnabled}
                   />
                 ))}
               </View>
             </View>
           ) : (
             <View style={styles.stack}>
-              <StoryTile article={lead} size="hero" />
+              <StoryTile article={lead} size="hero" videoEnabled={homepageVideoEnabled} />
               <View style={tablet ? styles.twoColumnGrid : styles.stack}>
                 {secondary.map((article) => (
                   <View
                     key={storyKey(article)}
                     style={tablet ? styles.half : undefined}
                   >
-                    <StoryTile article={article} size="secondary" />
+                    <StoryTile
+                      article={article}
+                      size="secondary"
+                      videoEnabled={homepageVideoEnabled}
+                    />
                   </View>
                 ))}
               </View>
@@ -532,7 +538,10 @@ export default function HomeScreen() {
                           : styles.full
                     }
                   >
-                    <StoryTile article={article} />
+                    <StoryTile
+                      article={article}
+                      videoEnabled={homepageVideoEnabled}
+                    />
                   </View>
                 ))}
               </View>
