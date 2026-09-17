@@ -248,27 +248,31 @@ export function EventEvidencePanel({
     () => (intelligence?.evidence ?? []).filter((item) => !item.is_duplicate),
     [intelligence?.evidence],
   );
-  const coverageCountries = useMemo(
-    () =>
-      new Set(
-        evidence.map((item) => String(item.country || "").trim()).filter(Boolean),
-      ).size,
-    [evidence],
-  );
+  const evidenceStats = useMemo(() => {
+    const sources = new Set(
+      evidence.map((item) => String(item.source || "").trim()).filter(Boolean),
+    ).size;
+    const languages = new Set(
+      evidence.map((item) => String(item.source_language || "").trim()).filter(Boolean),
+    ).size;
+    const countries = new Set(
+      evidence.map((item) => String(item.country || "").trim()).filter(Boolean),
+    ).size;
+    return { sources, languages, countries };
+  }, [evidence]);
 
   if (!intelligence && !failed) return null;
 
-  const corroboration = assessment?.corroboration ?? {};
+  const sourceCount =
+    assessment?.corroboration?.unique_source_count ?? evidenceStats.sources;
+  const languageCount =
+    assessment?.corroboration?.language_count ?? evidenceStats.languages;
+  const countryCount =
+    assessment?.corroboration?.country_count ?? evidenceStats.countries;
   const stats = [
-    corroboration.unique_source_count
-      ? `${corroboration.unique_source_count} ${text.sources}`
-      : null,
-    corroboration.language_count
-      ? `${corroboration.language_count} ${text.languages}`
-      : null,
-    corroboration.country_count
-      ? `${corroboration.country_count} ${text.countries}`
-      : null,
+    sourceCount ? `${sourceCount} ${text.sources}` : null,
+    languageCount ? `${languageCount} ${text.languages}` : null,
+    countryCount ? `${countryCount} ${text.countries}` : null,
   ].filter((item): item is string => Boolean(item));
 
   const stateLabel = assessment
@@ -291,7 +295,7 @@ export function EventEvidencePanel({
     {
       id: "coverage",
       label: text.coverage,
-      badge: coverageCountries || undefined,
+      badge: evidenceStats.countries || undefined,
     },
   ];
 
