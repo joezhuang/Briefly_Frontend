@@ -68,7 +68,7 @@ function BriefSummarySection({
 }){
   const [measuredLines,setMeasuredLines]=useState(0);
   const canExpand=collapsedLines!==undefined&&measuredLines>collapsedLines;
-  const showFull=!canExpand||expanded;
+  const showFull=collapsedLines===undefined||expanded||(measuredLines>0&&!canExpand);
 
   return <View style={styles.briefSection}>
     <Text style={[styles.briefTitle,{color:colors.accent}]}>{title}</Text>
