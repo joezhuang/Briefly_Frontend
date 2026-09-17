@@ -83,14 +83,9 @@ export default function HistoryScreen() {
           <AppHeader />
 
           <View style={styles.header}>
-            <View style={styles.headerCopy}>
-              <Text style={[styles.title, { color: colors.text }]}>
-                {labels.title}
-              </Text>
-              <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-                {labels.subtitle}
-              </Text>
-            </View>
+            <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+              {labels.subtitle}
+            </Text>
 
             {items.length > 0 ? (
               <Pressable
@@ -181,13 +176,11 @@ const styles = StyleSheet.create({
   header: {
     paddingVertical: 28,
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 16,
   },
-  headerCopy: { flex: 1, minWidth: 0 },
-  title: { fontSize: 42, lineHeight: 48, fontWeight: "900" },
-  subtitle: { marginTop: 8, fontSize: 18, lineHeight: 27 },
+  subtitle: { flex: 1, minWidth: 0, fontSize: 18, lineHeight: 27 },
   clearButton: {
     minHeight: 38,
     paddingHorizontal: 14,
