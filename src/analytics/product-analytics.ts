@@ -85,7 +85,7 @@ export function trackProductEvent(
 
   queue.push({
     event_name: eventName,
-    session_id: sessionId,
+    session_id: telemetrySessionId,
     event_id: normalizeEventId(options?.eventId),
     article_version_id: options?.articleVersionId ?? null,
     platform,
