@@ -66,23 +66,21 @@ export function EventFollowButton({
     try {
       if (next) {
         await followEvent(eventId);
-        trackProductEvent("event_follow", {
-          eventId,
-          properties: { source: "story" },
-        });
       } else {
         await unfollowEvent(eventId);
-        trackProductEvent("event_unfollow", {
-          eventId,
-          properties: { source: "story" },
-        });
       }
     } catch {
       setFollowing(previous);
       Alert.alert("Briefly", text.error);
-    } finally {
       setBusy(false);
+      return;
     }
+
+    setBusy(false);
+    trackProductEvent(next ? "event_follow" : "event_unfollow", {
+      eventId,
+      properties: { source: "story" },
+    });
   };
 
   const active = !!user && following === true;
