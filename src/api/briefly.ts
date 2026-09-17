@@ -538,3 +538,12 @@ export type BrieflyAppConfig = {
 export function getBrieflyAppConfig() {
   return getJson<BrieflyAppConfig>("/api/app-config");
 }
+
+export function getBetaDashboardAppConfig() {
+  return getJson<BrieflyAppConfig>("/api/beta-dashboard/app-config");
+}
+
+export function updateBetaDashboardAppConfig(config: BrieflyAppConfig) {
+  return postJson<BrieflyAppConfig>("/api/beta-dashboard/app-config", config);
+}
+
