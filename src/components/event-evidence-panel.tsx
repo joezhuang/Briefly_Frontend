@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
   getEventIntelligence,
@@ -16,6 +16,8 @@ import { useBrieflyTheme } from "@/context/theme";
 const copy = {
   en: {
     title: "Evidence",
+    timeline: "Timeline",
+    coverage: "Coverage",
     whatWeKnow: "What we know",
     disputed: "Disputed",
     unknown: "Still unknown",
@@ -33,6 +35,8 @@ const copy = {
   },
   es: {
     title: "Evidencia",
+    timeline: "Cronología",
+    coverage: "Cobertura",
     whatWeKnow: "Lo que sabemos",
     disputed: "En disputa",
     unknown: "Aún no se sabe",
@@ -50,6 +54,8 @@ const copy = {
   },
   ja: {
     title: "根拠",
+    timeline: "タイムライン",
+    coverage: "報道範囲",
     whatWeKnow: "確認できていること",
     disputed: "食い違い",
     unknown: "まだ不明",
@@ -67,6 +73,8 @@ const copy = {
   },
   "zh-CN": {
     title: "证据",
+    timeline: "时间线",
+    coverage: "报道范围",
     whatWeKnow: "目前可确认",
     disputed: "存在争议",
     unknown: "仍不明确",
@@ -84,6 +92,8 @@ const copy = {
   },
   "zh-TW": {
     title: "證據",
+    timeline: "時間線",
+    coverage: "報導範圍",
     whatWeKnow: "目前可確認",
     disputed: "存在爭議",
     unknown: "仍不明確",
@@ -100,6 +110,8 @@ const copy = {
     conflict: "不同報導存在衝突",
   },
 } as const;
+
+type EventLens = "evidence" | "timeline" | "coverage";
 
 type CorroboratedClaim = {
   text: string;
@@ -201,18 +213,23 @@ export function EventEvidencePanel({
   const text = copy[language] ?? copy.en;
   const [intelligence, setIntelligence] = useState<EventIntelligence | null>(null);
   const [failed, setFailed] = useState(false);
+  const [activeLens, setActiveLens] = useState<EventLens>("evidence");
 
   useEffect(() => {
     let active = true;
     setFailed(false);
     setIntelligence(null);
+    setActiveLens("evidence");
 
     void getEventIntelligence(eventId, 100)
       .then((result) => {
         if (active) setIntelligence(result);
       })
       .catch(() => {
-        if (active) setFailed(true);
+        if (active) {
+          setFailed(true);
+          setActiveLens("timeline");
+        }
       });
 
     return () => {
@@ -227,21 +244,21 @@ export function EventEvidencePanel({
   );
   const contradictions = (assessment?.contradictions ?? []).slice(0, 3);
   const unknowns = uncertainties.filter(Boolean).slice(0, 4);
+  const evidence = useMemo(
+    () => (intelligence?.evidence ?? []).filter((item) => !item.is_duplicate),
+    [intelligence?.evidence],
+  );
+  const coverageCountries = useMemo(
+    () =>
+      new Set(
+        evidence.map((item) => String(item.country || "").trim()).filter(Boolean),
+      ).size,
+    [evidence],
+  );
 
-  if (failed || !intelligence) {
-    return <EventEvolutionPanel eventId={eventId} />;
-  }
+  if (!intelligence && !failed) return null;
 
-  if (!assessment) {
-    return (
-      <>
-        <EventEvolutionPanel eventId={eventId} />
-        <EventCoveragePanel intelligence={intelligence} />
-      </>
-    );
-  }
-
-  const corroboration = assessment.corroboration ?? {};
+  const corroboration = assessment?.corroboration ?? {};
   const stats = [
     corroboration.unique_source_count
       ? `${corroboration.unique_source_count} ${text.sources}`
@@ -254,92 +271,159 @@ export function EventEvidencePanel({
       : null,
   ].filter((item): item is string => Boolean(item));
 
-  const stateLabel =
-    assessment.confidence_state === "corroborated"
+  const stateLabel = assessment
+    ? assessment.confidence_state === "corroborated"
       ? text.corroborated
       : assessment.confidence_state === "conflicted"
         ? text.conflicted
         : assessment.confidence_state === "single_source"
           ? text.singleSource
-          : text.developing;
+          : text.developing
+    : null;
+
+  const tabs: Array<{ id: EventLens; label: string; badge?: number }> = [
+    {
+      id: "evidence",
+      label: text.title,
+      badge: intelligence ? evidence.length : undefined,
+    },
+    { id: "timeline", label: text.timeline },
+    {
+      id: "coverage",
+      label: text.coverage,
+      badge: coverageCountries || undefined,
+    },
+  ];
 
   return (
-    <>
+    <View style={styles.lenses}>
       <View
         style={[
-          styles.container,
-          { borderColor: colors.border, backgroundColor: colors.surface },
+          styles.tabBar,
+          { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
         ]}
       >
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.text }]}>{text.title}</Text>
-          <Text style={[styles.state, { color: colors.accent }]}>{stateLabel}</Text>
-        </View>
-        {!!stats.length && (
-          <Text style={[styles.stats, { color: colors.textMuted }]}>
-            {stats.join(" · ")}
-          </Text>
-        )}
+        {tabs.map((tab) => {
+          const selected = activeLens === tab.id;
+          const disabled = tab.id !== "timeline" && !intelligence;
+          return (
+            <Pressable
+              key={tab.id}
+              accessibilityRole="button"
+              accessibilityState={{ selected, disabled }}
+              disabled={disabled}
+              onPress={() => setActiveLens(tab.id)}
+              style={({ pressed }) => [
+                styles.tab,
+                selected && [
+                  styles.tabSelected,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ],
+                pressed && !disabled && styles.tabPressed,
+                disabled && styles.tabDisabled,
+              ]}
+            >
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.tabLabel,
+                  { color: selected ? colors.text : colors.textMuted },
+                ]}
+              >
+                {tab.label}
+              </Text>
+              {!!tab.badge && (
+                <Text style={[styles.tabBadge, { color: colors.accent }]}>
+                  {tab.badge}
+                </Text>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
 
-        {!!corroborated.length && (
-          <EvidenceSection title={text.whatWeKnow} colors={colors}>
-            {corroborated.map((claim, index) => (
-              <View key={`${claim.text}-${index}`} style={styles.claimRow}>
-                <Text style={[styles.marker, { color: colors.accent }]}>✓</Text>
-                <View style={styles.claimCopy}>
-                  <Text style={[styles.claimText, { color: colors.text }]}>
-                    {claim.text}
-                  </Text>
-                  <Text style={[styles.claimMeta, { color: colors.textMuted }]}>
-                    {text.reportedBy} {claim.sources.join(" · ")}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </EvidenceSection>
-        )}
+      {activeLens === "evidence" && intelligence && (
+        <View
+          style={[
+            styles.container,
+            { borderColor: colors.border, backgroundColor: colors.surface },
+          ]}
+        >
+          <View style={styles.headerRow}>
+            <Text style={[styles.title, { color: colors.text }]}>{text.title}</Text>
+            {!!stateLabel && (
+              <Text style={[styles.state, { color: colors.accent }]}>{stateLabel}</Text>
+            )}
+          </View>
+          {!!stats.length && (
+            <Text style={[styles.stats, { color: colors.textMuted }]}>
+              {stats.join(" · ")}
+            </Text>
+          )}
 
-        {!!contradictions.length && (
-          <EvidenceSection title={text.disputed} colors={colors}>
-            {contradictions.map((item) => (
-              <View key={item.contradiction_id} style={styles.conflictCard}>
-                <View style={styles.claimRow}>
-                  <Text style={[styles.marker, { color: colors.error }]}>!</Text>
-                  <Text style={[styles.conflictReason, { color: colors.text }]}>
-                    {contradictionReason(item, text)}
-                  </Text>
-                </View>
-                {(item.observations ?? []).slice(0, 2).map((observation) => (
-                  <View key={observation.claim_id} style={styles.observation}>
-                    <Text style={[styles.observationSource, { color: colors.accent }]}>
-                      {observation.source}
+          {!!corroborated.length && (
+            <EvidenceSection title={text.whatWeKnow} colors={colors}>
+              {corroborated.map((claim, index) => (
+                <View key={`${claim.text}-${index}`} style={styles.claimRow}>
+                  <Text style={[styles.marker, { color: colors.accent }]}>✓</Text>
+                  <View style={styles.claimCopy}>
+                    <Text style={[styles.claimText, { color: colors.text }]}>
+                      {claim.text}
                     </Text>
-                    <Text style={[styles.observationText, { color: colors.textMuted }]}>
-                      {observation.text}
+                    <Text style={[styles.claimMeta, { color: colors.textMuted }]}>
+                      {text.reportedBy} {claim.sources.join(" · ")}
                     </Text>
                   </View>
-                ))}
-              </View>
-            ))}
-          </EvidenceSection>
-        )}
+                </View>
+              ))}
+            </EvidenceSection>
+          )}
 
-        {!!unknowns.length && (
-          <EvidenceSection title={text.unknown} colors={colors}>
-            {unknowns.map((item, index) => (
-              <View key={`${item}-${index}`} style={styles.claimRow}>
-                <Text style={[styles.marker, { color: colors.textMuted }]}>?</Text>
-                <Text style={[styles.unknownText, { color: colors.textMuted }]}>
-                  {item}
-                </Text>
-              </View>
-            ))}
-          </EvidenceSection>
-        )}
-      </View>
-      <EventEvolutionPanel eventId={eventId} />
-      <EventCoveragePanel intelligence={intelligence} />
-    </>
+          {!!contradictions.length && (
+            <EvidenceSection title={text.disputed} colors={colors}>
+              {contradictions.map((item) => (
+                <View key={item.contradiction_id} style={styles.conflictCard}>
+                  <View style={styles.claimRow}>
+                    <Text style={[styles.marker, { color: colors.error }]}>!</Text>
+                    <Text style={[styles.conflictReason, { color: colors.text }]}>
+                      {contradictionReason(item, text)}
+                    </Text>
+                  </View>
+                  {(item.observations ?? []).slice(0, 2).map((observation) => (
+                    <View key={observation.claim_id} style={styles.observation}>
+                      <Text style={[styles.observationSource, { color: colors.accent }]}>
+                        {observation.source}
+                      </Text>
+                      <Text style={[styles.observationText, { color: colors.textMuted }]}>
+                        {observation.text}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </EvidenceSection>
+          )}
+
+          {!!unknowns.length && (
+            <EvidenceSection title={text.unknown} colors={colors}>
+              {unknowns.map((item, index) => (
+                <View key={`${item}-${index}`} style={styles.claimRow}>
+                  <Text style={[styles.marker, { color: colors.textMuted }]}>?</Text>
+                  <Text style={[styles.unknownText, { color: colors.textMuted }]}>
+                    {item}
+                  </Text>
+                </View>
+              ))}
+            </EvidenceSection>
+          )}
+        </View>
+      )}
+
+      {activeLens === "timeline" && <EventEvolutionPanel eventId={eventId} />}
+      {activeLens === "coverage" && intelligence && (
+        <EventCoveragePanel intelligence={intelligence} />
+      )}
+    </View>
   );
 }
 
@@ -361,8 +445,51 @@ function EvidenceSection({
 }
 
 const styles = StyleSheet.create({
-  container: {
+  lenses: {
     marginTop: 24,
+  },
+  tabBar: {
+    flexDirection: "row",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
+  },
+  tab: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 42,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 5,
+  },
+  tabSelected: {
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  tabPressed: {
+    opacity: 0.72,
+  },
+  tabDisabled: {
+    opacity: 0.4,
+  },
+  tabLabel: {
+    flexShrink: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "800",
+  },
+  tabBadge: {
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: "900",
+  },
+  container: {
+    marginTop: 10,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 18,
     padding: 20,
