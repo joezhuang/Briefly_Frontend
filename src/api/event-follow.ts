@@ -4,6 +4,7 @@ import {
   setBrieflyAccessToken,
 } from "@/auth/session";
 import { supabase } from "@/auth/supabase";
+import { captureApiError } from "@/monitoring/error-monitoring";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
 
@@ -16,15 +17,26 @@ async function requestJson<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const send = (token: string | null) =>
-    fetch(`${requireApiBaseUrl()}${path}`, {
-      ...init,
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(init.body ? { "Content-Type": "application/json" } : {}),
-        ...(init.headers ?? {}),
-      },
-    });
+  const send = async (token: string | null) => {
+    const method = String(init.method ?? "GET").toUpperCase();
+    try {
+      const response = await fetch(`${requireApiBaseUrl()}${path}`, {
+        ...init,
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(init.body ? { "Content-Type": "application/json" } : {}),
+          ...(init.headers ?? {}),
+        },
+      });
+      if (response.status >= 500) {
+        captureApiError({ route: path, method, statusCode: response.status });
+      }
+      return response;
+    } catch (error) {
+      captureApiError({ route: path, method, error });
+      throw error;
+    }
+  };
 
   let token = getBrieflyAccessToken();
   let response = await send(token);
