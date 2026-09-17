@@ -180,7 +180,6 @@ async function resolveDeviceLocation(options: {
 
 export async function enableAutoNewsLocation(): Promise<NewsLocationPreference> {
   const location = await resolveDeviceLocation({ requestPermission: true });
-  if (!location) return { mode: "auto", location: null };
   return persist({ mode: "auto", location });
 }
 
