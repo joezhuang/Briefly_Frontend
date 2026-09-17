@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import {
@@ -104,6 +104,12 @@ type CorroboratedClaim = {
   sources: string[];
 };
 
+type ConflictCopy = {
+  numericConflict: string;
+  negationConflict: string;
+  conflict: string;
+};
+
 function tokenSet(signature: string) {
   return new Set(
     signature
@@ -174,7 +180,7 @@ function buildCorroboratedClaims(
 
 function contradictionReason(
   item: EventContradictionCandidate,
-  text: (typeof copy)["en"],
+  text: ConflictCopy,
 ) {
   if (item.reason === "numeric_conflict") return text.numericConflict;
   if (item.reason === "negation_conflict") return text.negationConflict;
@@ -233,7 +239,7 @@ export function EventEvidencePanel({
     corroboration.country_count
       ? `${corroboration.country_count} ${text.countries}`
       : null,
-  ].filter(Boolean);
+  ].filter((item): item is string => Boolean(item));
 
   const stateLabel =
     assessment.confidence_state === "corroborated"
@@ -256,7 +262,7 @@ export function EventEvidencePanel({
         <Text style={[styles.state, { color: colors.accent }]}>{stateLabel}</Text>
       </View>
       {!!stats.length && (
-        <Text style={[styles.stats, { color: colors.textMuted }]}> 
+        <Text style={[styles.stats, { color: colors.textMuted }]}>
           {stats.join(" · ")}
         </Text>
       )}
@@ -267,10 +273,10 @@ export function EventEvidencePanel({
             <View key={`${claim.text}-${index}`} style={styles.claimRow}>
               <Text style={[styles.marker, { color: colors.accent }]}>✓</Text>
               <View style={styles.claimCopy}>
-                <Text style={[styles.claimText, { color: colors.text }]}> 
+                <Text style={[styles.claimText, { color: colors.text }]}>
                   {claim.text}
                 </Text>
-                <Text style={[styles.claimMeta, { color: colors.textMuted }]}> 
+                <Text style={[styles.claimMeta, { color: colors.textMuted }]}>
                   {text.reportedBy} {claim.sources.join(" · ")}
                 </Text>
               </View>
@@ -285,16 +291,16 @@ export function EventEvidencePanel({
             <View key={item.contradiction_id} style={styles.conflictCard}>
               <View style={styles.claimRow}>
                 <Text style={[styles.marker, { color: colors.error }]}>!</Text>
-                <Text style={[styles.conflictReason, { color: colors.text }]}> 
+                <Text style={[styles.conflictReason, { color: colors.text }]}>
                   {contradictionReason(item, text)}
                 </Text>
               </View>
               {(item.observations ?? []).slice(0, 2).map((observation) => (
                 <View key={observation.claim_id} style={styles.observation}>
-                  <Text style={[styles.observationSource, { color: colors.accent }]}> 
+                  <Text style={[styles.observationSource, { color: colors.accent }]}>
                     {observation.source}
                   </Text>
-                  <Text style={[styles.observationText, { color: colors.textMuted }]}> 
+                  <Text style={[styles.observationText, { color: colors.textMuted }]}>
                     {observation.text}
                   </Text>
                 </View>
@@ -309,7 +315,7 @@ export function EventEvidencePanel({
           {unknowns.map((item, index) => (
             <View key={`${item}-${index}`} style={styles.claimRow}>
               <Text style={[styles.marker, { color: colors.textMuted }]}>?</Text>
-              <Text style={[styles.unknownText, { color: colors.textMuted }]}> 
+              <Text style={[styles.unknownText, { color: colors.textMuted }]}>
                 {item}
               </Text>
             </View>
@@ -327,10 +333,10 @@ function EvidenceSection({
 }: {
   title: string;
   colors: ReturnType<typeof useBrieflyTheme>["colors"];
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <View style={[styles.section, { borderTopColor: colors.border }]}> 
+    <View style={[styles.section, { borderTopColor: colors.border }]}>
       <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
       <View style={styles.sectionBody}>{children}</View>
     </View>
