@@ -66,6 +66,7 @@ function isPublicContentPath(path: string) {
     path.startsWith("/api/articles") ||
     path.startsWith("/api/lazy-articles") ||
     path.startsWith("/api/event-timeline") ||
+    path.startsWith("/api/location") ||
     path.startsWith("/api/search")
   );
 }
@@ -334,6 +335,32 @@ export function getHomepageArticleFeed(options?: {
   if (options?.city) params.set("city", options.city);
   if (options?.region) params.set("region", options.region);
   return getJson<HomepageArticleFeed>(`/api/article-feed?${params.toString()}`);
+}
+
+export type NewsLocationCountryOption = {
+  code: string;
+  name: string;
+};
+
+export type NewsLocationRegionOption = {
+  code: string;
+  iso_code: string;
+  name: string;
+  type?: string | null;
+};
+
+export function getNewsLocationCountries() {
+  return getJson<{ countries: NewsLocationCountryOption[] }>(
+    "/api/location/countries",
+  );
+}
+
+export function getNewsLocationRegions(countryCode: string) {
+  const params = new URLSearchParams({ country_code: countryCode });
+  return getJson<{
+    country_code: string;
+    regions: NewsLocationRegionOption[];
+  }>(`/api/location/regions?${params.toString()}`);
 }
 
 export type BrieflyAccountState = {
