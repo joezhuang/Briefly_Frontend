@@ -8,6 +8,7 @@ import {
   type EventContradictionCandidate,
   type EventIntelligence,
 } from "@/api/event-intelligence";
+import { EventCoveragePanel } from "@/components/event-coverage-panel";
 import { EventEvolutionPanel } from "@/components/event-evolution-panel";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -206,7 +207,7 @@ export function EventEvidencePanel({
     setFailed(false);
     setIntelligence(null);
 
-    void getEventIntelligence(eventId)
+    void getEventIntelligence(eventId, 100)
       .then((result) => {
         if (active) setIntelligence(result);
       })
@@ -227,8 +228,17 @@ export function EventEvidencePanel({
   const contradictions = (assessment?.contradictions ?? []).slice(0, 3);
   const unknowns = uncertainties.filter(Boolean).slice(0, 4);
 
-  if (failed || !intelligence || !assessment) {
+  if (failed || !intelligence) {
     return <EventEvolutionPanel eventId={eventId} />;
+  }
+
+  if (!assessment) {
+    return (
+      <>
+        <EventEvolutionPanel eventId={eventId} />
+        <EventCoveragePanel intelligence={intelligence} />
+      </>
+    );
   }
 
   const corroboration = assessment.corroboration ?? {};
@@ -328,6 +338,7 @@ export function EventEvidencePanel({
         )}
       </View>
       <EventEvolutionPanel eventId={eventId} />
+      <EventCoveragePanel intelligence={intelligence} />
     </>
   );
 }
