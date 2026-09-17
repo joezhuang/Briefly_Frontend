@@ -46,6 +46,8 @@ export type CanonicalArticle = {
   headline: string;
   standfirst: string;
   image_url?: string | null;
+  video_url?: string | null;
+  video_thumbnail_url?: string | null;
   category?: string | null;
   ranking_score?: number | null;
   source_count?: number | null;
