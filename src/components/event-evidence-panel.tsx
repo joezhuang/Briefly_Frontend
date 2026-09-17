@@ -8,6 +8,7 @@ import {
   type EventContradictionCandidate,
   type EventIntelligence,
 } from "@/api/event-intelligence";
+import { EventEvolutionPanel } from "@/components/event-evolution-panel";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 
@@ -226,7 +227,9 @@ export function EventEvidencePanel({
   const contradictions = (assessment?.contradictions ?? []).slice(0, 3);
   const unknowns = uncertainties.filter(Boolean).slice(0, 4);
 
-  if (failed || !intelligence || !assessment) return null;
+  if (failed || !intelligence || !assessment) {
+    return <EventEvolutionPanel eventId={eventId} />;
+  }
 
   const corroboration = assessment.corroboration ?? {};
   const stats = [
@@ -251,78 +254,81 @@ export function EventEvidencePanel({
           : text.developing;
 
   return (
-    <View
-      style={[
-        styles.container,
-        { borderColor: colors.border, backgroundColor: colors.surface },
-      ]}
-    >
-      <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: colors.text }]}>{text.title}</Text>
-        <Text style={[styles.state, { color: colors.accent }]}>{stateLabel}</Text>
-      </View>
-      {!!stats.length && (
-        <Text style={[styles.stats, { color: colors.textMuted }]}>
-          {stats.join(" · ")}
-        </Text>
-      )}
+    <>
+      <View
+        style={[
+          styles.container,
+          { borderColor: colors.border, backgroundColor: colors.surface },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: colors.text }]}>{text.title}</Text>
+          <Text style={[styles.state, { color: colors.accent }]}>{stateLabel}</Text>
+        </View>
+        {!!stats.length && (
+          <Text style={[styles.stats, { color: colors.textMuted }]}>
+            {stats.join(" · ")}
+          </Text>
+        )}
 
-      {!!corroborated.length && (
-        <EvidenceSection title={text.whatWeKnow} colors={colors}>
-          {corroborated.map((claim, index) => (
-            <View key={`${claim.text}-${index}`} style={styles.claimRow}>
-              <Text style={[styles.marker, { color: colors.accent }]}>✓</Text>
-              <View style={styles.claimCopy}>
-                <Text style={[styles.claimText, { color: colors.text }]}>
-                  {claim.text}
-                </Text>
-                <Text style={[styles.claimMeta, { color: colors.textMuted }]}>
-                  {text.reportedBy} {claim.sources.join(" · ")}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </EvidenceSection>
-      )}
-
-      {!!contradictions.length && (
-        <EvidenceSection title={text.disputed} colors={colors}>
-          {contradictions.map((item) => (
-            <View key={item.contradiction_id} style={styles.conflictCard}>
-              <View style={styles.claimRow}>
-                <Text style={[styles.marker, { color: colors.error }]}>!</Text>
-                <Text style={[styles.conflictReason, { color: colors.text }]}>
-                  {contradictionReason(item, text)}
-                </Text>
-              </View>
-              {(item.observations ?? []).slice(0, 2).map((observation) => (
-                <View key={observation.claim_id} style={styles.observation}>
-                  <Text style={[styles.observationSource, { color: colors.accent }]}>
-                    {observation.source}
+        {!!corroborated.length && (
+          <EvidenceSection title={text.whatWeKnow} colors={colors}>
+            {corroborated.map((claim, index) => (
+              <View key={`${claim.text}-${index}`} style={styles.claimRow}>
+                <Text style={[styles.marker, { color: colors.accent }]}>✓</Text>
+                <View style={styles.claimCopy}>
+                  <Text style={[styles.claimText, { color: colors.text }]}>
+                    {claim.text}
                   </Text>
-                  <Text style={[styles.observationText, { color: colors.textMuted }]}>
-                    {observation.text}
+                  <Text style={[styles.claimMeta, { color: colors.textMuted }]}>
+                    {text.reportedBy} {claim.sources.join(" · ")}
                   </Text>
                 </View>
-              ))}
-            </View>
-          ))}
-        </EvidenceSection>
-      )}
+              </View>
+            ))}
+          </EvidenceSection>
+        )}
 
-      {!!unknowns.length && (
-        <EvidenceSection title={text.unknown} colors={colors}>
-          {unknowns.map((item, index) => (
-            <View key={`${item}-${index}`} style={styles.claimRow}>
-              <Text style={[styles.marker, { color: colors.textMuted }]}>?</Text>
-              <Text style={[styles.unknownText, { color: colors.textMuted }]}>
-                {item}
-              </Text>
-            </View>
-          ))}
-        </EvidenceSection>
-      )}
-    </View>
+        {!!contradictions.length && (
+          <EvidenceSection title={text.disputed} colors={colors}>
+            {contradictions.map((item) => (
+              <View key={item.contradiction_id} style={styles.conflictCard}>
+                <View style={styles.claimRow}>
+                  <Text style={[styles.marker, { color: colors.error }]}>!</Text>
+                  <Text style={[styles.conflictReason, { color: colors.text }]}>
+                    {contradictionReason(item, text)}
+                  </Text>
+                </View>
+                {(item.observations ?? []).slice(0, 2).map((observation) => (
+                  <View key={observation.claim_id} style={styles.observation}>
+                    <Text style={[styles.observationSource, { color: colors.accent }]}>
+                      {observation.source}
+                    </Text>
+                    <Text style={[styles.observationText, { color: colors.textMuted }]}>
+                      {observation.text}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ))}
+          </EvidenceSection>
+        )}
+
+        {!!unknowns.length && (
+          <EvidenceSection title={text.unknown} colors={colors}>
+            {unknowns.map((item, index) => (
+              <View key={`${item}-${index}`} style={styles.claimRow}>
+                <Text style={[styles.marker, { color: colors.textMuted }]}>?</Text>
+                <Text style={[styles.unknownText, { color: colors.textMuted }]}>
+                  {item}
+                </Text>
+              </View>
+            ))}
+          </EvidenceSection>
+        )}
+      </View>
+      <EventEvolutionPanel eventId={eventId} />
+    </>
   );
 }
 
