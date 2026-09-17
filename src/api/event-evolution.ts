@@ -1,3 +1,5 @@
+import { captureApiError } from "@/monitoring/error-monitoring";
+
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
 
 export type EventTimelineItem = {
@@ -24,9 +26,17 @@ function requireApiBaseUrl() {
 export async function getEventTimeline(
   eventId: string,
 ): Promise<EventTimelineSnapshot> {
-  const response = await fetch(
-    `${requireApiBaseUrl()}/api/events/${encodeURIComponent(eventId)}/timeline`,
-  );
+  const route = `/api/events/${encodeURIComponent(eventId)}/timeline`;
+  let response: Response;
+  try {
+    response = await fetch(`${requireApiBaseUrl()}${route}`);
+  } catch (error) {
+    captureApiError({ route, method: "GET", error });
+    throw error;
+  }
+  if (response.status >= 500) {
+    captureApiError({ route, method: "GET", statusCode: response.status });
+  }
   if (!response.ok) {
     const message = await response.text().catch(() => "");
     throw new Error(
