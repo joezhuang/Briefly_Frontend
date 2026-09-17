@@ -7,6 +7,7 @@ export type FeedLocation = {
   countryCode: string | null;
   city: string;
   region: string | null;
+  regionCode: string | null;
   source: "device" | "manual";
 };
 
@@ -39,6 +40,11 @@ function firstText(...values: Array<string | null | undefined>) {
 function normalizeCountryCode(value: string | null | undefined) {
   const code = String(value || "").trim().toUpperCase();
   return /^[A-Z]{2}$/.test(code) ? code : null;
+}
+
+function normalizeRegionCode(value: string | null | undefined) {
+  const code = String(value || "").trim().toUpperCase();
+  return code || null;
 }
 
 function canonicalCountryName(
@@ -76,6 +82,7 @@ function validLocation(value: unknown): FeedLocation | null {
     country,
     countryCode: normalizeCountryCode(candidate.countryCode),
     region: firstText(candidate.region) || null,
+    regionCode: normalizeRegionCode(candidate.regionCode),
     city: firstText(candidate.city),
     source: candidate.source === "device" ? "device" : "manual",
   };
@@ -159,6 +166,7 @@ async function reverseGeocodeWeb(
     country,
     countryCode,
     region: firstText(payload.region) || null,
+    regionCode: null,
     city: firstText(payload.city),
     source: "device",
   };
@@ -208,6 +216,7 @@ async function resolveDeviceLocation(options: {
         country,
         countryCode,
         region,
+        regionCode: null,
         city,
         source: "device",
       };
@@ -239,6 +248,7 @@ export async function saveManualFeedLocation(input: {
   country: string;
   countryCode?: string | null;
   region?: string | null;
+  regionCode?: string | null;
   city?: string | null;
 }): Promise<NewsLocationPreference> {
   const country = firstText(input.country);
@@ -248,6 +258,7 @@ export async function saveManualFeedLocation(input: {
     country,
     countryCode: normalizeCountryCode(input.countryCode),
     region: firstText(input.region) || null,
+    regionCode: normalizeRegionCode(input.regionCode),
     city: firstText(input.city),
     source: "manual",
   };
