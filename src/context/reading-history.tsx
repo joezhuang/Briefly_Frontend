@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import { trackProductEvent } from "@/analytics/product-analytics";
 import { useBrieflyAuth } from "@/context/auth";
 import type { CanonicalArticle } from "@/models/article";
 import {
@@ -144,6 +145,17 @@ export function ReadingHistoryProvider({ children }: PropsWithChildren) {
           ...current.items.filter((item) => item.event_id !== article.event_id),
         ].slice(0, READING_HISTORY_LIMIT);
         return { ownerKey, items: next };
+      });
+
+      trackProductEvent("story_open", {
+        eventId: article.event_id,
+        articleVersionId: article.article_version_id,
+        properties: {
+          source: href.includes("savedSnapshotId=") ? "saved" : "story",
+          language: article.requested_language ?? article.language,
+          content_language: article.content_language ?? article.language,
+          canonical_stale: article.canonical_stale === true,
+        },
       });
     },
     [ownerKey, ready],
