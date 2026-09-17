@@ -28,9 +28,6 @@ export default function SavedScreen() {
           <AppHeader />
 
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>
-              {t.savedStories}
-            </Text>
             <Text style={[styles.subtitle, { color: colors.textMuted }]}>
               {t.savedSubtitle}
             </Text>
@@ -74,9 +71,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.pagePaddingCompact,
   },
   header: { paddingVertical: 28 },
-  title: { fontSize: 42, fontWeight: "900" },
   subtitle: {
-    marginTop: 8,
     maxWidth: 760,
     fontSize: 18,
     lineHeight: 27,
