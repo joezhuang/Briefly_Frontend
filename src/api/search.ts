@@ -9,7 +9,7 @@ export type ArticleSearchResponse = {
   query: string;
   language: string;
   feed_language: "en";
-  search_scope: "canonical_event";
+  search_scope: "event_universe";
 };
 
 export async function searchBrieflyArticles(
