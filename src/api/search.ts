@@ -1,4 +1,5 @@
 import { getBrieflyAccessToken } from "@/auth/session";
+import { captureApiError } from "@/monitoring/error-monitoring";
 import type { CanonicalArticle } from "@/models/article";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
@@ -36,9 +37,23 @@ export async function searchBrieflyArticles(
     headers["X-Briefly-Test-Subscriber"] = "1";
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/article-search?${params.toString()}`, {
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/article-search?${params.toString()}`,
+      { headers },
+    );
+  } catch (error) {
+    captureApiError({ route: "/api/article-search", method: "GET", error });
+    throw error;
+  }
+  if (response.status >= 500) {
+    captureApiError({
+      route: "/api/article-search",
+      method: "GET",
+      statusCode: response.status,
+    });
+  }
 
   if (!response.ok) {
     const message = await response.text().catch(() => "");
