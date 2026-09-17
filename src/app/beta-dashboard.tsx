@@ -5,7 +5,9 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -13,9 +15,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   getBetaDashboard,
+  getBetaDashboardAppConfig,
   setBetaDashboardErrorResolution,
+  updateBetaDashboardAppConfig,
   type BetaDashboardErrorGroup,
   type BetaDashboardSnapshot,
+  type BrieflyAppConfig,
 } from "@/api/briefly";
 import { AppHeader } from "@/components/app-header";
 import { ScreenState } from "@/components/screen-state";
@@ -216,6 +221,267 @@ function ErrorGroupCard({
   );
 }
 
+function ConfigToggle({
+  label,
+  detail,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  detail?: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}) {
+  const { colors } = useBrieflyTheme();
+  return (
+    <View
+      style={[
+        styles.configRow,
+        { borderBottomColor: colors.border },
+      ]}
+    >
+      <View style={styles.configCopy}>
+        <Text style={[styles.configLabel, { color: colors.text }]}>{label}</Text>
+        {!!detail && (
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            {detail}
+          </Text>
+        )}
+      </View>
+      <Switch value={value} onValueChange={onValueChange} />
+    </View>
+  );
+}
+
+function RuntimeConfigEditor({
+  config,
+  loading,
+  saving,
+  error,
+  saved,
+  onChange,
+  onSave,
+}: {
+  config: BrieflyAppConfig | null;
+  loading: boolean;
+  saving: boolean;
+  error: boolean;
+  saved: boolean;
+  onChange: <K extends keyof BrieflyAppConfig>(
+    key: K,
+    value: BrieflyAppConfig[K],
+  ) => void;
+  onSave: () => void;
+}) {
+  const { colors } = useBrieflyTheme();
+
+  if (loading && !config) {
+    return <ScreenState loading message="Loading runtime configuration…" />;
+  }
+
+  if (!config) {
+    return (
+      <Text style={[styles.empty, { color: colors.textMuted }]}>
+        Runtime configuration is unavailable.
+      </Text>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.configPanel,
+        { borderColor: colors.border, backgroundColor: colors.surface },
+      ]}
+    >
+      <ConfigToggle
+        label="Email/password login"
+        detail="Enable the reviewer email/password sign-in flow."
+        value={config.email_password_login_enabled}
+        onValueChange={(value) =>
+          onChange("email_password_login_enabled", value)
+        }
+      />
+
+      <View
+        style={[
+          styles.configFieldRow,
+          { borderBottomColor: colors.border },
+        ]}
+      >
+        <View style={styles.configCopy}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Reviewer email
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Optional reviewer account shown by the current review-login config.
+          </Text>
+        </View>
+        <TextInput
+          value={config.reviewer_email ?? ""}
+          onChangeText={(value) => onChange("reviewer_email", value || null)}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          placeholder="reviewer@example.com"
+          placeholderTextColor={colors.textMuted}
+          style={[
+            styles.configInput,
+            {
+              borderColor: colors.border,
+              backgroundColor: colors.background,
+              color: colors.text,
+            },
+          ]}
+        />
+      </View>
+
+      <ConfigToggle
+        label="Ads enabled"
+        detail="Master advertising switch."
+        value={config.ads_enabled}
+        onValueChange={(value) => onChange("ads_enabled", value)}
+      />
+      <ConfigToggle
+        label="Ads free for Pro"
+        detail="Suppress ads for Briefly Pro users."
+        value={config.ads_free_for_pro}
+        onValueChange={(value) => onChange("ads_free_for_pro", value)}
+      />
+      <ConfigToggle
+        label="Home ads"
+        detail="Allow ad placements in the home feed."
+        value={config.home_ad_enabled}
+        onValueChange={(value) => onChange("home_ad_enabled", value)}
+      />
+
+      <View
+        style={[
+          styles.configFieldRow,
+          { borderBottomColor: colors.border },
+        ]}
+      >
+        <View style={styles.configCopy}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Home ad interval
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Number of feed items between home ad placements. Allowed: 1–100.
+          </Text>
+        </View>
+        <TextInput
+          value={String(config.home_ad_interval)}
+          onChangeText={(value) => {
+            const digits = value.replace(/[^0-9]/g, "");
+            if (!digits) return;
+            onChange(
+              "home_ad_interval",
+              Math.max(1, Math.min(100, Number(digits))),
+            );
+          }}
+          keyboardType="number-pad"
+          style={[
+            styles.configInputSmall,
+            {
+              borderColor: colors.border,
+              backgroundColor: colors.background,
+              color: colors.text,
+            },
+          ]}
+        />
+      </View>
+
+      <ConfigToggle
+        label="Story ads"
+        detail="Allow ad placements on StoryDetail."
+        value={config.story_ad_enabled}
+        onValueChange={(value) => onChange("story_ad_enabled", value)}
+      />
+
+      <View
+        style={[
+          styles.configFieldRow,
+          { borderBottomColor: colors.border },
+        ]}
+      >
+        <View style={styles.configCopy}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Ad provider
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Lowercase provider identifier, for example admob.
+          </Text>
+        </View>
+        <TextInput
+          value={config.ad_provider}
+          onChangeText={(value) =>
+            onChange(
+              "ad_provider",
+              value.toLowerCase().replace(/[^a-z0-9_-]/g, ""),
+            )
+          }
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={[
+            styles.configInput,
+            {
+              borderColor: colors.border,
+              backgroundColor: colors.background,
+              color: colors.text,
+            },
+          ]}
+        />
+      </View>
+
+      <ConfigToggle
+        label="Homepage video"
+        detail="Allow source video playback on the homepage."
+        value={config.homepage_video_enabled}
+        onValueChange={(value) => onChange("homepage_video_enabled", value)}
+      />
+      <ConfigToggle
+        label="Story video"
+        detail="Allow source video playback inside stories."
+        value={config.story_video_enabled}
+        onValueChange={(value) => onChange("story_video_enabled", value)}
+      />
+
+      <View style={styles.configActions}>
+        <Pressable
+          accessibilityRole="button"
+          disabled={saving}
+          onPress={onSave}
+          style={({ pressed }) => [
+            styles.configSaveButton,
+            {
+              backgroundColor: colors.text,
+              opacity: saving ? 0.5 : pressed ? 0.72 : 1,
+            },
+          ]}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color={colors.background} />
+          ) : (
+            <Text style={[styles.configSaveText, { color: colors.background }]}>
+              Save runtime config
+            </Text>
+          )}
+        </Pressable>
+        {saved && !error && (
+          <Text style={[styles.configStatus, { color: colors.textMuted }]}>
+            Saved.
+          </Text>
+        )}
+        {error && (
+          <Text style={[styles.configStatus, { color: colors.accent }]}>
+            Save failed. Current settings were not replaced in the editor.
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
 export default function BetaDashboardScreen() {
   const { width } = useWindowDimensions();
   const { ready: authReady, user, account } = useBrieflyAuth();
@@ -227,6 +493,11 @@ export default function BetaDashboardScreen() {
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState(false);
   const [busyFingerprint, setBusyFingerprint] = useState<string | null>(null);
+  const [appConfig, setAppConfig] = useState<BrieflyAppConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [configSaving, setConfigSaving] = useState(false);
+  const [configError, setConfigError] = useState(false);
+  const [configSaved, setConfigSaved] = useState(false);
 
   const refreshDashboard = useCallback(async () => {
     if (!user) return;
@@ -282,6 +553,55 @@ export default function BetaDashboardScreen() {
       active = false;
     };
   }, [authReady, days, user]);
+
+  useEffect(() => {
+    if (!authReady || !user || account?.is_admin !== true) return;
+
+    let active = true;
+
+    getBetaDashboardAppConfig()
+      .then((next) => {
+        if (!active) return;
+        setAppConfig(next);
+        setConfigError(false);
+      })
+      .catch(() => {
+        if (active) setConfigError(true);
+      })
+      .finally(() => {
+        if (active) setConfigLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [account?.is_admin, authReady, user]);
+
+  const changeAppConfig = <K extends keyof BrieflyAppConfig>(
+    key: K,
+    value: BrieflyAppConfig[K],
+  ) => {
+    setConfigSaved(false);
+    setAppConfig((current) =>
+      current ? { ...current, [key]: value } : current,
+    );
+  };
+
+  const saveAppConfig = async () => {
+    if (!appConfig) return;
+    setConfigSaving(true);
+    setConfigSaved(false);
+    setConfigError(false);
+    try {
+      const savedConfig = await updateBetaDashboardAppConfig(appConfig);
+      setAppConfig(savedConfig);
+      setConfigSaved(true);
+    } catch {
+      setConfigError(true);
+    } finally {
+      setConfigSaving(false);
+    }
+  };
 
   const maxDailySessions = useMemo(
     () =>
@@ -541,6 +861,22 @@ export default function BetaDashboardScreen() {
 
               <View style={styles.section}>
                 <SectionTitle
+                  title="Runtime configuration"
+                  detail="Admin-only controls backed by briefly_app_config. Changes take effect through the existing public app-config endpoint."
+                />
+                <RuntimeConfigEditor
+                  config={appConfig}
+                  loading={configLoading}
+                  saving={configSaving}
+                  error={configError}
+                  saved={configSaved}
+                  onChange={changeAppConfig}
+                  onSave={() => void saveAppConfig()}
+                />
+              </View>
+
+              <View style={styles.section}>
+                <SectionTitle
                   title="Error groups"
                   detail="Grouped by sanitized fingerprint. Unresolved groups are shown first."
                 />
@@ -676,6 +1012,88 @@ const styles = StyleSheet.create({
   activityValue: { fontSize: 12, fontWeight: "600" },
   track: { height: 7, borderRadius: 999, overflow: "hidden" },
   fill: { height: "100%", borderRadius: 999 },
+  configPanel: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+  configRow: {
+    minHeight: 68,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 20,
+  },
+  configFieldRow: {
+    minHeight: 82,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 14,
+  },
+  configCopy: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 300,
+    gap: 4,
+  },
+  configLabel: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  configDetail: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  configInput: {
+    minWidth: 220,
+    minHeight: 40,
+    paddingHorizontal: 11,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    fontSize: 13,
+  },
+  configInputSmall: {
+    width: 90,
+    minHeight: 40,
+    paddingHorizontal: 11,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    fontSize: 13,
+    textAlign: "center",
+  },
+  configActions: {
+    minHeight: 70,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  configSaveButton: {
+    minHeight: 40,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  configSaveText: {
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  configStatus: {
+    flexShrink: 1,
+    fontSize: 12,
+    lineHeight: 18,
+  },
   errorList: { gap: 12 },
   errorCard: {
     borderWidth: StyleSheet.hairlineWidth,
