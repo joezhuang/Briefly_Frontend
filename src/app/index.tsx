@@ -533,35 +533,6 @@ export default function HomeScreen() {
       <View style={[styles.header, mobileHeader && styles.headerCompact]}>
         <View style={styles.headingRow}>
           <View style={styles.headingCopy}>
-            <View style={styles.titleRow}>
-              <Text
-                style={[
-                  styles.title,
-                  mobileHeader && styles.titleCompact,
-                  { color: colors.text },
-                ]}
-              >
-                {t.topStories}
-              </Text>
-              {Platform.OS === "web" && (
-                <Pressable
-                  onPress={() => void loadFeed("refresh")}
-                  disabled={refreshing || !locationUsable}
-                  style={({ pressed }) => [
-                    styles.refreshButton,
-                    { borderColor: colors.border },
-                    (refreshing || !locationUsable) && styles.refreshDisabled,
-                    pressed && styles.refreshPressed,
-                  ]}
-                >
-                  <Text
-                    style={[styles.refreshText, { color: colors.textMuted }]}
-                  >
-                    {copy.refresh}
-                  </Text>
-                </Pressable>
-              )}
-            </View>
             <Text
               style={[
                 styles.subtitle,
@@ -575,7 +546,25 @@ export default function HomeScreen() {
             </Text>
           </View>
 
-          {!mobileHeader && scopeControls}
+          <View style={styles.headerActions}>
+            {Platform.OS === "web" && (
+              <Pressable
+                onPress={() => void loadFeed("refresh")}
+                disabled={refreshing || !locationUsable}
+                style={({ pressed }) => [
+                  styles.refreshButton,
+                  { borderColor: colors.border },
+                  (refreshing || !locationUsable) && styles.refreshDisabled,
+                  pressed && styles.refreshPressed,
+                ]}
+              >
+                <Text style={[styles.refreshText, { color: colors.textMuted }]}>
+                  {copy.refresh}
+                </Text>
+              </Pressable>
+            )}
+            {!mobileHeader && scopeControls}
+          </View>
         </View>
 
         {mobileHeader && scopeControls}
@@ -812,30 +801,24 @@ const styles = StyleSheet.create({
   },
   pageWithoutBottomPadding: { paddingBottom: 0 },
   pageCompact: { paddingHorizontal: layout.pagePaddingCompact },
-  header: { paddingTop: 28, paddingBottom: 24, gap: 20 },
-  headerCompact: { paddingTop: 16, paddingBottom: 14, gap: 12 },
+  header: { paddingTop: 22, paddingBottom: 20, gap: 18 },
+  headerCompact: { paddingTop: 14, paddingBottom: 12, gap: 12 },
   headingRow: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 18,
   },
   headingCopy: { flex: 1, minWidth: 0 },
-  titleRow: {
+  headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    flexShrink: 0,
     gap: 10,
   },
-  title: {
-    fontSize: 43,
-    lineHeight: 50,
-    fontWeight: "900",
-    letterSpacing: -1.1,
-  },
-  titleCompact: { fontSize: 31, lineHeight: 36, letterSpacing: -0.6 },
-  subtitle: { marginTop: 6, fontSize: 21, lineHeight: 29 },
-  subtitleCompact: { marginTop: 4, fontSize: 15, lineHeight: 20 },
+  subtitle: { fontSize: 21, lineHeight: 29 },
+  subtitleCompact: { fontSize: 15, lineHeight: 20 },
   refreshButton: {
     paddingHorizontal: 10,
     paddingVertical: 5,
