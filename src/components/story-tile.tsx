@@ -18,7 +18,12 @@ import { useBrieflyLanguage } from "@/context/language";
 import type { CanonicalArticle } from "@/models/article";
 
 type TileSize = "hero" | "secondary" | "standard";
-type Props = { article: CanonicalArticle; size?: TileSize; href?: string };
+type Props = {
+  article: CanonicalArticle;
+  size?: TileSize;
+  href?: string;
+  videoEnabled?: boolean;
+};
 
 type ActiveVideoListener = (eventId: string | null) => void;
 let activeVideoEventId: string | null = null;
@@ -43,7 +48,12 @@ const translationCopy: Record<string, { translate: string; original: string; ret
   "zh-TW": { translate: "翻譯", original: "原文", retry: "重試", play: "播放", close: "關閉影片" },
 };
 
-export function StoryTile({ article, size = "standard", href }: Props) {
+export function StoryTile({
+  article,
+  size = "standard",
+  href,
+  videoEnabled = true,
+}: Props) {
   const { language, t } = useBrieflyLanguage();
   const [translation, setTranslation] = useState<CardTranslation | null>(null);
   const [showTranslation, setShowTranslation] = useState(false);
@@ -53,9 +63,15 @@ export function StoryTile({ article, size = "standard", href }: Props) {
 
   useEffect(() => {
     return subscribeActiveHomepageVideo((eventId) => {
-      setPlayingVideo(eventId === article.event_id);
+      setPlayingVideo(videoEnabled && eventId === article.event_id);
     });
-  }, [article.event_id]);
+  }, [article.event_id, videoEnabled]);
+
+  useEffect(() => {
+    if (!videoEnabled && activeVideoEventId === article.event_id) {
+      setActiveHomepageVideo(null);
+    }
+  }, [article.event_id, videoEnabled]);
 
   const height = size === "hero" ? 520 : size === "secondary" ? 252 : 270;
   const headlineStyle =
@@ -65,7 +81,7 @@ export function StoryTile({ article, size = "standard", href }: Props) {
         ? styles.secondaryHeadline
         : styles.standardHeadline;
   const sourceCount = article.source_count ?? article.sources_used?.length ?? 0;
-  const videoUrl = article.video_url ?? null;
+  const videoUrl = videoEnabled ? article.video_url ?? null : null;
   const imageUrl = article.video_thumbnail_url || article.image_url || null;
   const storyHref =
     href ??
