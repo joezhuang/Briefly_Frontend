@@ -7,6 +7,7 @@ import { Fragment, PropsWithChildren, useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import { AppErrorBoundary } from "@/components/app-error-boundary";
 import { GlobalPodcastPlayer } from "@/components/global-podcast-player";
 import { AnalysisReadinessProvider } from "@/context/analysis-readiness";
 import { BrieflyAuthProvider } from "@/context/auth";
@@ -14,6 +15,7 @@ import { LanguageProvider } from "@/context/language";
 import { PodcastPlayerProvider } from "@/context/podcast-player";
 import { ReadingHistoryProvider } from "@/context/reading-history";
 import { SavedArticlesProvider } from "@/context/saved-articles";
+import { installGlobalErrorMonitoring } from "@/monitoring/error-monitoring";
 import {
   BrieflyThemeProvider,
   useBrieflyTheme,
@@ -123,8 +125,11 @@ function AppStack() {
 }
 
 export default function RootLayout() {
+  useEffect(() => installGlobalErrorMonitoring(), []);
+
   return (
     <SafeAreaProvider>
+      <AppErrorBoundary>
       <SystemLocaleGate>
         <LanguageProvider>
           <BrieflyThemeProvider>
@@ -142,6 +147,7 @@ export default function RootLayout() {
           </BrieflyThemeProvider>
         </LanguageProvider>
       </SystemLocaleGate>
+      </AppErrorBoundary>
     </SafeAreaProvider>
   );
 }
