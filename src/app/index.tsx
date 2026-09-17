@@ -30,13 +30,12 @@ import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
+import { getFeedLocation } from "@/services/feed-location";
 import { layout } from "@/theme/tokens";
 
 const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
 const REFRESH_FRESHNESS_MS = 2 * 60 * 1000;
-const DEFAULT_COUNTRY = "Australia";
-const DEFAULT_CITY = "Sydney";
 const PAGE_SIZE = 20;
 const LOAD_MORE_THRESHOLD = 800;
 const VIRTUAL_BATCH_SIZE = 6;
@@ -206,12 +205,13 @@ export default function HomeScreen() {
       const offset = mode === "more" ? articlesRef.current.length : 0;
 
       try {
+        const location = scope === "top" ? null : await getFeedLocation();
         const result = await getHomepageArticleFeed({
           scope,
           language,
           includeDraft: PREVIEW_DRAFTS,
-          country: DEFAULT_COUNTRY,
-          city: DEFAULT_CITY,
+          country: location?.country,
+          city: location?.city,
           limit: PAGE_SIZE,
           offset,
         });
