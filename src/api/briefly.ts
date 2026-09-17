@@ -382,7 +382,100 @@ export type BrieflyAccountState = {
   authenticated: boolean;
   email: string | null;
   translation_entitled: boolean;
+  is_admin: boolean;
 };
+
+export type BetaDashboardEventCount = {
+  event_name: string;
+  count: number;
+  sessions: number;
+};
+
+export type BetaDashboardDailyUsage = {
+  day: string;
+  events: number;
+  sessions: number;
+};
+
+export type BetaDashboardPlatform = {
+  platform: string;
+  events: number;
+  sessions: number;
+};
+
+export type BetaDashboardErrorGroup = {
+  fingerprint: string;
+  occurrences: number;
+  unresolved_occurrences: number;
+  first_seen: string;
+  last_seen: string;
+  source: "client" | "server";
+  severity: "warning" | "error" | "fatal";
+  error_type: string;
+  route: string | null;
+  status_code: number | null;
+  exception_type: string | null;
+  message: string;
+};
+
+export type BetaDashboardSnapshot = {
+  window_days: number;
+  generated_at: string;
+  product: {
+    summary: {
+      total_events: number;
+      sessions: number;
+      authenticated_users: number;
+    };
+    event_counts: BetaDashboardEventCount[];
+    daily_usage: BetaDashboardDailyUsage[];
+    platforms: BetaDashboardPlatform[];
+    funnel: {
+      story_open_sessions: number;
+      story_save_sessions: number;
+      event_follow_sessions: number;
+      following_view_sessions: number;
+      story_save_rate: number;
+      event_follow_rate: number;
+      following_view_rate: number;
+    };
+  };
+  errors: {
+    summary: {
+      total_errors: number;
+      unresolved_errors: number;
+      client_errors: number;
+      server_errors: number;
+      unique_fingerprints: number;
+    };
+    groups: BetaDashboardErrorGroup[];
+  };
+};
+
+export function getBetaDashboard(days = 7) {
+  const params = new URLSearchParams({
+    days: String(Math.max(1, Math.min(days, 90))),
+  });
+  return getJson<BetaDashboardSnapshot>(
+    "/api/beta-dashboard?" + params.toString(),
+  );
+}
+
+export function setBetaDashboardErrorResolution(
+  fingerprint: string,
+  resolved: boolean,
+) {
+  return postJson<{
+    status: "resolved" | "reopened";
+    fingerprint: string;
+    changed: number;
+  }>(
+    "/api/beta-dashboard/errors/" +
+      encodeURIComponent(fingerprint) +
+      "/resolution",
+    { resolved },
+  );
+}
 
 export function getCurrentBrieflyAccount() {
   return getJson<BrieflyAccountState>("/api/me");
