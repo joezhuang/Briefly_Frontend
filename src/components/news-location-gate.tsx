@@ -10,32 +10,33 @@ import {
 
 import type { HomepageFeedScope } from "@/api/briefly";
 import { useBrieflyTheme } from "@/context/theme";
-import type { FeedLocation } from "@/services/feed-location";
+import type {
+  FeedLocation,
+  NewsLocationMode,
+} from "@/services/feed-location";
 
 type Props = {
   scope: Exclude<HomepageFeedScope, "top">;
+  mode: NewsLocationMode;
   location: FeedLocation | null;
   busy?: boolean;
   error?: string | null;
-  onUseLocation: () => void;
-  onSaveManual: (input: {
-    country: string;
-    region: string;
-  }) => void;
-  onChangeLocation: () => void;
+  onEnableAuto: () => void;
+  onSaveManual: (input: { country: string; region: string }) => void;
+  onDisable: () => void;
 };
 
 export function NewsLocationGate({
   scope,
+  mode,
   location,
   busy = false,
   error,
-  onUseLocation,
+  onEnableAuto,
   onSaveManual,
-  onChangeLocation,
+  onDisable,
 }: Props) {
   const { colors } = useBrieflyTheme();
-  const [manualOpen, setManualOpen] = useState(false);
   const [country, setCountry] = useState("");
   const [region, setRegion] = useState("");
 
@@ -43,39 +44,50 @@ export function NewsLocationGate({
     if (!location) return;
     setCountry(location.country);
     setRegion(location.region ?? "");
-    setManualOpen(false);
   }, [location]);
 
+  const localName = location?.region || location?.city || "";
   const usable =
-    !!location?.country && (scope === "national" || !!location.region);
+    !!location?.country && (scope === "national" || !!localName);
+  const locationText = !location
+    ? null
+    : scope === "national"
+      ? location.country
+      : [localName, location.country].filter(Boolean).join(" · ");
 
-  if (usable && location) {
-    const value =
-      scope === "national"
-        ? location.country
-        : [location.region, location.country].filter(Boolean).join(" · ");
-
+  const modeButton = (
+    value: NewsLocationMode,
+    label: string,
+    onPress: () => void,
+  ) => {
+    const selected = mode === value;
     return (
-      <View style={[styles.activeRow, { borderColor: colors.border }]}> 
-        <View style={styles.activeCopy}>
-          <Text style={[styles.activeLabel, { color: colors.textMuted }]}> 
-            {scope === "national" ? "NATIONAL NEWS" : "LOCAL NEWS"}
-          </Text>
-          <Text style={[styles.activeValue, { color: colors.text }]}>{value}</Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onChangeLocation}
-          style={({ pressed }) => [
-            styles.smallButton,
-            { borderColor: colors.border, opacity: pressed ? 0.65 : 1 },
+      <Pressable
+        key={value}
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        disabled={busy}
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.modeButton,
+          {
+            borderColor: selected ? colors.text : colors.border,
+            backgroundColor: selected ? colors.text : "transparent",
+            opacity: pressed || busy ? 0.65 : 1,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.modeText,
+            { color: selected ? colors.background : colors.text },
           ]}
         >
-          <Text style={[styles.smallButtonText, { color: colors.text }]}>Change</Text>
-        </Pressable>
-      </View>
+          {label}
+        </Text>
+      </Pressable>
     );
-  }
+  };
 
   return (
     <View
@@ -84,46 +96,49 @@ export function NewsLocationGate({
         { backgroundColor: colors.surface, borderColor: colors.border },
       ]}
     >
-      <Text style={[styles.title, { color: colors.text }]}> 
-        {scope === "national" ? "Set your national news location" : "Set your local news location"}
-      </Text>
-      <Text style={[styles.body, { color: colors.textMuted }]}> 
-        {scope === "national"
-          ? "Briefly only uses location after you choose to. Allow location to detect your country, or choose it manually."
-          : "Briefly only uses location after you choose to. Allow location to detect your state, province or region, or choose it manually."}
-      </Text>
-
-      <View style={styles.actions}>
-        <Pressable
-          accessibilityRole="button"
-          disabled={busy}
-          onPress={onUseLocation}
-          style={({ pressed }) => [
-            styles.primaryButton,
-            { backgroundColor: colors.text, opacity: pressed || busy ? 0.7 : 1 },
-          ]}
-        >
-          {busy ? (
-            <ActivityIndicator size="small" color={colors.background} />
-          ) : (
-            <Text style={[styles.primaryText, { color: colors.background }]}>Use my location</Text>
+      <View style={styles.headerRow}>
+        <View style={styles.headerCopy}>
+          <Text style={[styles.eyebrow, { color: colors.textMuted }]}>NEWS LOCATION</Text>
+          <Text style={[styles.title, { color: colors.text }]}> 
+            {scope === "national" ? "National news" : "Local news"}
+          </Text>
+          {!!locationText && mode !== "off" && (
+            <Text style={[styles.current, { color: colors.textMuted }]}>{locationText}</Text>
           )}
-        </Pressable>
-
-        <Pressable
-          accessibilityRole="button"
-          disabled={busy}
-          onPress={() => setManualOpen((value) => !value)}
-          style={({ pressed }) => [
-            styles.secondaryButton,
-            { borderColor: colors.border, opacity: pressed || busy ? 0.7 : 1 },
-          ]}
-        >
-          <Text style={[styles.secondaryText, { color: colors.text }]}>Choose manually</Text>
-        </Pressable>
+        </View>
+        {busy && <ActivityIndicator size="small" color={colors.textMuted} />}
       </View>
 
-      {manualOpen && (
+      <View style={styles.modeRow}>
+        {modeButton("auto", "Auto", onEnableAuto)}
+        {modeButton("manual", "Manual", () => {
+          if (mode !== "manual" && location) {
+            setCountry(location.country);
+            setRegion(location.region ?? "");
+          }
+          if (mode !== "manual" && !location) {
+            setCountry("");
+            setRegion("");
+          }
+        })}
+        {modeButton("off", "Off", onDisable)}
+      </View>
+
+      {mode === "off" && (
+        <Text style={[styles.body, { color: colors.textMuted }]}> 
+          National and Local personalization is off. Top news still works normally.
+        </Text>
+      )}
+
+      {mode === "auto" && (
+        <Text style={[styles.body, { color: colors.textMuted }]}> 
+          {usable
+            ? "Briefly uses your device location for news relevance. Tap Auto again to update your current location."
+            : "Tap Auto to allow location access. Briefly will only request device location after you choose this mode."}
+        </Text>
+      )}
+
+      {mode === "manual" && (
         <View style={styles.manual}>
           <TextInput
             value={country}
@@ -173,9 +188,17 @@ export function NewsLocationGate({
               },
             ]}
           >
-            <Text style={[styles.primaryText, { color: colors.background }]}>Save news location</Text>
+            <Text style={[styles.saveText, { color: colors.background }]}>Save location</Text>
           </Pressable>
         </View>
+      )}
+
+      {mode !== "off" && !usable && (
+        <Text style={[styles.notice, { color: colors.textMuted }]}> 
+          {scope === "national"
+            ? "Set a country before loading National news."
+            : "Set a state, province or region before loading Local news."}
+        </Text>
       )}
 
       {!!error && <Text style={[styles.error, { color: colors.textMuted }]}>{error}</Text>}
@@ -187,31 +210,32 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 16,
-    padding: 18,
+    padding: 16,
     marginBottom: 18,
-    gap: 10,
+    gap: 11,
   },
-  title: { fontSize: 20, lineHeight: 25, fontWeight: "900" },
-  body: { fontSize: 14, lineHeight: 21 },
-  actions: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 4 },
-  primaryButton: {
-    minHeight: 42,
-    paddingHorizontal: 16,
-    borderRadius: 999,
+  headerRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    gap: 12,
   },
-  secondaryButton: {
-    minHeight: 42,
-    paddingHorizontal: 16,
+  headerCopy: { flex: 1, gap: 2 },
+  eyebrow: { fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
+  title: { fontSize: 18, lineHeight: 23, fontWeight: "900" },
+  current: { fontSize: 13, lineHeight: 18, fontWeight: "700" },
+  modeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  modeButton: {
+    minHeight: 34,
+    paddingHorizontal: 14,
     borderRadius: 999,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryText: { fontSize: 14, fontWeight: "800" },
-  secondaryText: { fontSize: 14, fontWeight: "800" },
-  manual: { gap: 10, marginTop: 4 },
+  modeText: { fontSize: 12, fontWeight: "800" },
+  body: { fontSize: 13, lineHeight: 19 },
+  manual: { gap: 10 },
   input: {
     minHeight: 46,
     borderWidth: 1,
@@ -221,32 +245,13 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     alignSelf: "flex-start",
-    minHeight: 42,
+    minHeight: 40,
     paddingHorizontal: 16,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
   },
-  error: { fontSize: 13, lineHeight: 19 },
-  activeRow: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    marginBottom: 18,
-    paddingBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  activeCopy: { flex: 1, gap: 2 },
-  activeLabel: { fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
-  activeValue: { fontSize: 15, fontWeight: "800" },
-  smallButton: {
-    minHeight: 34,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  smallButtonText: { fontSize: 12, fontWeight: "800" },
+  saveText: { fontSize: 13, fontWeight: "800" },
+  notice: { fontSize: 12, lineHeight: 18 },
+  error: { fontSize: 12, lineHeight: 18 },
 });
