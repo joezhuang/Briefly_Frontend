@@ -7,6 +7,7 @@ import {
   getEventFollowState,
   unfollowEvent,
 } from "@/api/event-follow";
+import { trackProductEvent } from "@/analytics/product-analytics";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -63,8 +64,19 @@ export function EventFollowButton({
     setBusy(true);
 
     try {
-      if (next) await followEvent(eventId);
-      else await unfollowEvent(eventId);
+      if (next) {
+        await followEvent(eventId);
+        trackProductEvent("event_follow", {
+          eventId,
+          properties: { source: "story" },
+        });
+      } else {
+        await unfollowEvent(eventId);
+        trackProductEvent("event_unfollow", {
+          eventId,
+          properties: { source: "story" },
+        });
+      }
     } catch {
       setFollowing(previous);
       Alert.alert("Briefly", text.error);
