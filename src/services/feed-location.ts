@@ -2,6 +2,7 @@ import * as Location from "expo-location";
 
 export type FeedLocation = {
   country: string;
+  countryCode: string | null;
   city: string;
   region: string | null;
   source: "device" | "fallback";
@@ -9,6 +10,7 @@ export type FeedLocation = {
 
 const FALLBACK_LOCATION: FeedLocation = {
   country: "Australia",
+  countryCode: "AU",
   city: "Sydney",
   region: "New South Wales",
   source: "fallback",
@@ -23,6 +25,30 @@ function firstText(...values: Array<string | null | undefined>) {
     if (text) return text;
   }
   return "";
+}
+
+function canonicalCountryName(
+  isoCountryCode: string | null | undefined,
+  localizedCountry: string | null | undefined,
+): string {
+  const code = String(isoCountryCode || "").trim().toUpperCase();
+  if (code) {
+    try {
+      const DisplayNames = (
+        Intl as unknown as {
+          DisplayNames?: new (
+            locales: string[],
+            options: { type: "region" },
+          ) => { of(value: string): string | undefined };
+        }
+      ).DisplayNames;
+      const resolved = DisplayNames
+        ? new DisplayNames(["en"], { type: "region" }).of(code)
+        : undefined;
+      if (resolved) return resolved;
+    } catch {}
+  }
+  return firstText(localizedCountry, FALLBACK_LOCATION.country);
 }
 
 async function resolveOnce(): Promise<FeedLocation> {
@@ -46,16 +72,21 @@ async function resolveOnce(): Promise<FeedLocation> {
     const place = places[0];
     if (!place) return FALLBACK_LOCATION;
 
-    const country = firstText(place.country, FALLBACK_LOCATION.country);
+    const countryCode = firstText(place.isoCountryCode).toUpperCase() || null;
+    const country = canonicalCountryName(countryCode, place.country);
+
+    // Android geocoders can return a suburb/district where another platform
+    // returns the metro city. Prefer explicit city, then the broader subregion,
+    // and use district only as the final locality fallback.
     const city = firstText(
       place.city,
-      place.district,
       place.subregion,
+      place.district,
       FALLBACK_LOCATION.city,
     );
     const region = firstText(place.region, place.subregion) || null;
 
-    return { country, city, region, source: "device" };
+    return { country, countryCode, city, region, source: "device" };
   } catch {
     return FALLBACK_LOCATION;
   }
