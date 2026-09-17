@@ -37,8 +37,20 @@
         "expo-localization",
         {
           "supportedLocales": {
-            "ios": ["en", "es", "ja", "zh-Hans", "zh-Hant"],
-            "android": ["en", "es", "ja", "zh-CN", "zh-TW"]
+            "ios": [
+              "en",
+              "es",
+              "ja",
+              "zh-Hans",
+              "zh-Hant"
+            ],
+            "android": [
+              "en",
+              "es",
+              "ja",
+              "zh-CN",
+              "zh-TW"
+            ]
           }
         }
       ],
@@ -62,7 +74,8 @@
           "androidAppId": "ca-app-pub-3940256099942544~3347511713",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511"
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,
