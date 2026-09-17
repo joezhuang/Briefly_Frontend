@@ -326,8 +326,8 @@ export function getHomepageArticleFeed(options?: {
     scope: options?.scope ?? "top",
     language: options?.language ?? "en",
     include_draft: String(options?.includeDraft ?? false),
-    country: options?.country ?? "Australia",
-    city: options?.city ?? "Sydney",
+    country: options?.country ?? "",
+    city: options?.city ?? "",
     limit: String(options?.limit ?? 20),
     offset: String(options?.offset ?? 0),
   });
@@ -362,7 +362,7 @@ export function createBrieflyWebCheckout(
 }
 
 export function createBrieflyWebPortal(returnUrl: string) {
-  return postJson<{ portal_url: string }>(
+  return postJson<{ checkout_url: string; portal_url: string }>(
     "/api/subscriptions/web/portal",
     { return_url: returnUrl },
   );
