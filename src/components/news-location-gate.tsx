@@ -18,6 +18,7 @@ import {
   type NewsLocationCountryOption,
   type NewsLocationRegionOption,
 } from "@/api/briefly";
+import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type {
   FeedLocation,
@@ -44,6 +45,164 @@ type Props = {
 
 type PickerKind = "country" | "region" | null;
 
+const locationCopy = {
+  en: {
+    eyebrow: "NEWS LOCATION",
+    setNational: "Set National news location",
+    setLocal: "Set Local news location",
+    setupBody: "Choose automatic location, select a location manually, or keep location off.",
+    auto: "Auto",
+    manual: "Manual",
+    off: "Off",
+    useCurrent: "Use current location",
+    chooseManually: "Choose manually",
+    change: "Change",
+    changeLocation: "Change location",
+    country: "COUNTRY",
+    region: "REGION",
+    chooseCountry: "Choose country",
+    chooseRegion: "Choose region",
+    loadingRegions: "Loading regions…",
+    chooseArea: "Choose state / province / region",
+    chooseCountryFirst: "Choose country first",
+    nationalRegionHelper: "Region is optional for National news but will also configure Local news.",
+    saveLocation: "Save location",
+    done: "Done",
+    searchCountries: "Search countries",
+    searchRegions: "Search regions",
+    noMatchingCountries: "No matching countries.",
+    noMatchingRegions: "No matching regions.",
+    unableCountries: "Unable to load countries.",
+    unableRegions: "Unable to load regions.",
+    permissionError: "Location permission is unavailable or was not granted. Choose Manual or Off, or enable location permission in your device settings.",
+    saveError: "Unable to save news location.",
+  },
+  es: {
+    eyebrow: "UBICACIÓN DE NOTICIAS",
+    setNational: "Configurar ubicación de noticias nacionales",
+    setLocal: "Configurar ubicación de noticias locales",
+    setupBody: "Usa la ubicación automática, elige una manualmente o mantén la ubicación desactivada.",
+    auto: "Auto",
+    manual: "Manual",
+    off: "Desactivado",
+    useCurrent: "Usar ubicación actual",
+    chooseManually: "Elegir manualmente",
+    change: "Cambiar",
+    changeLocation: "Cambiar ubicación",
+    country: "PAÍS",
+    region: "REGIÓN",
+    chooseCountry: "Elegir país",
+    chooseRegion: "Elegir región",
+    loadingRegions: "Cargando regiones…",
+    chooseArea: "Elegir estado / provincia / región",
+    chooseCountryFirst: "Elige primero un país",
+    nationalRegionHelper: "La región es opcional para las noticias nacionales, pero también configurará las noticias locales.",
+    saveLocation: "Guardar ubicación",
+    done: "Listo",
+    searchCountries: "Buscar países",
+    searchRegions: "Buscar regiones",
+    noMatchingCountries: "No hay países coincidentes.",
+    noMatchingRegions: "No hay regiones coincidentes.",
+    unableCountries: "No se pudieron cargar los países.",
+    unableRegions: "No se pudieron cargar las regiones.",
+    permissionError: "El permiso de ubicación no está disponible o no fue concedido. Elige Manual o Desactivado, o habilita el permiso de ubicación en los ajustes del dispositivo.",
+    saveError: "No se pudo guardar la ubicación de noticias.",
+  },
+  ja: {
+    eyebrow: "ニュース地域",
+    setNational: "国内ニュースの地域を設定",
+    setLocal: "地域ニュースの場所を設定",
+    setupBody: "現在地を自動使用するか、手動で選択するか、位置情報をオフにできます。",
+    auto: "自動",
+    manual: "手動",
+    off: "オフ",
+    useCurrent: "現在地を使用",
+    chooseManually: "手動で選択",
+    change: "変更",
+    changeLocation: "地域を変更",
+    country: "国",
+    region: "地域",
+    chooseCountry: "国を選択",
+    chooseRegion: "地域を選択",
+    loadingRegions: "地域を読み込み中…",
+    chooseArea: "州 / 県 / 地域を選択",
+    chooseCountryFirst: "先に国を選択してください",
+    nationalRegionHelper: "国内ニュースでは地域の選択は任意ですが、地域ニュースにも同じ設定が使われます。",
+    saveLocation: "地域を保存",
+    done: "完了",
+    searchCountries: "国を検索",
+    searchRegions: "地域を検索",
+    noMatchingCountries: "一致する国がありません。",
+    noMatchingRegions: "一致する地域がありません。",
+    unableCountries: "国の一覧を読み込めませんでした。",
+    unableRegions: "地域の一覧を読み込めませんでした。",
+    permissionError: "位置情報の権限を利用できないか、許可されていません。手動またはオフを選ぶか、端末設定で位置情報の権限を有効にしてください。",
+    saveError: "ニュース地域を保存できませんでした。",
+  },
+  "zh-CN": {
+    eyebrow: "新闻位置",
+    setNational: "设置全国新闻位置",
+    setLocal: "设置本地新闻位置",
+    setupBody: "可使用自动定位、手动选择位置，或关闭位置功能。",
+    auto: "自动",
+    manual: "手动",
+    off: "关闭",
+    useCurrent: "使用当前位置",
+    chooseManually: "手动选择",
+    change: "更改",
+    changeLocation: "更改位置",
+    country: "国家",
+    region: "地区",
+    chooseCountry: "选择国家",
+    chooseRegion: "选择地区",
+    loadingRegions: "正在加载地区…",
+    chooseArea: "选择州 / 省 / 地区",
+    chooseCountryFirst: "请先选择国家",
+    nationalRegionHelper: "全国新闻可不选择地区；选择后也会同时配置本地新闻。",
+    saveLocation: "保存位置",
+    done: "完成",
+    searchCountries: "搜索国家",
+    searchRegions: "搜索地区",
+    noMatchingCountries: "没有匹配的国家。",
+    noMatchingRegions: "没有匹配的地区。",
+    unableCountries: "无法加载国家列表。",
+    unableRegions: "无法加载地区列表。",
+    permissionError: "位置权限不可用或未获授权。请选择手动或关闭，或在设备设置中启用位置权限。",
+    saveError: "无法保存新闻位置。",
+  },
+  "zh-TW": {
+    eyebrow: "新聞位置",
+    setNational: "設定全國新聞位置",
+    setLocal: "設定本地新聞位置",
+    setupBody: "可使用自動定位、手動選擇位置，或關閉位置功能。",
+    auto: "自動",
+    manual: "手動",
+    off: "關閉",
+    useCurrent: "使用目前位置",
+    chooseManually: "手動選擇",
+    change: "更改",
+    changeLocation: "更改位置",
+    country: "國家",
+    region: "地區",
+    chooseCountry: "選擇國家",
+    chooseRegion: "選擇地區",
+    loadingRegions: "正在載入地區…",
+    chooseArea: "選擇州 / 省 / 地區",
+    chooseCountryFirst: "請先選擇國家",
+    nationalRegionHelper: "全國新聞可不選擇地區；選擇後也會同時設定本地新聞。",
+    saveLocation: "儲存位置",
+    done: "完成",
+    searchCountries: "搜尋國家",
+    searchRegions: "搜尋地區",
+    noMatchingCountries: "沒有符合的國家。",
+    noMatchingRegions: "沒有符合的地區。",
+    unableCountries: "無法載入國家清單。",
+    unableRegions: "無法載入地區清單。",
+    permissionError: "位置權限不可用或未獲授權。請選擇手動或關閉，或在裝置設定中啟用位置權限。",
+    saveError: "無法儲存新聞位置。",
+  },
+} as const;
+
 function normalize(value: string) {
   return value.trim().toLocaleLowerCase();
 }
@@ -59,6 +218,8 @@ export function NewsLocationGate({
   onDisable,
 }: Props) {
   const { colors } = useBrieflyTheme();
+  const { language } = useBrieflyLanguage();
+  const labels = locationCopy[language] ?? locationCopy.en;
   const [modalOpen, setModalOpen] = useState(false);
   const [manualMode, setManualMode] = useState(mode === "manual");
   const [picker, setPicker] = useState<PickerKind>(null);
@@ -84,7 +245,13 @@ export function NewsLocationGate({
           .filter(Boolean)
           .join(" · ");
 
-  const modeLabel = mode === "auto" ? "Auto" : mode === "manual" ? "Manual" : "Off";
+  const modeLabel =
+    mode === "auto" ? labels.auto : mode === "manual" ? labels.manual : labels.off;
+  const displayedError = error?.startsWith("Location permission")
+    ? labels.permissionError
+    : error === "Unable to save news location."
+      ? labels.saveError
+      : error;
 
   const loadCountries = useCallback(async () => {
     if (countries.length || loadingCountries) return;
@@ -93,14 +260,12 @@ export function NewsLocationGate({
     try {
       const result = await getNewsLocationCountries();
       setCountries(result.countries ?? []);
-    } catch (err: unknown) {
-      setOptionsError(
-        err instanceof Error ? err.message : "Unable to load countries.",
-      );
+    } catch {
+      setOptionsError(labels.unableCountries);
     } finally {
       setLoadingCountries(false);
     }
-  }, [countries.length, loadingCountries]);
+  }, [countries.length, labels.unableCountries, loadingCountries]);
 
   const loadRegions = useCallback(async (countryCode: string) => {
     setLoadingRegions(true);
@@ -108,15 +273,13 @@ export function NewsLocationGate({
     try {
       const result = await getNewsLocationRegions(countryCode);
       setRegions(result.regions ?? []);
-    } catch (err: unknown) {
+    } catch {
       setRegions([]);
-      setOptionsError(
-        err instanceof Error ? err.message : "Unable to load regions.",
-      );
+      setOptionsError(labels.unableRegions);
     } finally {
       setLoadingRegions(false);
     }
-  }, []);
+  }, [labels.unableRegions]);
 
   const openSettings = useCallback((forceManual = false) => {
     const countryCode = location?.countryCode ?? null;
@@ -236,7 +399,7 @@ export function NewsLocationGate({
     </Pressable>
   );
 
-  if (usable && !error) {
+  if (usable && !displayedError) {
     return (
       <>
         <View style={[styles.compactBar, { borderColor: colors.border }]}> 
@@ -255,7 +418,7 @@ export function NewsLocationGate({
               onPress={() => openSettings(false)}
               hitSlop={8}
             >
-              <Text style={[styles.changeText, { color: colors.accent }]}>Change</Text>
+              <Text style={[styles.changeText, { color: colors.accent }]}>{labels.change}</Text>
             </Pressable>
           </View>
         </View>
@@ -305,22 +468,21 @@ export function NewsLocationGate({
       >
         <View style={styles.setupHeader}>
           <View style={styles.setupCopy}>
-            <Text style={[styles.eyebrow, { color: colors.textMuted }]}>NEWS LOCATION</Text>
+            <Text style={[styles.eyebrow, { color: colors.textMuted }]}>{labels.eyebrow}</Text>
             <Text style={[styles.title, { color: colors.text }]}> 
-              {scope === "national" ? "Set National news location" : "Set Local news location"}
+              {scope === "national" ? labels.setNational : labels.setLocal}
             </Text>
             <Text style={[styles.body, { color: colors.textMuted }]}> 
-              {error ||
-                "Choose automatic location, select a location manually, or keep location off."}
+              {displayedError || labels.setupBody}
             </Text>
           </View>
           {busy && <ActivityIndicator size="small" color={colors.textMuted} />}
         </View>
 
         <View style={styles.modeRow}>
-          {modeButton("auto", "Use current location", mode === "auto", onEnableAuto)}
-          {modeButton("manual", "Choose manually", mode === "manual", () => openSettings(true))}
-          {modeButton("off", "Off", mode === "off", onDisable)}
+          {modeButton("auto", labels.useCurrent, mode === "auto", onEnableAuto)}
+          {modeButton("manual", labels.chooseManually, mode === "manual", () => openSettings(true))}
+          {modeButton("off", labels.off, mode === "off", onDisable)}
         </View>
       </View>
 
@@ -419,6 +581,8 @@ function LocationModal({
   modeButton,
 }: ModalProps) {
   const { colors } = useBrieflyTheme();
+  const { language } = useBrieflyLanguage();
+  const labels = locationCopy[language] ?? locationCopy.en;
   const manualSelected = manualMode || mode === "manual";
   const pickerItems = picker === "country" ? filteredCountries : filteredRegions;
   const pickerLoading = picker === "country" ? loadingCountries : loadingRegions;
@@ -440,8 +604,8 @@ function LocationModal({
         >
           <View style={styles.modalHeader}>
             <View>
-              <Text style={[styles.eyebrow, { color: colors.textMuted }]}>NEWS LOCATION</Text>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Change location</Text>
+              <Text style={[styles.eyebrow, { color: colors.textMuted }]}>{labels.eyebrow}</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{labels.changeLocation}</Text>
             </View>
             <Pressable accessibilityRole="button" hitSlop={10} onPress={onClose}>
               <Text style={[styles.closeText, { color: colors.textMuted }]}>×</Text>
@@ -449,18 +613,18 @@ function LocationModal({
           </View>
 
           <View style={styles.modeRow}>
-            {modeButton("auto", "Auto", !manualMode && mode === "auto", onEnableAuto)}
-            {modeButton("manual", "Manual", manualSelected, () => {
+            {modeButton("auto", labels.auto, !manualMode && mode === "auto", onEnableAuto)}
+            {modeButton("manual", labels.manual, manualSelected, () => {
               setManualMode(true);
               setPicker(null);
               setSearch("");
             })}
-            {modeButton("off", "Off", !manualMode && mode === "off", onDisable)}
+            {modeButton("off", labels.off, !manualMode && mode === "off", onDisable)}
           </View>
 
           {manualMode && (
             <View style={styles.manualArea}>
-              <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>COUNTRY</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>{labels.country}</Text>
               <Pressable
                 onPress={() => {
                   setPicker("country");
@@ -469,12 +633,12 @@ function LocationModal({
                 style={[styles.select, { borderColor: colors.border }]}
               >
                 <Text style={[styles.selectText, { color: country ? colors.text : colors.textMuted }]}> 
-                  {country?.name || "Choose country"}
+                  {country?.name || labels.chooseCountry}
                 </Text>
                 <Text style={[styles.chevron, { color: colors.textMuted }]}>⌄</Text>
               </Pressable>
 
-              <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>REGION</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>{labels.region}</Text>
               <Pressable
                 disabled={!country?.code || loadingRegions}
                 onPress={() => {
@@ -489,16 +653,16 @@ function LocationModal({
               >
                 <Text style={[styles.selectText, { color: region ? colors.text : colors.textMuted }]}> 
                   {loadingRegions
-                    ? "Loading regions…"
+                    ? labels.loadingRegions
                     : region?.name ||
-                      (country?.code ? "Choose state / province / region" : "Choose country first")}
+                      (country?.code ? labels.chooseArea : labels.chooseCountryFirst)}
                 </Text>
                 <Text style={[styles.chevron, { color: colors.textMuted }]}>⌄</Text>
               </Pressable>
 
               {scope === "national" && (
                 <Text style={[styles.helper, { color: colors.textMuted }]}> 
-                  Region is optional for National news but will also configure Local news.
+                  {labels.nationalRegionHelper}
                 </Text>
               )}
 
@@ -530,7 +694,7 @@ function LocationModal({
                   },
                 ]}
               >
-                <Text style={[styles.saveText, { color: colors.background }]}>Save location</Text>
+                <Text style={[styles.saveText, { color: colors.background }]}>{labels.saveLocation}</Text>
               </Pressable>
             </View>
           )}
@@ -539,16 +703,16 @@ function LocationModal({
             <View style={[styles.pickerPanel, { borderColor: colors.border }]}> 
               <View style={styles.pickerHeader}>
                 <Text style={[styles.pickerTitle, { color: colors.text }]}> 
-                  {picker === "country" ? "Choose country" : "Choose region"}
+                  {picker === "country" ? labels.chooseCountry : labels.chooseRegion}
                 </Text>
                 <Pressable onPress={() => setPicker(null)} hitSlop={8}>
-                  <Text style={[styles.pickerDone, { color: colors.accent }]}>Done</Text>
+                  <Text style={[styles.pickerDone, { color: colors.accent }]}>{labels.done}</Text>
                 </Pressable>
               </View>
               <TextInput
                 value={search}
                 onChangeText={setSearch}
-                placeholder={picker === "country" ? "Search countries" : "Search regions"}
+                placeholder={picker === "country" ? labels.searchCountries : labels.searchRegions}
                 placeholderTextColor={colors.textMuted}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -593,7 +757,7 @@ function LocationModal({
                   ))}
                   {!pickerItems.length && (
                     <Text style={[styles.emptyText, { color: colors.textMuted }]}> 
-                      No matching {picker === "country" ? "countries" : "regions"}.
+                      {picker === "country" ? labels.noMatchingCountries : labels.noMatchingRegions}
                     </Text>
                   )}
                 </ScrollView>
