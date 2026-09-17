@@ -70,6 +70,26 @@ function preferredPreviewHeadline(
   return { ...article, headline: previewHeadline };
 }
 
+function looksLikeDirectVideoUrl(value: string | null | undefined) {
+  const url = String(value || "").toLowerCase();
+  return /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/.test(url);
+}
+
+function applyStoryVideoSwitch(
+  article: CanonicalArticle,
+  enabled: boolean,
+): CanonicalArticle {
+  if (enabled) return article;
+  const safeImage =
+    article.video_thumbnail_url ||
+    (!looksLikeDirectVideoUrl(article.image_url) ? article.image_url : null);
+  return {
+    ...article,
+    video_url: null,
+    image_url: safeImage,
+  };
+}
+
 function getStoryUrl(currentStoryHref: string): string | null {
   const configuredBase = process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, "");
   if (configuredBase) return `${configuredBase}${currentStoryHref}`;
@@ -152,6 +172,7 @@ export default function StoryDetailScreen() {
   const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${language}:${reloadKey}`;
   const loading = loadingKey !== requestKey && !error && !article;
   const isPro = account?.translation_entitled === true;
+  const storyVideoEnabled = appConfig?.story_video_enabled !== false;
   const showStoryAd =
     !isWeb &&
     appConfig?.ads_enabled === true &&
@@ -491,13 +512,17 @@ export default function StoryDetailScreen() {
   }
 
   if (article.article_version_id == null) {
+    const previewArticle = applyStoryVideoSwitch(
+      preferredPreviewHeadline(
+        preferredImage(article, resolvedImageUrl),
+        resolvedPreviewHeadline,
+      ),
+      storyVideoEnabled,
+    );
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <EventPreviewView
-          article={preferredPreviewHeadline(
-            preferredImage(article, resolvedImageUrl),
-            resolvedPreviewHeadline,
-          )}
+          article={previewArticle}
           onRetry={
             article.generation_status === "processing"
               ? undefined
@@ -514,11 +539,14 @@ export default function StoryDetailScreen() {
     language !== "en" &&
     article.experimental_localization === true &&
     authoritativeArticle?.article_version_id != null;
-  const displayedArticle = preferredImage(
-    canToggleOriginal && languageMode === "original" && authoritativeArticle
-      ? authoritativeArticle
-      : article,
-    resolvedImageUrl,
+  const displayedArticle = applyStoryVideoSwitch(
+    preferredImage(
+      canToggleOriginal && languageMode === "original" && authoritativeArticle
+        ? authoritativeArticle
+        : article,
+      resolvedImageUrl,
+    ),
+    storyVideoEnabled,
   );
   const showGoogleTranslate = language !== "en" && !!translateSourceUrl;
   const storyToolsText = storyToolsCopy[language] ?? storyToolsCopy.en;
