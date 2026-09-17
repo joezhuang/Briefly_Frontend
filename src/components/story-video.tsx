@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import StoryVideoEmbed from "./story-video-embed";
@@ -10,6 +10,7 @@ type Props = {
   posterUrl?: string | null;
   accessibilityLabel?: string;
   compact?: boolean;
+  autoStart?: boolean;
 };
 
 function embeddedUrl(url: string): string | null {
@@ -19,17 +20,17 @@ function embeddedUrl(url: string): string | null {
 
     if (host === "youtu.be") {
       const id = parsed.pathname.split("/").filter(Boolean)[0];
-      return id ? `https://www.youtube.com/embed/${id}?playsinline=1&rel=0` : null;
+      return id ? `https://www.youtube.com/embed/${id}?playsinline=1&rel=0&autoplay=1` : null;
     }
 
     if (host.endsWith("youtube.com")) {
       const id = parsed.searchParams.get("v") || parsed.pathname.match(/\/(?:shorts|embed)\/([^/?#]+)/)?.[1];
-      return id ? `https://www.youtube.com/embed/${id}?playsinline=1&rel=0` : null;
+      return id ? `https://www.youtube.com/embed/${id}?playsinline=1&rel=0&autoplay=1` : null;
     }
 
     if (host.endsWith("vimeo.com")) {
       const id = parsed.pathname.match(/\/(?:video\/)?(\d+)/)?.[1];
-      return id ? `https://player.vimeo.com/video/${id}` : null;
+      return id ? `https://player.vimeo.com/video/${id}?autoplay=1` : null;
     }
   } catch {}
   return null;
@@ -59,9 +60,14 @@ export function StoryVideo({
   posterUrl,
   accessibilityLabel = "Play video",
   compact = false,
+  autoStart = false,
 }: Props) {
-  const [started, setStarted] = useState(false);
+  const [started, setStarted] = useState(autoStart);
   const embed = useMemo(() => embeddedUrl(url), [url]);
+
+  useEffect(() => {
+    if (autoStart) setStarted(true);
+  }, [autoStart]);
 
   return (
     <View style={styles.root}>
