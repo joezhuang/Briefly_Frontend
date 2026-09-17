@@ -228,30 +228,26 @@ export default function BetaDashboardScreen() {
   const [error, setError] = useState(false);
   const [busyFingerprint, setBusyFingerprint] = useState<string | null>(null);
 
-  const load = useCallback(
-    async (mode: "initial" | "refresh" = "initial") => {
-      if (!user) return;
-      if (mode === "refresh") setRefreshing(true);
+  const refreshDashboard = useCallback(async () => {
+    if (!user) return;
+    setRefreshing(true);
 
-      try {
-        const next = await getBetaDashboard(days);
-        setError(false);
-        setForbidden(false);
-        setSnapshot(next);
-      } catch (caught) {
-        const message = caught instanceof Error ? caught.message : "";
-        if (message.includes("(403)") || message.includes("(401)")) {
-          setForbidden(true);
-        } else {
-          setError(true);
-        }
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
+    try {
+      const next = await getBetaDashboard(days);
+      setError(false);
+      setForbidden(false);
+      setSnapshot(next);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "";
+      if (message.includes("(403)") || message.includes("(401)")) {
+        setForbidden(true);
+      } else {
+        setError(true);
       }
-    },
-    [days, user],
-  );
+    } finally {
+      setRefreshing(false);
+    }
+  }, [days, user]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -259,8 +255,33 @@ export default function BetaDashboardScreen() {
       router.replace("/sign-in?returnTo=%2Fbeta-dashboard" as never);
       return;
     }
-    void load();
-  }, [authReady, load, user]);
+
+    let active = true;
+
+    getBetaDashboard(days)
+      .then((next) => {
+        if (!active) return;
+        setError(false);
+        setForbidden(false);
+        setSnapshot(next);
+      })
+      .catch((caught) => {
+        if (!active) return;
+        const message = caught instanceof Error ? caught.message : "";
+        if (message.includes("(403)") || message.includes("(401)")) {
+          setForbidden(true);
+        } else {
+          setError(true);
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authReady, days, user]);
 
   const maxDailySessions = useMemo(
     () =>
@@ -294,7 +315,7 @@ export default function BetaDashboardScreen() {
     setBusyFingerprint(item.fingerprint);
     try {
       await setBetaDashboardErrorResolution(item.fingerprint, resolved);
-      await load("refresh");
+      await refreshDashboard();
     } finally {
       setBusyFingerprint(null);
     }
@@ -370,7 +391,7 @@ export default function BetaDashboardScreen() {
               })}
               <Pressable
                 disabled={refreshing}
-                onPress={() => void load("refresh")}
+                onPress={() => void refreshDashboard()}
                 style={({ pressed }) => [
                   styles.refreshButton,
                   {
