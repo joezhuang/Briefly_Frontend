@@ -73,7 +73,11 @@ export function StoryVideo({
     <View style={styles.root}>
       {started ? (
         embed ? (
-          <StoryVideoEmbed src={embed} title={accessibilityLabel} />
+          <StoryVideoEmbed
+            src={embed}
+            title={accessibilityLabel}
+            dom={{ useExpoDOMWebView: false }}
+          />
         ) : (
           <DirectVideo url={url} />
         )
