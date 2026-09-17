@@ -27,11 +27,6 @@ const translationCopy: Record<string, { translate: string; original: string; ret
   "zh-TW": { translate: "翻譯", original: "原文", retry: "重試", play: "播放" },
 };
 
-function looksLikeVideoUrl(value: string | null | undefined) {
-  const url = String(value || "").toLowerCase();
-  return /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/.test(url);
-}
-
 export function StoryTile({ article, size = "standard", href }: Props) {
   const { language, t } = useBrieflyLanguage();
   const [translation, setTranslation] = useState<CardTranslation | null>(null);
@@ -47,13 +42,8 @@ export function StoryTile({ article, size = "standard", href }: Props) {
         ? styles.secondaryHeadline
         : styles.standardHeadline;
   const sourceCount = article.source_count ?? article.sources_used?.length ?? 0;
-  const legacyVideoUrl = looksLikeVideoUrl(article.image_url)
-    ? article.image_url
-    : null;
-  const videoUrl = article.video_url || legacyVideoUrl;
-  const imageUrl =
-    article.video_thumbnail_url ||
-    (!looksLikeVideoUrl(article.image_url) ? article.image_url : null);
+  const videoUrl = article.video_url ?? null;
+  const imageUrl = article.video_thumbnail_url || article.image_url || null;
   const storyHref =
     href ??
     (() => {
