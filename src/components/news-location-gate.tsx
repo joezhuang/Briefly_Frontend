@@ -37,14 +37,18 @@ export function NewsLocationGate({
   onDisable,
 }: Props) {
   const { colors } = useBrieflyTheme();
+  const [editingManual, setEditingManual] = useState(mode === "manual");
   const [country, setCountry] = useState("");
   const [region, setRegion] = useState("");
 
   useEffect(() => {
-    if (!location) return;
-    setCountry(location.country);
-    setRegion(location.region ?? "");
-  }, [location]);
+    if (location) {
+      setCountry(location.country);
+      setRegion(location.region ?? "");
+    }
+    if (mode === "manual") setEditingManual(true);
+    if (mode === "off") setEditingManual(false);
+  }, [location, mode]);
 
   const localName = location?.region || location?.city || "";
   const usable =
@@ -54,13 +58,14 @@ export function NewsLocationGate({
     : scope === "national"
       ? location.country
       : [localName, location.country].filter(Boolean).join(" · ");
+  const visualMode: NewsLocationMode = editingManual ? "manual" : mode;
 
   const modeButton = (
     value: NewsLocationMode,
     label: string,
     onPress: () => void,
   ) => {
-    const selected = mode === value;
+    const selected = visualMode === value;
     return (
       <Pressable
         key={value}
@@ -99,10 +104,10 @@ export function NewsLocationGate({
       <View style={styles.headerRow}>
         <View style={styles.headerCopy}>
           <Text style={[styles.eyebrow, { color: colors.textMuted }]}>NEWS LOCATION</Text>
-          <Text style={[styles.title, { color: colors.text }]}> 
+          <Text style={[styles.title, { color: colors.text }]}>
             {scope === "national" ? "National news" : "Local news"}
           </Text>
-          {!!locationText && mode !== "off" && (
+          {!!locationText && mode !== "off" && !editingManual && (
             <Text style={[styles.current, { color: colors.textMuted }]}>{locationText}</Text>
           )}
         </View>
@@ -110,27 +115,33 @@ export function NewsLocationGate({
       </View>
 
       <View style={styles.modeRow}>
-        {modeButton("auto", "Auto", onEnableAuto)}
+        {modeButton("auto", "Auto", () => {
+          setEditingManual(false);
+          onEnableAuto();
+        })}
         {modeButton("manual", "Manual", () => {
-          if (mode !== "manual" && location) {
+          if (!location) {
+            setCountry("");
+            setRegion("");
+          } else {
             setCountry(location.country);
             setRegion(location.region ?? "");
           }
-          if (mode !== "manual" && !location) {
-            setCountry("");
-            setRegion("");
-          }
+          setEditingManual(true);
         })}
-        {modeButton("off", "Off", onDisable)}
+        {modeButton("off", "Off", () => {
+          setEditingManual(false);
+          onDisable();
+        })}
       </View>
 
-      {mode === "off" && (
+      {mode === "off" && !editingManual && (
         <Text style={[styles.body, { color: colors.textMuted }]}> 
           National and Local personalization is off. Top news still works normally.
         </Text>
       )}
 
-      {mode === "auto" && (
+      {mode === "auto" && !editingManual && (
         <Text style={[styles.body, { color: colors.textMuted }]}> 
           {usable
             ? "Briefly uses your device location for news relevance. Tap Auto again to update your current location."
@@ -138,7 +149,7 @@ export function NewsLocationGate({
         </Text>
       )}
 
-      {mode === "manual" && (
+      {editingManual && (
         <View style={styles.manual}>
           <TextInput
             value={country}
@@ -193,7 +204,7 @@ export function NewsLocationGate({
         </View>
       )}
 
-      {mode !== "off" && !usable && (
+      {mode !== "off" && !editingManual && !usable && (
         <Text style={[styles.notice, { color: colors.textMuted }]}> 
           {scope === "national"
             ? "Set a country before loading National news."
