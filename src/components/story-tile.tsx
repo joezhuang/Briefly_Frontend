@@ -3,8 +3,6 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Linking,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -31,20 +29,7 @@ const translationCopy: Record<string, { translate: string; original: string; ret
 
 function looksLikeVideoUrl(value: string | null | undefined) {
   const url = String(value || "").toLowerCase();
-  return (
-    /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/.test(url) ||
-    url.includes("youtube.com/") ||
-    url.includes("youtu.be/") ||
-    url.includes("vimeo.com/")
-  );
-}
-
-async function openMedia(url: string) {
-  if (Platform.OS === "web" && typeof window !== "undefined") {
-    window.open(url, "_blank", "noopener,noreferrer");
-    return;
-  }
-  await Linking.openURL(url);
+  return /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/.test(url);
 }
 
 export function StoryTile({ article, size = "standard", href }: Props) {
@@ -77,6 +62,7 @@ export function StoryTile({ article, size = "standard", href }: Props) {
         previewHeadline: article.headline,
       });
       if (imageUrl) params.set("imageUrl", imageUrl);
+      if (videoUrl) params.set("videoUrl", videoUrl);
       return `/story/${article.slug}?${params.toString()}`;
     })();
 
@@ -163,7 +149,7 @@ export function StoryTile({ article, size = "standard", href }: Props) {
                 accessibilityLabel={copy.play}
                 onPress={(event) => {
                   event.stopPropagation();
-                  void openMedia(videoUrl);
+                  router.push(storyHref as never);
                 }}
                 style={({ pressed }) => [
                   styles.translateButton,
