@@ -4,6 +4,7 @@ import {
   setBrieflyAccessToken,
 } from "@/auth/session";
 import { supabase } from "@/auth/supabase";
+import { captureApiError } from "@/monitoring/error-monitoring";
 import type { CanonicalArticle } from "@/models/article";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
@@ -59,6 +60,20 @@ function requestHeaders(options?: { includeAuth?: boolean }) {
   return headers;
 }
 
+async function monitoredFetch(path: string, init?: RequestInit) {
+  const method = String(init?.method ?? "GET").toUpperCase();
+  try {
+    const response = await fetch(`${requireApiBaseUrl()}${path}`, init);
+    if (response.status >= 500) {
+      captureApiError({ route: path, method, statusCode: response.status });
+    }
+    return response;
+  } catch (error) {
+    captureApiError({ route: path, method, error });
+    throw error;
+  }
+}
+
 function isPublicContentPath(path: string) {
   return (
     path.startsWith("/api/app-config") ||
@@ -73,7 +88,7 @@ function isPublicContentPath(path: string) {
 
 async function getJson<T>(path: string): Promise<T> {
   const accessToken = getBrieflyAccessToken();
-  let response = await fetch(`${requireApiBaseUrl()}${path}`, {
+  let response = await monitoredFetch(path, {
     headers: requestHeaders(),
   });
 
@@ -81,11 +96,11 @@ async function getJson<T>(path: string): Promise<T> {
     const refreshedToken = await refreshBrieflyAccessToken();
 
     if (refreshedToken) {
-      response = await fetch(`${requireApiBaseUrl()}${path}`, {
+      response = await monitoredFetch(path, {
         headers: requestHeaders(),
       });
     } else if (isPublicContentPath(path)) {
-      response = await fetch(`${requireApiBaseUrl()}${path}`, {
+      response = await monitoredFetch(path, {
         headers: requestHeaders({ includeAuth: false }),
       });
     }
@@ -102,7 +117,7 @@ async function getJson<T>(path: string): Promise<T> {
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const request = () =>
-    fetch(`${requireApiBaseUrl()}${path}`, {
+    monitoredFetch(path, {
       method: "POST",
       headers: {
         ...requestHeaders(),
