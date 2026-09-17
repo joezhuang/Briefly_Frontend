@@ -302,7 +302,9 @@ export type HomepageArticleFeed = {
   has_more: boolean;
   scope: HomepageFeedScope;
   country: string | null;
+  country_code?: string | null;
   city: string | null;
+  region?: string | null;
   feed_language: "en";
   presentation_language?: string;
   generation_mode?: "lazy";
@@ -314,7 +316,9 @@ export function getHomepageArticleFeed(options?: {
   includeDraft?: boolean;
   language?: string;
   country?: string;
+  countryCode?: string | null;
   city?: string;
+  region?: string | null;
   limit?: number;
   offset?: number;
 }) {
@@ -327,6 +331,8 @@ export function getHomepageArticleFeed(options?: {
     limit: String(options?.limit ?? 20),
     offset: String(options?.offset ?? 0),
   });
+  if (options?.countryCode) params.set("country_code", options.countryCode);
+  if (options?.region) params.set("region", options.region);
   return getJson<HomepageArticleFeed>(`/api/article-feed?${params.toString()}`);
 }
 
