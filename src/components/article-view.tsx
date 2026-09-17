@@ -82,18 +82,10 @@ const localizationCopy = {
     availableText: "AI 翻譯支援其他語言。已有翻譯所有使用者均可閱讀；如果尚無對應翻譯，Briefly Pro 可產生翻譯。",
     signIn: "登入",
     proOnly: "Briefly Pro",
-    preparing: "正在準備翻譯…",
-    translated: "已翻譯",
+    preparing: "翻譯を準備中…",
+    translated: "翻譯済み",
     unavailable: "翻譯暫不可用",
   },
-} as const;
-
-const imageFitCopy = {
-  en: { fill: "Fill", full: "Full image", fillLabel: "Fill image frame", fullLabel: "Show full image" },
-  es: { fill: "Rellenar", full: "Imagen completa", fillLabel: "Rellenar el marco de la imagen", fullLabel: "Mostrar imagen completa" },
-  ja: { fill: "画面に合わせる", full: "全体表示", fillLabel: "画像を枠いっぱいに表示", fullLabel: "画像全体を表示" },
-  "zh-CN": { fill: "填满", full: "完整图片", fillLabel: "填满图片区域", fullLabel: "显示完整图片" },
-  "zh-TW": { fill: "填滿", full: "完整圖片", fillLabel: "填滿圖片區域", fullLabel: "顯示完整圖片" },
 } as const;
 
 const podcastCopy = {
@@ -101,7 +93,7 @@ const podcastCopy = {
   es: { title: "Análisis en pódcast", body: "Un análisis de Deeply con dos presentadores, generado a partir del artículo original de Briefly en inglés.", proOnly: "Briefly Pro", signIn: "Inicia sesión para usar el análisis en pódcast", generate: "Generar análisis en pódcast", preparing: "Preparando el análisis en pódcast…", listen: "Escuchar el análisis", retry: "Reintentar el análisis en pódcast" },
   ja: { title: "ポッドキャスト分析", body: "Brieflyの権威ある英語記事を基に生成する、Deeplyの2人ホストによる解説です。", proOnly: "Briefly Pro", signIn: "ポッドキャスト分析を利用するにはログインしてください", generate: "ポッドキャスト分析を生成", preparing: "ポッドキャスト分析を準備中…", listen: "分析を聴く", retry: "ポッドキャスト分析を再試行" },
   "zh-CN": { title: "播客分析", body: "由 Deeply 双主持人根据 Briefly 权威英文原文生成的深度分析。", proOnly: "Briefly Pro", signIn: "登录后使用播客分析", generate: "生成播客分析", preparing: "正在准备播客分析…", listen: "收听分析", retry: "重新生成播客分析" },
-  "zh-TW": { title: "Podcast 分析", body: "由 Deeply 雙主持人根據 Briefly 權威英文原文產生的深度分析。", proOnly: "Briefly Pro", signIn: "登入後使用 Podcast 分析", generate: "產生 Podcast 分析", preparing: "正在準備 Podcast 分析…", listen: "收聽分析", retry: "重新產生 Podcast 分析" },
+  "zh-TW": { title: "Podcast 分析", body: "由 Deeply 雙主持人根據 Briefly 權威英文原文產生的深度分析。", proOnly: "Briefly Pro", signIn: "登入後使用 Podcast 分析", generate: "產生 Podcast 分析", preparing: "準備 Podcast 分析…", listen: "收聽分析", retry: "重新產生 Podcast 分析" },
 } as const;
 
 const coverageCopy = {
@@ -116,19 +108,49 @@ const exploreCopy = {
   "zh-TW": { title: "更多關於這篇報導", uncertainties: "尚不確定", sources: "使用的來源", coverage: "相關報導" },
 } as const;
 
+const mediaCopy = {
+  en: { play: "Play video" },
+  es: { play: "Reproducir video" },
+  ja: { play: "動画を再生" },
+  "zh-CN": { play: "播放视频" },
+  "zh-TW": { play: "播放影片" },
+} as const;
+
 function formatDate(value: string | null | undefined, language: string) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : new Intl.DateTimeFormat(language, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
+function looksLikeVideoUrl(value: string | null | undefined) {
+  const url = String(value || "").toLowerCase();
+  return (
+    /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/.test(url) ||
+    url.includes("youtube.com/") ||
+    url.includes("youtu.be/") ||
+    url.includes("vimeo.com/")
+  );
+}
+
+async function openMedia(url: string) {
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+  await Linking.openURL(url);
+}
+
 export function ArticleView({ article, immutable = false, podcast = null, podcastBusy = false, podcastPro = false, podcastSignedIn = false, onPodcastAction, translationAction, footer }: { article: CanonicalArticle; immutable?: boolean; podcast?: PodcastAnalysisStatus | null; podcastBusy?: boolean; podcastPro?: boolean; podcastSignedIn?: boolean; onPodcastAction?: () => void; translationAction?: ReactNode; footer?: ReactNode; }) {
   const { width } = useWindowDimensions(); const { language, t } = useBrieflyLanguage(); const { colors } = useBrieflyTheme(); const { isSaved, toggleSaved } = useSavedArticles(); const { user, account } = useBrieflyAuth(); const { watchTranslation } = useAnalysisReadiness();
   const saved = isSaved(article); const sourceCount = article.source_count ?? article.sources_used?.length ?? 0; const timestamp = formatDate(article.published_at ?? article.generated_at, language);
   const contentLanguage = article.content_language ?? article.language; const showingEnglishFallback = language !== "en" && contentLanguage === "en"; const translationPending = article.translation_status === "pending"; const experimentalTranslation = article.experimental_localization === true; const translatedContent = language !== "en" && contentLanguage !== "en" && contentLanguage === language;
-  const localizationText = localizationCopy[language] ?? localizationCopy.en; const imageFitText = imageFitCopy[language] ?? imageFitCopy.en; const podcastText = podcastCopy[language] ?? podcastCopy.en; const coverageText = coverageCopy[language] ?? coverageCopy.en; const exploreText = exploreCopy[language] ?? exploreCopy.en;
-  const [openExplore, setOpenExplore] = useState<"uncertainties" | "sources" | "coverage" | null>(null); const [heroFit, setHeroFit] = useState<"contain" | "cover">("contain"); const [showFloatingBack, setShowFloatingBack] = useState(false);
+  const localizationText = localizationCopy[language] ?? localizationCopy.en; const podcastText = podcastCopy[language] ?? podcastCopy.en; const coverageText = coverageCopy[language] ?? coverageCopy.en; const exploreText = exploreCopy[language] ?? exploreCopy.en; const mediaText = mediaCopy[language] ?? mediaCopy.en;
+  const [openExplore, setOpenExplore] = useState<"uncertainties" | "sources" | "coverage" | null>(null); const [showFloatingBack, setShowFloatingBack] = useState(false);
   const podcastProcessing = podcastBusy || podcast?.status === "processing"; const podcastReady = podcast?.status === "ready" && !!podcast.audio_url;
+  const legacyVideoUrl = looksLikeVideoUrl(article.image_url) ? article.image_url : null;
+  const videoUrl = article.video_url || legacyVideoUrl;
+  const heroImageUrl = article.video_thumbnail_url || (!looksLikeVideoUrl(article.image_url) ? article.image_url : null);
+  const hasHeroMedia = !!heroImageUrl || !!videoUrl;
 
   useEffect(() => {
     if (
@@ -214,7 +236,7 @@ export function ArticleView({ article, immutable = false, podcast = null, podcas
   }
 
   return <View style={[styles.articleRoot, { backgroundColor: colors.surface }]}><ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} onScroll={(event) => { if (!immutable) setShowFloatingBack(event.nativeEvent.contentOffset.y > 420); }} scrollEventThrottle={120}><View style={[styles.page, width < 480 && styles.pageCompact]}>
-    {!!article.image_url && <View style={[styles.heroFrame, { backgroundColor: colors.imageFallback }]}><Image source={{ uri: article.image_url }} style={styles.heroImage} contentFit={heroFit} transition={180} />{!immutable && <Pressable accessibilityRole="button" accessibilityLabel={heroFit === "contain" ? imageFitText.fillLabel : imageFitText.fullLabel} onPress={() => setHeroFit(v => v === "contain" ? "cover" : "contain")} style={({pressed}) => [styles.heroFitButton, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? .72 : .92 }]}><Text style={[styles.heroFitButtonText,{color:colors.text}]}>{heroFit === "contain" ? imageFitText.fill : imageFitText.full}</Text></Pressable>}</View>}
+    {hasHeroMedia && <View style={[styles.heroFrame, { backgroundColor: colors.imageFallback }]}>{!!heroImageUrl&&<Image source={{ uri: heroImageUrl }} style={styles.heroImage} contentFit="cover" transition={180} />}{!!videoUrl&&<Pressable accessibilityRole="button" accessibilityLabel={mediaText.play} onPress={()=>void openMedia(videoUrl)} style={({pressed})=>[styles.heroPlayButton,{opacity:pressed?.72:.94}]}><Text style={styles.heroPlayIcon}>▶</Text><Text style={styles.heroPlayText}>{mediaText.play}</Text></Pressable>}</View>}
     <Text style={[styles.brand,{color:colors.accent}]}>BRIEFLY</Text><Text style={[styles.headline,width<480&&styles.headlineCompact,{color:colors.text}]}>{article.headline}</Text>{!!article.standfirst&&<Text style={[styles.standfirst,width<480&&styles.standfirstCompact,{color:colors.textMuted}]}>{article.standfirst}</Text>}
     {!!translationAction && <View style={styles.translationAction}>{translationAction}</View>}
     {showLocalizationNotice && <View style={[styles.podcastFeature,{backgroundColor:colors.surfaceMuted,borderColor:colors.border}]}><View style={styles.podcastFeatureCopy}><View style={styles.podcastFeatureTitleRow}><Text style={[styles.podcastFeatureTitle,{color:colors.text}]}>{translationPending?localizationText.pendingTitle:localizationText.readyTitle}</Text><Text style={[styles.podcastProBadge,{color:colors.accent}]}>PRO</Text></View><Text style={[styles.podcastFeatureBody,{color:colors.textMuted}]}>{localizationBody}</Text></View><Pressable disabled={localizationDisabled} onPress={localizationPress} style={[styles.podcastFeatureButton,{backgroundColor:colors.text},localizationDisabled&&styles.podcastButtonDisabled]}>{translationPending&&<ActivityIndicator size="small" color={colors.background}/>}<Text style={[styles.podcastButtonText,{color:colors.background}]}>{localizationAction}</Text></Pressable></View>}
@@ -231,5 +253,5 @@ export function ArticleView({ article, immutable = false, podcast = null, podcas
 function ExploreRow({label,meta,open,colors,onPress,children}:{label:string;meta?:string;open:boolean;colors:ReturnType<typeof useBrieflyTheme>["colors"];onPress:()=>void;children:ReactNode;}) { return <View style={[styles.exploreRow,{borderColor:colors.border}]}><Pressable accessibilityRole="button" onPress={onPress} style={({pressed})=>[styles.exploreTrigger,{opacity:pressed?.68:1}]}><Text style={[styles.exploreLabel,{color:colors.text}]}>{label}</Text><View style={styles.exploreMetaRow}>{!!meta&&<Text style={[styles.exploreMeta,{color:colors.textMuted}]}>{meta}</Text>}<Text style={[styles.exploreArrow,{color:colors.accent}]}>{open?"−":"+"}</Text></View></Pressable>{open&&<View style={styles.exploreContent}>{children}</View>}</View>; }
 
 const styles = StyleSheet.create({
-  articleRoot:{flex:1},screen:{flex:1},scrollContent:{alignItems:"center"},page:{width:"100%",maxWidth:layout.articleMax,paddingHorizontal:20,paddingTop:24,paddingBottom:72},pageCompact:{paddingHorizontal:14,paddingTop:18},floatingBack:{position:"absolute",left:14,top:14,width:44,height:44,borderRadius:22,borderWidth:StyleSheet.hairlineWidth,alignItems:"center",justifyContent:"center"},floatingBackText:{fontSize:24,lineHeight:26,fontWeight:"900"},heroFrame:{width:"100%",aspectRatio:16/9,borderRadius:18,overflow:"hidden",marginBottom:28},heroImage:{width:"100%",height:"100%"},heroFitButton:{position:"absolute",right:10,bottom:10,minHeight:34,paddingHorizontal:12,borderRadius:999,borderWidth:StyleSheet.hairlineWidth,alignItems:"center",justifyContent:"center"},heroFitButtonText:{fontSize:12,fontWeight:"800"},brand:{fontSize:13,fontWeight:"800",letterSpacing:2.2,marginBottom:16},headline:{fontSize:42,lineHeight:49,fontWeight:"900",letterSpacing:-1.1},headlineCompact:{fontSize:34,lineHeight:40,letterSpacing:-.7},standfirst:{marginTop:18,fontSize:21,lineHeight:31},standfirstCompact:{fontSize:18,lineHeight:27},translationAction:{marginTop:22,alignSelf:"flex-start"},localizationNotice:{marginTop:22,padding:16,borderRadius:14,borderWidth:StyleSheet.hairlineWidth,gap:5},statusTitleRow:{flexDirection:"row",alignItems:"center",gap:8},localizationNoticeTitle:{fontSize:14,fontWeight:"800",flexShrink:1},localizationNoticeText:{fontSize:13,lineHeight:19},meta:{flexDirection:"row",flexWrap:"wrap",gap:10,alignItems:"center",marginTop:18},metaText:{fontSize:13},languageBadge:{fontSize:12,fontWeight:"700"},snapshotBadge:{fontSize:12,fontWeight:"800"},actions:{flexDirection:"row",gap:10,marginTop:22},action:{paddingHorizontal:18,paddingVertical:10,borderRadius:999,borderWidth:1},actionText:{fontWeight:"800"},podcastCard:{marginTop:24,padding:18,borderRadius:18,borderWidth:StyleSheet.hairlineWidth,gap:14},podcastCopy:{gap:5},podcastTitle:{fontSize:19,fontWeight:"900",flexShrink:1},podcastBody:{fontSize:14,lineHeight:21},podcastButton:{alignSelf:"flex-start",minHeight:42,paddingHorizontal:18,borderRadius:999,alignItems:"center",justifyContent:"center"},podcastButtonDisabled:{opacity:.6},buttonContent:{flexDirection:"row",alignItems:"center",gap:8},podcastButtonText:{fontSize:14,fontWeight:"800"},briefCard:{marginTop:34,padding:24,borderRadius:18,gap:22},briefSection:{gap:7},briefTitle:{fontSize:14,fontWeight:"800",letterSpacing:1,textTransform:"uppercase"},briefText:{fontSize:18,lineHeight:28},podcastFeature:{marginTop:22,padding:16,borderRadius:16,borderWidth:StyleSheet.hairlineWidth,gap:12},podcastFeatureCopy:{gap:4},podcastFeatureTitleRow:{flexDirection:"row",alignItems:"center",flexWrap:"wrap",gap:8},podcastFeatureTitle:{fontSize:17,fontWeight:"900"},podcastProBadge:{fontSize:10,fontWeight:"900",letterSpacing:.8},podcastFeatureBody:{fontSize:13,lineHeight:19},podcastFeatureButton:{alignSelf:"flex-start",minHeight:40,paddingHorizontal:16,borderRadius:999,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8},body:{marginTop:38,gap:24},bodyText:{fontSize:19,lineHeight:31},exploreGroup:{marginTop:42,paddingTop:26,borderTopWidth:StyleSheet.hairlineWidth},exploreTitle:{fontSize:23,fontWeight:"900",marginBottom:10},exploreRow:{borderBottomWidth:StyleSheet.hairlineWidth},exploreTrigger:{minHeight:54,flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12},exploreLabel:{flex:1,fontSize:16,fontWeight:"800"},exploreMetaRow:{flexDirection:"row",alignItems:"center",gap:10},exploreMeta:{fontSize:12,fontWeight:"700"},exploreArrow:{width:20,textAlign:"center",fontSize:20,fontWeight:"700"},exploreContent:{paddingBottom:18,gap:10},podcastCompact:{gap:12,paddingBottom:2},group:{marginTop:44,paddingTop:28,borderTopWidth:StyleSheet.hairlineWidth,gap:14},groupTitle:{fontSize:24,fontWeight:"800"},bulletRow:{flexDirection:"row",gap:10},bullet:{fontSize:18,lineHeight:27},bulletText:{flex:1,fontSize:17,lineHeight:27},source:{gap:4,paddingVertical:7},sourceName:{fontSize:16,fontWeight:"700"},sourceContribution:{fontSize:15,lineHeight:22},coverageRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:16,paddingVertical:14,borderBottomWidth:StyleSheet.hairlineWidth},coveragePressed:{opacity:.6},coverageCopy:{flex:1,gap:4},coverageSource:{fontSize:13,fontWeight:"800"},coverageTitle:{fontSize:16,lineHeight:22,fontWeight:"600"},coverageMeta:{fontSize:12},coverageOpen:{fontSize:12,fontWeight:"700",flexShrink:0},
+  articleRoot:{flex:1},screen:{flex:1},scrollContent:{alignItems:"center"},page:{width:"100%",maxWidth:layout.articleMax,paddingHorizontal:20,paddingTop:24,paddingBottom:72},pageCompact:{paddingHorizontal:14,paddingTop:18},floatingBack:{position:"absolute",left:14,top:14,width:44,height:44,borderRadius:22,borderWidth:StyleSheet.hairlineWidth,alignItems:"center",justifyContent:"center"},floatingBackText:{fontSize:24,lineHeight:26,fontWeight:"900"},heroFrame:{width:"100%",aspectRatio:16/9,borderRadius:18,overflow:"hidden",marginBottom:28},heroImage:{width:"100%",height:"100%"},heroPlayButton:{position:"absolute",right:12,bottom:12,minHeight:40,paddingHorizontal:14,borderRadius:999,backgroundColor:"rgba(0,0,0,.68)",flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8},heroPlayIcon:{color:"#FFFFFF",fontSize:13,fontWeight:"900"},heroPlayText:{color:"#FFFFFF",fontSize:12,fontWeight:"800"},brand:{fontSize:13,fontWeight:"800",letterSpacing:2.2,marginBottom:16},headline:{fontSize:42,lineHeight:49,fontWeight:"900",letterSpacing:-1.1},headlineCompact:{fontSize:34,lineHeight:40,letterSpacing:-.7},standfirst:{marginTop:18,fontSize:21,lineHeight:31},standfirstCompact:{fontSize:18,lineHeight:27},translationAction:{marginTop:22,alignSelf:"flex-start"},localizationNotice:{marginTop:22,padding:16,borderRadius:14,borderWidth:StyleSheet.hairlineWidth,gap:5},statusTitleRow:{flexDirection:"row",alignItems:"center",gap:8},localizationNoticeTitle:{fontSize:14,fontWeight:"800",flexShrink:1},localizationNoticeText:{fontSize:13,lineHeight:19},meta:{flexDirection:"row",flexWrap:"wrap",gap:10,alignItems:"center",marginTop:18},metaText:{fontSize:13},languageBadge:{fontSize:12,fontWeight:"700"},snapshotBadge:{fontSize:12,fontWeight:"800"},actions:{flexDirection:"row",gap:10,marginTop:22},action:{paddingHorizontal:18,paddingVertical:10,borderRadius:999,borderWidth:1},actionText:{fontWeight:"800"},podcastCard:{marginTop:24,padding:18,borderRadius:18,borderWidth:StyleSheet.hairlineWidth,gap:14},podcastCopy:{gap:5},podcastTitle:{fontSize:19,fontWeight:"900",flexShrink:1},podcastBody:{fontSize:14,lineHeight:21},podcastButton:{alignSelf:"flex-start",minHeight:42,paddingHorizontal:18,borderRadius:999,alignItems:"center",justifyContent:"center"},podcastButtonDisabled:{opacity:.6},buttonContent:{flexDirection:"row",alignItems:"center",gap:8},podcastButtonText:{fontSize:14,fontWeight:"800"},briefCard:{marginTop:34,padding:24,borderRadius:18,gap:22},briefSection:{gap:7},briefTitle:{fontSize:14,fontWeight:"800",letterSpacing:1,textTransform:"uppercase"},briefText:{fontSize:18,lineHeight:28},podcastFeature:{marginTop:22,padding:16,borderRadius:16,borderWidth:StyleSheet.hairlineWidth,gap:12},podcastFeatureCopy:{gap:4},podcastFeatureTitleRow:{flexDirection:"row",alignItems:"center",flexWrap:"wrap",gap:8},podcastFeatureTitle:{fontSize:17,fontWeight:"900"},podcastProBadge:{fontSize:10,fontWeight:"900",letterSpacing:.8},podcastFeatureBody:{fontSize:13,lineHeight:19},podcastFeatureButton:{alignSelf:"flex-start",minHeight:40,paddingHorizontal:16,borderRadius:999,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8},body:{marginTop:38,gap:24},bodyText:{fontSize:19,lineHeight:31},exploreGroup:{marginTop:42,paddingTop:26,borderTopWidth:StyleSheet.hairlineWidth},exploreTitle:{fontSize:23,fontWeight:"900",marginBottom:10},exploreRow:{borderBottomWidth:StyleSheet.hairlineWidth},exploreTrigger:{minHeight:54,flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12},exploreLabel:{flex:1,fontSize:16,fontWeight:"800"},exploreMetaRow:{flexDirection:"row",alignItems:"center",gap:10},exploreMeta:{fontSize:12,fontWeight:"700"},exploreArrow:{width:20,textAlign:"center",fontSize:20,fontWeight:"700"},exploreContent:{paddingBottom:18,gap:10},podcastCompact:{gap:12,paddingBottom:2},group:{marginTop:44,paddingTop:28,borderTopWidth:StyleSheet.hairlineWidth,gap:14},groupTitle:{fontSize:24,fontWeight:"800"},bulletRow:{flexDirection:"row",gap:10},bullet:{fontSize:18,lineHeight:27},bulletText:{flex:1,fontSize:17,lineHeight:27},source:{gap:4,paddingVertical:7},sourceName:{fontSize:16,fontWeight:"700"},sourceContribution:{fontSize:15,lineHeight:22},coverageRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:16,paddingVertical:14,borderBottomWidth:StyleSheet.hairlineWidth},coveragePressed:{opacity:.6},coverageCopy:{flex:1,gap:4},coverageSource:{fontSize:13,fontWeight:"800"},coverageTitle:{fontSize:16,lineHeight:22,fontWeight:"600"},coverageMeta:{fontSize:12},coverageOpen:{fontSize:12,fontWeight:"700",flexShrink:0},
 });
