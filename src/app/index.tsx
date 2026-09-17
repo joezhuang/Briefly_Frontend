@@ -211,7 +211,9 @@ export default function HomeScreen() {
           language,
           includeDraft: PREVIEW_DRAFTS,
           country: location?.country,
+          countryCode: location?.countryCode,
           city: location?.city,
+          region: location?.region,
           limit: PAGE_SIZE,
           offset,
         });
