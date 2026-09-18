@@ -167,10 +167,8 @@ export default function HomeScreen() {
   const switchScope = useCallback(
     (nextScope: HomepageFeedScope) => {
       if (nextScope === scope) return;
-      activeRequest.current += 1;
-      restoredScrollRef.current = false;
-      replaceArticles([]);
-      updateHasMore(false);
+      setArticles([]);
+      setHasMore(false);
       setError(null);
       setLoading(true);
       setShowTopButton(
@@ -178,7 +176,7 @@ export default function HomeScreen() {
       );
       setScope(nextScope);
     },
-    [replaceArticles, scope, updateHasMore],
+    [scope],
   );
 
   const switchScopeByDirection = useCallback(
@@ -410,17 +408,12 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!authReady) return;
 
+    activeRequest.current += 1;
     articlesRef.current = [];
     hasMoreRef.current = false;
+    restoredScrollRef.current = false;
     Promise.resolve().then(() => void loadFeed("initial"));
   }, [authReady, loadFeed, language, scope]);
-
-  useEffect(() => {
-    restoredScrollRef.current = false;
-    setShowTopButton(
-      rememberedHomeScrollOffsets[scope] > SHOW_TOP_BUTTON_OFFSET,
-    );
-  }, [scope]);
 
   useEffect(() => {
     const onActive = () => {
