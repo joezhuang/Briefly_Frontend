@@ -58,6 +58,10 @@ const copy = {
     showAll: "Show all",
     showLess: "Show less",
     withdraw: "Withdraw",
+    withdrawTitle: "Withdraw this contribution?",
+    withdrawBody: "This removes it from the public event discussion.",
+    cancel: "Cancel",
+    confirmWithdraw: "Withdraw",
     report: "Report",
     reported: "Reported",
     retry: "Retry",
@@ -90,6 +94,10 @@ const copy = {
     showAll: "Ver todo",
     showLess: "Ver menos",
     withdraw: "Retirar",
+    withdrawTitle: "¿Retirar esta contribución?",
+    withdrawBody: "Se eliminará de la discusión pública del evento.",
+    cancel: "Cancelar",
+    confirmWithdraw: "Retirar",
     report: "Reportar",
     reported: "Reportado",
     retry: "Reintentar",
@@ -122,6 +130,10 @@ const copy = {
     showAll: "すべて表示",
     showLess: "折りたたむ",
     withdraw: "取り下げ",
+    withdrawTitle: "この投稿を取り下げますか？",
+    withdrawBody: "イベントの公開ディスカッションから削除されます。",
+    cancel: "キャンセル",
+    confirmWithdraw: "取り下げ",
     report: "報告",
     reported: "報告済み",
     retry: "再試行",
@@ -154,6 +166,10 @@ const copy = {
     showAll: "查看全部",
     showLess: "收起",
     withdraw: "撤回",
+    withdrawTitle: "撤回这条贡献？",
+    withdrawBody: "撤回后将不再显示在该事件的公开讨论中。",
+    cancel: "取消",
+    confirmWithdraw: "撤回",
     report: "举报",
     reported: "已举报",
     retry: "重试",
@@ -186,6 +202,10 @@ const copy = {
     showAll: "查看全部",
     showLess: "收起",
     withdraw: "撤回",
+    withdrawTitle: "撤回這則貢獻？",
+    withdrawBody: "撤回後將不再顯示在此事件的公開討論中。",
+    cancel: "取消",
+    confirmWithdraw: "撤回",
     report: "檢舉",
     reported: "已檢舉",
     retry: "重試",
@@ -245,6 +265,7 @@ export function EventCommunityPanel({
   const [body, setBody] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [busy, setBusy] = useState(false);
+  const [withdrawTarget, setWithdrawTarget] = useState<number | null>(null);
   const [reportTarget, setReportTarget] = useState<number | null>(null);
   const [reportedIds, setReportedIds] = useState<Set<number>>(() => new Set());
 
@@ -326,6 +347,7 @@ export function EventCommunityPanel({
         eventId,
         properties: { kind: item.contribution_type },
       });
+      setWithdrawTarget(null);
       await refresh();
     } catch {
       Alert.alert("Briefly", text.error);
@@ -545,6 +567,7 @@ export function EventCommunityPanel({
       <View style={styles.list}>
         {cards.map(({ item, date }) => {
           const reported = reportedIds.has(item.contribution_id);
+          const withdrawing = withdrawTarget === item.contribution_id;
           const reporting = reportTarget === item.contribution_id;
           return (
             <View
@@ -587,7 +610,13 @@ export function EventCommunityPanel({
                 {item.is_mine ? (
                   <Pressable
                     disabled={busy}
-                    onPress={() => void withdraw(item)}
+                    onPress={() =>
+                      setWithdrawTarget((current) =>
+                        current === item.contribution_id
+                          ? null
+                          : item.contribution_id,
+                      )
+                    }
                     style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                   >
                     <Text style={[styles.actionText, { color: colors.textMuted }]}>
@@ -606,6 +635,70 @@ export function EventCommunityPanel({
                   </Pressable>
                 )}
               </View>
+
+              {withdrawing && (
+                <View
+                  style={[
+                    styles.withdrawConfirm,
+                    {
+                      borderColor: colors.border,
+                      backgroundColor: colors.surfaceMuted,
+                    },
+                  ]}
+                >
+                  <View style={styles.withdrawConfirmCopy}>
+                    <Text style={[styles.withdrawConfirmTitle, { color: colors.text }]}>
+                      {text.withdrawTitle}
+                    </Text>
+                    <Text style={[styles.withdrawConfirmBody, { color: colors.textMuted }]}>
+                      {text.withdrawBody}
+                    </Text>
+                    <Text
+                      numberOfLines={2}
+                      style={[styles.withdrawPreview, { color: colors.textMuted }]}
+                    >
+                      “{item.body}”
+                    </Text>
+                  </View>
+                  <View style={styles.withdrawConfirmActions}>
+                    <Pressable
+                      disabled={busy}
+                      onPress={() => setWithdrawTarget(null)}
+                      style={({ pressed }) => [
+                        styles.withdrawCancel,
+                        { borderColor: colors.border, opacity: pressed ? 0.68 : 1 },
+                      ]}
+                    >
+                      <Text style={[styles.withdrawCancelText, { color: colors.text }]}>
+                        {text.cancel}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={busy}
+                      onPress={() => void withdraw(item)}
+                      style={({ pressed }) => [
+                        styles.withdrawConfirmButton,
+                        {
+                          backgroundColor: colors.text,
+                          opacity: busy ? 0.55 : pressed ? 0.75 : 1,
+                        },
+                      ]}
+                    >
+                      {busy && (
+                        <ActivityIndicator size="small" color={colors.background} />
+                      )}
+                      <Text
+                        style={[
+                          styles.withdrawConfirmButtonText,
+                          { color: colors.background },
+                        ]}
+                      >
+                        {text.confirmWithdraw}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
 
               {reporting && !reported && (
                 <View style={styles.reportReasons}>
@@ -756,6 +849,40 @@ const styles = StyleSheet.create({
   sourceLink: { fontSize: 12, fontWeight: "800" },
   cardActions: { flexDirection: "row", gap: 14 },
   actionText: { fontSize: 12, fontWeight: "800" },
+  withdrawConfirm: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+  withdrawConfirmCopy: { gap: 4 },
+  withdrawConfirmTitle: { fontSize: 13, fontWeight: "900" },
+  withdrawConfirmBody: { fontSize: 12, lineHeight: 18 },
+  withdrawPreview: { fontSize: 12, lineHeight: 18, fontStyle: "italic" },
+  withdrawConfirmActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  withdrawCancel: {
+    minHeight: 34,
+    paddingHorizontal: 11,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  withdrawCancelText: { fontSize: 12, fontWeight: "800" },
+  withdrawConfirmButton: {
+    minHeight: 34,
+    paddingHorizontal: 11,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  withdrawConfirmButtonText: { fontSize: 12, fontWeight: "900" },
   reportReasons: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   reportReason: {
     minHeight: 30,
