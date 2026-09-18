@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { trackProductEvent } from "@/analytics/product-analytics";
 import {
   getBrieflyAppConfig,
   getBriefRepairStatus,
@@ -110,11 +111,13 @@ function getStoryUrl(currentStoryHref: string): string | null {
 }
 
 export default function StoryDetailScreen() {
-  const { slug, eventId, imageUrl, previewHeadline } = useLocalSearchParams<{
+  const { slug, eventId, imageUrl, previewHeadline, source, scope } = useLocalSearchParams<{
     slug?: string | string[];
     eventId?: string | string[];
     imageUrl?: string | string[];
     previewHeadline?: string | string[];
+    source?: string | string[];
+    scope?: string | string[];
   }>();
 
   const resolvedSlug = useMemo(
@@ -132,6 +135,14 @@ export default function StoryDetailScreen() {
   const resolvedPreviewHeadline = useMemo(
     () => (Array.isArray(previewHeadline) ? previewHeadline[0] : previewHeadline),
     [previewHeadline],
+  );
+  const resolvedSource = useMemo(
+    () => (Array.isArray(source) ? source[0] : source),
+    [source],
+  );
+  const resolvedScope = useMemo(
+    () => (Array.isArray(scope) ? scope[0] : scope),
+    [scope],
   );
 
   const { language, t } = useBrieflyLanguage();
@@ -162,6 +173,7 @@ export default function StoryDetailScreen() {
   const [briefRepairBusyKey, setBriefRepairBusyKey] = useState("");
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(false);
   const historyRecordedKey = useRef("");
+  const storyOpenTrackedKey = useRef("");
 
   const isWeb = Platform.OS === "web";
   const articleRequestLanguage = language;
@@ -173,12 +185,16 @@ export default function StoryDetailScreen() {
     if (resolvedPreviewHeadline) {
       params.set("previewHeadline", resolvedPreviewHeadline);
     }
+    if (resolvedSource) params.set("source", resolvedSource);
+    if (resolvedScope) params.set("scope", resolvedScope);
     const query = params.toString();
     return `/story/${encodeURIComponent(resolvedSlug)}${query ? `?${query}` : ""}`;
   }, [
     resolvedEventId,
     resolvedImageUrl,
     resolvedPreviewHeadline,
+    resolvedScope,
+    resolvedSource,
     resolvedSlug,
   ]);
   const translateSourceUrl = getStoryUrl(currentStoryHref);
@@ -403,6 +419,40 @@ export default function StoryDetailScreen() {
   }, [article, currentStoryHref, recordArticle]);
 
   useEffect(() => {
+    if (!article || article.article_version_id == null) return;
+
+    const versionId =
+      authoritativeArticle?.article_version_id ??
+      article.authoritative_article_version_id ??
+      article.article_version_id;
+    const eventIdValue = article.event_id || resolvedEventId || null;
+    const acquisitionSource = resolvedSource || "direct";
+    const openKey = `${eventIdValue ?? "none"}:${versionId}:${acquisitionSource}`;
+
+    if (storyOpenTrackedKey.current === openKey) return;
+    storyOpenTrackedKey.current = openKey;
+
+    trackProductEvent("story_open", {
+      eventId: eventIdValue,
+      articleVersionId: versionId,
+      properties: {
+        source: acquisitionSource,
+        scope: resolvedScope ?? null,
+        language,
+        content_language: article.content_language ?? article.language,
+        canonical_stale: article.canonical_stale === true,
+      },
+    });
+  }, [
+    article,
+    authoritativeArticle?.article_version_id,
+    language,
+    resolvedEventId,
+    resolvedScope,
+    resolvedSource,
+  ]);
+
+  useEffect(() => {
     if (!briefRepairArticleVersionId || !authReady) return;
 
     let active = true;
@@ -500,19 +550,41 @@ export default function StoryDetailScreen() {
   }, [language, podcastRequestKey, podcastSourceVersionId, podcastWatchKey]);
 
   const handlePodcastAction = async () => {
+    const analyticsBase = {
+      eventId: article?.event_id ?? resolvedEventId ?? null,
+      articleVersionId: podcastSourceVersionId,
+    };
+
     if (!user) {
+      trackProductEvent("podcast_action", {
+        ...analyticsBase,
+        properties: { action: "sign_in", language, surface: "story" },
+      });
       router.push(
         `/sign-in?returnTo=${encodeURIComponent(currentStoryHref)}` as never,
       );
       return;
     }
     if (!isPro) {
+      trackProductEvent("podcast_action", {
+        ...analyticsBase,
+        properties: { action: "upgrade", language, surface: "story" },
+      });
       router.push(
         `/upgrade?returnTo=${encodeURIComponent(currentStoryHref)}` as never,
       );
       return;
     }
     if (!podcastSourceVersionId || !podcastRequestKey || podcastBusy) return;
+
+    trackProductEvent("podcast_action", {
+      ...analyticsBase,
+      properties: {
+        action: podcast?.status === "failed" ? "retry" : "generate",
+        language,
+        surface: "story",
+      },
+    });
 
     const busyKey = podcastRequestKey;
     setPodcastBusyKey(busyKey);
