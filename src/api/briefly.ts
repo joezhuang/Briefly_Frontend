@@ -79,7 +79,7 @@ function isPublicContentPath(path: string) {
     path.startsWith("/api/app-config") ||
     path.startsWith("/api/article-feed") ||
     path.startsWith("/api/articles") ||
-    path.startsWith("/api/community") ||
+    path.startsWith("/api/community/events/") ||
     path.startsWith("/api/lazy-articles") ||
     path.startsWith("/api/event-timeline") ||
     path.startsWith("/api/location") ||
@@ -398,6 +398,53 @@ export function reportCommunityContribution(
   }>(
     `/api/community/contributions/${encodeURIComponent(String(contributionId))}/report`,
     { reason },
+  );
+}
+
+export type CommunityModerationItem = {
+  contribution_id: number;
+  event_id: string;
+  contribution_type: CommunityContributionType;
+  body: string;
+  source_url: string | null;
+  status: "visible" | "hidden";
+  created_at: string;
+  updated_at: string;
+  report_count: number;
+  latest_report_reason: CommunityReportReason;
+  latest_report_at: string;
+};
+
+export type CommunityModerationQueue = {
+  items: CommunityModerationItem[];
+  count: number;
+};
+
+export function getCommunityModerationQueue(options?: {
+  limit?: number;
+  offset?: number;
+}) {
+  const params = new URLSearchParams({
+    limit: String(options?.limit ?? 50),
+    offset: String(options?.offset ?? 0),
+  });
+  return getJson<CommunityModerationQueue>(
+    `/api/community/moderation/reports?${params.toString()}`,
+  );
+}
+
+export function setCommunityContributionVisibility(
+  contributionId: number,
+  visible: boolean,
+) {
+  return postJson<{
+    contribution_id: number;
+    event_id: string;
+    contribution_type: CommunityContributionType;
+    status: "visible" | "hidden";
+  }>(
+    `/api/community/contributions/${encodeURIComponent(String(contributionId))}/moderation`,
+    { visible },
   );
 }
 
