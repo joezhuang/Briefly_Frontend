@@ -137,7 +137,7 @@ export async function getNewsLocationPreference(): Promise<NewsLocationPreferenc
   return pendingPreference;
 }
 
-async function reverseGeocodeWeb(
+async function reverseGeocodeBackend(
   latitude: number,
   longitude: number,
 ): Promise<FeedLocation | null> {
@@ -156,6 +156,7 @@ async function reverseGeocodeWeb(
     country?: string | null;
     country_code?: string | null;
     region?: string | null;
+    region_code?: string | null;
     city?: string | null;
   };
   const countryCode = normalizeCountryCode(payload.country_code);
@@ -166,7 +167,7 @@ async function reverseGeocodeWeb(
     country,
     countryCode,
     region: firstText(payload.region) || null,
-    regionCode: null,
+    regionCode: normalizeRegionCode(payload.region_code),
     city: firstText(payload.city),
     source: "device",
   };
@@ -192,12 +193,15 @@ async function resolveDeviceLocation(options: {
           accuracy: Location.Accuracy.Balanced,
         }));
 
-      if (Platform.OS === "web") {
-        return reverseGeocodeWeb(
-          position.coords.latitude,
-          position.coords.longitude,
-        );
-      }
+      // Prefer the backend geocoder on every platform so Auto gets the same
+      // canonical English country/region identity and subdivision code as Manual.
+      const backendLocation = await reverseGeocodeBackend(
+        position.coords.latitude,
+        position.coords.longitude,
+      );
+      if (backendLocation) return backendLocation;
+
+      if (Platform.OS === "web") return null;
 
       const places = await Location.reverseGeocodeAsync({
         latitude: position.coords.latitude,
