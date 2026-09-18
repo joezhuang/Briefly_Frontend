@@ -24,6 +24,7 @@ import {
 } from "@/components/article-language-toggle";
 import { ArticleView } from "@/components/article-view";
 import { EventPreviewView } from "@/components/event-preview-view";
+import { EventCommunityPanel } from "@/components/event-community-panel";
 import { EventTimeline } from "@/components/event-timeline";
 import { RelatedStoriesCarousel } from "@/components/related-stories-carousel";
 import { ScreenState } from "@/components/screen-state";
@@ -795,6 +796,12 @@ export default function StoryDetailScreen() {
         footer={
           <>
             {showStoryAd && <StoryAdSlot />}
+            {!!displayedArticle.event_id && (
+              <EventCommunityPanel
+                eventId={displayedArticle.event_id}
+                returnTo={currentStoryHref}
+              />
+            )}
             <RelatedStoriesCarousel article={displayedArticle} />
           </>
         }
