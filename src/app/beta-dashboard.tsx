@@ -847,7 +847,7 @@ export default function BetaDashboardScreen() {
                     }
                   />
                   <MetricCard
-                    label="Used Evidence / Timeline / Coverage"
+                    label="Switched event lens"
                     value={percentage(snapshot.product.social_beta.lens_rate)}
                     detail={
                       number(snapshot.product.social_beta.lens_sessions) +
