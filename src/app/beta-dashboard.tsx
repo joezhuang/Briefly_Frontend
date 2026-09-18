@@ -660,7 +660,7 @@ export default function BetaDashboardScreen() {
           (item) => item.count,
         ),
       ),
-    [snapshot],
+    [socialBeta.lens_breakdown],
   );
 
   const maxPodcastCount = useMemo(
@@ -671,7 +671,7 @@ export default function BetaDashboardScreen() {
           (item) => item.count,
         ),
       ),
-    [snapshot],
+    [socialBeta.podcast_breakdown],
   );
 
   const maxStorySourceCount = useMemo(
@@ -682,7 +682,7 @@ export default function BetaDashboardScreen() {
           (item) => item.count,
         ),
       ),
-    [snapshot],
+    [socialBeta.story_source_breakdown],
   );
 
   const toggleError = async (item: BetaDashboardErrorGroup) => {
