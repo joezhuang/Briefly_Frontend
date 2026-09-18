@@ -77,6 +77,8 @@ const feedCopy = {
 } as const;
 
 const scopes: HomepageFeedScope[] = ["top", "national", "local"];
+const LOCAL_COVERAGE_RETRY_MS = 5000;
+const LOCAL_COVERAGE_MAX_RETRIES = 6;
 const storyKey = (article: CanonicalArticle) =>
   String(article.article_version_id ?? article.event_id);
 
@@ -146,6 +148,9 @@ export default function HomeScreen() {
   const restoredScrollRef = useRef(false);
   const loadingMoreRef = useRef(false);
   const hasMoreRef = useRef(false);
+  const coverageRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const coverageRetryCountRef = useRef(0);
+  const [coverageRetryTick, setCoverageRetryTick] = useState(0);
 
   const copy = feedCopy[language] ?? feedCopy.en;
 
@@ -172,6 +177,11 @@ export default function HomeScreen() {
       setHasMore(false);
       setError(null);
       setLoading(true);
+      coverageRetryCountRef.current = 0;
+      if (coverageRetryTimerRef.current) {
+        clearTimeout(coverageRetryTimerRef.current);
+        coverageRetryTimerRef.current = null;
+      }
       setShowTopButton(
         rememberedHomeScrollOffsets[nextScope] > SHOW_TOP_BUTTON_OFFSET,
       );
@@ -291,6 +301,37 @@ export default function HomeScreen() {
         }
 
         updateHasMore(result.has_more === true);
+
+        const coverageStatus = result.local_coverage?.status;
+        const coverageBuilding =
+          scope === "local" &&
+          mode !== "more" &&
+          (coverageStatus === "queued" || coverageStatus === "running");
+
+        if (
+          coverageBuilding &&
+          coverageRetryCountRef.current < LOCAL_COVERAGE_MAX_RETRIES
+        ) {
+          coverageRetryCountRef.current += 1;
+          if (coverageRetryTimerRef.current) {
+            clearTimeout(coverageRetryTimerRef.current);
+          }
+          coverageRetryTimerRef.current = setTimeout(() => {
+            coverageRetryTimerRef.current = null;
+            setCoverageRetryTick((value) => value + 1);
+          }, LOCAL_COVERAGE_RETRY_MS);
+        } else if (
+          scope !== "local" ||
+          coverageStatus === "ready" ||
+          coverageStatus === "failed"
+        ) {
+          coverageRetryCountRef.current = 0;
+          if (coverageRetryTimerRef.current) {
+            clearTimeout(coverageRetryTimerRef.current);
+            coverageRetryTimerRef.current = null;
+          }
+        }
+
         lastFetchedAt.current = Date.now();
       } catch (err: unknown) {
         if (activeRequest.current !== requestId) return;
@@ -416,6 +457,20 @@ export default function HomeScreen() {
     restoredScrollRef.current = false;
     Promise.resolve().then(() => void loadFeed("initial"));
   }, [authReady, loadFeed, language, scope]);
+
+  useEffect(() => {
+    if (coverageRetryTick === 0 || scope !== "local") return;
+    Promise.resolve().then(() => void loadFeed("refresh"));
+  }, [coverageRetryTick, loadFeed, scope]);
+
+  useEffect(
+    () => () => {
+      if (coverageRetryTimerRef.current) {
+        clearTimeout(coverageRetryTimerRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const onActive = () => {
