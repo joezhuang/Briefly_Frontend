@@ -180,6 +180,7 @@ export function RelatedStoriesCarousel({
           const params = new URLSearchParams({
             eventId: item.event_id,
             previewHeadline: item.headline,
+            source: "related",
           });
           if (item.image_url) params.set("imageUrl", item.image_url);
           const href = `/story/${item.slug}?${params.toString()}`;
