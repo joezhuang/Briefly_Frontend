@@ -1,17 +1,20 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   getBrieflyAppConfig,
+  getBriefRepairStatus,
   getCanonicalArticleByEventId,
   getCanonicalArticleBySlug,
   getExperimentalArticleByEventId,
   getLazyCanonicalArticleByEventId,
   getPodcastAnalysisStatus,
+  requestBriefRepair,
   requestPodcastAnalysis,
   type BrieflyAppConfig,
+  type BriefRepairStatus,
   type PodcastAnalysisStatus,
 } from "@/api/briefly";
 import {
@@ -52,6 +55,11 @@ const storyToolsCopy = {
 type PodcastState = {
   key: string;
   value: PodcastAnalysisStatus | null;
+};
+
+type BriefRepairState = {
+  key: string;
+  value: BriefRepairStatus | null;
 };
 
 function preferredImage(
@@ -147,6 +155,11 @@ export default function StoryDetailScreen() {
   });
   const [podcastWatchKey, setPodcastWatchKey] = useState("");
   const [podcastBusyKey, setPodcastBusyKey] = useState("");
+  const [briefRepairState, setBriefRepairState] = useState<BriefRepairState>({
+    key: "",
+    value: null,
+  });
+  const [briefRepairBusyKey, setBriefRepairBusyKey] = useState("");
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(false);
   const historyRecordedKey = useRef("");
 
@@ -192,6 +205,19 @@ export default function StoryDetailScreen() {
     podcastState.key === podcastRequestKey ? podcastState.value : null;
   const podcastBusy =
     !!podcastRequestKey && podcastBusyKey === podcastRequestKey;
+  const briefRepairArticleVersionId =
+    authoritativeArticle?.article_version_id ??
+    ((article?.content_language ?? article?.language) === "en"
+      ? article?.article_version_id
+      : null) ??
+    null;
+  const briefRepairKey = briefRepairArticleVersionId
+    ? String(briefRepairArticleVersionId)
+    : "";
+  const briefRepair =
+    briefRepairState.key === briefRepairKey ? briefRepairState.value : null;
+  const briefRepairBusy =
+    !!briefRepairKey && briefRepairBusyKey === briefRepairKey;
 
   useEffect(() => {
     if (!authReady) return;
@@ -377,6 +403,28 @@ export default function StoryDetailScreen() {
   }, [article, currentStoryHref, recordArticle]);
 
   useEffect(() => {
+    if (!briefRepairArticleVersionId || !authReady) {
+      setBriefRepairState({ key: "", value: null });
+      return;
+    }
+
+    let active = true;
+    const key = String(briefRepairArticleVersionId);
+
+    void getBriefRepairStatus(briefRepairArticleVersionId)
+      .then((value) => {
+        if (active) setBriefRepairState({ key, value });
+      })
+      .catch(() => {
+        if (active) setBriefRepairState({ key, value: null });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authReady, briefRepairArticleVersionId, reloadKey]);
+
+  useEffect(() => {
     if (!podcastRequestKey || !podcastSourceVersionId) return;
 
     let active = true;
@@ -488,6 +536,36 @@ export default function StoryDetailScreen() {
       }
     } finally {
       setPodcastBusyKey((current) => (current === busyKey ? "" : current));
+    }
+  };
+
+  const handleBriefRepair = async () => {
+    if (!briefRepairArticleVersionId || briefRepairBusy) return;
+
+    if (!user) {
+      router.push(
+        `/sign-in?returnTo=${encodeURIComponent(currentStoryHref)}` as never,
+      );
+      return;
+    }
+
+    const key = String(briefRepairArticleVersionId);
+    setBriefRepairBusyKey(key);
+    try {
+      await requestBriefRepair(briefRepairArticleVersionId);
+      setReloadKey((value) => value + 1);
+    } catch (err: unknown) {
+      Alert.alert(
+        "Briefly",
+        err instanceof Error
+          ? err.message
+          : "Briefly could not repair the missing summary sections.",
+      );
+      void getBriefRepairStatus(briefRepairArticleVersionId)
+        .then((value) => setBriefRepairState({ key, value }))
+        .catch(() => null);
+    } finally {
+      setBriefRepairBusyKey((current) => (current === key ? "" : current));
     }
   };
 
@@ -633,6 +711,13 @@ export default function StoryDetailScreen() {
         podcastPro={isPro}
         podcastSignedIn={!!user}
         onPodcastAction={() => void handlePodcastAction()}
+        briefRepair={
+          (displayedArticle.content_language ?? displayedArticle.language) === "en"
+            ? briefRepair
+            : null
+        }
+        briefRepairBusy={briefRepairBusy}
+        onBriefRepair={() => void handleBriefRepair()}
         translationAction={
           showGoogleTranslate && translateSourceUrl ? (
             <WebTranslateButton sourceUrl={translateSourceUrl} />
