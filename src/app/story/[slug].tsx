@@ -403,10 +403,7 @@ export default function StoryDetailScreen() {
   }, [article, currentStoryHref, recordArticle]);
 
   useEffect(() => {
-    if (!briefRepairArticleVersionId || !authReady) {
-      setBriefRepairState({ key: "", value: null });
-      return;
-    }
+    if (!briefRepairArticleVersionId || !authReady) return;
 
     let active = true;
     const key = String(briefRepairArticleVersionId);
