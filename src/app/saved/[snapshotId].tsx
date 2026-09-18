@@ -59,6 +59,7 @@ export default function SavedArticleScreen() {
         const params = new URLSearchParams({
           eventId: latest.event_id,
           savedSnapshotId: resolved,
+          source: "saved",
         });
         if (latest.image_url) params.set("imageUrl", latest.image_url);
         if (latest.headline) params.set("previewHeadline", latest.headline);
@@ -105,7 +106,10 @@ export default function SavedArticleScreen() {
   }
 
   const liveStoryHref = (() => {
-    const params = new URLSearchParams({ eventId: article.event_id });
+    const params = new URLSearchParams({
+      eventId: article.event_id,
+      source: "saved_snapshot",
+    });
     if (article.image_url) params.set("imageUrl", article.image_url);
     if (article.headline) params.set("previewHeadline", article.headline);
     return `/story/${article.slug}?${params.toString()}`;
