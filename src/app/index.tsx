@@ -110,6 +110,7 @@ function locationPreferenceKey(preference: NewsLocationPreference) {
     location?.country ?? "",
     location?.countryCode ?? "",
     location?.region ?? "",
+    location?.regionCode ?? "",
     location?.city ?? "",
   ].join("|");
 }
@@ -274,6 +275,7 @@ export default function HomeScreen() {
           countryCode: activeLocation?.countryCode,
           city: activeLocation?.city,
           region: activeLocation?.region,
+          regionCode: activeLocation?.regionCode,
           limit: PAGE_SIZE,
           offset,
         });
