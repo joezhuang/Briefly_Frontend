@@ -486,7 +486,7 @@ export function EventCommunityPanel({
           ]}
         >
           <Text style={[styles.contributeText, { color: colors.text }]}>
-            {user ? text.contribute : text.signIn}
+            {text.contribute}
           </Text>
         </Pressable>
       </View>
