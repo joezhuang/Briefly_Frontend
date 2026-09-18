@@ -435,6 +435,12 @@ export type BetaDashboardPlatform = {
   sessions: number;
 };
 
+export type BetaDashboardBreakdown = {
+  name: string;
+  count: number;
+  sessions: number;
+};
+
 export type BetaDashboardErrorGroup = {
   fingerprint: string;
   occurrences: number;
@@ -470,6 +476,26 @@ export type BetaDashboardSnapshot = {
       story_save_rate: number;
       event_follow_rate: number;
       following_view_rate: number;
+    };
+    social_beta: {
+      feed_view_sessions: number;
+      feed_story_open_sessions: number;
+      feed_to_story_rate: number;
+      lens_sessions: number;
+      lens_rate: number;
+      source_open_sessions: number;
+      source_open_rate: number;
+      share_sessions: number;
+      share_rate: number;
+      podcast_action_sessions: number;
+      podcast_action_rate: number;
+      authenticated_active_users: number;
+      multi_session_users: number;
+      returning_users: number;
+      returning_user_rate: number;
+      lens_breakdown: BetaDashboardBreakdown[];
+      podcast_breakdown: BetaDashboardBreakdown[];
+      story_source_breakdown: BetaDashboardBreakdown[];
     };
   };
   errors: {
