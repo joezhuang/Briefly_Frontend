@@ -27,7 +27,8 @@ export type ProductAnalyticsEventName =
   | "podcast_action"
   | "community_contribution_create"
   | "community_contribution_withdraw"
-  | "community_contribution_report";
+  | "community_contribution_report"
+  | "community_reaction";
 
 type AnalyticsProperties = Record<
   string,
