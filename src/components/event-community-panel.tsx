@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -378,14 +378,10 @@ export function EventCommunityPanel({
   const typeLabel = (value: CommunityContributionType) => text[value];
   const reasonLabel = (value: CommunityReportReason) => text[value];
 
-  const cards = useMemo(
-    () =>
-      visibleContributions.map((item) => ({
-        item,
-        date: contributionDate(item.created_at, language),
-      })),
-    [language, visibleContributions],
-  );
+  const cards = visibleContributions.map((item) => ({
+    item,
+    date: contributionDate(item.created_at, language),
+  }));
 
   return (
     <View style={[styles.section, { borderTopColor: colors.border }]}>
