@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { trackProductEvent } from "@/analytics/product-analytics";
 import {
   getEventIntelligence,
   type EventAssessment,
@@ -215,6 +216,15 @@ export function EventEvidencePanel({
   const [failed, setFailed] = useState(false);
   const [activeLens, setActiveLens] = useState<EventLens>("evidence");
 
+  const selectLens = (lens: EventLens) => {
+    if (lens === activeLens) return;
+    setActiveLens(lens);
+    trackProductEvent("event_lens_select", {
+      eventId,
+      properties: { lens },
+    });
+  };
+
   useEffect(() => {
     let active = true;
     setFailed(false);
@@ -316,7 +326,7 @@ export function EventEvidencePanel({
               accessibilityRole="button"
               accessibilityState={{ selected, disabled }}
               disabled={disabled}
-              onPress={() => setActiveLens(tab.id)}
+              onPress={() => selectLens(tab.id)}
               style={({ pressed }) => [
                 styles.tab,
                 selected && [
