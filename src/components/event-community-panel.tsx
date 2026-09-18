@@ -16,6 +16,7 @@ import {
   createCommunityContribution,
   getEventCommunity,
   reportCommunityContribution,
+  setCommunityReaction,
   withdrawCommunityContribution,
   type CommunityContribution,
   type CommunityContributionType,
@@ -265,6 +266,7 @@ export function EventCommunityPanel({
   const [body, setBody] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [busy, setBusy] = useState(false);
+  const [busyReactionId, setBusyReactionId] = useState<number | null>(null);
   const [withdrawTarget, setWithdrawTarget] = useState<number | null>(null);
   const [reportTarget, setReportTarget] = useState<number | null>(null);
   const [reportedIds, setReportedIds] = useState<Set<number>>(() => new Set());
@@ -353,6 +355,52 @@ export function EventCommunityPanel({
       Alert.alert("Briefly", text.error);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const react = async (
+    item: CommunityContribution,
+    reaction: "up" | "down",
+  ) => {
+    if (!user) {
+      router.push(`/sign-in?returnTo=${encodeURIComponent(returnTo)}` as never);
+      return;
+    }
+    if (busyReactionId !== null) return;
+
+    setBusyReactionId(item.contribution_id);
+    try {
+      const result = await setCommunityReaction(
+        item.contribution_id,
+        reaction,
+      );
+      setCommunityState((current) => {
+        if (!current || current.eventId !== eventId) return current;
+        return {
+          ...current,
+          value: {
+            ...current.value,
+            contributions: current.value.contributions.map((contribution) =>
+              contribution.contribution_id === item.contribution_id
+                ? {
+                    ...contribution,
+                    up_count: result.up_count,
+                    down_count: result.down_count,
+                    my_reaction: result.my_reaction,
+                  }
+                : contribution,
+            ),
+          },
+        };
+      });
+      trackProductEvent("community_reaction", {
+        eventId,
+        properties: { reaction: result.my_reaction ?? "none" },
+      });
+    } catch {
+      Alert.alert("Briefly", text.error);
+    } finally {
+      setBusyReactionId(null);
     }
   };
 
@@ -607,33 +655,91 @@ export function EventCommunityPanel({
               )}
 
               <View style={styles.cardActions}>
-                {item.is_mine ? (
-                  <Pressable
-                    disabled={busy}
-                    onPress={() =>
-                      setWithdrawTarget((current) =>
-                        current === item.contribution_id
-                          ? null
-                          : item.contribution_id,
-                      )
-                    }
-                    style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-                  >
-                    <Text style={[styles.actionText, { color: colors.textMuted }]}>
-                      {text.withdraw}
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    disabled={busy || reported}
-                    onPress={() => startReport(item)}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-                  >
-                    <Text style={[styles.actionText, { color: colors.textMuted }]}>
-                      {reported ? text.reported : text.report}
-                    </Text>
-                  </Pressable>
-                )}
+                <View style={styles.reactions}>
+                  {(["up", "down"] as const).map((reaction) => {
+                    const selected = item.my_reaction === reaction;
+                    const count =
+                      reaction === "up" ? item.up_count : item.down_count;
+                    return (
+                      <Pressable
+                        key={reaction}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          reaction === "up"
+                            ? "Helpful reaction"
+                            : "Not helpful reaction"
+                        }
+                        accessibilityState={{ selected }}
+                        disabled={busyReactionId !== null}
+                        onPress={() => void react(item, reaction)}
+                        style={({ pressed }) => [
+                          styles.reactionButton,
+                          {
+                            borderColor: selected
+                              ? colors.accent
+                              : colors.border,
+                            backgroundColor: selected
+                              ? colors.surfaceMuted
+                              : colors.surface,
+                            opacity:
+                              busyReactionId === item.contribution_id
+                                ? 0.5
+                                : pressed
+                                  ? 0.68
+                                  : 1,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.reactionText,
+                            {
+                              color: selected
+                                ? colors.accent
+                                : colors.textMuted,
+                            },
+                          ]}
+                        >
+                          {reaction === "up" ? "👍" : "👎"} {count}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <View style={styles.ownerActions}>
+                  {item.is_mine ? (
+                    <Pressable
+                      disabled={busy}
+                      onPress={() =>
+                        setWithdrawTarget((current) =>
+                          current === item.contribution_id
+                            ? null
+                            : item.contribution_id,
+                        )
+                      }
+                      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                    >
+                      <Text
+                        style={[styles.actionText, { color: colors.textMuted }]}
+                      >
+                        {text.withdraw}
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      disabled={busy || reported}
+                      onPress={() => startReport(item)}
+                      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                    >
+                      <Text
+                        style={[styles.actionText, { color: colors.textMuted }]}
+                      >
+                        {reported ? text.reported : text.report}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
               </View>
 
               {withdrawing && (
@@ -847,7 +953,29 @@ const styles = StyleSheet.create({
   meta: { fontSize: 11, fontWeight: "700" },
   body: { fontSize: 15, lineHeight: 23 },
   sourceLink: { fontSize: 12, fontWeight: "800" },
-  cardActions: { flexDirection: "row", gap: 14 },
+  cardActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  reactions: { flexDirection: "row", gap: 7 },
+  reactionButton: {
+    minHeight: 32,
+    minWidth: 54,
+    paddingHorizontal: 9,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reactionText: { fontSize: 12, fontWeight: "800" },
+  ownerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
   actionText: { fontSize: 12, fontWeight: "800" },
   withdrawConfirm: {
     borderWidth: StyleSheet.hairlineWidth,
