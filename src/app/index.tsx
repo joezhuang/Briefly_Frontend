@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { trackProductEvent } from "@/analytics/product-analytics";
 import {
   getBrieflyAppConfig,
   getHomepageArticleFeed,
@@ -282,6 +283,12 @@ export default function HomeScreen() {
 
         if (mode === "more") appendArticles(result.articles ?? []);
         else replaceArticles(result.articles ?? []);
+
+        if (mode !== "more") {
+          trackProductEvent("feed_view", {
+            properties: { scope, language },
+          });
+        }
 
         updateHasMore(result.has_more === true);
         lastFetchedAt.current = Date.now();
@@ -616,6 +623,8 @@ export default function HomeScreen() {
                   article={lead}
                   size="hero"
                   videoEnabled={homepageVideoEnabled}
+                  analyticsSource="feed"
+                  analyticsScope={scope}
                 />
               </View>
               <View style={styles.secondaryColumn}>
@@ -625,6 +634,8 @@ export default function HomeScreen() {
                     article={article}
                     size="secondary"
                     videoEnabled={homepageVideoEnabled}
+                    analyticsSource="feed"
+                    analyticsScope={scope}
                   />
                 ))}
               </View>
@@ -635,6 +646,8 @@ export default function HomeScreen() {
                 article={lead}
                 size="hero"
                 videoEnabled={homepageVideoEnabled}
+                analyticsSource="feed"
+                analyticsScope={scope}
               />
               <View style={tablet ? styles.twoColumnGrid : styles.stack}>
                 {secondary.map((article) => (
@@ -646,6 +659,8 @@ export default function HomeScreen() {
                       article={article}
                       size="secondary"
                       videoEnabled={homepageVideoEnabled}
+                      analyticsSource="feed"
+                      analyticsScope={scope}
                     />
                   </View>
                 ))}
@@ -710,6 +725,8 @@ export default function HomeScreen() {
                     <StoryTile
                       article={article}
                       videoEnabled={homepageVideoEnabled}
+                      analyticsSource="feed"
+                      analyticsScope={scope}
                     />
                   </View>
                 ))}
