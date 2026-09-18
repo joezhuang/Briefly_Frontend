@@ -1,5 +1,6 @@
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
+import { trackProductEvent } from "@/analytics/product-analytics";
 import type { CanonicalArticle, SavedArticleSnapshot } from "@/models/article";
 import { readSavedSnapshots, snapshotIdFor, toSavedSnapshot, writeSavedSnapshots } from "@/storage/saved-articles";
 
@@ -38,11 +39,24 @@ export function SavedArticlesProvider({ children }: PropsWithChildren) {
       ? snapshots.filter((item) => item.snapshot_id !== id)
       : [toSavedSnapshot(article), ...snapshots];
     await persist(next);
+    trackProductEvent(exists ? "story_unsave" : "story_save", {
+      eventId: article.event_id,
+      articleVersionId: article.article_version_id,
+      properties: { source: "article_action" },
+    });
     return !exists;
   }, [persist, snapshots]);
 
   const removeSaved = useCallback(async (snapshotId: string) => {
+    const existing = snapshots.find((item) => item.snapshot_id === snapshotId);
     await persist(snapshots.filter((item) => item.snapshot_id !== snapshotId));
+    if (existing) {
+      trackProductEvent("story_unsave", {
+        eventId: existing.event_id,
+        articleVersionId: existing.article_version_id,
+        properties: { source: "saved_list" },
+      });
+    }
   }, [persist, snapshots]);
 
   const value = useMemo(

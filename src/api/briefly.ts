@@ -4,6 +4,7 @@ import {
   setBrieflyAccessToken,
 } from "@/auth/session";
 import { supabase } from "@/auth/supabase";
+import { captureApiError } from "@/monitoring/error-monitoring";
 import type { CanonicalArticle } from "@/models/article";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
@@ -59,11 +60,26 @@ function requestHeaders(options?: { includeAuth?: boolean }) {
   return headers;
 }
 
+async function monitoredFetch(path: string, init?: RequestInit) {
+  const method = String(init?.method ?? "GET").toUpperCase();
+  try {
+    const response = await fetch(`${requireApiBaseUrl()}${path}`, init);
+    if (response.status >= 500) {
+      captureApiError({ route: path, method, statusCode: response.status });
+    }
+    return response;
+  } catch (error) {
+    captureApiError({ route: path, method, error });
+    throw error;
+  }
+}
+
 function isPublicContentPath(path: string) {
   return (
     path.startsWith("/api/app-config") ||
     path.startsWith("/api/article-feed") ||
     path.startsWith("/api/articles") ||
+    path.startsWith("/api/community/events/") ||
     path.startsWith("/api/lazy-articles") ||
     path.startsWith("/api/event-timeline") ||
     path.startsWith("/api/location") ||
@@ -73,7 +89,7 @@ function isPublicContentPath(path: string) {
 
 async function getJson<T>(path: string): Promise<T> {
   const accessToken = getBrieflyAccessToken();
-  let response = await fetch(`${requireApiBaseUrl()}${path}`, {
+  let response = await monitoredFetch(path, {
     headers: requestHeaders(),
   });
 
@@ -81,11 +97,11 @@ async function getJson<T>(path: string): Promise<T> {
     const refreshedToken = await refreshBrieflyAccessToken();
 
     if (refreshedToken) {
-      response = await fetch(`${requireApiBaseUrl()}${path}`, {
+      response = await monitoredFetch(path, {
         headers: requestHeaders(),
       });
     } else if (isPublicContentPath(path)) {
-      response = await fetch(`${requireApiBaseUrl()}${path}`, {
+      response = await monitoredFetch(path, {
         headers: requestHeaders({ includeAuth: false }),
       });
     }
@@ -102,13 +118,39 @@ async function getJson<T>(path: string): Promise<T> {
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const request = () =>
-    fetch(`${requireApiBaseUrl()}${path}`, {
+    monitoredFetch(path, {
       method: "POST",
       headers: {
         ...requestHeaders(),
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
+    });
+
+  const accessToken = getBrieflyAccessToken();
+  let response = await request();
+
+  if (response.status === 401 && accessToken) {
+    const refreshedToken = await refreshBrieflyAccessToken();
+    if (refreshedToken) {
+      response = await request();
+    }
+  }
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => "");
+    throw new Error(
+      `Briefly API request failed (${response.status}): ${message || response.statusText}`,
+    );
+  }
+  return response.json() as Promise<T>;
+}
+
+async function deleteJson<T>(path: string): Promise<T> {
+  const request = () =>
+    monitoredFetch(path, {
+      method: "DELETE",
+      headers: requestHeaders(),
     });
 
   const accessToken = getBrieflyAccessToken();
@@ -165,6 +207,38 @@ export function getLazyCanonicalArticleByEventId(
   });
   return getJson<CanonicalArticle>(
     `/api/lazy-articles/event/${encodeURIComponent(eventId)}?${params.toString()}`,
+  );
+}
+
+export type BriefRepairStatus = {
+  article_version_id: number;
+  event_id: string;
+  missing_sections: ("what_happened" | "why_it_matters" | "what_next")[];
+  attempted: boolean;
+  status: "processing" | "succeeded" | "failed" | null;
+  available: boolean;
+  repaired_article_version_id: number | null;
+};
+
+export type BriefRepairResult = {
+  status: "succeeded" | "not_needed";
+  source_article_version_id?: number;
+  article_version_id: number;
+  event_id?: string;
+  repaired_sections?: ("what_happened" | "why_it_matters" | "what_next")[];
+  missing_sections?: string[];
+};
+
+export function getBriefRepairStatus(articleVersionId: number) {
+  return getJson<BriefRepairStatus>(
+    `/api/articles/version/${encodeURIComponent(String(articleVersionId))}/brief-repair`,
+  );
+}
+
+export function requestBriefRepair(articleVersionId: number) {
+  return postJson<BriefRepairResult>(
+    `/api/articles/version/${encodeURIComponent(String(articleVersionId))}/brief-repair`,
+    {},
   );
 }
 
@@ -232,6 +306,164 @@ export function requestCardTranslation(
     source_headline: sourceHeadline ?? null,
     source_summary: sourceSummary ?? null,
   });
+}
+
+export type CommunityContributionType =
+  | "perspective"
+  | "reason"
+  | "evidence"
+  | "question"
+  | "correction";
+
+export type CommunityReportReason =
+  | "misleading"
+  | "abusive"
+  | "spam"
+  | "off_topic"
+  | "other";
+
+export type CommunityContribution = {
+  contribution_id: number;
+  event_id: string;
+  contribution_type: CommunityContributionType;
+  body: string;
+  source_url: string | null;
+  created_at: string;
+  updated_at: string;
+  is_mine: boolean;
+  up_count: number;
+  down_count: number;
+  my_reaction: "up" | "down" | null;
+};
+
+export type EventCommunity = {
+  event_id: string;
+  contributions: CommunityContribution[];
+  count: number;
+  by_type: Partial<Record<CommunityContributionType, number>>;
+};
+
+export function getEventCommunity(
+  eventId: string,
+  options?: {
+    contributionType?: CommunityContributionType;
+    limit?: number;
+    offset?: number;
+  },
+) {
+  const params = new URLSearchParams({
+    limit: String(options?.limit ?? 40),
+    offset: String(options?.offset ?? 0),
+  });
+  if (options?.contributionType) {
+    params.set("contribution_type", options.contributionType);
+  }
+  return getJson<EventCommunity>(
+    `/api/community/events/${encodeURIComponent(eventId)}?${params.toString()}`,
+  );
+}
+
+export function createCommunityContribution(
+  eventId: string,
+  input: {
+    contribution_type: CommunityContributionType;
+    body: string;
+    source_url?: string | null;
+  },
+) {
+  return postJson<CommunityContribution>(
+    `/api/community/events/${encodeURIComponent(eventId)}/contributions`,
+    input,
+  );
+}
+
+export function withdrawCommunityContribution(contributionId: number) {
+  return deleteJson<{
+    status: "withdrawn";
+    contribution_id: number;
+    event_id: string;
+    contribution_type: CommunityContributionType;
+  }>(
+    `/api/community/contributions/${encodeURIComponent(String(contributionId))}`,
+  );
+}
+
+export function setCommunityReaction(
+  contributionId: number,
+  reaction: "up" | "down",
+) {
+  return postJson<{
+    contribution_id: number;
+    my_reaction: "up" | "down" | null;
+    up_count: number;
+    down_count: number;
+  }>(
+    `/api/community/contributions/${encodeURIComponent(String(contributionId))}/reaction`,
+    { reaction },
+  );
+}
+
+export function reportCommunityContribution(
+  contributionId: number,
+  reason: CommunityReportReason,
+) {
+  return postJson<{
+    status: "reported";
+    report_id: number;
+    contribution_id: number;
+    reason: CommunityReportReason;
+    created_at: string;
+  }>(
+    `/api/community/contributions/${encodeURIComponent(String(contributionId))}/report`,
+    { reason },
+  );
+}
+
+export type CommunityModerationItem = {
+  contribution_id: number;
+  event_id: string;
+  contribution_type: CommunityContributionType;
+  body: string;
+  source_url: string | null;
+  status: "visible" | "hidden";
+  created_at: string;
+  updated_at: string;
+  report_count: number;
+  latest_report_reason: CommunityReportReason;
+  latest_report_at: string;
+};
+
+export type CommunityModerationQueue = {
+  items: CommunityModerationItem[];
+  count: number;
+};
+
+export function getCommunityModerationQueue(options?: {
+  limit?: number;
+  offset?: number;
+}) {
+  const params = new URLSearchParams({
+    limit: String(options?.limit ?? 50),
+    offset: String(options?.offset ?? 0),
+  });
+  return getJson<CommunityModerationQueue>(
+    `/api/community/moderation/reports?${params.toString()}`,
+  );
+}
+
+export function setCommunityContributionVisibility(
+  contributionId: number,
+  visible: boolean,
+) {
+  return postJson<{
+    contribution_id: number;
+    event_id: string;
+    contribution_type: CommunityContributionType;
+    status: "visible" | "hidden";
+  }>(
+    `/api/community/contributions/${encodeURIComponent(String(contributionId))}/moderation`,
+    { visible },
+  );
 }
 
 export type PodcastAnalysisStatus = {
@@ -367,7 +599,126 @@ export type BrieflyAccountState = {
   authenticated: boolean;
   email: string | null;
   translation_entitled: boolean;
+  is_admin: boolean;
 };
+
+export type BetaDashboardEventCount = {
+  event_name: string;
+  count: number;
+  sessions: number;
+};
+
+export type BetaDashboardDailyUsage = {
+  day: string;
+  events: number;
+  sessions: number;
+};
+
+export type BetaDashboardPlatform = {
+  platform: string;
+  events: number;
+  sessions: number;
+};
+
+export type BetaDashboardBreakdown = {
+  name: string;
+  count: number;
+  sessions: number;
+};
+
+export type BetaDashboardErrorGroup = {
+  fingerprint: string;
+  occurrences: number;
+  unresolved_occurrences: number;
+  first_seen: string;
+  last_seen: string;
+  source: "client" | "server";
+  severity: "warning" | "error" | "fatal";
+  error_type: string;
+  route: string | null;
+  status_code: number | null;
+  exception_type: string | null;
+  message: string;
+};
+
+export type BetaDashboardSnapshot = {
+  window_days: number;
+  generated_at: string;
+  product: {
+    summary: {
+      total_events: number;
+      sessions: number;
+      authenticated_users: number;
+    };
+    event_counts: BetaDashboardEventCount[];
+    daily_usage: BetaDashboardDailyUsage[];
+    platforms: BetaDashboardPlatform[];
+    funnel: {
+      story_open_sessions: number;
+      story_save_sessions: number;
+      event_follow_sessions: number;
+      following_view_sessions: number;
+      story_save_rate: number;
+      event_follow_rate: number;
+      following_view_rate: number;
+    };
+    social_beta: {
+      feed_view_sessions: number;
+      feed_story_open_sessions: number;
+      feed_to_story_rate: number;
+      lens_sessions: number;
+      lens_rate: number;
+      source_open_sessions: number;
+      source_open_rate: number;
+      share_sessions: number;
+      share_rate: number;
+      podcast_action_sessions: number;
+      podcast_action_rate: number;
+      authenticated_active_users: number;
+      multi_session_users: number;
+      returning_users: number;
+      returning_user_rate: number;
+      lens_breakdown: BetaDashboardBreakdown[];
+      podcast_breakdown: BetaDashboardBreakdown[];
+      story_source_breakdown: BetaDashboardBreakdown[];
+    };
+  };
+  errors: {
+    summary: {
+      total_errors: number;
+      unresolved_errors: number;
+      client_errors: number;
+      server_errors: number;
+      unique_fingerprints: number;
+    };
+    groups: BetaDashboardErrorGroup[];
+  };
+};
+
+export function getBetaDashboard(days = 7) {
+  const params = new URLSearchParams({
+    days: String(Math.max(1, Math.min(days, 90))),
+  });
+  return getJson<BetaDashboardSnapshot>(
+    "/api/beta-dashboard?" + params.toString(),
+  );
+}
+
+export function setBetaDashboardErrorResolution(
+  fingerprint: string,
+  resolved: boolean,
+) {
+  return postJson<{
+    status: "resolved" | "reopened";
+    fingerprint: string;
+    changed: number;
+  }>(
+    "/api/beta-dashboard/errors/" +
+      encodeURIComponent(fingerprint) +
+      "/resolution",
+    { resolved },
+  );
+}
 
 export function getCurrentBrieflyAccount() {
   return getJson<BrieflyAccountState>("/api/me");
@@ -430,3 +781,12 @@ export type BrieflyAppConfig = {
 export function getBrieflyAppConfig() {
   return getJson<BrieflyAppConfig>("/api/app-config");
 }
+
+export function getBetaDashboardAppConfig() {
+  return getJson<BrieflyAppConfig>("/api/beta-dashboard/app-config");
+}
+
+export function updateBetaDashboardAppConfig(config: BrieflyAppConfig) {
+  return postJson<BrieflyAppConfig>("/api/beta-dashboard/app-config", config);
+}
+

@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import StoryVideoEmbed from "./story-video-embed";
@@ -62,12 +62,9 @@ export function StoryVideo({
   compact = false,
   autoStart = false,
 }: Props) {
-  const [started, setStarted] = useState(autoStart);
+  const [manuallyStarted, setManuallyStarted] = useState(false);
+  const started = autoStart || manuallyStarted;
   const embed = useMemo(() => embeddedUrl(url), [url]);
-
-  useEffect(() => {
-    if (autoStart) setStarted(true);
-  }, [autoStart]);
 
   return (
     <View style={styles.root}>
@@ -96,7 +93,7 @@ export function StoryVideo({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={accessibilityLabel}
-            onPress={() => setStarted(true)}
+            onPress={() => setManuallyStarted(true)}
             style={({ pressed }) => [
               compact ? styles.compactButton : styles.playButton,
               pressed && styles.pressed,

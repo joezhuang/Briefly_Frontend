@@ -29,7 +29,7 @@ let cachedPreference: NewsLocationPreference | undefined;
 let pendingPreference: Promise<NewsLocationPreference> | null = null;
 let pendingDeviceLocation: Promise<FeedLocation | null> | null = null;
 
-function firstText(...values: Array<string | null | undefined>) {
+function firstText(...values: (string | null | undefined)[]) {
   for (const value of values) {
     const text = String(value || "").trim();
     if (text) return text;

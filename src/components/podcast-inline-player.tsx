@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { trackProductEvent } from "@/analytics/product-analytics";
 import { usePodcastPlayer } from "@/context/podcast-player";
 import { useBrieflyTheme } from "@/context/theme";
 
@@ -13,9 +14,15 @@ function formatTime(value: number) {
 export function PodcastInlinePlayer({
   source,
   title = "Briefly Podcast Analysis",
+  eventId,
+  articleVersionId,
+  language = "en",
 }: {
   source: string;
   title?: string;
+  eventId?: string | null;
+  articleVersionId?: number | null;
+  language?: string;
 }) {
   const { colors } = useBrieflyTheme();
   const {
@@ -49,7 +56,18 @@ export function PodcastInlinePlayer({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={isPlaying ? "Pause podcast" : "Play podcast"}
-          onPress={() => toggle(track)}
+          onPress={() => {
+            trackProductEvent("podcast_action", {
+              eventId,
+              articleVersionId,
+              properties: {
+                action: isPlaying ? "pause" : "play",
+                language,
+                surface: "story_player",
+              },
+            });
+            toggle(track);
+          }}
           style={[styles.primaryButton, { backgroundColor: colors.text }]}
         >
           <Text style={[styles.primaryText, { color: colors.background }]}>
@@ -61,7 +79,18 @@ export function PodcastInlinePlayer({
           accessibilityRole="button"
           accessibilityLabel={queued ? "Podcast already in queue" : "Add podcast to queue"}
           disabled={queued}
-          onPress={() => addToQueue(track)}
+          onPress={() => {
+            trackProductEvent("podcast_action", {
+              eventId,
+              articleVersionId,
+              properties: {
+                action: "queue",
+                language,
+                surface: "story_player",
+              },
+            });
+            addToQueue(track);
+          }}
           style={[
             styles.secondaryButton,
             { borderColor: colors.border },

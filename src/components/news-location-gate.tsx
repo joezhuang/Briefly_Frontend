@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -308,11 +308,6 @@ export function NewsLocationGate({
     void loadCountries();
     if (countryCode) void loadRegions(countryCode);
   }, [loadCountries, loadRegions, location, mode]);
-
-  useEffect(() => {
-    if (!modalOpen) return;
-    if (manualMode) void loadCountries();
-  }, [loadCountries, manualMode, modalOpen]);
 
   const filteredCountries = useMemo(() => {
     const query = normalize(search);

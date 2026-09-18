@@ -23,6 +23,8 @@ type Props = {
   size?: TileSize;
   href?: string;
   videoEnabled?: boolean;
+  analyticsSource?: string;
+  analyticsScope?: string;
 };
 
 type ActiveVideoListener = (eventId: string | null) => void;
@@ -37,7 +39,9 @@ function setActiveHomepageVideo(eventId: string | null) {
 function subscribeActiveHomepageVideo(listener: ActiveVideoListener) {
   activeVideoListeners.add(listener);
   listener(activeVideoEventId);
-  return () => activeVideoListeners.delete(listener);
+  return () => {
+    activeVideoListeners.delete(listener);
+  };
 }
 
 const translationCopy: Record<string, { translate: string; original: string; retry: string; play: string; close: string }> = {
@@ -53,6 +57,8 @@ export function StoryTile({
   size = "standard",
   href,
   videoEnabled = true,
+  analyticsSource,
+  analyticsScope,
 }: Props) {
   const { language, t } = useBrieflyLanguage();
   const [translation, setTranslation] = useState<CardTranslation | null>(null);
@@ -90,6 +96,8 @@ export function StoryTile({
         eventId: article.event_id,
         previewHeadline: article.headline,
       });
+      if (analyticsSource) params.set("source", analyticsSource);
+      if (analyticsScope) params.set("scope", analyticsScope);
       if (imageUrl) params.set("imageUrl", imageUrl);
       if (videoUrl) params.set("videoUrl", videoUrl);
       return `/story/${article.slug}?${params.toString()}`;

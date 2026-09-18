@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { trackProductEvent } from "@/analytics/product-analytics";
 import {
   getBrieflyAppConfig,
   getHomepageArticleFeed,
@@ -166,10 +167,8 @@ export default function HomeScreen() {
   const switchScope = useCallback(
     (nextScope: HomepageFeedScope) => {
       if (nextScope === scope) return;
-      activeRequest.current += 1;
-      restoredScrollRef.current = false;
-      replaceArticles([]);
-      updateHasMore(false);
+      setArticles([]);
+      setHasMore(false);
       setError(null);
       setLoading(true);
       setShowTopButton(
@@ -177,7 +176,7 @@ export default function HomeScreen() {
       );
       setScope(nextScope);
     },
-    [replaceArticles, scope, updateHasMore],
+    [scope],
   );
 
   const switchScopeByDirection = useCallback(
@@ -282,6 +281,12 @@ export default function HomeScreen() {
 
         if (mode === "more") appendArticles(result.articles ?? []);
         else replaceArticles(result.articles ?? []);
+
+        if (mode !== "more") {
+          trackProductEvent("feed_view", {
+            properties: { scope, language },
+          });
+        }
 
         updateHasMore(result.has_more === true);
         lastFetchedAt.current = Date.now();
@@ -403,17 +408,12 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!authReady) return;
 
+    activeRequest.current += 1;
     articlesRef.current = [];
     hasMoreRef.current = false;
+    restoredScrollRef.current = false;
     Promise.resolve().then(() => void loadFeed("initial"));
   }, [authReady, loadFeed, language, scope]);
-
-  useEffect(() => {
-    restoredScrollRef.current = false;
-    setShowTopButton(
-      rememberedHomeScrollOffsets[scope] > SHOW_TOP_BUTTON_OFFSET,
-    );
-  }, [scope]);
 
   useEffect(() => {
     const onActive = () => {
@@ -616,6 +616,8 @@ export default function HomeScreen() {
                   article={lead}
                   size="hero"
                   videoEnabled={homepageVideoEnabled}
+                  analyticsSource="feed"
+                  analyticsScope={scope}
                 />
               </View>
               <View style={styles.secondaryColumn}>
@@ -625,6 +627,8 @@ export default function HomeScreen() {
                     article={article}
                     size="secondary"
                     videoEnabled={homepageVideoEnabled}
+                    analyticsSource="feed"
+                    analyticsScope={scope}
                   />
                 ))}
               </View>
@@ -635,6 +639,8 @@ export default function HomeScreen() {
                 article={lead}
                 size="hero"
                 videoEnabled={homepageVideoEnabled}
+                analyticsSource="feed"
+                analyticsScope={scope}
               />
               <View style={tablet ? styles.twoColumnGrid : styles.stack}>
                 {secondary.map((article) => (
@@ -646,6 +652,8 @@ export default function HomeScreen() {
                       article={article}
                       size="secondary"
                       videoEnabled={homepageVideoEnabled}
+                      analyticsSource="feed"
+                      analyticsScope={scope}
                     />
                   </View>
                 ))}
@@ -710,6 +718,8 @@ export default function HomeScreen() {
                     <StoryTile
                       article={article}
                       videoEnabled={homepageVideoEnabled}
+                      analyticsSource="feed"
+                      analyticsScope={scope}
                     />
                   </View>
                 ))}

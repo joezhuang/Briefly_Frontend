@@ -1,4 +1,5 @@
 import { getBrieflyAccessToken } from "@/auth/session";
+import { captureApiError } from "@/monitoring/error-monitoring";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
 
@@ -14,17 +15,34 @@ function requireAccessToken() {
 }
 
 export async function syncBrieflyNativeSubscription() {
-  const response = await fetch(
-    `${requireApiBaseUrl()}/api/subscriptions/native/sync`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${requireAccessToken()}`,
-        "Content-Type": "application/json",
+  let response: Response;
+  try {
+    response = await fetch(
+      `${requireApiBaseUrl()}/api/subscriptions/native/sync`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${requireAccessToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: "{}",
       },
-      body: "{}",
-    },
-  );
+    );
+  } catch (error) {
+    captureApiError({
+      route: "/api/subscriptions/native/sync",
+      method: "POST",
+      error,
+    });
+    throw error;
+  }
+  if (response.status >= 500) {
+    captureApiError({
+      route: "/api/subscriptions/native/sync",
+      method: "POST",
+      statusCode: response.status,
+    });
+  }
 
   if (!response.ok) {
     const message = await response.text().catch(() => "");
@@ -41,12 +59,25 @@ export async function syncBrieflyNativeSubscription() {
 }
 
 export async function deleteBrieflyAccount() {
-  const response = await fetch(`${requireApiBaseUrl()}/api/account`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${requireAccessToken()}`,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${requireApiBaseUrl()}/api/account`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${requireAccessToken()}`,
+      },
+    });
+  } catch (error) {
+    captureApiError({ route: "/api/account", method: "DELETE", error });
+    throw error;
+  }
+  if (response.status >= 500) {
+    captureApiError({
+      route: "/api/account",
+      method: "DELETE",
+      statusCode: response.status,
+    });
+  }
 
   if (!response.ok) {
     const message = await response.text().catch(() => "");

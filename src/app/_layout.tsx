@@ -3,17 +3,20 @@ import { useLocales } from "expo-localization";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { Fragment, PropsWithChildren, useEffect, useState } from "react";
+import { Fragment, PropsWithChildren, useEffect, useRef, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { trackProductEvent } from "@/analytics/product-analytics";
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import { AppErrorBoundary } from "@/components/app-error-boundary";
 import { GlobalPodcastPlayer } from "@/components/global-podcast-player";
 import { AnalysisReadinessProvider } from "@/context/analysis-readiness";
-import { BrieflyAuthProvider } from "@/context/auth";
+import { BrieflyAuthProvider, useBrieflyAuth } from "@/context/auth";
 import { LanguageProvider } from "@/context/language";
 import { PodcastPlayerProvider } from "@/context/podcast-player";
 import { ReadingHistoryProvider } from "@/context/reading-history";
 import { SavedArticlesProvider } from "@/context/saved-articles";
+import { installGlobalErrorMonitoring } from "@/monitoring/error-monitoring";
 import {
   BrieflyThemeProvider,
   useBrieflyTheme,
@@ -98,6 +101,21 @@ function SystemLocaleGate({ children }: PropsWithChildren) {
   return <Fragment key={languageRevision}>{children}</Fragment>;
 }
 
+function ProductAnalyticsSession() {
+  const { ready } = useBrieflyAuth();
+  const tracked = useRef(false);
+
+  useEffect(() => {
+    if (!ready || tracked.current) return;
+    tracked.current = true;
+    trackProductEvent("session_start", {
+      properties: { entry: "app" },
+    });
+  }, [ready]);
+
+  return null;
+}
+
 function AppStack() {
   const { resolvedMode } = useBrieflyTheme();
 
@@ -111,6 +129,7 @@ function AppStack() {
         <Stack.Screen name="saved/[snapshotId]" />
         <Stack.Screen name="history" />
         <Stack.Screen name="search" />
+        <Stack.Screen name="beta-dashboard" />
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="upgrade" />
         <Stack.Screen name="auth/callback" />
@@ -123,12 +142,16 @@ function AppStack() {
 }
 
 export default function RootLayout() {
+  useEffect(() => installGlobalErrorMonitoring(), []);
+
   return (
     <SafeAreaProvider>
+      <AppErrorBoundary>
       <SystemLocaleGate>
         <LanguageProvider>
           <BrieflyThemeProvider>
             <BrieflyAuthProvider>
+              <ProductAnalyticsSession />
               <PodcastPlayerProvider>
                 <AnalysisReadinessProvider>
                   <ReadingHistoryProvider>
@@ -142,6 +165,7 @@ export default function RootLayout() {
           </BrieflyThemeProvider>
         </LanguageProvider>
       </SystemLocaleGate>
+      </AppErrorBoundary>
     </SafeAreaProvider>
   );
 }

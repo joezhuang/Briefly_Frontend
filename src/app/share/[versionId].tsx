@@ -1,8 +1,9 @@
 import { useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getCanonicalArticleByVersionId } from "@/api/briefly";
+import { trackProductEvent } from "@/analytics/product-analytics";
 import { ArticleView } from "@/components/article-view";
 import { ScreenState } from "@/components/screen-state";
 import { useBrieflyLanguage } from "@/context/language";
@@ -25,12 +26,13 @@ export default function SharedArticleScreen() {
   const id = Number(resolved);
   const invalidId = !Number.isInteger(id) || id <= 0;
 
-  const { t } = useBrieflyLanguage();
+  const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
 
   const [article, setArticle] = useState<CanonicalArticle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const trackedOpen = useRef("");
 
   useEffect(() => {
     if (invalidId) return;
@@ -62,6 +64,23 @@ export default function SharedArticleScreen() {
       active = false;
     };
   }, [id, invalidId, reloadKey, t.sharedUnavailable]);
+
+  useEffect(() => {
+    if (!article || article.article_version_id == null) return;
+    const key = `${article.event_id}:${article.article_version_id}`;
+    if (trackedOpen.current === key) return;
+    trackedOpen.current = key;
+    trackProductEvent("story_open", {
+      eventId: article.event_id,
+      articleVersionId: article.article_version_id,
+      properties: {
+        source: "share",
+        language,
+        content_language: article.content_language ?? article.language,
+        canonical_stale: article.canonical_stale === true,
+      },
+    });
+  }, [article, language]);
 
   if (invalidId) {
     return (

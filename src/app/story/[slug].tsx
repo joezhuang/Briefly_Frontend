@@ -1,17 +1,21 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { trackProductEvent } from "@/analytics/product-analytics";
 import {
   getBrieflyAppConfig,
+  getBriefRepairStatus,
   getCanonicalArticleByEventId,
   getCanonicalArticleBySlug,
   getExperimentalArticleByEventId,
   getLazyCanonicalArticleByEventId,
   getPodcastAnalysisStatus,
+  requestBriefRepair,
   requestPodcastAnalysis,
   type BrieflyAppConfig,
+  type BriefRepairStatus,
   type PodcastAnalysisStatus,
 } from "@/api/briefly";
 import {
@@ -20,6 +24,7 @@ import {
 } from "@/components/article-language-toggle";
 import { ArticleView } from "@/components/article-view";
 import { EventPreviewView } from "@/components/event-preview-view";
+import { EventCommunityPanel } from "@/components/event-community-panel";
 import { EventTimeline } from "@/components/event-timeline";
 import { RelatedStoriesCarousel } from "@/components/related-stories-carousel";
 import { ScreenState } from "@/components/screen-state";
@@ -52,6 +57,11 @@ const storyToolsCopy = {
 type PodcastState = {
   key: string;
   value: PodcastAnalysisStatus | null;
+};
+
+type BriefRepairState = {
+  key: string;
+  value: BriefRepairStatus | null;
 };
 
 function preferredImage(
@@ -102,11 +112,13 @@ function getStoryUrl(currentStoryHref: string): string | null {
 }
 
 export default function StoryDetailScreen() {
-  const { slug, eventId, imageUrl, previewHeadline } = useLocalSearchParams<{
+  const { slug, eventId, imageUrl, previewHeadline, source, scope } = useLocalSearchParams<{
     slug?: string | string[];
     eventId?: string | string[];
     imageUrl?: string | string[];
     previewHeadline?: string | string[];
+    source?: string | string[];
+    scope?: string | string[];
   }>();
 
   const resolvedSlug = useMemo(
@@ -124,6 +136,14 @@ export default function StoryDetailScreen() {
   const resolvedPreviewHeadline = useMemo(
     () => (Array.isArray(previewHeadline) ? previewHeadline[0] : previewHeadline),
     [previewHeadline],
+  );
+  const resolvedSource = useMemo(
+    () => (Array.isArray(source) ? source[0] : source),
+    [source],
+  );
+  const resolvedScope = useMemo(
+    () => (Array.isArray(scope) ? scope[0] : scope),
+    [scope],
   );
 
   const { language, t } = useBrieflyLanguage();
@@ -147,8 +167,14 @@ export default function StoryDetailScreen() {
   });
   const [podcastWatchKey, setPodcastWatchKey] = useState("");
   const [podcastBusyKey, setPodcastBusyKey] = useState("");
+  const [briefRepairState, setBriefRepairState] = useState<BriefRepairState>({
+    key: "",
+    value: null,
+  });
+  const [briefRepairBusyKey, setBriefRepairBusyKey] = useState("");
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(false);
   const historyRecordedKey = useRef("");
+  const storyOpenTrackedKey = useRef("");
 
   const isWeb = Platform.OS === "web";
   const articleRequestLanguage = language;
@@ -160,12 +186,16 @@ export default function StoryDetailScreen() {
     if (resolvedPreviewHeadline) {
       params.set("previewHeadline", resolvedPreviewHeadline);
     }
+    if (resolvedSource) params.set("source", resolvedSource);
+    if (resolvedScope) params.set("scope", resolvedScope);
     const query = params.toString();
     return `/story/${encodeURIComponent(resolvedSlug)}${query ? `?${query}` : ""}`;
   }, [
     resolvedEventId,
     resolvedImageUrl,
     resolvedPreviewHeadline,
+    resolvedScope,
+    resolvedSource,
     resolvedSlug,
   ]);
   const translateSourceUrl = getStoryUrl(currentStoryHref);
@@ -192,6 +222,19 @@ export default function StoryDetailScreen() {
     podcastState.key === podcastRequestKey ? podcastState.value : null;
   const podcastBusy =
     !!podcastRequestKey && podcastBusyKey === podcastRequestKey;
+  const briefRepairArticleVersionId =
+    authoritativeArticle?.article_version_id ??
+    ((article?.content_language ?? article?.language) === "en"
+      ? article?.article_version_id
+      : null) ??
+    null;
+  const briefRepairKey = briefRepairArticleVersionId
+    ? String(briefRepairArticleVersionId)
+    : "";
+  const briefRepair =
+    briefRepairState.key === briefRepairKey ? briefRepairState.value : null;
+  const briefRepairBusy =
+    !!briefRepairKey && briefRepairBusyKey === briefRepairKey;
 
   useEffect(() => {
     if (!authReady) return;
@@ -377,6 +420,59 @@ export default function StoryDetailScreen() {
   }, [article, currentStoryHref, recordArticle]);
 
   useEffect(() => {
+    if (!article || article.article_version_id == null) return;
+
+    const versionId =
+      authoritativeArticle?.article_version_id ??
+      article.authoritative_article_version_id ??
+      article.article_version_id;
+    const eventIdValue = article.event_id || resolvedEventId || null;
+    const acquisitionSource = resolvedSource || "direct";
+    const openKey = `${eventIdValue ?? "none"}:${versionId}:${acquisitionSource}`;
+
+    if (storyOpenTrackedKey.current === openKey) return;
+    storyOpenTrackedKey.current = openKey;
+
+    trackProductEvent("story_open", {
+      eventId: eventIdValue,
+      articleVersionId: versionId,
+      properties: {
+        source: acquisitionSource,
+        scope: resolvedScope ?? null,
+        language,
+        content_language: article.content_language ?? article.language,
+        canonical_stale: article.canonical_stale === true,
+      },
+    });
+  }, [
+    article,
+    authoritativeArticle?.article_version_id,
+    language,
+    resolvedEventId,
+    resolvedScope,
+    resolvedSource,
+  ]);
+
+  useEffect(() => {
+    if (!briefRepairArticleVersionId || !authReady) return;
+
+    let active = true;
+    const key = String(briefRepairArticleVersionId);
+
+    void getBriefRepairStatus(briefRepairArticleVersionId)
+      .then((value) => {
+        if (active) setBriefRepairState({ key, value });
+      })
+      .catch(() => {
+        if (active) setBriefRepairState({ key, value: null });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authReady, briefRepairArticleVersionId, reloadKey]);
+
+  useEffect(() => {
     if (!podcastRequestKey || !podcastSourceVersionId) return;
 
     let active = true;
@@ -455,19 +551,41 @@ export default function StoryDetailScreen() {
   }, [language, podcastRequestKey, podcastSourceVersionId, podcastWatchKey]);
 
   const handlePodcastAction = async () => {
+    const analyticsBase = {
+      eventId: article?.event_id ?? resolvedEventId ?? null,
+      articleVersionId: podcastSourceVersionId,
+    };
+
     if (!user) {
+      trackProductEvent("podcast_action", {
+        ...analyticsBase,
+        properties: { action: "sign_in", language, surface: "story" },
+      });
       router.push(
         `/sign-in?returnTo=${encodeURIComponent(currentStoryHref)}` as never,
       );
       return;
     }
     if (!isPro) {
+      trackProductEvent("podcast_action", {
+        ...analyticsBase,
+        properties: { action: "upgrade", language, surface: "story" },
+      });
       router.push(
         `/upgrade?returnTo=${encodeURIComponent(currentStoryHref)}` as never,
       );
       return;
     }
     if (!podcastSourceVersionId || !podcastRequestKey || podcastBusy) return;
+
+    trackProductEvent("podcast_action", {
+      ...analyticsBase,
+      properties: {
+        action: podcast?.status === "failed" ? "retry" : "generate",
+        language,
+        surface: "story",
+      },
+    });
 
     const busyKey = podcastRequestKey;
     setPodcastBusyKey(busyKey);
@@ -488,6 +606,36 @@ export default function StoryDetailScreen() {
       }
     } finally {
       setPodcastBusyKey((current) => (current === busyKey ? "" : current));
+    }
+  };
+
+  const handleBriefRepair = async () => {
+    if (!briefRepairArticleVersionId || briefRepairBusy) return;
+
+    if (!user) {
+      router.push(
+        `/sign-in?returnTo=${encodeURIComponent(currentStoryHref)}` as never,
+      );
+      return;
+    }
+
+    const key = String(briefRepairArticleVersionId);
+    setBriefRepairBusyKey(key);
+    try {
+      await requestBriefRepair(briefRepairArticleVersionId);
+      setReloadKey((value) => value + 1);
+    } catch (err: unknown) {
+      Alert.alert(
+        "Briefly",
+        err instanceof Error
+          ? err.message
+          : "Briefly could not repair the missing summary sections.",
+      );
+      void getBriefRepairStatus(briefRepairArticleVersionId)
+        .then((value) => setBriefRepairState({ key, value }))
+        .catch(() => null);
+    } finally {
+      setBriefRepairBusyKey((current) => (current === key ? "" : current));
     }
   };
 
@@ -633,6 +781,13 @@ export default function StoryDetailScreen() {
         podcastPro={isPro}
         podcastSignedIn={!!user}
         onPodcastAction={() => void handlePodcastAction()}
+        briefRepair={
+          (displayedArticle.content_language ?? displayedArticle.language) === "en"
+            ? briefRepair
+            : null
+        }
+        briefRepairBusy={briefRepairBusy}
+        onBriefRepair={() => void handleBriefRepair()}
         translationAction={
           showGoogleTranslate && translateSourceUrl ? (
             <WebTranslateButton sourceUrl={translateSourceUrl} />
@@ -641,6 +796,12 @@ export default function StoryDetailScreen() {
         footer={
           <>
             {showStoryAd && <StoryAdSlot />}
+            {!!displayedArticle.event_id && (
+              <EventCommunityPanel
+                eventId={displayedArticle.event_id}
+                returnTo={currentStoryHref}
+              />
+            )}
             <RelatedStoriesCarousel article={displayedArticle} />
           </>
         }
