@@ -29,14 +29,20 @@ import { useBrieflyTheme } from "@/context/theme";
 import { layout } from "@/theme/tokens";
 
 const WINDOWS = [7, 30, 90] as const;
+const DASHBOARD_TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "social", label: "Social Beta" },
+  { id: "operations", label: "Operations" },
+  { id: "settings", label: "Settings" },
+] as const;
 const SOCIAL_BETA_TABS = [
   { id: "overview", label: "Overview" },
-  { id: "trend", label: "Trend" },
   { id: "acquisition", label: "Acquisition" },
   { id: "lenses", label: "Lenses" },
   { id: "deeply", label: "Podcast" },
 ] as const;
 
+type DashboardTab = (typeof DASHBOARD_TABS)[number]["id"];
 type SocialBetaTab = (typeof SOCIAL_BETA_TABS)[number]["id"];
 
 const EMPTY_SOCIAL_BETA: BetaDashboardSnapshot["product"]["social_beta"] = {
@@ -674,6 +680,8 @@ export default function BetaDashboardScreen() {
   const [configSaving, setConfigSaving] = useState(false);
   const [configError, setConfigError] = useState(false);
   const [configSaved, setConfigSaved] = useState(false);
+  const [dashboardTab, setDashboardTab] =
+    useState<DashboardTab>("overview");
   const [socialBetaTab, setSocialBetaTab] =
     useState<SocialBetaTab>("overview");
   const socialBeta = snapshot?.product.social_beta ?? EMPTY_SOCIAL_BETA;
@@ -939,7 +947,45 @@ export default function BetaDashboardScreen() {
             />
           ) : (
             <>
-              <View style={styles.metricsGrid}>
+              <View style={styles.dashboardTabs}>
+                {DASHBOARD_TABS.map((tab) => {
+                  const active = dashboardTab === tab.id;
+                  return (
+                    <Pressable
+                      key={tab.id}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: active }}
+                      onPress={() => setDashboardTab(tab.id)}
+                      style={[
+                        styles.dashboardTab,
+                        {
+                          borderColor: active ? colors.text : colors.border,
+                          backgroundColor: active
+                            ? colors.text
+                            : colors.surface,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.dashboardTabText,
+                          {
+                            color: active
+                              ? colors.background
+                              : colors.textMuted,
+                          },
+                        ]}
+                      >
+                        {tab.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {dashboardTab === "overview" && (
+                <>
+                  <View style={styles.metricsGrid}>
                 <MetricCard
                   label="Sessions"
                   value={number(snapshot.product.summary.sessions)}
@@ -1000,6 +1046,17 @@ export default function BetaDashboardScreen() {
                 </View>
               </View>
 
+                  <View style={styles.section}>
+                    <SectionTitle
+                      title="Usage trend"
+                      detail="Daily unique sessions for the selected dashboard window."
+                    />
+                    <DailySessionsTrend items={snapshot.product.daily_usage} />
+                  </View>
+                </>
+              )}
+
+              {dashboardTab === "social" && (
               <View style={styles.section}>
                 <SectionTitle
                   title="Social beta"
@@ -1093,10 +1150,6 @@ export default function BetaDashboardScreen() {
                       }
                     />
                   </View>
-                )}
-
-                {socialBetaTab === "trend" && (
-                  <DailySessionsTrend items={snapshot.product.daily_usage} />
                 )}
 
                 {socialBetaTab === "acquisition" && (
@@ -1195,7 +1248,10 @@ export default function BetaDashboardScreen() {
                   </View>
                 )}
               </View>
+              )}
 
+              {dashboardTab === "operations" && (
+                <>
               <View style={styles.twoColumn}>
                 <View
                   style={[
@@ -1240,22 +1296,6 @@ export default function BetaDashboardScreen() {
 
               <View style={styles.section}>
                 <SectionTitle
-                  title="Runtime configuration"
-                  detail="Admin-only controls backed by briefly_app_config. Changes take effect through the existing public app-config endpoint."
-                />
-                <RuntimeConfigEditor
-                  config={appConfig}
-                  loading={configLoading}
-                  saving={configSaving}
-                  error={configError}
-                  saved={configSaved}
-                  onChange={changeAppConfig}
-                  onSave={() => void saveAppConfig()}
-                />
-              </View>
-
-              <View style={styles.section}>
-                <SectionTitle
                   title="Error groups"
                   detail="Grouped by sanitized fingerprint. Unresolved groups are shown first."
                 />
@@ -1276,6 +1316,28 @@ export default function BetaDashboardScreen() {
                   </View>
                 )}
               </View>
+
+                </>
+              )}
+
+              {dashboardTab === "settings" && (
+              <View style={styles.section}>
+                <SectionTitle
+                  title="Runtime configuration"
+                  detail="Admin-only controls backed by briefly_app_config. Changes take effect through the existing public app-config endpoint."
+                />
+                <RuntimeConfigEditor
+                  config={appConfig}
+                  loading={configLoading}
+                  saving={configSaving}
+                  error={configError}
+                  saved={configSaved}
+                  onChange={changeAppConfig}
+                  onSave={() => void saveAppConfig()}
+                />
+              </View>
+
+              )}
 
               <Text style={[styles.generated, { color: colors.textMuted }]}>
                 Generated {formatTimestamp(snapshot.generated_at)}
@@ -1366,6 +1428,21 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 22, lineHeight: 28, fontWeight: "900" },
   sectionDetail: { fontSize: 13, lineHeight: 19, maxWidth: 720 },
   funnelGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  dashboardTabs: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 28,
+  },
+  dashboardTab: {
+    minHeight: 42,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dashboardTabText: { fontSize: 13, fontWeight: "900" },
   analyticsTabs: {
     flexDirection: "row",
     flexWrap: "wrap",
