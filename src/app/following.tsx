@@ -108,8 +108,9 @@ function formatDate(value: string | null, language: string) {
   }).format(date);
 }
 
-function storyHref(eventId: string) {
-  return `/story/event?eventId=${encodeURIComponent(eventId)}`;
+function storyHref(eventId: string, source: "following" | "following_update") {
+  const params = new URLSearchParams({ eventId, source });
+  return `/story/event?${params.toString()}`;
 }
 
 export default function FollowingScreen() {
@@ -156,8 +157,11 @@ export default function FollowingScreen() {
     };
   }, [authReady, user]);
 
-  const openEvent = (eventId: string) => {
-    router.push(storyHref(eventId) as never);
+  const openEvent = (
+    eventId: string,
+    source: "following" | "following_update" = "following",
+  ) => {
+    router.push(storyHref(eventId, source) as never);
   };
 
   const openUpdate = (update: MeaningfulEventUpdate) => {
@@ -173,7 +177,7 @@ export default function FollowingScreen() {
       },
     });
     void acknowledgeEventUpdate(update.event_id, update.development_id).catch(() => null);
-    openEvent(update.event_id);
+    openEvent(update.event_id, "following_update");
   };
 
   if (!authReady || !user) {
