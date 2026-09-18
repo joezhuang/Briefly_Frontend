@@ -186,7 +186,7 @@ export function getLazyCanonicalArticleByEventId(
 export type BriefRepairStatus = {
   article_version_id: number;
   event_id: string;
-  missing_sections: Array<"what_happened" | "why_it_matters" | "what_next">;
+  missing_sections: ("what_happened" | "why_it_matters" | "what_next")[];
   attempted: boolean;
   status: "processing" | "succeeded" | "failed" | null;
   available: boolean;
@@ -198,7 +198,7 @@ export type BriefRepairResult = {
   source_article_version_id?: number;
   article_version_id: number;
   event_id?: string;
-  repaired_sections?: Array<"what_happened" | "why_it_matters" | "what_next">;
+  repaired_sections?: ("what_happened" | "why_it_matters" | "what_next")[];
   missing_sections?: string[];
 };
 
