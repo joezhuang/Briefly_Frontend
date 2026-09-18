@@ -12,6 +12,7 @@ const MAX_RETRY_DELAY_MS = 60_000;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type ProductAnalyticsEventName =
+  | "session_start"
   | "feed_view"
   | "story_open"
   | "story_save"
@@ -22,6 +23,7 @@ export type ProductAnalyticsEventName =
   | "following_view"
   | "event_update_open"
   | "event_lens_select"
+  | "source_open"
   | "podcast_action";
 
 type AnalyticsProperties = Record<
