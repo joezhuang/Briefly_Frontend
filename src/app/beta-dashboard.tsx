@@ -630,6 +630,39 @@ export default function BetaDashboardScreen() {
     [snapshot],
   );
 
+  const maxLensCount = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...(snapshot?.product.social_beta.lens_breakdown ?? []).map(
+          (item) => item.count,
+        ),
+      ),
+    [snapshot],
+  );
+
+  const maxPodcastCount = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...(snapshot?.product.social_beta.podcast_breakdown ?? []).map(
+          (item) => item.count,
+        ),
+      ),
+    [snapshot],
+  );
+
+  const maxStorySourceCount = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...(snapshot?.product.social_beta.story_source_breakdown ?? []).map(
+          (item) => item.count,
+        ),
+      ),
+    [snapshot],
+  );
+
   const toggleError = async (item: BetaDashboardErrorGroup) => {
     const resolved = item.unresolved_occurrences > 0;
     setBusyFingerprint(item.fingerprint);
@@ -794,6 +827,147 @@ export default function BetaDashboardScreen() {
                     value={number(snapshot.product.funnel.following_view_sessions)}
                     detail={percentage(snapshot.product.funnel.following_view_rate)}
                   />
+                </View>
+              </View>
+
+              <View style={styles.section}>
+                <SectionTitle
+                  title="Social beta"
+                  detail="Session-level conversion and engagement. Feed→story is not a per-card impression CTR."
+                />
+                <View style={styles.funnelGrid}>
+                  <MetricCard
+                    label="Feed → story"
+                    value={percentage(snapshot.product.social_beta.feed_to_story_rate)}
+                    detail={
+                      number(snapshot.product.social_beta.feed_story_open_sessions) +
+                      " of " +
+                      number(snapshot.product.social_beta.feed_view_sessions) +
+                      " feed sessions"
+                    }
+                  />
+                  <MetricCard
+                    label="Used Evidence / Timeline / Coverage"
+                    value={percentage(snapshot.product.social_beta.lens_rate)}
+                    detail={
+                      number(snapshot.product.social_beta.lens_sessions) +
+                      " story sessions"
+                    }
+                  />
+                  <MetricCard
+                    label="Opened a source"
+                    value={percentage(snapshot.product.social_beta.source_open_rate)}
+                    detail={
+                      number(snapshot.product.social_beta.source_open_sessions) +
+                      " story sessions"
+                    }
+                  />
+                  <MetricCard
+                    label="Shared a story"
+                    value={percentage(snapshot.product.social_beta.share_rate)}
+                    detail={
+                      number(snapshot.product.social_beta.share_sessions) +
+                      " story sessions"
+                    }
+                  />
+                  <MetricCard
+                    label="Used Deeply"
+                    value={percentage(snapshot.product.social_beta.podcast_action_rate)}
+                    detail={
+                      number(snapshot.product.social_beta.podcast_action_sessions) +
+                      " story sessions"
+                    }
+                  />
+                  <MetricCard
+                    label="Returned on 2+ days"
+                    value={percentage(snapshot.product.social_beta.returning_user_rate)}
+                    detail={
+                      number(snapshot.product.social_beta.returning_users) +
+                      " of " +
+                      number(snapshot.product.social_beta.authenticated_active_users) +
+                      " signed-in active users"
+                    }
+                  />
+                </View>
+
+                <View style={styles.twoColumn}>
+                  <View
+                    style={[
+                      styles.panel,
+                      { borderColor: colors.border, backgroundColor: colors.surface },
+                    ]}
+                  >
+                    <SectionTitle title="Lens selections" />
+                    <View style={styles.activityList}>
+                      {snapshot.product.social_beta.lens_breakdown.length === 0 ? (
+                        <Text style={[styles.empty, { color: colors.textMuted }]}>
+                          No explicit lens selections yet.
+                        </Text>
+                      ) : (
+                        snapshot.product.social_beta.lens_breakdown.map((item) => (
+                          <ActivityBar
+                            key={item.name}
+                            label={item.name}
+                            value={item.count}
+                            max={maxLensCount}
+                            detail={number(item.sessions) + " sessions"}
+                          />
+                        ))
+                      )}
+                    </View>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.panel,
+                      { borderColor: colors.border, backgroundColor: colors.surface },
+                    ]}
+                  >
+                    <SectionTitle title="Deeply actions" />
+                    <View style={styles.activityList}>
+                      {snapshot.product.social_beta.podcast_breakdown.length === 0 ? (
+                        <Text style={[styles.empty, { color: colors.textMuted }]}>
+                          No Deeply actions yet.
+                        </Text>
+                      ) : (
+                        snapshot.product.social_beta.podcast_breakdown.map((item) => (
+                          <ActivityBar
+                            key={item.name}
+                            label={item.name}
+                            value={item.count}
+                            max={maxPodcastCount}
+                            detail={number(item.sessions) + " sessions"}
+                          />
+                        ))
+                      )}
+                    </View>
+                  </View>
+                </View>
+
+                <View
+                  style={[
+                    styles.panel,
+                    { borderColor: colors.border, backgroundColor: colors.surface },
+                  ]}
+                >
+                  <SectionTitle title="Story acquisition" />
+                  <View style={styles.activityList}>
+                    {snapshot.product.social_beta.story_source_breakdown.length === 0 ? (
+                      <Text style={[styles.empty, { color: colors.textMuted }]}>
+                        No story opens yet.
+                      </Text>
+                    ) : (
+                      snapshot.product.social_beta.story_source_breakdown.map((item) => (
+                        <ActivityBar
+                          key={item.name}
+                          label={item.name}
+                          value={item.count}
+                          max={maxStorySourceCount}
+                          detail={number(item.sessions) + " sessions"}
+                        />
+                      ))
+                    )}
+                  </View>
                 </View>
               </View>
 
