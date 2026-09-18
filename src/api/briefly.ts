@@ -183,6 +183,38 @@ export function getLazyCanonicalArticleByEventId(
   );
 }
 
+export type BriefRepairStatus = {
+  article_version_id: number;
+  event_id: string;
+  missing_sections: Array<"what_happened" | "why_it_matters" | "what_next">;
+  attempted: boolean;
+  status: "processing" | "succeeded" | "failed" | null;
+  available: boolean;
+  repaired_article_version_id: number | null;
+};
+
+export type BriefRepairResult = {
+  status: "succeeded" | "not_needed";
+  source_article_version_id?: number;
+  article_version_id: number;
+  event_id?: string;
+  repaired_sections?: Array<"what_happened" | "why_it_matters" | "what_next">;
+  missing_sections?: string[];
+};
+
+export function getBriefRepairStatus(articleVersionId: number) {
+  return getJson<BriefRepairStatus>(
+    `/api/articles/version/${encodeURIComponent(String(articleVersionId))}/brief-repair`,
+  );
+}
+
+export function requestBriefRepair(articleVersionId: number) {
+  return postJson<BriefRepairResult>(
+    `/api/articles/version/${encodeURIComponent(String(articleVersionId))}/brief-repair`,
+    {},
+  );
+}
+
 export type StaleStoryRefreshStatus = {
   status: "not_generated" | "processing" | "ready" | "failed" | "disabled";
   event_id: string;
