@@ -29,6 +29,15 @@ import { useBrieflyTheme } from "@/context/theme";
 import { layout } from "@/theme/tokens";
 
 const WINDOWS = [7, 30, 90] as const;
+const SOCIAL_BETA_TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "trend", label: "Trend" },
+  { id: "acquisition", label: "Acquisition" },
+  { id: "lenses", label: "Lenses" },
+  { id: "deeply", label: "Deeply" },
+] as const;
+
+type SocialBetaTab = (typeof SOCIAL_BETA_TABS)[number]["id"];
 
 const EMPTY_SOCIAL_BETA: BetaDashboardSnapshot["product"]["social_beta"] = {
   feed_view_sessions: 0,
@@ -149,6 +158,152 @@ function ActivityBar({
             { width: barWidth, backgroundColor: colors.accent },
           ]}
         />
+      </View>
+    </View>
+  );
+}
+
+function DailySessionsTrend({
+  items,
+}: {
+  items: BetaDashboardSnapshot["product"]["daily_usage"];
+}) {
+  const { colors } = useBrieflyTheme();
+  const [chartWidth, setChartWidth] = useState(0);
+  const chartHeight = 190;
+  const insetX = 18;
+  const insetY = 18;
+  const usableWidth = Math.max(0, chartWidth - insetX * 2);
+  const usableHeight = chartHeight - insetY * 2;
+  const maxSessions = Math.max(1, ...items.map((item) => item.sessions));
+
+  const points = useMemo(
+    () =>
+      items.map((item, index) => {
+        const denominator = Math.max(1, items.length - 1);
+        const x =
+          items.length === 1
+            ? chartWidth / 2
+            : insetX + (index / denominator) * usableWidth;
+        const y =
+          insetY +
+          (1 - Math.min(1, item.sessions / maxSessions)) * usableHeight;
+        return { ...item, x, y };
+      }),
+    [chartWidth, items, maxSessions, usableHeight, usableWidth],
+  );
+
+  const segments = useMemo(
+    () =>
+      points.slice(1).map((point, index) => {
+        const previous = points[index];
+        const dx = point.x - previous.x;
+        const dy = point.y - previous.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
+        return {
+          key: `${previous.day}-${point.day}`,
+          left: (previous.x + point.x) / 2 - length / 2,
+          top: (previous.y + point.y) / 2 - 1,
+          length,
+          angle,
+        };
+      }),
+    [points],
+  );
+
+  if (items.length === 0) {
+    return (
+      <Text style={[styles.empty, { color: colors.textMuted }]}>
+        No daily session data yet.
+      </Text>
+    );
+  }
+
+  const first = items[0];
+  const last = items[items.length - 1];
+  const totalSessions = items.reduce((sum, item) => sum + item.sessions, 0);
+  const formatDay = (value: string) => {
+    const date = new Date(`${value}T00:00:00Z`);
+    return Number.isNaN(date.getTime())
+      ? value
+      : new Intl.DateTimeFormat("en-AU", {
+          day: "numeric",
+          month: "short",
+        }).format(date);
+  };
+
+  return (
+    <View
+      style={[
+        styles.trendPanel,
+        { borderColor: colors.border, backgroundColor: colors.surface },
+      ]}
+    >
+      <View style={styles.trendSummary}>
+        <View>
+          <Text style={[styles.trendValue, { color: colors.text }]}>
+            {number(totalSessions)}
+          </Text>
+          <Text style={[styles.trendCaption, { color: colors.textMuted }]}>
+            daily-session total across visible buckets
+          </Text>
+        </View>
+        <Text style={[styles.trendCaption, { color: colors.textMuted }]}>
+          Peak {number(maxSessions)}
+        </Text>
+      </View>
+
+      <View
+        onLayout={(event) => setChartWidth(event.nativeEvent.layout.width)}
+        style={[
+          styles.trendChart,
+          { height: chartHeight, backgroundColor: colors.surfaceMuted },
+        ]}
+      >
+        {chartWidth > 0 &&
+          segments.map((segment) => (
+            <View
+              key={segment.key}
+              style={[
+                styles.trendLine,
+                {
+                  backgroundColor: colors.accent,
+                  width: segment.length,
+                  left: segment.left,
+                  top: segment.top,
+                  transform: [{ rotate: `${segment.angle}rad` }],
+                },
+              ]}
+            />
+          ))}
+
+        {chartWidth > 0 &&
+          points.map((point) => (
+            <View
+              key={point.day}
+              style={[
+                styles.trendPoint,
+                {
+                  borderColor: colors.background,
+                  backgroundColor: colors.accent,
+                  left: point.x - 5,
+                  top: point.y - 5,
+                },
+              ]}
+            />
+          ))}
+      </View>
+
+      <View style={styles.trendAxis}>
+        <Text style={[styles.trendAxisText, { color: colors.textMuted }]}>
+          {formatDay(first.day)}
+        </Text>
+        {items.length > 1 && (
+          <Text style={[styles.trendAxisText, { color: colors.textMuted }]}>
+            {formatDay(last.day)}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -519,6 +674,8 @@ export default function BetaDashboardScreen() {
   const [configSaving, setConfigSaving] = useState(false);
   const [configError, setConfigError] = useState(false);
   const [configSaved, setConfigSaved] = useState(false);
+  const [socialBetaTab, setSocialBetaTab] =
+    useState<SocialBetaTab>("overview");
   const socialBeta = snapshot?.product.social_beta ?? EMPTY_SOCIAL_BETA;
 
   const refreshDashboard = useCallback(async () => {
@@ -624,15 +781,6 @@ export default function BetaDashboardScreen() {
       setConfigSaving(false);
     }
   };
-
-  const maxDailySessions = useMemo(
-    () =>
-      Math.max(
-        0,
-        ...(snapshot?.product.daily_usage ?? []).map((item) => item.sessions),
-      ),
-    [snapshot],
-  );
 
   const maxEventCount = useMemo(
     () =>
@@ -857,66 +1005,141 @@ export default function BetaDashboardScreen() {
                   title="Social beta"
                   detail="Session-level conversion and engagement. Feed→story is not a per-card impression CTR."
                 />
-                <View style={styles.funnelGrid}>
-                  <MetricCard
-                    label="Feed → story"
-                    value={percentage(socialBeta.feed_to_story_rate)}
-                    detail={
-                      number(socialBeta.feed_story_open_sessions) +
-                      " of " +
-                      number(socialBeta.feed_view_sessions) +
-                      " feed sessions"
-                    }
-                  />
-                  <MetricCard
-                    label="Switched event lens"
-                    value={percentage(socialBeta.lens_rate)}
-                    detail={
-                      number(socialBeta.lens_sessions) +
-                      " story sessions"
-                    }
-                  />
-                  <MetricCard
-                    label="Opened a source"
-                    value={percentage(socialBeta.source_open_rate)}
-                    detail={
-                      number(socialBeta.source_open_sessions) +
-                      " story sessions"
-                    }
-                  />
-                  <MetricCard
-                    label="Shared a story"
-                    value={percentage(socialBeta.share_rate)}
-                    detail={
-                      number(socialBeta.share_sessions) +
-                      " story sessions"
-                    }
-                  />
-                  <MetricCard
-                    label="Used Deeply"
-                    value={percentage(socialBeta.podcast_action_rate)}
-                    detail={
-                      number(socialBeta.podcast_action_sessions) +
-                      " story sessions"
-                    }
-                  />
-                  <MetricCard
-                    label="Returned on 2+ days"
-                    value={percentage(socialBeta.returning_user_rate)}
-                    detail={
-                      number(socialBeta.returning_users) +
-                      " of " +
-                      number(socialBeta.authenticated_active_users) +
-                      " signed-in active users"
-                    }
-                  />
+
+                <View style={styles.analyticsTabs}>
+                  {SOCIAL_BETA_TABS.map((tab) => {
+                    const active = socialBetaTab === tab.id;
+                    return (
+                      <Pressable
+                        key={tab.id}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: active }}
+                        onPress={() => setSocialBetaTab(tab.id)}
+                        style={[
+                          styles.analyticsTab,
+                          {
+                            borderColor: active ? colors.text : colors.border,
+                            backgroundColor: active ? colors.text : colors.surface,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.analyticsTabText,
+                            {
+                              color: active
+                                ? colors.background
+                                : colors.textMuted,
+                            },
+                          ]}
+                        >
+                          {tab.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
 
-                <View style={styles.twoColumn}>
+                {socialBetaTab === "overview" && (
+                  <View style={styles.funnelGrid}>
+                    <MetricCard
+                      label="Feed → story"
+                      value={percentage(socialBeta.feed_to_story_rate)}
+                      detail={
+                        number(socialBeta.feed_story_open_sessions) +
+                        " of " +
+                        number(socialBeta.feed_view_sessions) +
+                        " feed sessions"
+                      }
+                    />
+                    <MetricCard
+                      label="Switched event lens"
+                      value={percentage(socialBeta.lens_rate)}
+                      detail={
+                        number(socialBeta.lens_sessions) + " story sessions"
+                      }
+                    />
+                    <MetricCard
+                      label="Opened a source"
+                      value={percentage(socialBeta.source_open_rate)}
+                      detail={
+                        number(socialBeta.source_open_sessions) +
+                        " story sessions"
+                      }
+                    />
+                    <MetricCard
+                      label="Shared a story"
+                      value={percentage(socialBeta.share_rate)}
+                      detail={
+                        number(socialBeta.share_sessions) + " story sessions"
+                      }
+                    />
+                    <MetricCard
+                      label="Used Deeply"
+                      value={percentage(socialBeta.podcast_action_rate)}
+                      detail={
+                        number(socialBeta.podcast_action_sessions) +
+                        " story sessions"
+                      }
+                    />
+                    <MetricCard
+                      label="Returned on 2+ days"
+                      value={percentage(socialBeta.returning_user_rate)}
+                      detail={
+                        number(socialBeta.returning_users) +
+                        " of " +
+                        number(socialBeta.authenticated_active_users) +
+                        " signed-in active users"
+                      }
+                    />
+                  </View>
+                )}
+
+                {socialBetaTab === "trend" && (
+                  <DailySessionsTrend items={snapshot.product.daily_usage} />
+                )}
+
+                {socialBetaTab === "acquisition" && (
                   <View
                     style={[
                       styles.panel,
-                      { borderColor: colors.border, backgroundColor: colors.surface },
+                      styles.tabPanel,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface,
+                      },
+                    ]}
+                  >
+                    <SectionTitle title="Story acquisition" />
+                    <View style={styles.activityList}>
+                      {socialBeta.story_source_breakdown.length === 0 ? (
+                        <Text style={[styles.empty, { color: colors.textMuted }]}>
+                          No story opens yet.
+                        </Text>
+                      ) : (
+                        socialBeta.story_source_breakdown.map((item) => (
+                          <ActivityBar
+                            key={item.name}
+                            label={item.name}
+                            value={item.count}
+                            max={maxStorySourceCount}
+                            detail={number(item.sessions) + " sessions"}
+                          />
+                        ))
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {socialBetaTab === "lenses" && (
+                  <View
+                    style={[
+                      styles.panel,
+                      styles.tabPanel,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface,
+                      },
                     ]}
                   >
                     <SectionTitle title="Lens selections" />
@@ -938,11 +1161,17 @@ export default function BetaDashboardScreen() {
                       )}
                     </View>
                   </View>
+                )}
 
+                {socialBetaTab === "deeply" && (
                   <View
                     style={[
                       styles.panel,
-                      { borderColor: colors.border, backgroundColor: colors.surface },
+                      styles.tabPanel,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface,
+                      },
                     ]}
                   >
                     <SectionTitle title="Deeply actions" />
@@ -964,33 +1193,7 @@ export default function BetaDashboardScreen() {
                       )}
                     </View>
                   </View>
-                </View>
-
-                <View
-                  style={[
-                    styles.panel,
-                    { borderColor: colors.border, backgroundColor: colors.surface },
-                  ]}
-                >
-                  <SectionTitle title="Story acquisition" />
-                  <View style={styles.activityList}>
-                    {socialBeta.story_source_breakdown.length === 0 ? (
-                      <Text style={[styles.empty, { color: colors.textMuted }]}>
-                        No story opens yet.
-                      </Text>
-                    ) : (
-                      socialBeta.story_source_breakdown.map((item) => (
-                        <ActivityBar
-                          key={item.name}
-                          label={item.name}
-                          value={item.count}
-                          max={maxStorySourceCount}
-                          detail={number(item.sessions) + " sessions"}
-                        />
-                      ))
-                    )}
-                  </View>
-                </View>
+                )}
               </View>
 
               <View style={styles.twoColumn}>
@@ -1032,26 +1235,6 @@ export default function BetaDashboardScreen() {
                       />
                     ))}
                   </View>
-                </View>
-              </View>
-
-              <View
-                style={[
-                  styles.panel,
-                  { borderColor: colors.border, backgroundColor: colors.surface },
-                ]}
-              >
-                <SectionTitle title="Daily sessions" />
-                <View style={styles.activityList}>
-                  {snapshot.product.daily_usage.map((item) => (
-                    <ActivityBar
-                      key={item.day}
-                      label={item.day}
-                      value={item.sessions}
-                      max={maxDailySessions}
-                      detail={number(item.events) + " events"}
-                    />
-                  ))}
                 </View>
               </View>
 
@@ -1183,6 +1366,61 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 22, lineHeight: 28, fontWeight: "900" },
   sectionDetail: { fontSize: 13, lineHeight: 19, maxWidth: 720 },
   funnelGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  analyticsTabs: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  analyticsTab: {
+    minHeight: 36,
+    paddingHorizontal: 13,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  analyticsTabText: { fontSize: 12, fontWeight: "800" },
+  tabPanel: { marginBottom: 0 },
+  trendPanel: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 18,
+    padding: 16,
+    gap: 12,
+  },
+  trendSummary: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    gap: 16,
+    flexWrap: "wrap",
+  },
+  trendValue: { fontSize: 32, lineHeight: 37, fontWeight: "900" },
+  trendCaption: { fontSize: 12, lineHeight: 18, fontWeight: "600" },
+  trendChart: {
+    width: "100%",
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: 12,
+  },
+  trendLine: {
+    position: "absolute",
+    height: 2,
+    borderRadius: 999,
+  },
+  trendPoint: {
+    position: "absolute",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+  },
+  trendAxis: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  trendAxisText: { fontSize: 11, fontWeight: "700" },
   twoColumn: {
     flexDirection: "row",
     flexWrap: "wrap",
