@@ -547,6 +547,14 @@ export type HomepageArticleFeed = {
     completed_at?: number | null;
     articles: number;
     events: number;
+    city_resolution?: {
+      country_code: string;
+      requested_region: string;
+      requested_region_code: string | null;
+      geonames_admin1_code: string | null;
+      cities: string[];
+      method: string;
+    } | null;
     error?: string | null;
   } | null;
   feed_language: "en";
