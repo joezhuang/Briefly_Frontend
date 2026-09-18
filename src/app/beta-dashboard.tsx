@@ -34,7 +34,7 @@ const SOCIAL_BETA_TABS = [
   { id: "trend", label: "Trend" },
   { id: "acquisition", label: "Acquisition" },
   { id: "lenses", label: "Lenses" },
-  { id: "deeply", label: "Deeply" },
+  { id: "deeply", label: "Podcast" },
 ] as const;
 
 type SocialBetaTab = (typeof SOCIAL_BETA_TABS)[number]["id"];
@@ -1075,7 +1075,7 @@ export default function BetaDashboardScreen() {
                       }
                     />
                     <MetricCard
-                      label="Used Deeply"
+                      label="Used podcast"
                       value={percentage(socialBeta.podcast_action_rate)}
                       detail={
                         number(socialBeta.podcast_action_sessions) +
@@ -1174,11 +1174,11 @@ export default function BetaDashboardScreen() {
                       },
                     ]}
                   >
-                    <SectionTitle title="Deeply actions" />
+                    <SectionTitle title="Podcast actions" />
                     <View style={styles.activityList}>
                       {socialBeta.podcast_breakdown.length === 0 ? (
                         <Text style={[styles.empty, { color: colors.textMuted }]}>
-                          No Deeply actions yet.
+                          No podcast actions yet.
                         </Text>
                       ) : (
                         socialBeta.podcast_breakdown.map((item) => (
