@@ -386,7 +386,12 @@ export default function HomeScreen() {
   }, [locationBusy]);
 
   const handleSaveManualLocation = useCallback(
-    async (input: { country: string; region: string }) => {
+    async (input: {
+      country: string;
+      countryCode: string | null;
+      region: string;
+      regionCode: string | null;
+    }) => {
       if (locationBusy) return;
       setLocationBusy(true);
       setLocationError(null);
