@@ -769,7 +769,7 @@ export default function BetaDashboardScreen() {
   const [communityModeration, setCommunityModeration] =
     useState<CommunityModerationQueue | null>(null);
   const [communityModerationLoading, setCommunityModerationLoading] =
-    useState(false);
+    useState(true);
   const [communityModerationError, setCommunityModerationError] =
     useState(false);
   const [busyContributionId, setBusyContributionId] = useState<number | null>(
@@ -881,8 +881,26 @@ export default function BetaDashboardScreen() {
 
   useEffect(() => {
     if (!authReady || !user || account?.is_admin !== true) return;
-    void refreshCommunityModeration();
-  }, [account?.is_admin, authReady, refreshCommunityModeration, user]);
+
+    let active = true;
+
+    getCommunityModerationQueue()
+      .then((next) => {
+        if (!active) return;
+        setCommunityModeration(next);
+        setCommunityModerationError(false);
+      })
+      .catch(() => {
+        if (active) setCommunityModerationError(true);
+      })
+      .finally(() => {
+        if (active) setCommunityModerationLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [account?.is_admin, authReady, user]);
 
   const toggleCommunityVisibility = async (item: CommunityModerationItem) => {
     setBusyContributionId(item.contribution_id);
