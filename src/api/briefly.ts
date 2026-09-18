@@ -331,6 +331,9 @@ export type CommunityContribution = {
   created_at: string;
   updated_at: string;
   is_mine: boolean;
+  up_count: number;
+  down_count: number;
+  my_reaction: "up" | "down" | null;
 };
 
 export type EventCommunity = {
@@ -382,6 +385,21 @@ export function withdrawCommunityContribution(contributionId: number) {
     contribution_type: CommunityContributionType;
   }>(
     `/api/community/contributions/${encodeURIComponent(String(contributionId))}`,
+  );
+}
+
+export function setCommunityReaction(
+  contributionId: number,
+  reaction: "up" | "down",
+) {
+  return postJson<{
+    contribution_id: number;
+    my_reaction: "up" | "down" | null;
+    up_count: number;
+    down_count: number;
+  }>(
+    `/api/community/contributions/${encodeURIComponent(String(contributionId))}/reaction`,
+    { reaction },
   );
 }
 
