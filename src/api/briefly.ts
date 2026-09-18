@@ -79,6 +79,7 @@ function isPublicContentPath(path: string) {
     path.startsWith("/api/app-config") ||
     path.startsWith("/api/article-feed") ||
     path.startsWith("/api/articles") ||
+    path.startsWith("/api/community") ||
     path.startsWith("/api/lazy-articles") ||
     path.startsWith("/api/event-timeline") ||
     path.startsWith("/api/location") ||
@@ -124,6 +125,32 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
+    });
+
+  const accessToken = getBrieflyAccessToken();
+  let response = await request();
+
+  if (response.status === 401 && accessToken) {
+    const refreshedToken = await refreshBrieflyAccessToken();
+    if (refreshedToken) {
+      response = await request();
+    }
+  }
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => "");
+    throw new Error(
+      `Briefly API request failed (${response.status}): ${message || response.statusText}`,
+    );
+  }
+  return response.json() as Promise<T>;
+}
+
+async function deleteJson<T>(path: string): Promise<T> {
+  const request = () =>
+    monitoredFetch(path, {
+      method: "DELETE",
+      headers: requestHeaders(),
     });
 
   const accessToken = getBrieflyAccessToken();
@@ -279,6 +306,99 @@ export function requestCardTranslation(
     source_headline: sourceHeadline ?? null,
     source_summary: sourceSummary ?? null,
   });
+}
+
+export type CommunityContributionType =
+  | "perspective"
+  | "reason"
+  | "evidence"
+  | "question"
+  | "correction";
+
+export type CommunityReportReason =
+  | "misleading"
+  | "abusive"
+  | "spam"
+  | "off_topic"
+  | "other";
+
+export type CommunityContribution = {
+  contribution_id: number;
+  event_id: string;
+  contribution_type: CommunityContributionType;
+  body: string;
+  source_url: string | null;
+  created_at: string;
+  updated_at: string;
+  is_mine: boolean;
+};
+
+export type EventCommunity = {
+  event_id: string;
+  contributions: CommunityContribution[];
+  count: number;
+  by_type: Partial<Record<CommunityContributionType, number>>;
+};
+
+export function getEventCommunity(
+  eventId: string,
+  options?: {
+    contributionType?: CommunityContributionType;
+    limit?: number;
+    offset?: number;
+  },
+) {
+  const params = new URLSearchParams({
+    limit: String(options?.limit ?? 40),
+    offset: String(options?.offset ?? 0),
+  });
+  if (options?.contributionType) {
+    params.set("contribution_type", options.contributionType);
+  }
+  return getJson<EventCommunity>(
+    `/api/community/events/${encodeURIComponent(eventId)}?${params.toString()}`,
+  );
+}
+
+export function createCommunityContribution(
+  eventId: string,
+  input: {
+    contribution_type: CommunityContributionType;
+    body: string;
+    source_url?: string | null;
+  },
+) {
+  return postJson<CommunityContribution>(
+    `/api/community/events/${encodeURIComponent(eventId)}/contributions`,
+    input,
+  );
+}
+
+export function withdrawCommunityContribution(contributionId: number) {
+  return deleteJson<{
+    status: "withdrawn";
+    contribution_id: number;
+    event_id: string;
+    contribution_type: CommunityContributionType;
+  }>(
+    `/api/community/contributions/${encodeURIComponent(String(contributionId))}`,
+  );
+}
+
+export function reportCommunityContribution(
+  contributionId: number,
+  reason: CommunityReportReason,
+) {
+  return postJson<{
+    status: "reported";
+    report_id: number;
+    contribution_id: number;
+    reason: CommunityReportReason;
+    created_at: string;
+  }>(
+    `/api/community/contributions/${encodeURIComponent(String(contributionId))}/report`,
+    { reason },
+  );
 }
 
 export type PodcastAnalysisStatus = {
