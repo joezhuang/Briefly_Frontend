@@ -30,6 +30,27 @@ import { layout } from "@/theme/tokens";
 
 const WINDOWS = [7, 30, 90] as const;
 
+const EMPTY_SOCIAL_BETA: BetaDashboardSnapshot["product"]["social_beta"] = {
+  feed_view_sessions: 0,
+  feed_story_open_sessions: 0,
+  feed_to_story_rate: 0,
+  lens_sessions: 0,
+  lens_rate: 0,
+  source_open_sessions: 0,
+  source_open_rate: 0,
+  share_sessions: 0,
+  share_rate: 0,
+  podcast_action_sessions: 0,
+  podcast_action_rate: 0,
+  authenticated_active_users: 0,
+  multi_session_users: 0,
+  returning_users: 0,
+  returning_user_rate: 0,
+  lens_breakdown: [],
+  podcast_breakdown: [],
+  story_source_breakdown: [],
+};
+
 function number(value: number | null | undefined) {
   return new Intl.NumberFormat("en-AU").format(value ?? 0);
 }
@@ -498,6 +519,7 @@ export default function BetaDashboardScreen() {
   const [configSaving, setConfigSaving] = useState(false);
   const [configError, setConfigError] = useState(false);
   const [configSaved, setConfigSaved] = useState(false);
+  const socialBeta = snapshot?.product.social_beta ?? EMPTY_SOCIAL_BETA;
 
   const refreshDashboard = useCallback(async () => {
     if (!user) return;
@@ -634,7 +656,7 @@ export default function BetaDashboardScreen() {
     () =>
       Math.max(
         0,
-        ...(snapshot?.product.social_beta.lens_breakdown ?? []).map(
+        ...(socialBeta.lens_breakdown ?? []).map(
           (item) => item.count,
         ),
       ),
@@ -645,7 +667,7 @@ export default function BetaDashboardScreen() {
     () =>
       Math.max(
         0,
-        ...(snapshot?.product.social_beta.podcast_breakdown ?? []).map(
+        ...(socialBeta.podcast_breakdown ?? []).map(
           (item) => item.count,
         ),
       ),
@@ -656,7 +678,7 @@ export default function BetaDashboardScreen() {
     () =>
       Math.max(
         0,
-        ...(snapshot?.product.social_beta.story_source_breakdown ?? []).map(
+        ...(socialBeta.story_source_breakdown ?? []).map(
           (item) => item.count,
         ),
       ),
@@ -838,53 +860,53 @@ export default function BetaDashboardScreen() {
                 <View style={styles.funnelGrid}>
                   <MetricCard
                     label="Feed → story"
-                    value={percentage(snapshot.product.social_beta.feed_to_story_rate)}
+                    value={percentage(socialBeta.feed_to_story_rate)}
                     detail={
-                      number(snapshot.product.social_beta.feed_story_open_sessions) +
+                      number(socialBeta.feed_story_open_sessions) +
                       " of " +
-                      number(snapshot.product.social_beta.feed_view_sessions) +
+                      number(socialBeta.feed_view_sessions) +
                       " feed sessions"
                     }
                   />
                   <MetricCard
                     label="Switched event lens"
-                    value={percentage(snapshot.product.social_beta.lens_rate)}
+                    value={percentage(socialBeta.lens_rate)}
                     detail={
-                      number(snapshot.product.social_beta.lens_sessions) +
+                      number(socialBeta.lens_sessions) +
                       " story sessions"
                     }
                   />
                   <MetricCard
                     label="Opened a source"
-                    value={percentage(snapshot.product.social_beta.source_open_rate)}
+                    value={percentage(socialBeta.source_open_rate)}
                     detail={
-                      number(snapshot.product.social_beta.source_open_sessions) +
+                      number(socialBeta.source_open_sessions) +
                       " story sessions"
                     }
                   />
                   <MetricCard
                     label="Shared a story"
-                    value={percentage(snapshot.product.social_beta.share_rate)}
+                    value={percentage(socialBeta.share_rate)}
                     detail={
-                      number(snapshot.product.social_beta.share_sessions) +
+                      number(socialBeta.share_sessions) +
                       " story sessions"
                     }
                   />
                   <MetricCard
                     label="Used Deeply"
-                    value={percentage(snapshot.product.social_beta.podcast_action_rate)}
+                    value={percentage(socialBeta.podcast_action_rate)}
                     detail={
-                      number(snapshot.product.social_beta.podcast_action_sessions) +
+                      number(socialBeta.podcast_action_sessions) +
                       " story sessions"
                     }
                   />
                   <MetricCard
                     label="Returned on 2+ days"
-                    value={percentage(snapshot.product.social_beta.returning_user_rate)}
+                    value={percentage(socialBeta.returning_user_rate)}
                     detail={
-                      number(snapshot.product.social_beta.returning_users) +
+                      number(socialBeta.returning_users) +
                       " of " +
-                      number(snapshot.product.social_beta.authenticated_active_users) +
+                      number(socialBeta.authenticated_active_users) +
                       " signed-in active users"
                     }
                   />
@@ -899,12 +921,12 @@ export default function BetaDashboardScreen() {
                   >
                     <SectionTitle title="Lens selections" />
                     <View style={styles.activityList}>
-                      {snapshot.product.social_beta.lens_breakdown.length === 0 ? (
+                      {socialBeta.lens_breakdown.length === 0 ? (
                         <Text style={[styles.empty, { color: colors.textMuted }]}>
                           No explicit lens selections yet.
                         </Text>
                       ) : (
-                        snapshot.product.social_beta.lens_breakdown.map((item) => (
+                        socialBeta.lens_breakdown.map((item) => (
                           <ActivityBar
                             key={item.name}
                             label={item.name}
@@ -925,12 +947,12 @@ export default function BetaDashboardScreen() {
                   >
                     <SectionTitle title="Deeply actions" />
                     <View style={styles.activityList}>
-                      {snapshot.product.social_beta.podcast_breakdown.length === 0 ? (
+                      {socialBeta.podcast_breakdown.length === 0 ? (
                         <Text style={[styles.empty, { color: colors.textMuted }]}>
                           No Deeply actions yet.
                         </Text>
                       ) : (
-                        snapshot.product.social_beta.podcast_breakdown.map((item) => (
+                        socialBeta.podcast_breakdown.map((item) => (
                           <ActivityBar
                             key={item.name}
                             label={item.name}
@@ -952,12 +974,12 @@ export default function BetaDashboardScreen() {
                 >
                   <SectionTitle title="Story acquisition" />
                   <View style={styles.activityList}>
-                    {snapshot.product.social_beta.story_source_breakdown.length === 0 ? (
+                    {socialBeta.story_source_breakdown.length === 0 ? (
                       <Text style={[styles.empty, { color: colors.textMuted }]}>
                         No story opens yet.
                       </Text>
                     ) : (
-                      snapshot.product.social_beta.story_source_breakdown.map((item) => (
+                      socialBeta.story_source_breakdown.map((item) => (
                         <ActivityBar
                           key={item.name}
                           label={item.name}
