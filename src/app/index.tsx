@@ -177,11 +177,6 @@ export default function HomeScreen() {
       setHasMore(false);
       setError(null);
       setLoading(true);
-      coverageRetryCountRef.current = 0;
-      if (coverageRetryTimerRef.current) {
-        clearTimeout(coverageRetryTimerRef.current);
-        coverageRetryTimerRef.current = null;
-      }
       setShowTopButton(
         rememberedHomeScrollOffsets[nextScope] > SHOW_TOP_BUTTON_OFFSET,
       );
@@ -462,6 +457,16 @@ export default function HomeScreen() {
     restoredScrollRef.current = false;
     Promise.resolve().then(() => void loadFeed("initial"));
   }, [authReady, loadFeed, language, scope]);
+
+  useEffect(() => {
+    // Retry bookkeeping is imperative state and belongs in an effect, not in the
+    // scope-switch callback that is captured by PanResponder during render.
+    coverageRetryCountRef.current = 0;
+    if (coverageRetryTimerRef.current) {
+      clearTimeout(coverageRetryTimerRef.current);
+      coverageRetryTimerRef.current = null;
+    }
+  }, [scope, newsLocation]);
 
   useEffect(() => {
     if (coverageRetryTick === 0 || scope !== "local") return;
