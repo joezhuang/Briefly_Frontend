@@ -16,11 +16,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   getBetaDashboard,
   getBetaDashboardAppConfig,
+  getCommunityModerationQueue,
   setBetaDashboardErrorResolution,
+  setCommunityContributionVisibility,
   updateBetaDashboardAppConfig,
   type BetaDashboardErrorGroup,
   type BetaDashboardSnapshot,
   type BrieflyAppConfig,
+  type CommunityModerationItem,
+  type CommunityModerationQueue,
 } from "@/api/briefly";
 import { AppHeader } from "@/components/app-header";
 import { ScreenState } from "@/components/screen-state";
@@ -403,6 +407,93 @@ function ErrorGroupCard({
   );
 }
 
+function CommunityModerationCard({
+  item,
+  busy,
+  onToggle,
+}: {
+  item: CommunityModerationItem;
+  busy: boolean;
+  onToggle: (item: CommunityModerationItem) => void;
+}) {
+  const { colors } = useBrieflyTheme();
+  const hidden = item.status === "hidden";
+  const reason = item.latest_report_reason.replaceAll("_", " ");
+
+  return (
+    <View
+      style={[
+        styles.errorCard,
+        { borderColor: colors.border, backgroundColor: colors.surface },
+      ]}
+    >
+      <View style={styles.errorTop}>
+        <View style={styles.errorTitleWrap}>
+          <Text style={[styles.errorType, { color: colors.accent }]}>
+            {item.contribution_type.toUpperCase()} · {number(item.report_count)}{" "}
+            {item.report_count === 1 ? "REPORT" : "REPORTS"}
+          </Text>
+          <Text
+            numberOfLines={4}
+            style={[styles.errorMessage, { color: colors.text }]}
+          >
+            {item.body}
+          </Text>
+        </View>
+        <View
+          style={[
+            styles.statusBadge,
+            { borderColor: hidden ? colors.border : colors.accent },
+          ]}
+        >
+          <Text
+            style={[
+              styles.statusText,
+              { color: hidden ? colors.textMuted : colors.accent },
+            ]}
+          >
+            {item.status.toUpperCase()}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.errorMeta}>
+        <Text style={[styles.metaText, { color: colors.textMuted }]}>
+          Latest reason: {reason}
+        </Text>
+        <Text style={[styles.metaText, { color: colors.textMuted }]}>
+          Reported {formatTimestamp(item.latest_report_at)}
+        </Text>
+        <Text style={[styles.metaText, { color: colors.textMuted }]}>
+          Event {item.event_id}
+        </Text>
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        disabled={busy}
+        onPress={() => onToggle(item)}
+        style={({ pressed }) => [
+          styles.resolveButton,
+          {
+            borderColor: colors.border,
+            backgroundColor: colors.surfaceMuted,
+            opacity: busy ? 0.5 : pressed ? 0.68 : 1,
+          },
+        ]}
+      >
+        {busy ? (
+          <ActivityIndicator size="small" color={colors.text} />
+        ) : (
+          <Text style={[styles.resolveText, { color: colors.text }]}>
+            {hidden ? "Restore contribution" : "Hide contribution"}
+          </Text>
+        )}
+      </Pressable>
+    </View>
+  );
+}
+
 function ConfigToggle({
   label,
   detail,
@@ -675,6 +766,15 @@ export default function BetaDashboardScreen() {
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState(false);
   const [busyFingerprint, setBusyFingerprint] = useState<string | null>(null);
+  const [communityModeration, setCommunityModeration] =
+    useState<CommunityModerationQueue | null>(null);
+  const [communityModerationLoading, setCommunityModerationLoading] =
+    useState(false);
+  const [communityModerationError, setCommunityModerationError] =
+    useState(false);
+  const [busyContributionId, setBusyContributionId] = useState<number | null>(
+    null,
+  );
   const [appConfig, setAppConfig] = useState<BrieflyAppConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [configSaving, setConfigSaving] = useState(false);
@@ -763,6 +863,41 @@ export default function BetaDashboardScreen() {
       active = false;
     };
   }, [account?.is_admin, authReady, user]);
+
+  const refreshCommunityModeration = useCallback(async () => {
+    if (!user || account?.is_admin !== true) return;
+
+    setCommunityModerationLoading(true);
+    try {
+      const next = await getCommunityModerationQueue();
+      setCommunityModeration(next);
+      setCommunityModerationError(false);
+    } catch {
+      setCommunityModerationError(true);
+    } finally {
+      setCommunityModerationLoading(false);
+    }
+  }, [account?.is_admin, user]);
+
+  useEffect(() => {
+    if (!authReady || !user || account?.is_admin !== true) return;
+    void refreshCommunityModeration();
+  }, [account?.is_admin, authReady, refreshCommunityModeration, user]);
+
+  const toggleCommunityVisibility = async (item: CommunityModerationItem) => {
+    setBusyContributionId(item.contribution_id);
+    try {
+      await setCommunityContributionVisibility(
+        item.contribution_id,
+        item.status === "hidden",
+      );
+      await refreshCommunityModeration();
+    } catch {
+      setCommunityModerationError(true);
+    } finally {
+      setBusyContributionId(null);
+    }
+  };
 
   const changeAppConfig = <K extends keyof BrieflyAppConfig>(
     key: K,
@@ -1292,6 +1427,75 @@ export default function BetaDashboardScreen() {
                     ))}
                   </View>
                 </View>
+              </View>
+
+              <View style={styles.section}>
+                <SectionTitle
+                  title="Community moderation"
+                  detail="Reported event contributions. Account identities stay private; only moderation-relevant content is shown."
+                />
+                <View style={styles.windowRow}>
+                  <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                    {number(communityModeration?.count)} reported contributions
+                  </Text>
+                  <Pressable
+                    disabled={communityModerationLoading}
+                    onPress={() => void refreshCommunityModeration()}
+                    style={({ pressed }) => [
+                      styles.refreshButton,
+                      {
+                        borderColor: colors.border,
+                        opacity: communityModerationLoading
+                          ? 0.5
+                          : pressed
+                            ? 0.65
+                            : 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.windowText, { color: colors.text }]}>
+                      {communityModerationLoading ? "Refreshing…" : "Refresh"}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {communityModerationLoading && !communityModeration ? (
+                  <ActivityIndicator
+                    color={colors.accent}
+                    style={{ alignSelf: "flex-start", marginTop: 14 }}
+                  />
+                ) : communityModerationError && !communityModeration ? (
+                  <Text
+                    style={[
+                      styles.empty,
+                      { color: colors.textMuted, marginTop: 14 },
+                    ]}
+                  >
+                    Community moderation queue is unavailable.
+                  </Text>
+                ) : communityModeration?.items.length ? (
+                  <View style={[styles.errorList, { marginTop: 14 }]}>
+                    {communityModeration.items.map((item) => (
+                      <CommunityModerationCard
+                        key={item.contribution_id}
+                        item={item}
+                        busy={busyContributionId === item.contribution_id}
+                        onToggle={(contribution) =>
+                          void toggleCommunityVisibility(contribution)
+                        }
+                      />
+                    ))}
+                  </View>
+                ) : (
+                  <Text
+                    style={[
+                      styles.empty,
+                      { color: colors.textMuted, marginTop: 14 },
+                    ]}
+                  >
+                    No reported contributions.
+                  </Text>
+                )}
               </View>
 
               <View style={styles.section}>
