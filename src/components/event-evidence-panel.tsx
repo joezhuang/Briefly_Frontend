@@ -212,13 +212,25 @@ export function EventEvidencePanel({
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const text = copy[language] ?? copy.en;
-  const [intelligence, setIntelligence] = useState<EventIntelligence | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [activeLens, setActiveLens] = useState<EventLens>("evidence");
+  const [intelligenceState, setIntelligenceState] = useState<{
+    eventId: string;
+    value: EventIntelligence;
+  } | null>(null);
+  const [failedEventId, setFailedEventId] = useState<string | null>(null);
+  const [lensState, setLensState] = useState<{
+    eventId: string;
+    lens: EventLens;
+  }>({ eventId, lens: "evidence" });
+
+  const intelligence =
+    intelligenceState?.eventId === eventId ? intelligenceState.value : null;
+  const failed = failedEventId === eventId;
+  const activeLens =
+    lensState.eventId === eventId ? lensState.lens : "evidence";
 
   const selectLens = (lens: EventLens) => {
     if (lens === activeLens) return;
-    setActiveLens(lens);
+    setLensState({ eventId, lens });
     trackProductEvent("event_lens_select", {
       eventId,
       properties: { lens },
@@ -227,18 +239,18 @@ export function EventEvidencePanel({
 
   useEffect(() => {
     let active = true;
-    setFailed(false);
-    setIntelligence(null);
-    setActiveLens("evidence");
 
     void getEventIntelligence(eventId, 100)
       .then((result) => {
-        if (active) setIntelligence(result);
+        if (active) {
+          setIntelligenceState({ eventId, value: result });
+          setFailedEventId((current) => (current === eventId ? null : current));
+        }
       })
       .catch(() => {
         if (active) {
-          setFailed(true);
-          setActiveLens("timeline");
+          setFailedEventId(eventId);
+          setLensState({ eventId, lens: "timeline" });
         }
       });
 
@@ -295,7 +307,7 @@ export function EventEvidencePanel({
           : text.developing
     : null;
 
-  const tabs: Array<{ id: EventLens; label: string; badge?: number }> = [
+  const tabs: { id: EventLens; label: string; badge?: number }[] = [
     {
       id: "evidence",
       label: text.title,
