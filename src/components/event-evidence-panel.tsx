@@ -125,6 +125,54 @@ type ConflictCopy = {
   conflict: string;
 };
 
+function decodeEvidenceEntities(value: string) {
+  const named: Record<string, string> = {
+    amp: "&",
+    apos: "'",
+    gt: ">",
+    lt: "<",
+    nbsp: " ",
+    quot: '"',
+  };
+
+  return value.replace(
+    /&(#x[0-9a-f]+|#\d+|[a-z]+);/gi,
+    (match, entity: string) => {
+      if (entity.startsWith("#x")) {
+        const code = Number.parseInt(entity.slice(2), 16);
+        return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+      }
+      if (entity.startsWith("#")) {
+        const code = Number.parseInt(entity.slice(1), 10);
+        return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+      }
+      return named[entity.toLowerCase()] ?? match;
+    },
+  );
+}
+
+function cleanEvidenceText(value: string | null | undefined) {
+  let text = String(value || "");
+  if (!text) return "";
+
+  text = text.replace(
+    /\[([^\]]+)\]\((?:https?:\/\/|www\.)[^)]+\)/gi,
+    "$1",
+  );
+  text = text.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ");
+  text = text.replace(/<[^>]+>/g, " ");
+  text = decodeEvidenceEntities(text);
+  text = text.replace(/(?:https?:\/\/|www\.)[^\s<>"']+/gi, " ");
+  return text.replace(/\s+/g, " ").replace(/^[\s|·-]+|[\s|·-]+$/g, "").trim();
+}
+
+function usefulEvidenceText(value: string | null | undefined) {
+  const cleaned = cleanEvidenceText(value);
+  if (cleaned.length < 12) return "";
+  if (!/[A-Za-z0-9\u00C0-\uFFFF]/.test(cleaned)) return "";
+  return cleaned;
+}
+
 function tokenSet(signature: string) {
   return new Set(
     signature
@@ -148,7 +196,13 @@ function signatureSimilarity(left: string, right: string) {
 function buildCorroboratedClaims(
   assessment: EventAssessment | null | undefined,
 ): CorroboratedClaim[] {
-  const observations = assessment?.claim_observations ?? [];
+  const observations = (assessment?.claim_observations ?? [])
+    .map((observation) => ({
+      ...observation,
+      text: usefulEvidenceText(observation.text),
+      source: cleanEvidenceText(observation.source),
+    }))
+    .filter((observation) => Boolean(observation.text));
   const contradictions = assessment?.contradictions ?? [];
   const disputedClaims = new Set(
     contradictions.flatMap((item) =>
@@ -184,8 +238,8 @@ function buildCorroboratedClaims(
         (a, b) => a.text.length - b.text.length,
       )[0];
       return {
-        text: representative?.text ?? "",
-        sources,
+        text: usefulEvidenceText(representative?.text),
+        sources: sources.map(cleanEvidenceText).filter(Boolean),
       };
     })
     .filter((group) => group.text && group.sources.length >= 2)
@@ -264,8 +318,23 @@ export function EventEvidencePanel({
     () => buildCorroboratedClaims(assessment),
     [assessment],
   );
-  const contradictions = (assessment?.contradictions ?? []).slice(0, 3);
-  const unknowns = uncertainties.filter(Boolean).slice(0, 4);
+  const contradictions = (assessment?.contradictions ?? [])
+    .map((item) => ({
+      ...item,
+      observations: (item.observations ?? [])
+        .map((observation) => ({
+          ...observation,
+          text: usefulEvidenceText(observation.text),
+          source: cleanEvidenceText(observation.source),
+        }))
+        .filter((observation) => Boolean(observation.text)),
+    }))
+    .filter((item) => item.observations.length >= 2)
+    .slice(0, 3);
+  const unknowns = uncertainties
+    .map(usefulEvidenceText)
+    .filter(Boolean)
+    .slice(0, 4);
   const evidence = useMemo(
     () => (intelligence?.evidence ?? []).filter((item) => !item.is_duplicate),
     [intelligence?.evidence],
