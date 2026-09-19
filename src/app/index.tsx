@@ -78,7 +78,7 @@ const feedCopy = {
 
 const scopes: HomepageFeedScope[] = ["top", "national", "local"];
 const GEO_COVERAGE_RETRY_MS = 5000;
-const GEO_COVERAGE_MAX_RETRIES = 6;
+const GEO_COVERAGE_MAX_RETRIES = 24;
 const storyKey = (article: CanonicalArticle) =>
   String(article.article_version_id ?? article.event_id);
 
