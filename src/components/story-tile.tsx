@@ -142,14 +142,9 @@ export function StoryTile({
     }
   };
 
-  return (
-    <Pressable
-      onPress={() => {
-        if (!playingVideo) router.push(storyHref as never);
-      }}
-      style={StyleSheet.flatten([styles.tile, { height }])}
-    >
-      {playingVideo && videoUrl ? (
+  if (playingVideo && videoUrl) {
+    return (
+      <View style={StyleSheet.flatten([styles.tile, { height }])}>
         <View style={StyleSheet.absoluteFill}>
           <StoryVideo
             url={videoUrl}
@@ -160,8 +155,7 @@ export function StoryTile({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={copy.close}
-            onPress={(event) => {
-              event.stopPropagation();
+            onPress={() => {
               if (activeVideoEventId === article.event_id) {
                 setActiveHomepageVideo(null);
               }
@@ -174,97 +168,102 @@ export function StoryTile({
             <Text style={styles.videoCloseText}>×</Text>
           </Pressable>
         </View>
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      onPress={() => router.push(storyHref as never)}
+      style={StyleSheet.flatten([styles.tile, { height }])}
+    >
+      {imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={180}
+        />
       ) : (
-        <>
-          {imageUrl ? (
-            <Image
-              source={{ uri: imageUrl }}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              transition={180}
-            />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, styles.imageFallback]} />
+        <View style={[StyleSheet.absoluteFill, styles.imageFallback]} />
+      )}
+
+      <View style={[StyleSheet.absoluteFill, styles.overlay]} />
+
+      <View style={styles.content}>
+        <Text style={styles.category}>
+          {(article.category ?? t.topStory).toUpperCase()}
+        </Text>
+
+        <View style={styles.bottom}>
+          <Text
+            style={[styles.headline, headlineStyle]}
+            numberOfLines={size === "hero" ? 4 : 3}
+          >
+            {displayedHeadline}
+          </Text>
+
+          {size === "hero" && !!displayedStandfirst && (
+            <Text style={styles.standfirst} numberOfLines={3}>
+              {displayedStandfirst}
+            </Text>
           )}
 
-          <View style={[StyleSheet.absoluteFill, styles.overlay]} />
-
-          <View style={styles.content}>
-            <Text style={styles.category}>
-              {(article.category ?? t.topStory).toUpperCase()}
-            </Text>
-
-            <View style={styles.bottom}>
-              <Text
-                style={[styles.headline, headlineStyle]}
-                numberOfLines={size === "hero" ? 4 : 3}
+          <View style={styles.mediaActions}>
+            {!!videoUrl && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={copy.play}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  setActiveHomepageVideo(article.event_id);
+                }}
+                style={({ pressed }) => [
+                  styles.translateButton,
+                  pressed && styles.translateButtonPressed,
+                ]}
               >
-                {displayedHeadline}
-              </Text>
+                <Text style={styles.translateText}>▶ {copy.play}</Text>
+              </Pressable>
+            )}
 
-              {size === "hero" && !!displayedStandfirst && (
-                <Text style={styles.standfirst} numberOfLines={3}>
-                  {displayedStandfirst}
+            <Pressable
+              accessibilityRole="button"
+              disabled={translating}
+              onPress={(event) => {
+                event.stopPropagation();
+                void handleTranslation();
+              }}
+              style={({ pressed }) => [
+                styles.translateButton,
+                pressed && styles.translateButtonPressed,
+              ]}
+            >
+              {translating ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.translateText}>
+                  {translationFailed
+                    ? copy.retry
+                    : translated
+                      ? copy.original
+                      : copy.translate}
                 </Text>
               )}
+            </Pressable>
+          </View>
 
-              <View style={styles.mediaActions}>
-                {!!videoUrl && (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={copy.play}
-                    onPress={(event) => {
-                      event.stopPropagation();
-                      setActiveHomepageVideo(article.event_id);
-                    }}
-                    style={({ pressed }) => [
-                      styles.translateButton,
-                      pressed && styles.translateButtonPressed,
-                    ]}
-                  >
-                    <Text style={styles.translateText}>▶ {copy.play}</Text>
-                  </Pressable>
-                )}
-
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={translating}
-                  onPress={(event) => {
-                    event.stopPropagation();
-                    void handleTranslation();
-                  }}
-                  style={({ pressed }) => [
-                    styles.translateButton,
-                    pressed && styles.translateButtonPressed,
-                  ]}
-                >
-                  {translating ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.translateText}>
-                      {translationFailed
-                        ? copy.retry
-                        : translated
-                          ? copy.original
-                          : copy.translate}
-                    </Text>
-                  )}
-                </Pressable>
-              </View>
-
-              <View style={styles.metaRow}>
-                <Text style={styles.meta}>
-                  {sourceCount}{" "}
-                  {sourceCount === 1 ? t.source : t.sourcesPlural}
-                </Text>
-                <View style={styles.arrow}>
-                  <Text style={styles.arrowText}>→</Text>
-                </View>
-              </View>
+          <View style={styles.metaRow}>
+            <Text style={styles.meta}>
+              {sourceCount}{" "}
+              {sourceCount === 1 ? t.source : t.sourcesPlural}
+            </Text>
+            <View style={styles.arrow}>
+              <Text style={styles.arrowText}>→</Text>
             </View>
           </View>
-        </>
-      )}
+        </View>
+      </View>
     </Pressable>
   );
 }
