@@ -155,6 +155,16 @@ function cleanEvidenceText(value: string | null | undefined) {
   let text = String(value || "");
   if (!text) return "";
 
+  // Stored RSS summaries can contain literal HTML, entity-escaped HTML, or markup
+  // escaped for transport. Decode first so every representation reaches the same
+  // tag-removal path.
+  text = text.replace(/\\([<>])/g, "$1");
+  for (let pass = 0; pass < 2; pass += 1) {
+    const decoded = decodeEvidenceEntities(text);
+    if (decoded === text) break;
+    text = decoded;
+  }
+
   text = text.replace(
     /\[([^\]]+)\]\((?:https?:\/\/|www\.)[^)]+\)/gi,
     "$1",
@@ -162,6 +172,7 @@ function cleanEvidenceText(value: string | null | undefined) {
   text = text.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ");
   text = text.replace(/<[^>]+>/g, " ");
   text = decodeEvidenceEntities(text);
+  text = text.replace(/<[^>]+>/g, " ");
   text = text.replace(/(?:https?:\/\/|www\.)[^\s<>"']+/gi, " ");
   return text.replace(/\s+/g, " ").replace(/^[\s|·-]+|[\s|·-]+$/g, "").trim();
 }
