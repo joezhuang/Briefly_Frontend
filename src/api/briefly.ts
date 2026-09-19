@@ -539,6 +539,16 @@ export type HomepageArticleFeed = {
   city: string | null;
   region?: string | null;
   region_code?: string | null;
+  national_coverage?: {
+    key: string;
+    status: "not_requested" | "queued" | "running" | "ready" | "failed";
+    country_code: string | null;
+    started_at?: number | null;
+    completed_at?: number | null;
+    articles: number;
+    events: number;
+    error?: string | null;
+  } | null;
   local_coverage?: {
     key: string;
     status: "not_requested" | "queued" | "running" | "ready" | "failed";

@@ -77,8 +77,8 @@ const feedCopy = {
 } as const;
 
 const scopes: HomepageFeedScope[] = ["top", "national", "local"];
-const LOCAL_COVERAGE_RETRY_MS = 5000;
-const LOCAL_COVERAGE_MAX_RETRIES = 6;
+const GEO_COVERAGE_RETRY_MS = 5000;
+const GEO_COVERAGE_MAX_RETRIES = 6;
 const storyKey = (article: CanonicalArticle) =>
   String(article.article_version_id ?? article.event_id);
 
@@ -297,15 +297,20 @@ export default function HomeScreen() {
 
         updateHasMore(result.has_more === true);
 
-        const coverageStatus = result.local_coverage?.status;
+        const coverageStatus =
+          scope === "local"
+            ? result.local_coverage?.status
+            : scope === "national"
+              ? result.national_coverage?.status
+              : undefined;
         const coverageBuilding =
-          scope === "local" &&
+          scope !== "top" &&
           mode !== "more" &&
           (coverageStatus === "queued" || coverageStatus === "running");
 
         if (
           coverageBuilding &&
-          coverageRetryCountRef.current < LOCAL_COVERAGE_MAX_RETRIES
+          coverageRetryCountRef.current < GEO_COVERAGE_MAX_RETRIES
         ) {
           coverageRetryCountRef.current += 1;
           if (coverageRetryTimerRef.current) {
@@ -314,9 +319,9 @@ export default function HomeScreen() {
           coverageRetryTimerRef.current = setTimeout(() => {
             coverageRetryTimerRef.current = null;
             setCoverageRetryTick((value) => value + 1);
-          }, LOCAL_COVERAGE_RETRY_MS);
+          }, GEO_COVERAGE_RETRY_MS);
         } else if (
-          scope !== "local" ||
+          scope === "top" ||
           coverageStatus === "ready" ||
           coverageStatus === "failed"
         ) {
@@ -469,7 +474,7 @@ export default function HomeScreen() {
   }, [scope, newsLocation]);
 
   useEffect(() => {
-    if (coverageRetryTick === 0 || scope !== "local") return;
+    if (coverageRetryTick === 0 || scope === "top") return;
     Promise.resolve().then(() => void loadFeed("refresh"));
   }, [coverageRetryTick, loadFeed, scope]);
 
