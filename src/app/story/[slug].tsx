@@ -112,13 +112,14 @@ function getStoryUrl(currentStoryHref: string): string | null {
 }
 
 export default function StoryDetailScreen() {
-  const { slug, eventId, imageUrl, previewHeadline, source, scope } = useLocalSearchParams<{
+  const { slug, eventId, imageUrl, previewHeadline, source, scope, community } = useLocalSearchParams<{
     slug?: string | string[];
     eventId?: string | string[];
     imageUrl?: string | string[];
     previewHeadline?: string | string[];
     source?: string | string[];
     scope?: string | string[];
+    community?: string | string[];
   }>();
 
   const resolvedSlug = useMemo(
@@ -144,6 +145,10 @@ export default function StoryDetailScreen() {
   const resolvedScope = useMemo(
     () => (Array.isArray(scope) ? scope[0] : scope),
     [scope],
+  );
+  const resolvedCommunity = useMemo(
+    () => (Array.isArray(community) ? community[0] : community),
+    [community],
   );
 
   const { language, t } = useBrieflyLanguage();
@@ -776,6 +781,12 @@ export default function StoryDetailScreen() {
 
       <ArticleView
         article={displayedArticle}
+        refreshKey={
+          displayedArticle.authoritative_article_version_id ??
+          displayedArticle.article_version_id ??
+          reloadKey
+        }
+        focusCommunity={resolvedCommunity === "1"}
         podcast={podcast}
         podcastBusy={podcastBusy}
         podcastPro={isPro}
@@ -793,15 +804,17 @@ export default function StoryDetailScreen() {
             <WebTranslateButton sourceUrl={translateSourceUrl} />
           ) : undefined
         }
+        community={
+          !!displayedArticle.event_id ? (
+            <EventCommunityPanel
+              eventId={displayedArticle.event_id}
+              returnTo={currentStoryHref}
+            />
+          ) : undefined
+        }
         footer={
           <>
             {showStoryAd && <StoryAdSlot />}
-            {!!displayedArticle.event_id && (
-              <EventCommunityPanel
-                eventId={displayedArticle.event_id}
-                returnTo={currentStoryHref}
-              />
-            )}
             <RelatedStoriesCarousel article={displayedArticle} />
           </>
         }

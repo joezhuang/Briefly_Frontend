@@ -270,9 +270,11 @@ function contradictionReason(
 export function EventEvidencePanel({
   eventId,
   uncertainties = [],
+  refreshKey,
 }: {
   eventId: string;
   uncertainties?: string[];
+  refreshKey?: string | number | null;
 }) {
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
@@ -322,7 +324,7 @@ export function EventEvidencePanel({
     return () => {
       active = false;
     };
-  }, [eventId]);
+  }, [eventId, refreshKey]);
 
   const assessment = intelligence?.assessment;
   const corroborated = useMemo(
@@ -525,7 +527,7 @@ export function EventEvidencePanel({
         </View>
       )}
 
-      {activeLens === "timeline" && <EventEvolutionPanel eventId={eventId} />}
+      {activeLens === "timeline" && <EventEvolutionPanel eventId={eventId} refreshKey={refreshKey} />}
       {activeLens === "coverage" && intelligence && (
         <EventCoveragePanel intelligence={intelligence} />
       )}

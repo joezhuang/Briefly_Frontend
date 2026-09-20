@@ -3,7 +3,10 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -13,6 +16,7 @@ import {
   requestCardTranslation,
   type CardTranslation,
 } from "@/api/briefly";
+import { trackProductEvent } from "@/analytics/product-analytics";
 import { StoryVideo } from "@/components/story-video";
 import { useBrieflyLanguage } from "@/context/language";
 import type { CanonicalArticle } from "@/models/article";
@@ -44,12 +48,12 @@ function subscribeActiveHomepageVideo(listener: ActiveVideoListener) {
   };
 }
 
-const translationCopy: Record<string, { translate: string; original: string; retry: string; play: string; close: string }> = {
-  en: { translate: "Translate", original: "Original", retry: "Retry", play: "Play", close: "Close video" },
-  es: { translate: "Traducir", original: "Original", retry: "Reintentar", play: "Reproducir", close: "Cerrar video" },
-  ja: { translate: "翻訳", original: "原文", retry: "再試行", play: "再生", close: "動画を閉じる" },
-  "zh-CN": { translate: "翻译", original: "原文", retry: "重试", play: "播放", close: "关闭视频" },
-  "zh-TW": { translate: "翻譯", original: "原文", retry: "重試", play: "播放", close: "關閉影片" },
+const translationCopy: Record<string, { translate: string; original: string; retry: string; play: string; close: string; share: string; community: string }> = {
+  en: { translate: "Translate", original: "Original", retry: "Retry", play: "Play", close: "Close video", share: "Share", community: "Community" },
+  es: { translate: "Traducir", original: "Original", retry: "Reintentar", play: "Reproducir", close: "Cerrar video", share: "Compartir", community: "Comunidad" },
+  ja: { translate: "翻訳", original: "原文", retry: "再試行", play: "再生", close: "動画を閉じる", share: "共有", community: "コミュニティ" },
+  "zh-CN": { translate: "翻译", original: "原文", retry: "重试", play: "播放", close: "关闭视频", share: "分享", community: "社区" },
+  "zh-TW": { translate: "翻譯", original: "原文", retry: "重試", play: "播放", close: "關閉影片", share: "分享", community: "社群" },
 };
 
 export function StoryTile({
@@ -102,6 +106,30 @@ export function StoryTile({
       if (videoUrl) params.set("videoUrl", videoUrl);
       return `/story/${article.slug}?${params.toString()}`;
     })();
+
+  const communityHref = `${storyHref}${storyHref.includes("?") ? "&" : "?"}community=1`;
+
+  const handleShare = async () => {
+    if (article.article_version_id == null) return;
+    const webBase = process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, "");
+    if (!webBase) {
+      Alert.alert("Briefly", "Sharing is not configured.");
+      return;
+    }
+    const url = `${webBase}/share/${article.article_version_id}`;
+    const result = await Share.share(
+      Platform.OS === "ios"
+        ? { message: article.headline, url }
+        : { message: `${article.headline}\n${url}` },
+    );
+    if (result.action !== Share.dismissedAction) {
+      trackProductEvent("story_share", {
+        eventId: article.event_id,
+        articleVersionId: article.article_version_id,
+        properties: { source: "homepage_card" },
+      });
+    }
+  };
 
   const currentTranslation =
     translation?.language === language ? translation : null;
@@ -210,6 +238,37 @@ export function StoryTile({
           )}
 
           <View style={styles.mediaActions}>
+            {article.article_version_id != null && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={copy.share}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  void handleShare();
+                }}
+                style={({ pressed }) => [
+                  styles.translateButton,
+                  pressed && styles.translateButtonPressed,
+                ]}
+              >
+                <Text style={styles.translateText}>↗ {copy.share}</Text>
+              </Pressable>
+            )}
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={copy.community}
+              onPress={(event) => {
+                event.stopPropagation();
+                router.push(communityHref as never);
+              }}
+              style={({ pressed }) => [
+                styles.translateButton,
+                pressed && styles.translateButtonPressed,
+              ]}
+            >
+              <Text style={styles.translateText}>◌ {copy.community}</Text>
+            </Pressable>
             {!!videoUrl && (
               <Pressable
                 accessibilityRole="button"

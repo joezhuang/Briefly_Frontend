@@ -119,7 +119,13 @@ function developmentDetails(
   return details;
 }
 
-export function EventEvolutionPanel({ eventId }: { eventId: string }) {
+export function EventEvolutionPanel({
+  eventId,
+  refreshKey,
+}: {
+  eventId: string;
+  refreshKey?: string | number | null;
+}) {
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const text = copy[language] ?? copy.en;
@@ -170,7 +176,7 @@ export function EventEvolutionPanel({ eventId }: { eventId: string }) {
     return () => {
       active = false;
     };
-  }, [eventId]);
+  }, [eventId, refreshKey]);
 
   const meaningful = useMemo(
     () =>
