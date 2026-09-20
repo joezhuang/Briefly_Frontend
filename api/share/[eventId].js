@@ -139,10 +139,19 @@ module.exports = async function handler(request, response) {
         "Understand what happened, why it matters, and what comes next.",
       220,
     );
-    const imageUrl = absoluteUrl(
+    const sourceImageUrl = absoluteUrl(
       article.video_thumbnail_url || article.image_url,
       origin,
     );
+    const imageVersion = article.article_version_id
+      ? `&version=${encodeURIComponent(String(article.article_version_id))}`
+      : "";
+    const imagePath = legacyVersion
+      ? `/api/og/${encodeURIComponent(key)}?legacyVersion=1${imageVersion}`
+      : `/api/og/${encodeURIComponent(eventId)}?source=event${imageVersion}`;
+    const imageUrl = sourceImageUrl
+      ? new URL(imagePath, origin).toString()
+      : null;
 
     const safeTitle = escapeHtml(title);
     const safeDescription = escapeHtml(description);
@@ -176,12 +185,15 @@ module.exports = async function handler(request, response) {
   <meta property="og:title" content="${safeTitle}">
   <meta property="og:description" content="${safeDescription}">
   <meta property="og:url" content="${safeShareUrl}">
-  ${safeImage ? `<meta property="og:image" content="${safeImage}">` : ""}
+  ${safeImage ? `<meta property="og:image" content="${safeImage}">
+  <meta property="og:image:secure_url" content="${safeImage}">
+  <meta property="og:image:alt" content="${safeTitle}">` : ""}
 
   <meta name="twitter:card" content="${safeImage ? "summary_large_image" : "summary"}">
   <meta name="twitter:title" content="${safeTitle}">
   <meta name="twitter:description" content="${safeDescription}">
-  ${safeImage ? `<meta name="twitter:image" content="${safeImage}">` : ""}
+  ${safeImage ? `<meta name="twitter:image" content="${safeImage}">
+  <meta name="twitter:image:alt" content="${safeTitle}">` : ""}
 </head>
 <body>
   <main>

@@ -83,10 +83,23 @@ const checks = [
       'property="og:title"',
       'property="og:description"',
       'property="og:image"',
+      'property="og:image:secure_url"',
       'name="twitter:card"',
       'window.location.replace',
       'legacyVersion',
       'source: "share"',
+      '"/api/og/"',
+    ],
+  },
+  {
+    name: "Share image proxy serves crawler-friendly story images from Briefly",
+    file: "api/og/[eventId].js",
+    needles: [
+      "video_thumbnail_url || article.image_url",
+      "BrieflyShareCard/1.0",
+      'contentType.startsWith("image/")',
+      '"Content-Disposition", "inline"',
+      "MAX_IMAGE_BYTES",
     ],
   },
   {

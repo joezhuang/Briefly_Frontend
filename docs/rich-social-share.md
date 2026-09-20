@@ -50,3 +50,22 @@ current canonical event story.
 Event-based share cards cache for five minutes so evolving stories can refresh their
 headline/description/image. Legacy version links cache longer because their referenced
 article version is immutable.
+
+
+## Reliable image delivery
+
+The Open Graph page does not expose a third-party publisher image URL directly anymore.
+When a story has an image, `og:image` points to:
+
+```text
+/api/og/<event_id>?source=event&version=<article_version_id>
+```
+
+That Vercel Function fetches the current story image or video thumbnail server-side and
+serves the bytes from the Briefly domain. This improves compatibility with social
+crawlers that reject hot-linked publisher/CDN images or image URLs with unusual query
+parameters.
+
+The proxy accepts only HTTP(S) image URLs coming from the canonical Briefly article,
+requires an `image/*` response type, caps the image at 10 MB, and applies short CDN
+caching for living events. Legacy immutable share links use the longer cache policy.
