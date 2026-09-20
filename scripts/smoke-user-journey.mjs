@@ -96,7 +96,7 @@ const checks = [
       '"/s/:eventId"',
       '"/api/share/:eventId"',
       '"/share/:versionId"',
-      '"legacyVersion=1"',
+      'legacyVersion=1',
     ],
   },
   {
