@@ -110,6 +110,8 @@ const checks = [
       "setCommunityReaction",
       "reportCommunityContribution",
       "withdrawCommunityContribution",
+      "communityMutationError",
+      "text.rateLimited",
       "/sign-in?returnTo=",
     ],
   },

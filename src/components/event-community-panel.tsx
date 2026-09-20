@@ -69,6 +69,7 @@ const copy = {
     unavailable: "Community is temporarily unavailable.",
     empty: "No community contributions yet.",
     error: "Could not update Community. Please try again.",
+    rateLimited: "You’re doing that too quickly. Please wait a little and try again.",
     perspective: "Perspective",
     reason: "Reason",
     evidence: "Evidence",
@@ -105,6 +106,7 @@ const copy = {
     unavailable: "La comunidad no está disponible temporalmente.",
     empty: "Aún no hay contribuciones de la comunidad.",
     error: "No se pudo actualizar la comunidad. Inténtalo de nuevo.",
+    rateLimited: "Estás haciendo esto demasiado rápido. Espera un momento e inténtalo de nuevo.",
     perspective: "Perspectiva",
     reason: "Razón",
     evidence: "Evidencia",
@@ -141,6 +143,7 @@ const copy = {
     unavailable: "コミュニティを一時的に利用できません。",
     empty: "まだコミュニティ投稿はありません。",
     error: "コミュニティを更新できませんでした。もう一度お試しください。",
+    rateLimited: "操作が速すぎます。少し待ってからもう一度お試しください。",
     perspective: "視点",
     reason: "理由",
     evidence: "根拠",
@@ -177,6 +180,7 @@ const copy = {
     unavailable: "社区暂时不可用。",
     empty: "暂无社区贡献。",
     error: "无法更新社区，请重试。",
+    rateLimited: "操作过于频繁，请稍等片刻后再试。",
     perspective: "观点",
     reason: "理由",
     evidence: "证据",
@@ -213,6 +217,7 @@ const copy = {
     unavailable: "社群暫時無法使用。",
     empty: "目前沒有社群貢獻。",
     error: "無法更新社群，請再試一次。",
+    rateLimited: "操作過於頻繁，請稍等片刻後再試。",
     perspective: "觀點",
     reason: "理由",
     evidence: "證據",
@@ -237,6 +242,17 @@ function contributionDate(value: string, language: string) {
   return new Intl.DateTimeFormat(language, {
     dateStyle: "medium",
   }).format(date);
+}
+
+function communityMutationError(
+  error: unknown,
+  fallback: string,
+  rateLimited: string,
+) {
+  if (error instanceof Error && error.message.includes("(429)")) {
+    return rateLimited;
+  }
+  return fallback;
 }
 
 export function EventCommunityPanel({
@@ -333,8 +349,11 @@ export function EventCommunityPanel({
       setBody("");
       setSourceUrl("");
       await refresh();
-    } catch {
-      Alert.alert("Briefly", text.error);
+    } catch (error) {
+      Alert.alert(
+        "Briefly",
+        communityMutationError(error, text.error, text.rateLimited),
+      );
     } finally {
       setBusy(false);
     }
@@ -397,8 +416,11 @@ export function EventCommunityPanel({
         eventId,
         properties: { reaction: result.my_reaction ?? "none" },
       });
-    } catch {
-      Alert.alert("Briefly", text.error);
+    } catch (error) {
+      Alert.alert(
+        "Briefly",
+        communityMutationError(error, text.error, text.rateLimited),
+      );
     } finally {
       setBusyReactionId(null);
     }
@@ -432,8 +454,11 @@ export function EventCommunityPanel({
         return next;
       });
       setReportTarget(null);
-    } catch {
-      Alert.alert("Briefly", text.error);
+    } catch (error) {
+      Alert.alert(
+        "Briefly",
+        communityMutationError(error, text.error, text.rateLimited),
+      );
     } finally {
       setBusy(false);
     }
