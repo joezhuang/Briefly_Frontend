@@ -50,7 +50,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "postinstall": "node scripts/patch-expo-router-initial-link.js"
+    "postinstall": "node scripts/patch-expo-router-initial-link.js",
+    "smoke:journey": "node scripts/smoke-user-journey.mjs"
   },
   "private": true
 }

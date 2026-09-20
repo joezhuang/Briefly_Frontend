@@ -1,0 +1,163 @@
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+function read(relativePath) {
+  return fs.readFileSync(path.join(root, relativePath), "utf8");
+}
+
+function requireAll(relativePath, needles) {
+  const source = read(relativePath);
+  const missing = needles.filter((needle) => !source.includes(needle));
+  if (missing.length) {
+    throw new Error(
+      `${relativePath} is missing journey contract(s): ${missing.join(", ")}`,
+    );
+  }
+}
+
+const checks = [
+  {
+    name: "Feed renders canonical story tiles and records feed views",
+    file: "src/app/index.tsx",
+    needles: ["getHomepageArticleFeed", "StoryTile", 'trackProductEvent("feed_view"'],
+  },
+  {
+    name: "Story tile opens the canonical story route",
+    file: "src/components/story-tile.tsx",
+    needles: ["/story/${article.slug}?", "router.push(storyHref as never)"],
+  },
+  {
+    name: "Story screen composes article, Community, and podcast actions",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      "ArticleView",
+      "EventCommunityPanel",
+      "handlePodcastAction",
+      "requestPodcastAnalysis",
+      'focusCommunity={resolvedCommunity === "1"}',
+    ],
+  },
+  {
+    name: "Lens exposes Evidence, Timeline, Coverage and records explicit selection",
+    file: "src/components/event-evidence-panel.tsx",
+    needles: [
+      'type EventLens = "evidence" | "timeline" | "coverage"',
+      'trackProductEvent("event_lens_select"',
+      'id: "evidence"',
+      'id: "timeline"',
+      'id: "coverage"',
+    ],
+  },
+  {
+    name: "Source coverage opens originals and records source opens",
+    file: "src/components/article-view.tsx",
+    needles: [
+      'trackProductEvent("source_open"',
+      "Linking.openURL(item.url)",
+      'window.open(item.url,"_blank","noopener,noreferrer")',
+    ],
+  },
+  {
+    name: "Follow is authenticated, reversible, and linked from the story",
+    file: "src/components/event-follow-button.tsx",
+    needles: [
+      "getEventFollowState",
+      "followEvent(eventId)",
+      "unfollowEvent(eventId)",
+      "/sign-in?returnTo=",
+      'trackProductEvent(next ? "event_follow" : "event_unfollow"',
+    ],
+  },
+  {
+    name: "Saved stories are locally persisted and instrumented",
+    file: "src/context/saved-articles.tsx",
+    needles: [
+      "readSavedSnapshots",
+      "writeSavedSnapshots",
+      'trackProductEvent(exists ? "story_unsave" : "story_save"',
+    ],
+  },
+  {
+    name: "Article action is wired to saved-story state",
+    file: "src/components/article-view.tsx",
+    needles: ["useSavedArticles", "toggleSaved"],
+  },
+  {
+    name: "Podcast status, generation and inline playback are wired",
+    file: "src/components/article-view.tsx",
+    needles: ["PodcastInlinePlayer"],
+  },
+  {
+    name: "Podcast API contract matches the canonical article-version route",
+    file: "src/api/briefly.ts",
+    needles: [
+      "/api/articles/version/",
+      "/podcast?",
+      "getPodcastAnalysisStatus",
+      "requestPodcastAnalysis",
+    ],
+  },
+  {
+    name: "Community supports create, reaction, report and withdrawal",
+    file: "src/components/event-community-panel.tsx",
+    needles: [
+      "getEventCommunity",
+      "createCommunityContribution",
+      "setCommunityReaction",
+      "reportCommunityContribution",
+      "withdrawCommunityContribution",
+      "/sign-in?returnTo=",
+    ],
+  },
+  {
+    name: "Community client routes match the backend contract",
+    file: "src/api/briefly.ts",
+    needles: [
+      "/api/community/events/",
+      "/contributions",
+      "/reaction",
+      "/report",
+      "/moderation",
+    ],
+  },
+  {
+    name: "Admin dashboard exposes Community moderation",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      "getCommunityModerationQueue",
+      "setCommunityContributionVisibility",
+      'title="Community moderation"',
+    ],
+  },
+  {
+    name: "Journey analytics names remain registered",
+    file: "src/analytics/product-analytics.ts",
+    needles: [
+      '"feed_view"',
+      '"story_open"',
+      '"story_save"',
+      '"event_follow"',
+      '"event_lens_select"',
+      '"source_open"',
+      '"podcast_action"',
+      '"community_contribution_create"',
+      '"community_contribution_report"',
+      '"community_reaction"',
+    ],
+  },
+];
+
+let passed = 0;
+for (const check of checks) {
+  requireAll(check.file, check.needles);
+  passed += 1;
+  process.stdout.write(`✓ ${check.name}\n`);
+}
+
+process.stdout.write(
+  `\nBriefly beta user-journey contract: ${passed}/${checks.length} checks passed.\n`,
+);
