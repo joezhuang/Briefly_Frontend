@@ -49,7 +49,7 @@ function DirectVideo({ url }: { url: string }) {
       nativeControls
       contentFit="cover"
       surfaceType="textureView"
-      allowsFullscreen
+      fullscreenOptions={{ enable: true }}
       allowsPictureInPicture
     />
   );

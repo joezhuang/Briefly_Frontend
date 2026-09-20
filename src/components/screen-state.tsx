@@ -11,7 +11,7 @@ import { useBrieflyTheme } from "@/context/theme";
 
 type Props = {
   title?: string;
-  message: string;
+  message?: string;
   loading?: boolean;
   onRetry?: () => void;
 };
@@ -33,9 +33,11 @@ export function ScreenState({
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       ) : null}
 
-      <Text style={[styles.message, { color: colors.textMuted }]}>
-        {message}
-      </Text>
+      {message ? (
+        <Text style={[styles.message, { color: colors.textMuted }]}>
+          {message}
+        </Text>
+      ) : null}
 
       {onRetry ? (
         <Pressable

@@ -178,7 +178,7 @@ async function resolveDeviceLocation(options: {
 }): Promise<FeedLocation | null> {
   if (pendingDeviceLocation) return pendingDeviceLocation;
 
-  pendingDeviceLocation = (async () => {
+  pendingDeviceLocation = (async (): Promise<FeedLocation | null> => {
     try {
       let permission = await Location.getForegroundPermissionsAsync();
       if (permission.status !== "granted" && options.requestPermission) {

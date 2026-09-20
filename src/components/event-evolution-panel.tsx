@@ -101,9 +101,16 @@ function formatDate(value: string | null | undefined, language: string) {
   }).format(new Date(time));
 }
 
+type DevelopmentCopy = {
+  newReports: string;
+  newSources: string;
+  newLanguages: string;
+  headlineShift: string;
+};
+
 function developmentDetails(
   development: EventDevelopment,
-  text: (typeof copy)["en"],
+  text: DevelopmentCopy,
 ) {
   const details: string[] = [];
   if (development.new_evidence_count > 0) {
