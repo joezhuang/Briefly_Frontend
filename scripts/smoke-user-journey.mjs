@@ -95,7 +95,11 @@ const checks = [
     name: "Share image proxy serves crawler-friendly story images from Briefly",
     file: "api/og/[eventId].js",
     needles: [
-      "video_thumbnail_url || article.image_url",
+      "imageCandidates(article)",
+      "youtubeVideoId",
+      "maxresdefault.jpg",
+      "hqdefault.jpg",
+      "BRIEFLY_FALLBACK_IMAGE_URL",
       "BrieflyShareCard/1.0",
       'contentType.startsWith("image/")',
       '"Content-Disposition", "inline"',

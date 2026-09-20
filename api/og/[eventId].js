@@ -1,5 +1,7 @@
 const DEFAULT_API_BASE = "https://briefly-api.deeplyapp.uk";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const BRIEFLY_FALLBACK_IMAGE_URL =
+  "https://raw.githubusercontent.com/joezhuang/Briefly_Frontend/main/assets/images/logo-glow.png";
 
 function first(value) {
   return Array.isArray(value) ? value[0] : value;
@@ -45,6 +47,99 @@ function validRemoteImageUrl(value) {
   }
 }
 
+function youtubeVideoId(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  try {
+    const url = new URL(raw);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+
+    if (host === "youtu.be") {
+      return url.pathname.split("/").filter(Boolean)[0] || null;
+    }
+
+    if (
+      host === "youtube.com" ||
+      host === "m.youtube.com" ||
+      host === "youtube-nocookie.com"
+    ) {
+      const queryId = url.searchParams.get("v");
+      if (queryId) return queryId;
+
+      const parts = url.pathname.split("/").filter(Boolean);
+      if (
+        parts.length >= 2 &&
+        ["shorts", "embed", "live"].includes(parts[0])
+      ) {
+        return parts[1];
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function imageCandidates(article) {
+  const candidates = [
+    validRemoteImageUrl(article.video_thumbnail_url),
+    validRemoteImageUrl(article.image_url),
+  ];
+
+  const youtubeId = youtubeVideoId(article.video_url);
+  if (youtubeId) {
+    const encoded = encodeURIComponent(youtubeId);
+    candidates.push(
+      `https://i.ytimg.com/vi/${encoded}/maxresdefault.jpg`,
+      `https://i.ytimg.com/vi/${encoded}/hqdefault.jpg`,
+      `https://i.ytimg.com/vi/${encoded}/mqdefault.jpg`,
+    );
+  }
+
+  candidates.push(BRIEFLY_FALLBACK_IMAGE_URL);
+  return [...new Set(candidates.filter(Boolean))];
+}
+
+async function fetchImageCandidate(imageUrl) {
+  const upstream = await fetch(imageUrl, {
+    headers: {
+      Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      "User-Agent":
+        "Mozilla/5.0 (compatible; BrieflyShareCard/1.0; +https://briefly-news-analysis.vercel.app)",
+    },
+    redirect: "follow",
+    signal: AbortSignal.timeout(12_000),
+  });
+
+  if (!upstream.ok) {
+    throw new Error(`Upstream image failed: ${upstream.status}`);
+  }
+
+  const contentType = String(
+    upstream.headers.get("content-type") || "",
+  ).split(";")[0].trim().toLowerCase();
+
+  if (!contentType.startsWith("image/")) {
+    throw new Error(
+      `Upstream did not return an image: ${contentType || "unknown"}`,
+    );
+  }
+
+  const declaredLength = Number(upstream.headers.get("content-length") || 0);
+  if (declaredLength > MAX_IMAGE_BYTES) {
+    throw new Error("Story image is too large");
+  }
+
+  const buffer = Buffer.from(await upstream.arrayBuffer());
+  if (buffer.length > MAX_IMAGE_BYTES) {
+    throw new Error("Story image is too large");
+  }
+
+  return { buffer, contentType };
+}
+
 module.exports = async function handler(request, response) {
   const key = String(first(request.query.eventId) || "").trim();
   const legacyVersion = String(first(request.query.legacyVersion) || "") === "1";
@@ -57,53 +152,24 @@ module.exports = async function handler(request, response) {
 
   try {
     const article = await loadArticle(key, legacyVersion);
-    const imageUrl = validRemoteImageUrl(
-      article.video_thumbnail_url || article.image_url,
-    );
+    const candidates = imageCandidates(article);
 
-    if (!imageUrl) {
-      response.statusCode = 404;
-      response.setHeader("Cache-Control", "no-store");
-      response.end("Story image unavailable");
-      return;
+    let resolvedImage = null;
+    let lastError = null;
+    for (const candidate of candidates) {
+      try {
+        resolvedImage = await fetchImageCandidate(candidate);
+        break;
+      } catch (error) {
+        lastError = error;
+      }
     }
 
-    const upstream = await fetch(imageUrl, {
-      headers: {
-        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-        "User-Agent":
-          "Mozilla/5.0 (compatible; BrieflyShareCard/1.0; +https://briefly-news-analysis.vercel.app)",
-      },
-      redirect: "follow",
-      signal: AbortSignal.timeout(12_000),
-    });
-
-    if (!upstream.ok) {
-      throw new Error(`Upstream image failed: ${upstream.status}`);
+    if (!resolvedImage) {
+      throw lastError || new Error("Story image unavailable");
     }
 
-    const contentType = String(
-      upstream.headers.get("content-type") || "",
-    ).split(";")[0].trim().toLowerCase();
-
-    if (!contentType.startsWith("image/")) {
-      throw new Error(`Upstream did not return an image: ${contentType || "unknown"}`);
-    }
-
-    const declaredLength = Number(upstream.headers.get("content-length") || 0);
-    if (declaredLength > MAX_IMAGE_BYTES) {
-      response.statusCode = 413;
-      response.end("Story image is too large");
-      return;
-    }
-
-    const buffer = Buffer.from(await upstream.arrayBuffer());
-    if (buffer.length > MAX_IMAGE_BYTES) {
-      response.statusCode = 413;
-      response.end("Story image is too large");
-      return;
-    }
-
+    const { buffer, contentType } = resolvedImage;
     response.statusCode = 200;
     response.setHeader("Content-Type", contentType);
     response.setHeader("Content-Length", String(buffer.length));

@@ -139,19 +139,13 @@ module.exports = async function handler(request, response) {
         "Understand what happened, why it matters, and what comes next.",
       220,
     );
-    const sourceImageUrl = absoluteUrl(
-      article.video_thumbnail_url || article.image_url,
-      origin,
-    );
     const imageVersion = article.article_version_id
       ? `&version=${encodeURIComponent(String(article.article_version_id))}`
       : "";
     const imagePath = legacyVersion
       ? `/api/og/${encodeURIComponent(key)}?legacyVersion=1${imageVersion}`
       : `/api/og/${encodeURIComponent(eventId)}?source=event${imageVersion}`;
-    const imageUrl = sourceImageUrl
-      ? new URL(imagePath, origin).toString()
-      : null;
+    const imageUrl = new URL(imagePath, origin).toString();
 
     const safeTitle = escapeHtml(title);
     const safeDescription = escapeHtml(description);
