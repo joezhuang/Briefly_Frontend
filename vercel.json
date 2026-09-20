@@ -2,6 +2,14 @@
   "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/s/:eventId",
+      "destination": "/api/share/:eventId"
+    },
+    {
+      "source": "/share/:versionId",
+      "destination": "/api/share/:versionId?legacyVersion=1"
+    },
+    {
       "source": "/story/:path*",
       "destination": "/"
     }

@@ -67,13 +67,44 @@ const checks = [
     ],
   },
   {
-    name: "Story sharing uses canonical story URLs and Community focus survives async layout",
+    name: "Story sharing uses rich-card short URLs and Community focus survives async layout",
     file: "src/components/article-view.tsx",
     needles: [
       "buildPublicStoryShareUrl(article,shareHref)",
       "onContentSizeChange",
       "communityFocusActiveRef",
       "onScrollBeginDrag",
+    ],
+  },
+  {
+    name: "Rich share endpoint provides Open Graph metadata and legacy share compatibility",
+    file: "api/share/[eventId].js",
+    needles: [
+      'property="og:title"',
+      'property="og:description"',
+      'property="og:image"',
+      'name="twitter:card"',
+      'window.location.replace',
+      'legacyVersion',
+      'source: "share"',
+    ],
+  },
+  {
+    name: "Vercel routes short and legacy share links through the rich-card function",
+    file: "vercel.json",
+    needles: [
+      '"/s/:eventId"',
+      '"/api/share/:eventId"',
+      '"/share/:versionId"',
+      '"legacyVersion=1"',
+    ],
+  },
+  {
+    name: "Client share helper emits stable event-based short links",
+    file: "src/navigation/story-share.ts",
+    needles: [
+      '/s/',
+      'encodeURIComponent(eventId)',
     ],
   },
   {
