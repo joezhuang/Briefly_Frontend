@@ -20,6 +20,7 @@ import { trackProductEvent } from "@/analytics/product-analytics";
 import { StoryVideo } from "@/components/story-video";
 import { useBrieflyLanguage } from "@/context/language";
 import type { CanonicalArticle } from "@/models/article";
+import { buildPublicStoryShareUrl } from "@/navigation/story-share";
 
 type TileSize = "hero" | "secondary" | "standard";
 type Props = {
@@ -110,13 +111,11 @@ export function StoryTile({
   const communityHref = `${storyHref}${storyHref.includes("?") ? "&" : "?"}community=1`;
 
   const handleShare = async () => {
-    if (article.article_version_id == null) return;
-    const webBase = process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, "");
-    if (!webBase) {
+    const url = buildPublicStoryShareUrl(article, storyHref);
+    if (!url) {
       Alert.alert("Briefly", "Sharing is not configured.");
       return;
     }
-    const url = `${webBase}/share/${article.article_version_id}`;
     const result = await Share.share(
       Platform.OS === "ios"
         ? { message: article.headline, url }

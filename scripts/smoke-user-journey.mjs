@@ -28,7 +28,11 @@ const checks = [
   {
     name: "Story tile opens the canonical story route",
     file: "src/components/story-tile.tsx",
-    needles: ["/story/${article.slug}?", "router.push(storyHref as never)"],
+    needles: [
+      "/story/${article.slug}?",
+      "router.push(storyHref as never)",
+      "buildPublicStoryShareUrl(article, storyHref)",
+    ],
   },
   {
     name: "Story screen composes article, Community, and podcast actions",
@@ -39,6 +43,7 @@ const checks = [
       "handlePodcastAction",
       "requestPodcastAnalysis",
       'focusCommunity={resolvedCommunity === "1"}',
+      "shareHref={currentStoryHref}",
     ],
   },
   {
@@ -59,6 +64,16 @@ const checks = [
       'trackProductEvent("source_open"',
       "Linking.openURL(item.url)",
       'window.open(item.url,"_blank","noopener,noreferrer")',
+    ],
+  },
+  {
+    name: "Story sharing uses canonical story URLs and Community focus survives async layout",
+    file: "src/components/article-view.tsx",
+    needles: [
+      "buildPublicStoryShareUrl(article,shareHref)",
+      "onContentSizeChange",
+      "communityFocusActiveRef",
+      "onScrollBeginDrag",
     ],
   },
   {

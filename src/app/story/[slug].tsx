@@ -787,6 +787,7 @@ export default function StoryDetailScreen() {
           reloadKey
         }
         focusCommunity={resolvedCommunity === "1"}
+        shareHref={currentStoryHref}
         podcast={podcast}
         podcastBusy={podcastBusy}
         podcastPro={isPro}
