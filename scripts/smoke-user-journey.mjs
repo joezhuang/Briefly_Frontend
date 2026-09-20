@@ -88,7 +88,7 @@ const checks = [
       'window.location.replace',
       'legacyVersion',
       'source: "share"',
-      '"/api/og/"',
+      '/api/og/',
     ],
   },
   {
