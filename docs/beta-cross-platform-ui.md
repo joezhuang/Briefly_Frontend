@@ -58,7 +58,13 @@ video frame leaves the viewport and render a compact floating player at the top-
 The latest playback time is handed to the floating player, and when the original video
 frame returns to view the time is handed back to the inline player. Closing the
 floating player stops that floating session. Only one Home video session is active at
-a time, so the transition cannot create duplicate Home audio.
+a time.
+
+Player teardown is explicit rather than relying only on React state: direct
+`expo-video` playback is paused on unmount, Web YouTube/Vimeo embeds receive a
+stop/pause command and their iframe is blanked, and native WebView media is paused and
+blanked during teardown. Replaying the same story must therefore start only one audible
+player.
 
 ## Automated gates
 
@@ -71,7 +77,7 @@ npm run smoke:ui
 Expected:
 
 ```text
-Briefly cross-platform UI contract: 10/10 checks passed.
+Briefly cross-platform UI contract: 12/12 checks passed.
 ```
 
 ## Manual runtime matrix
@@ -94,6 +100,8 @@ Test around 1440px, 900px and phone-width 390px.
   handed-off timestamp.
 - In Story, scroll the playing hero video out of view and back again; confirm floating
   and inline playback preserve position.
+- Close/navigate away from a playing video, return to that same story, press Play again,
+  and confirm there is exactly one audible audio stream.
 
 ### iOS
 

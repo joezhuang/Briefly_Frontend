@@ -29,9 +29,10 @@ export default function StoryVideoEmbed({
 
   useEffect(() => {
     const kind = provider(src);
+    const iframe = iframeRef.current;
 
     const handleMessage = (event: MessageEvent) => {
-      if (event.source !== iframeRef.current?.contentWindow) return;
+      if (event.source !== iframe?.contentWindow) return;
 
       let payload = event.data;
       if (typeof payload === "string") {
@@ -66,7 +67,7 @@ export default function StoryVideoEmbed({
     window.addEventListener("message", handleMessage);
 
     const interval = window.setInterval(() => {
-      const target = iframeRef.current?.contentWindow;
+      const target = iframe?.contentWindow;
       if (!target) return;
 
       if (kind === "youtube") {
@@ -101,6 +102,31 @@ export default function StoryVideoEmbed({
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("message", handleMessage);
+
+      const target = iframe?.contentWindow;
+      try {
+        if (kind === "youtube") {
+          target?.postMessage(
+            JSON.stringify({
+              event: "command",
+              func: "stopVideo",
+              args: [],
+            }),
+            "*",
+          );
+        } else if (kind === "vimeo") {
+          target?.postMessage({ method: "pause" }, "*");
+          target?.postMessage({ method: "unload" }, "*");
+        }
+      } catch {}
+
+      onPlayingChange?.(false);
+
+      // Cross-origin media can outlive React state briefly. Blank the frame
+      // explicitly so an old embed cannot remain audible after unmount.
+      try {
+        if (iframe) iframe.src = "about:blank";
+      } catch {}
     };
   }, [onPlayingChange, onTimeUpdate, src]);
 

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { type ComponentRef, useEffect, useMemo, useRef } from "react";
 import { StyleSheet } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 
@@ -75,6 +75,7 @@ export default function StoryVideoEmbed({
   onTimeUpdate,
   onPlayingChange,
 }: Props) {
+  const webViewRef = useRef<ComponentRef<typeof WebView>>(null);
   const referrer = useMemo(
     () => normalizeOrigin(process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL),
     [],
@@ -87,6 +88,31 @@ export default function StoryVideoEmbed({
     () => progressScript(initialTime),
     [initialTime],
   );
+
+  useEffect(() => {
+    const activeWebView = webViewRef.current;
+    return () => {
+      try {
+        activeWebView?.injectJavaScript(`
+          (function () {
+            try {
+              var video = document.querySelector('video');
+              if (video) {
+                video.pause();
+                video.removeAttribute('src');
+                video.load();
+              }
+            } catch (e) {}
+            try {
+              window.location.replace('about:blank');
+            } catch (e) {}
+          })();
+          true;
+        `);
+      } catch {}
+      onPlayingChange?.(false);
+    };
+  }, [onPlayingChange]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
@@ -102,6 +128,7 @@ export default function StoryVideoEmbed({
 
   return (
     <WebView
+      ref={webViewRef}
       source={{
         uri: identifiedSrc,
         headers: {

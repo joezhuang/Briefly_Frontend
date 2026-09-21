@@ -97,6 +97,24 @@ const checks = [
     ],
   },
   {
+    name: "Video engines stop explicitly when an old player unmounts",
+    file: "src/components/story-video.tsx",
+    needles: [
+      "player.pause()",
+      "onPlayingChange?.(false)",
+    ],
+  },
+  {
+    name: "Web embedded video tears down cross-origin media on unmount",
+    file: "src/components/story-video-embed.web.tsx",
+    needles: [
+      'func: "stopVideo"',
+      '{ method: "pause" }',
+      '{ method: "unload" }',
+      'iframe.src = "about:blank"',
+    ],
+  },
+  {
     name: "Community interactive controls use mobile-sized touch targets",
     file: "src/components/event-community-panel.tsx",
     needles: [
