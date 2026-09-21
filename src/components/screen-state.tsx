@@ -71,9 +71,12 @@ const styles = StyleSheet.create({
   },
   retry: {
     marginTop: 6,
+    minHeight: 44,
     borderRadius: 999,
     paddingHorizontal: 18,
     paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   retryText: {
     fontWeight: "800",

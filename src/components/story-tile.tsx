@@ -6,7 +6,6 @@ import {
   Alert,
   Platform,
   Pressable,
-  Share,
   StyleSheet,
   Text,
   View,
@@ -20,6 +19,7 @@ import { trackProductEvent } from "@/analytics/product-analytics";
 import { StoryVideo } from "@/components/story-video";
 import { useBrieflyLanguage } from "@/context/language";
 import type { CanonicalArticle } from "@/models/article";
+import { shareBrieflyStory } from "@/navigation/platform-share";
 import { buildPublicStoryShareUrl } from "@/navigation/story-share";
 
 type TileSize = "hero" | "secondary" | "standard";
@@ -117,12 +117,18 @@ export function StoryTile({
       Alert.alert("Briefly", "Sharing is not configured.");
       return;
     }
-    const result = await Share.share(
-      Platform.OS === "ios"
-        ? { message: article.headline, url }
-        : { message: `${article.headline}\n${url}` },
-    );
-    if (result.action !== Share.dismissedAction) {
+    const result = await shareBrieflyStory({
+      headline: article.headline,
+      url,
+    });
+    if (result === "copied") {
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.alert(t.shareLinkCopied);
+      } else {
+        Alert.alert("Briefly", t.shareLinkCopied);
+      }
+    }
+    if (result !== "dismissed") {
       trackProductEvent("story_share", {
         eventId: article.event_id,
         articleVersionId: article.article_version_id,
@@ -202,6 +208,8 @@ export function StoryTile({
 
   return (
     <Pressable
+      accessibilityRole={Platform.OS === "web" ? "link" : "button"}
+      accessibilityLabel={displayedHeadline}
       onPress={() => router.push(storyHref as never)}
       style={StyleSheet.flatten([styles.tile, { height }])}
     >
@@ -370,7 +378,7 @@ const styles = StyleSheet.create({
   },
   translateButton: {
     alignSelf: "flex-start",
-    minHeight: 30,
+    minHeight: 44,
     minWidth: 72,
     paddingHorizontal: 11,
     borderRadius: 999,
@@ -390,9 +398,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 12,
     right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "rgba(0,0,0,0.72)",
     alignItems: "center",
     justifyContent: "center",
@@ -412,9 +420,9 @@ const styles = StyleSheet.create({
   },
   meta: { color: "rgba(255,255,255,0.82)", fontSize: 13 },
   arrow: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.55)",
     backgroundColor: "rgba(0,0,0,0.28)",

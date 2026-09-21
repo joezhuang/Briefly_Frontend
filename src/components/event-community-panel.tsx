@@ -671,7 +671,10 @@ export function EventCommunityPanel({
                 <Pressable
                   accessibilityRole="link"
                   onPress={() => void Linking.openURL(item.source_url!)}
-                  style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                  style={({ pressed }) => [
+                    styles.sourceLinkButton,
+                    { opacity: pressed ? 0.6 : 1 },
+                  ]}
                 >
                   <Text style={[styles.sourceLink, { color: colors.accent }]}>
                     {text.source}
@@ -743,7 +746,11 @@ export function EventCommunityPanel({
                             : item.contribution_id,
                         )
                       }
-                      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [
+                        styles.ownerActionButton,
+                        { opacity: pressed ? 0.6 : 1 },
+                      ]}
                     >
                       <Text
                         style={[styles.actionText, { color: colors.textMuted }]}
@@ -755,7 +762,11 @@ export function EventCommunityPanel({
                     <Pressable
                       disabled={busy || reported}
                       onPress={() => startReport(item)}
-                      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [
+                        styles.ownerActionButton,
+                        { opacity: pressed ? 0.6 : 1 },
+                      ]}
                     >
                       <Text
                         style={[styles.actionText, { color: colors.textMuted }]}
@@ -899,7 +910,7 @@ const styles = StyleSheet.create({
   count: { fontSize: 12, fontWeight: "800" },
   subtitle: { fontSize: 14, lineHeight: 21, maxWidth: 620 },
   contributeButton: {
-    minHeight: 38,
+    minHeight: 44,
     paddingHorizontal: 14,
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
@@ -915,7 +926,7 @@ const styles = StyleSheet.create({
   },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
   chip: {
-    minHeight: 32,
+    minHeight: 44,
     paddingHorizontal: 10,
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
@@ -934,7 +945,7 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   sourceInput: {
-    minHeight: 42,
+    minHeight: 44,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 12,
     paddingHorizontal: 12,
@@ -947,7 +958,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   publishButton: {
-    minHeight: 38,
+    minHeight: 44,
     paddingHorizontal: 14,
     borderRadius: 999,
     flexDirection: "row",
@@ -977,6 +988,7 @@ const styles = StyleSheet.create({
   type: { fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
   meta: { fontSize: 11, fontWeight: "700" },
   body: { fontSize: 15, lineHeight: 23 },
+  sourceLinkButton: { minHeight: 44, alignSelf: "flex-start", justifyContent: "center" },
   sourceLink: { fontSize: 12, fontWeight: "800" },
   cardActions: {
     flexDirection: "row",
@@ -987,7 +999,7 @@ const styles = StyleSheet.create({
   },
   reactions: { flexDirection: "row", gap: 7 },
   reactionButton: {
-    minHeight: 32,
+    minHeight: 44,
     minWidth: 54,
     paddingHorizontal: 9,
     borderRadius: 999,
@@ -1001,6 +1013,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+  ownerActionButton: { minHeight: 44, justifyContent: "center" },
   actionText: { fontSize: 12, fontWeight: "800" },
   withdrawConfirm: {
     borderWidth: StyleSheet.hairlineWidth,
@@ -1018,7 +1031,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   withdrawCancel: {
-    minHeight: 34,
+    minHeight: 44,
     paddingHorizontal: 11,
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
@@ -1027,7 +1040,7 @@ const styles = StyleSheet.create({
   },
   withdrawCancelText: { fontSize: 12, fontWeight: "800" },
   withdrawConfirmButton: {
-    minHeight: 34,
+    minHeight: 44,
     paddingHorizontal: 11,
     borderRadius: 999,
     flexDirection: "row",
@@ -1038,7 +1051,7 @@ const styles = StyleSheet.create({
   withdrawConfirmButtonText: { fontSize: 12, fontWeight: "900" },
   reportReasons: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   reportReason: {
-    minHeight: 30,
+    minHeight: 44,
     paddingHorizontal: 9,
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
@@ -1046,6 +1059,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   reportReasonText: { fontSize: 11, fontWeight: "700" },
-  showMore: { alignSelf: "flex-start", paddingVertical: 4 },
+  showMore: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center", paddingVertical: 4 },
   showMoreText: { fontSize: 13, fontWeight: "900" },
 });

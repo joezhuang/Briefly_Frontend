@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   },
   accountNavButton: {
     maxWidth: 220,
-    minHeight: 36,
+    minHeight: 44,
     paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   settingsButton: {
-    minHeight: 36,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -592,10 +592,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   compactIconButton: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     paddingHorizontal: 0,
-    borderRadius: 18,
+    borderRadius: 22,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
     justifyContent: "center",
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   option: {
-    minHeight: 38,
+    minHeight: 44,
     paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: 1,

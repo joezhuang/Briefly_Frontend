@@ -51,7 +51,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "postinstall": "node scripts/patch-expo-router-initial-link.js",
-    "smoke:journey": "node scripts/smoke-user-journey.mjs"
+    "smoke:journey": "node scripts/smoke-user-journey.mjs",
+    "smoke:ui": "node scripts/smoke-cross-platform-ui.mjs"
   },
   "private": true
 }

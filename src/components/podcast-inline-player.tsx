@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButton: {
-    minHeight: 38,
+    minHeight: 44,
     paddingHorizontal: 16,
     borderRadius: 999,
     alignItems: "center",
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   },
   primaryText: { fontSize: 14, fontWeight: "800" },
   secondaryButton: {
-    minHeight: 38,
+    minHeight: 44,
     paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: 1,
