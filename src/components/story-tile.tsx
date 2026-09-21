@@ -157,7 +157,12 @@ export function StoryTile({
   const articleReady = article.article_version_id != null;
   const contentLanguage = normalizeLanguage(article.content_language ?? article.language);
   const requestedLanguage = normalizeLanguage(article.requested_language ?? language);
-  const showTranslate = !!contentLanguage && !!requestedLanguage && contentLanguage !== requestedLanguage;
+  const presentationLanguage = normalizeLanguage(language);
+  const showTranslate =
+    !!presentationLanguage &&
+    (contentLanguage
+      ? contentLanguage !== presentationLanguage
+      : requestedLanguage !== presentationLanguage);
 
   const playbackStoryHref = () => {
     const separator = storyHref.includes("?") ? "&" : "?";
