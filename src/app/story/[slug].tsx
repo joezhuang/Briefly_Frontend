@@ -112,7 +112,16 @@ function getStoryUrl(currentStoryHref: string): string | null {
 }
 
 export default function StoryDetailScreen() {
-  const { slug, eventId, imageUrl, previewHeadline, source, scope, community } = useLocalSearchParams<{
+  const {
+    slug,
+    eventId,
+    imageUrl,
+    previewHeadline,
+    source,
+    scope,
+    community,
+    autoplayVideo,
+  } = useLocalSearchParams<{
     slug?: string | string[];
     eventId?: string | string[];
     imageUrl?: string | string[];
@@ -120,6 +129,7 @@ export default function StoryDetailScreen() {
     source?: string | string[];
     scope?: string | string[];
     community?: string | string[];
+    autoplayVideo?: string | string[];
   }>();
 
   const resolvedSlug = useMemo(
@@ -149,6 +159,10 @@ export default function StoryDetailScreen() {
   const resolvedCommunity = useMemo(
     () => (Array.isArray(community) ? community[0] : community),
     [community],
+  );
+  const resolvedAutoplayVideo = useMemo(
+    () => (Array.isArray(autoplayVideo) ? autoplayVideo[0] : autoplayVideo) === "1",
+    [autoplayVideo],
   );
 
   const { language, t } = useBrieflyLanguage();
@@ -787,6 +801,7 @@ export default function StoryDetailScreen() {
           reloadKey
         }
         focusCommunity={resolvedCommunity === "1"}
+        autoStartVideo={resolvedAutoplayVideo}
         shareHref={currentStoryHref}
         podcast={podcast}
         podcastBusy={podcastBusy}

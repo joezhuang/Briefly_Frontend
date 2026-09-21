@@ -48,6 +48,12 @@ A separate 44×44 story-entry arrow stays available at the top-left of the playi
 card, while the close-video control remains top-right. Opening the story therefore
 never requires hijacking taps intended for play/pause, scrubbing or fullscreen.
 
+If the user opens that story through the playing-video arrow, Home explicitly stops
+its player and passes an `autoplayVideo=1` handoff. The Story player then starts
+automatically. Normal story navigation does not set the flag and never autoplays.
+This preserves playback intent without introducing a global video player or duplicate
+audio. The handoff does not claim exact timestamp continuity.
+
 ## Automated gates
 
 ```bash

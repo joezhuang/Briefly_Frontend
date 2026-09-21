@@ -110,6 +110,8 @@ export function StoryTile({
     })();
 
   const communityHref = `${storyHref}${storyHref.includes("?") ? "&" : "?"}community=1`;
+  const playingStoryHref =
+    `${storyHref}${storyHref.includes("?") ? "&" : "?"}autoplayVideo=1`;
   const articleReady = article.article_version_id != null;
 
   const handleShare = async () => {
@@ -190,7 +192,10 @@ export function StoryTile({
           <Pressable
             accessibilityRole={Platform.OS === "web" ? "link" : "button"}
             accessibilityLabel={displayedHeadline}
-            onPress={() => router.push(storyHref as never)}
+            onPress={() => {
+              setActiveHomepageVideo(null);
+              router.push(playingStoryHref as never);
+            }}
             style={({ pressed }) => [
               styles.videoStoryLink,
               pressed && styles.actionButtonPressed,

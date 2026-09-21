@@ -38,6 +38,7 @@ const checks = [
     needles: [
       'keyboardShouldPersistTaps="handled"',
       'keyboardDismissMode={Platform.OS==="ios"?"interactive":"on-drag"}',
+      "autoStart={autoStartVideo}",
       'window.open(item.url,"_blank","noopener,noreferrer")',
       "shareBrieflyStory({headline:article.headline,url})",
     ],
@@ -52,7 +53,9 @@ const checks = [
       "height: 44",
       "styles.actionIconButton",
       "styles.videoStoryLink",
-      "onPress={() => router.push(storyHref as never)}",
+      "autoplayVideo=1",
+      "setActiveHomepageVideo(null)",
+      "router.push(playingStoryHref as never)",
       "accessibilityLabel={copy.share}",
       "accessibilityLabel={copy.community}",
       "accessibilityLabel={copy.play}",
