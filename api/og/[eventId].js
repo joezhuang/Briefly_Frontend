@@ -1,7 +1,5 @@
 const DEFAULT_API_BASE = "https://briefly-api.deeplyapp.uk";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const BRIEFLY_FALLBACK_IMAGE_URL =
-  "https://raw.githubusercontent.com/joezhuang/Briefly_Frontend/main/assets/images/logo-glow.png";
 
 function first(value) {
   return Array.isArray(value) ? value[0] : value;
@@ -82,7 +80,7 @@ function youtubeVideoId(value) {
   return null;
 }
 
-function imageCandidates(article) {
+function imageCandidates(article, origin) {
   const candidates = [
     validRemoteImageUrl(article.video_thumbnail_url),
     validRemoteImageUrl(article.image_url),
@@ -98,7 +96,7 @@ function imageCandidates(article) {
     );
   }
 
-  candidates.push(BRIEFLY_FALLBACK_IMAGE_URL);
+  candidates.push(new URL("/briefly-share-default.png", origin).toString());
   return [...new Set(candidates.filter(Boolean))];
 }
 
@@ -143,6 +141,13 @@ async function fetchImageCandidate(imageUrl) {
 module.exports = async function handler(request, response) {
   const key = String(first(request.query.eventId) || "").trim();
   const legacyVersion = String(first(request.query.legacyVersion) || "") === "1";
+  const protocol = String(
+    first(request.headers["x-forwarded-proto"]) || "https",
+  ).split(",")[0].trim();
+  const host = String(
+    request.headers.host || "briefly-news-analysis.vercel.app",
+  );
+  const origin = `${protocol}://${host}`;
 
   if (!key) {
     response.statusCode = 400;
@@ -152,7 +157,7 @@ module.exports = async function handler(request, response) {
 
   try {
     const article = await loadArticle(key, legacyVersion);
-    const candidates = imageCandidates(article);
+    const candidates = imageCandidates(article, origin);
 
     let resolvedImage = null;
     let lastError = null;

@@ -24,6 +24,12 @@ Community type, Publish and other controls can therefore be tapped without the f
 tap being consumed only to dismiss the keyboard. iOS uses interactive dismissal;
 Android/other native platforms use drag dismissal.
 
+### Briefly brand surfaces
+
+The new three-circle Briefly mark is now shared by the app header, launcher icons,
+favicon, splash, feed/related-card no-image states, and the rich-share no-image
+fallback. Cards no longer fall back to an anonymous flat gray block.
+
 ### Touch targets
 
 Core beta controls now use a minimum 44pt target where they were previously 30–40pt:

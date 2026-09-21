@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 
+import { BrieflyLogo } from "@/components/briefly-brand";
 import { useBrieflyAuth } from "@/context/auth";
 import { LANGUAGES, useBrieflyLanguage } from "@/context/language";
 import {
@@ -163,8 +164,12 @@ export function AppHeader() {
     <View style={[styles.wrap, { borderBottomColor: colors.border }]}>
       <View style={styles.row}>
         <Link href="/" asChild>
-          <Pressable>
-            <Text style={[styles.logo, { color: colors.accentSoft }]}>BRIEFLY</Text>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="Briefly home"
+            style={styles.brandLink}
+          >
+            <BrieflyLogo markSize={phoneNav ? 28 : 32} color={colors.text} />
           </Pressable>
         </Link>
 
@@ -539,11 +544,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 14,
   },
-  logo: {
+  brandLink: {
+    minHeight: 44,
     flexShrink: 0,
-    fontSize: 24,
-    fontWeight: "900",
-    letterSpacing: 3,
+    justifyContent: "center",
   },
   nav: {
     flexShrink: 1,

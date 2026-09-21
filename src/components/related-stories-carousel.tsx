@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { getHomepageArticleFeed } from "@/api/briefly";
+import { BrieflyMediaFallback } from "@/components/briefly-brand";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
@@ -177,12 +178,14 @@ export function RelatedStoriesCarousel({
         contentContainerStyle={styles.track}
       >
         {related.map((item) => {
+          const itemImageUrl =
+            item.video_thumbnail_url || item.image_url || null;
           const params = new URLSearchParams({
             eventId: item.event_id,
             previewHeadline: item.headline,
             source: "related",
           });
-          if (item.image_url) params.set("imageUrl", item.image_url);
+          if (itemImageUrl) params.set("imageUrl", itemImageUrl);
           const href = `/story/${item.slug}?${params.toString()}`;
           const sourceCount = item.source_count ?? item.sources_used?.length ?? 0;
 
@@ -199,10 +202,14 @@ export function RelatedStoriesCarousel({
                 },
               ]}
             >
-              {item.image_url ? (
-                <Image source={{ uri: item.image_url }} style={styles.image} contentFit="cover" />
+              {itemImageUrl ? (
+                <Image
+                  source={{ uri: itemImageUrl }}
+                  style={styles.image}
+                  contentFit="cover"
+                />
               ) : (
-                <View style={[styles.image, { backgroundColor: colors.imageFallback }]} />
+                <BrieflyMediaFallback style={styles.image} compact />
               )}
               <View style={styles.copy}>
                 {!!item.category && (

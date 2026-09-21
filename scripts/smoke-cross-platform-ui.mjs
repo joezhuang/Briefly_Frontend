@@ -50,6 +50,7 @@ const checks = [
       "accessibilityLabel={displayedHeadline}",
       "minHeight: 44",
       "shareBrieflyStory({",
+      "BrieflyMediaFallback",
     ],
   },
   {
@@ -83,6 +84,7 @@ const checks = [
       "minHeight: 44",
       "width: 44",
       "height: 44",
+      "BrieflyLogo",
     ],
   },
   {

@@ -34,6 +34,7 @@ const checks = [
       "buildPublicStoryShareUrl(article, storyHref)",
       "const articleReady = article.article_version_id != null",
       "{articleReady && (",
+      "BrieflyMediaFallback",
     ],
   },
   {
@@ -97,11 +98,11 @@ const checks = [
     name: "Share image proxy serves crawler-friendly story images from Briefly",
     file: "api/og/[eventId].js",
     needles: [
-      "imageCandidates(article)",
+      "imageCandidates(article, origin)",
       "youtubeVideoId",
       "maxresdefault.jpg",
       "hqdefault.jpg",
-      "BRIEFLY_FALLBACK_IMAGE_URL",
+      "/briefly-share-default.png",
       "BrieflyShareCard/1.0",
       'contentType.startsWith("image/")',
       '"Content-Disposition", "inline"',

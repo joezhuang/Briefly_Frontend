@@ -16,6 +16,7 @@ import {
   type CardTranslation,
 } from "@/api/briefly";
 import { trackProductEvent } from "@/analytics/product-analytics";
+import { BrieflyMediaFallback } from "@/components/briefly-brand";
 import { StoryVideo } from "@/components/story-video";
 import { useBrieflyLanguage } from "@/context/language";
 import type { CanonicalArticle } from "@/models/article";
@@ -221,10 +222,15 @@ export function StoryTile({
           transition={180}
         />
       ) : (
-        <View style={[StyleSheet.absoluteFill, styles.imageFallback]} />
+        <BrieflyMediaFallback style={StyleSheet.absoluteFill} />
       )}
 
-      <View style={[StyleSheet.absoluteFill, styles.overlay]} />
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          imageUrl ? styles.overlay : styles.fallbackOverlay,
+        ]}
+      />
 
       <View style={styles.content}>
         <Text style={styles.category}>
@@ -344,8 +350,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#252525",
   },
-  imageFallback: { backgroundColor: "#42433F" },
   overlay: { backgroundColor: "rgba(0, 0, 0, 0.42)" },
+  fallbackOverlay: { backgroundColor: "rgba(0, 0, 0, 0.18)" },
   content: { flex: 1, justifyContent: "space-between", padding: 22 },
   category: {
     color: "#FFFFFF",
