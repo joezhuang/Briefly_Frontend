@@ -53,7 +53,8 @@
     "postinstall": "node scripts/patch-expo-router-initial-link.js",
     "smoke:journey": "node scripts/smoke-user-journey.mjs",
     "smoke:ui": "node scripts/smoke-cross-platform-ui.mjs",
-    "smoke:telemetry": "node scripts/smoke-telemetry.mjs"
+    "smoke:telemetry": "node scripts/smoke-telemetry.mjs",
+    "release:gate": "node scripts/release-gate.mjs"
   },
   "private": true
 }
