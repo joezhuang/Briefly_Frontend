@@ -43,6 +43,11 @@ changes for translated/original/retry state. If actions ever wrap, they wrap upw
 so adding controls cannot push the story-entry arrow downward or clip it out of the
 fixed-height tile.
 
+When a feed video is playing, its media surface remains dedicated to playback controls.
+A separate 44×44 story-entry arrow stays available at the top-left of the playing
+card, while the close-video control remains top-right. Opening the story therefore
+never requires hijacking taps intended for play/pause, scrubbing or fullscreen.
+
 ## Automated gates
 
 ```bash

@@ -51,6 +51,8 @@ const checks = [
       "width: 44",
       "height: 44",
       "styles.actionIconButton",
+      "styles.videoStoryLink",
+      "onPress={() => router.push(storyHref as never)}",
       "accessibilityLabel={copy.share}",
       "accessibilityLabel={copy.community}",
       "accessibilityLabel={copy.play}",

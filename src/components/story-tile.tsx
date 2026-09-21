@@ -188,6 +188,17 @@ export function StoryTile({
             autoStart
           />
           <Pressable
+            accessibilityRole={Platform.OS === "web" ? "link" : "button"}
+            accessibilityLabel={displayedHeadline}
+            onPress={() => router.push(storyHref as never)}
+            style={({ pressed }) => [
+              styles.videoStoryLink,
+              pressed && styles.actionButtonPressed,
+            ]}
+          >
+            <Text style={styles.arrowText}>→</Text>
+          </Pressable>
+          <Pressable
             accessibilityRole="button"
             accessibilityLabel={copy.close}
             onPress={() => {
@@ -413,6 +424,20 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: "800",
     textAlign: "center",
+  },
+  videoStoryLink: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.55)",
+    backgroundColor: "rgba(0,0,0,0.72)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 20,
   },
   videoClose: {
     position: "absolute",
