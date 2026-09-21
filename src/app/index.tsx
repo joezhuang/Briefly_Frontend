@@ -27,6 +27,7 @@ import { FloatingStoryVideo } from "@/components/floating-story-video";
 // Metro resolves the platform-specific .native/.web implementation at runtime.
 // eslint-disable-next-line import/no-unresolved
 import { HomeAdSlot } from "@/components/home-ad-slot";
+import { HomeInstallBanners } from "@/components/home-install-banners";
 import { NewsLocationGate } from "@/components/news-location-gate";
 import { ScreenState } from "@/components/screen-state";
 import {
@@ -696,6 +697,7 @@ export default function HomeScreen() {
       ]}
     >
       <AppHeader />
+      <HomeInstallBanners />
 
       <View style={[styles.header, mobileHeader && styles.headerCompact]}>
         <View style={styles.headingRow}>

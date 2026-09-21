@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Briefly — News Analysis",
+  "short_name": "Briefly",
+  "description": "AI-clustered news with what happened, why it matters, and what comes next.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F4F1EB",
+  "theme_color": "#171717",
+  "icons": [
+    {
+      "src": "/briefly-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
