@@ -48,7 +48,12 @@ const checks = [
     needles: [
       'accessibilityRole={Platform.OS === "web" ? "link" : "button"}',
       "accessibilityLabel={displayedHeadline}",
-      "minHeight: 44",
+      "width: 44",
+      "height: 44",
+      "styles.actionIconButton",
+      "accessibilityLabel={copy.share}",
+      "accessibilityLabel={copy.community}",
+      "accessibilityLabel={copy.play}",
       "shareBrieflyStory({",
       "BrieflyMediaFallback",
       'bottom: { gap: 10, paddingBottom: 54 }',

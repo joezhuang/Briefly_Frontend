@@ -197,7 +197,7 @@ export function StoryTile({
             }}
             style={({ pressed }) => [
               styles.videoClose,
-              pressed && styles.translateButtonPressed,
+              pressed && styles.actionButtonPressed,
             ]}
           >
             <Text style={styles.videoCloseText}>×</Text>
@@ -261,11 +261,11 @@ export function StoryTile({
                   void handleShare();
                 }}
                 style={({ pressed }) => [
-                  styles.translateButton,
-                  pressed && styles.translateButtonPressed,
+                  styles.actionIconButton,
+                  pressed && styles.actionButtonPressed,
                 ]}
               >
-                <Text style={styles.translateText}>↗ {copy.share}</Text>
+                <Text style={styles.actionIcon}>↗</Text>
               </Pressable>
             )}
 
@@ -278,11 +278,11 @@ export function StoryTile({
                   router.push(communityHref as never);
                 }}
                 style={({ pressed }) => [
-                  styles.translateButton,
-                  pressed && styles.translateButtonPressed,
+                  styles.actionIconButton,
+                  pressed && styles.actionButtonPressed,
                 ]}
               >
-                <Text style={styles.translateText}>◌ {copy.community}</Text>
+                <Text style={styles.actionIcon}>◎</Text>
               </Pressable>
             )}
             {!!videoUrl && (
@@ -294,35 +294,39 @@ export function StoryTile({
                   setActiveHomepageVideo(article.event_id);
                 }}
                 style={({ pressed }) => [
-                  styles.translateButton,
-                  pressed && styles.translateButtonPressed,
+                  styles.actionIconButton,
+                  pressed && styles.actionButtonPressed,
                 ]}
               >
-                <Text style={styles.translateText}>▶ {copy.play}</Text>
+                <Text style={styles.actionIcon}>▶</Text>
               </Pressable>
             )}
 
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={
+                translationFailed
+                  ? copy.retry
+                  : translated
+                    ? copy.original
+                    : copy.translate
+              }
               disabled={translating}
               onPress={(event) => {
                 event.stopPropagation();
                 void handleTranslation();
               }}
               style={({ pressed }) => [
-                styles.translateButton,
-                pressed && styles.translateButtonPressed,
+                styles.actionIconButton,
+                translated && styles.actionIconButtonActive,
+                pressed && styles.actionButtonPressed,
               ]}
             >
               {translating ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.translateText}>
-                  {translationFailed
-                    ? copy.retry
-                    : translated
-                      ? copy.original
-                      : copy.translate}
+                <Text style={styles.actionIcon}>
+                  {translationFailed ? "↻" : translated ? "A" : "文"}
                 </Text>
               )}
             </Pressable>
@@ -387,23 +391,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  translateButton: {
+  actionIconButton: {
     alignSelf: "flex-start",
-    minHeight: 44,
-    minWidth: 72,
-    paddingHorizontal: 11,
-    borderRadius: 999,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.55)",
     backgroundColor: "rgba(0,0,0,0.3)",
     alignItems: "center",
     justifyContent: "center",
   },
-  translateButtonPressed: { opacity: 0.72 },
-  translateText: {
+  actionIconButtonActive: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(255,255,255,0.85)",
+  },
+  actionButtonPressed: { opacity: 0.72 },
+  actionIcon: {
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: 18,
+    lineHeight: 22,
     fontWeight: "800",
+    textAlign: "center",
   },
   videoClose: {
     position: "absolute",

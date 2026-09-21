@@ -37,8 +37,11 @@ Feed actions, Story actions, Follow, Community controls, Podcast controls, Heade
 controls and retry states.
 
 The feed card's source-count + enter-story arrow row is anchored to the bottom edge of
-the card. Share / Community / Play / Translate may wrap upward, but adding actions can
-no longer push the story-entry arrow downward or clip it out of the fixed-height tile.
+the card. Feed Share / Community / Play / Translate controls are compact 44×44
+icon-only buttons with localized accessibility labels; the translation icon also
+changes for translated/original/retry state. If actions ever wrap, they wrap upward,
+so adding controls cannot push the story-entry arrow downward or clip it out of the
+fixed-height tile.
 
 ## Automated gates
 
