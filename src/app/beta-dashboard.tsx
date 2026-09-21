@@ -552,6 +552,8 @@ function TelemetryConfigEditor({
   onSave: () => void;
 }) {
   const { colors } = useBrieflyTheme();
+  const { width } = useWindowDimensions();
+  const stackEmailEditor = width < 640;
 
   if (loading && !config) {
     return <ScreenState loading message="Loading telemetry controls…" />;
@@ -575,10 +577,11 @@ function TelemetryConfigEditor({
       <View
         style={[
           styles.configFieldRow,
+          stackEmailEditor && styles.telemetryEmailRowStacked,
           { borderBottomColor: colors.border },
         ]}
       >
-        <View style={styles.configCopy}>
+        <View style={styles.telemetryEmailCopy}>
           <Text style={[styles.configLabel, { color: colors.text }]}>
             Test account emails
           </Text>
@@ -608,6 +611,7 @@ function TelemetryConfigEditor({
           style={[
             styles.configInput,
             styles.configInputMultiline,
+            stackEmailEditor && styles.telemetryEmailInputStacked,
             {
               borderColor: colors.border,
               backgroundColor: colors.background,
@@ -2113,6 +2117,17 @@ const styles = StyleSheet.create({
     flexBasis: 300,
     gap: 4,
   },
+  telemetryEmailCopy: {
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 280,
+    gap: 4,
+  },
+  telemetryEmailRowStacked: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    justifyContent: "flex-start",
+  },
   configLabel: {
     fontSize: 14,
     fontWeight: "800",
@@ -2134,6 +2149,10 @@ const styles = StyleSheet.create({
     minHeight: 96,
     paddingVertical: 10,
     textAlignVertical: "top",
+  },
+  telemetryEmailInputStacked: {
+    width: "100%",
+    minWidth: 0,
   },
   configInputSmall: {
     width: 90,

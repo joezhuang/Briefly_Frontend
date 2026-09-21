@@ -66,6 +66,9 @@ const checks = [
       'label="Include test accounts in error monitoring"',
       "Save telemetry controls",
       "Applies to new telemetry only",
+      "const stackEmailEditor = width < 640",
+      "styles.telemetryEmailRowStacked",
+      "styles.telemetryEmailInputStacked",
     ],
   },
   {
