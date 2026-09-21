@@ -1024,8 +1024,6 @@ export default function BetaDashboardScreen() {
     if (!authReady || !user || account?.is_admin !== true) return;
 
     let active = true;
-    setTelemetryConfigLoading(true);
-    setTelemetryHealthLoading(true);
 
     void Promise.allSettled([
       getBetaDashboardTelemetryConfig(),
