@@ -42,6 +42,8 @@ const checks = [
       "updateFloatingVideo(scrollY)",
       "initialTime={videoResumeTime}",
       "onTimeUpdate={handleStoryVideoTimeUpdate}",
+      "onClose={closeFloatingVideo}/>}\\",
+      "{!immutable&&showFloatingBack&&<Pressable",
       'window.open(item.url,"_blank","noopener,noreferrer")',
       "shareBrieflyStory({headline:article.headline,url})",
     ],
