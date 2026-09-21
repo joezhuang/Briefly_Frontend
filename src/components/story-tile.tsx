@@ -189,35 +189,37 @@ export function StoryTile({
             accessibilityLabel={copy.play}
             autoStart
           />
-          <Pressable
-            accessibilityRole={Platform.OS === "web" ? "link" : "button"}
-            accessibilityLabel={displayedHeadline}
-            onPress={() => {
-              setActiveHomepageVideo(null);
-              router.push(playingStoryHref as never);
-            }}
-            style={({ pressed }) => [
-              styles.videoStoryLink,
-              pressed && styles.actionButtonPressed,
-            ]}
-          >
-            <Text style={styles.arrowText}>→</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={copy.close}
-            onPress={() => {
-              if (activeVideoEventId === article.event_id) {
+          <View style={styles.videoTopActions}>
+            <Pressable
+              accessibilityRole={Platform.OS === "web" ? "link" : "button"}
+              accessibilityLabel={displayedHeadline}
+              onPress={() => {
                 setActiveHomepageVideo(null);
-              }
-            }}
-            style={({ pressed }) => [
-              styles.videoClose,
-              pressed && styles.actionButtonPressed,
-            ]}
-          >
-            <Text style={styles.videoCloseText}>×</Text>
-          </Pressable>
+                router.push(playingStoryHref as never);
+              }}
+              style={({ pressed }) => [
+                styles.videoStoryLink,
+                pressed && styles.actionButtonPressed,
+              ]}
+            >
+              <Text style={styles.arrowText}>→</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={copy.close}
+              onPress={() => {
+                if (activeVideoEventId === article.event_id) {
+                  setActiveHomepageVideo(null);
+                }
+              }}
+              style={({ pressed }) => [
+                styles.videoClose,
+                pressed && styles.actionButtonPressed,
+              ]}
+            >
+              <Text style={styles.videoCloseText}>×</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     );
@@ -430,10 +432,16 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
   },
-  videoStoryLink: {
+  videoTopActions: {
     position: "absolute",
     top: 12,
-    left: 12,
+    right: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    zIndex: 20,
+  },
+  videoStoryLink: {
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -442,19 +450,14 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.72)",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 20,
   },
   videoClose: {
-    position: "absolute",
-    top: 12,
-    right: 12,
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: "rgba(0,0,0,0.72)",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 20,
   },
   videoCloseText: {
     color: "#FFFFFF",
