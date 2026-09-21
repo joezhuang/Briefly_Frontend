@@ -1,10 +1,13 @@
 import { useMemo } from "react";
 import { StyleSheet } from "react-native";
-import { WebView } from "react-native-webview";
+import { WebView, type WebViewMessageEvent } from "react-native-webview";
 
 type Props = {
   src: string;
   title: string;
+  initialTime?: number;
+  onTimeUpdate?: (seconds: number) => void;
+  onPlayingChange?: (playing: boolean) => void;
 };
 
 const DEFAULT_REFERRER = "https://briefly.app";
@@ -33,7 +36,45 @@ function identifiedEmbedUrl(src: string, referrer: string) {
   }
 }
 
-export default function StoryVideoEmbed({ src, title }: Props) {
+function progressScript(initialTime: number) {
+  const start = Number.isFinite(initialTime) && initialTime > 0 ? initialTime : 0;
+  return `
+    (function () {
+      var desiredStart = ${JSON.stringify(start)};
+      var didSeek = desiredStart <= 0;
+      var lastPlaying = null;
+      function report() {
+        try {
+          var video = document.querySelector('video');
+          if (!video) return;
+          if (!didSeek && isFinite(video.duration) && video.duration > 0) {
+            video.currentTime = Math.min(desiredStart, Math.max(0, video.duration - 0.05));
+            didSeek = true;
+          }
+          var current = Number(video.currentTime || 0);
+          var playing = !video.paused && !video.ended;
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'briefly-video-progress',
+            currentTime: current,
+            playing: playing
+          }));
+          if (lastPlaying !== playing) lastPlaying = playing;
+        } catch (e) {}
+      }
+      setInterval(report, 500);
+      report();
+    })();
+    true;
+  `;
+}
+
+export default function StoryVideoEmbed({
+  src,
+  title,
+  initialTime = 0,
+  onTimeUpdate,
+  onPlayingChange,
+}: Props) {
   const referrer = useMemo(
     () => normalizeOrigin(process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL),
     [],
@@ -42,6 +83,22 @@ export default function StoryVideoEmbed({ src, title }: Props) {
     () => identifiedEmbedUrl(src, referrer),
     [src, referrer],
   );
+  const injectedJavaScript = useMemo(
+    () => progressScript(initialTime),
+    [initialTime],
+  );
+
+  const handleMessage = (event: WebViewMessageEvent) => {
+    try {
+      const payload = JSON.parse(event.nativeEvent.data);
+      if (payload?.type !== "briefly-video-progress") return;
+      const seconds = Number(payload.currentTime);
+      if (Number.isFinite(seconds)) onTimeUpdate?.(Math.max(0, seconds));
+      if (typeof payload.playing === "boolean") {
+        onPlayingChange?.(payload.playing);
+      }
+    } catch {}
+  };
 
   return (
     <WebView
@@ -56,6 +113,8 @@ export default function StoryVideoEmbed({ src, title }: Props) {
       accessibilityLabel={title}
       javaScriptEnabled
       domStorageEnabled
+      injectedJavaScript={injectedJavaScript}
+      onMessage={handleMessage}
       allowsFullscreenVideo
       allowsInlineMediaPlayback
       mediaPlaybackRequiresUserAction={false}

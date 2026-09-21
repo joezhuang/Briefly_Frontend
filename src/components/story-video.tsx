@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import StoryVideoEmbed from "./story-video-embed";
@@ -11,36 +11,96 @@ type Props = {
   accessibilityLabel?: string;
   compact?: boolean;
   autoStart?: boolean;
+  initialTime?: number;
+  onStarted?: () => void;
+  onTimeUpdate?: (seconds: number) => void;
+  onPlayingChange?: (playing: boolean) => void;
 };
 
-function embeddedUrl(url: string): string | null {
+function safeTime(value: number | undefined) {
+  return Number.isFinite(value) && Number(value) > 0 ? Number(value) : 0;
+}
+
+function embeddedUrl(url: string, initialTime: number): string | null {
   try {
     const parsed = new URL(url);
     const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+    const start = Math.floor(safeTime(initialTime));
 
     if (host === "youtu.be") {
       const id = parsed.pathname.split("/").filter(Boolean)[0];
-      return id ? `https://www.youtube.com/embed/${id}?playsinline=1&rel=0&autoplay=1` : null;
+      if (!id) return null;
+      const embed = new URL(`https://www.youtube.com/embed/${id}`);
+      embed.searchParams.set("playsinline", "1");
+      embed.searchParams.set("rel", "0");
+      embed.searchParams.set("autoplay", "1");
+      embed.searchParams.set("enablejsapi", "1");
+      if (start > 0) embed.searchParams.set("start", String(start));
+      return embed.toString();
     }
 
     if (host.endsWith("youtube.com")) {
-      const id = parsed.searchParams.get("v") || parsed.pathname.match(/\/(?:shorts|embed)\/([^/?#]+)/)?.[1];
-      return id ? `https://www.youtube.com/embed/${id}?playsinline=1&rel=0&autoplay=1` : null;
+      const id =
+        parsed.searchParams.get("v") ||
+        parsed.pathname.match(/\/(?:shorts|embed)\/([^/?#]+)/)?.[1];
+      if (!id) return null;
+      const embed = new URL(`https://www.youtube.com/embed/${id}`);
+      embed.searchParams.set("playsinline", "1");
+      embed.searchParams.set("rel", "0");
+      embed.searchParams.set("autoplay", "1");
+      embed.searchParams.set("enablejsapi", "1");
+      if (start > 0) embed.searchParams.set("start", String(start));
+      return embed.toString();
     }
 
     if (host.endsWith("vimeo.com")) {
       const id = parsed.pathname.match(/\/(?:video\/)?(\d+)/)?.[1];
-      return id ? `https://player.vimeo.com/video/${id}?autoplay=1` : null;
+      if (!id) return null;
+      const embed = new URL(`https://player.vimeo.com/video/${id}`);
+      embed.searchParams.set("autoplay", "1");
+      embed.searchParams.set("api", "1");
+      if (start > 0) embed.hash = `t=${start}s`;
+      return embed.toString();
     }
   } catch {}
   return null;
 }
 
-function DirectVideo({ url }: { url: string }) {
+function DirectVideo({
+  url,
+  initialTime,
+  onTimeUpdate,
+  onPlayingChange,
+}: {
+  url: string;
+  initialTime: number;
+  onTimeUpdate?: (seconds: number) => void;
+  onPlayingChange?: (playing: boolean) => void;
+}) {
+  const startTimeRef = useRef(safeTime(initialTime));
   const player = useVideoPlayer(url, (instance) => {
     instance.loop = false;
+    instance.timeUpdateEventInterval = 0.5;
+    if (startTimeRef.current > 0) {
+      instance.currentTime = startTimeRef.current;
+    }
     instance.play();
   });
+
+  useEffect(() => {
+    player.timeUpdateEventInterval = 0.5;
+    const timeSubscription = player.addListener("timeUpdate", (payload) => {
+      onTimeUpdate?.(Math.max(0, payload.currentTime || 0));
+    });
+    const playingSubscription = player.addListener("playingChange", (payload) => {
+      onPlayingChange?.(payload.isPlaying);
+    });
+
+    return () => {
+      timeSubscription.remove();
+      playingSubscription.remove();
+    };
+  }, [onPlayingChange, onTimeUpdate, player]);
 
   return (
     <VideoView
@@ -61,10 +121,25 @@ export function StoryVideo({
   accessibilityLabel = "Play video",
   compact = false,
   autoStart = false,
+  initialTime = 0,
+  onStarted,
+  onTimeUpdate,
+  onPlayingChange,
 }: Props) {
   const [manuallyStarted, setManuallyStarted] = useState(false);
   const started = autoStart || manuallyStarted;
-  const embed = useMemo(() => embeddedUrl(url), [url]);
+  const startTimeRef = useRef(safeTime(initialTime));
+  const startedNotifiedRef = useRef(false);
+  const embed = useMemo(
+    () => embeddedUrl(url, startTimeRef.current),
+    [url],
+  );
+
+  useEffect(() => {
+    if (!started || startedNotifiedRef.current) return;
+    startedNotifiedRef.current = true;
+    onStarted?.();
+  }, [onStarted, started]);
 
   return (
     <View style={styles.root}>
@@ -73,10 +148,18 @@ export function StoryVideo({
           <StoryVideoEmbed
             src={embed}
             title={accessibilityLabel}
+            initialTime={startTimeRef.current}
+            onTimeUpdate={onTimeUpdate}
+            onPlayingChange={onPlayingChange}
             dom={{ useExpoDOMWebView: false }}
           />
         ) : (
-          <DirectVideo url={url} />
+          <DirectVideo
+            url={url}
+            initialTime={startTimeRef.current}
+            onTimeUpdate={onTimeUpdate}
+            onPlayingChange={onPlayingChange}
+          />
         )
       ) : (
         <>
@@ -93,7 +176,10 @@ export function StoryVideo({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={accessibilityLabel}
-            onPress={() => setManuallyStarted(true)}
+            onPress={() => {
+              setManuallyStarted(true);
+              onPlayingChange?.(true);
+            }}
             style={({ pressed }) => [
               compact ? styles.compactButton : styles.playButton,
               pressed && styles.pressed,
@@ -109,7 +195,13 @@ export function StoryVideo({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, width: "100%", height: "100%", backgroundColor: "#252525", overflow: "hidden" },
+  root: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#252525",
+    overflow: "hidden",
+  },
   fallback: { backgroundColor: "#343434" },
   playButton: {
     position: "absolute",
@@ -138,6 +230,11 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.72 },
   playIcon: { color: "#FFFFFF", fontSize: 15, fontWeight: "900" },
-  compactIcon: { color: "#FFFFFF", fontSize: 16, fontWeight: "900", marginLeft: 2 },
+  compactIcon: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "900",
+    marginLeft: 2,
+  },
   playText: { color: "#FFFFFF", fontSize: 13, fontWeight: "800" },
 });
