@@ -69,6 +69,12 @@ const checks = [
       "const stackEmailEditor = width < 640",
       "styles.telemetryEmailRowStacked",
       "styles.telemetryEmailInputStacked",
+      "const stackWideFields = width < 640",
+      "styles.configFieldRowStacked",
+      "styles.configCopyStacked",
+      "styles.configInputFullWidth",
+      "Reviewer email",
+      "Ad provider",
     ],
   },
   {

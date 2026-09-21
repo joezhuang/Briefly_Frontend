@@ -697,6 +697,8 @@ function RuntimeConfigEditor({
   onSave: () => void;
 }) {
   const { colors } = useBrieflyTheme();
+  const { width } = useWindowDimensions();
+  const stackWideFields = width < 640;
 
   if (loading && !config) {
     return <ScreenState loading message="Loading runtime configuration…" />;
@@ -729,10 +731,16 @@ function RuntimeConfigEditor({
       <View
         style={[
           styles.configFieldRow,
+          stackWideFields && styles.configFieldRowStacked,
           { borderBottomColor: colors.border },
         ]}
       >
-        <View style={styles.configCopy}>
+        <View
+          style={[
+            styles.configCopy,
+            stackWideFields && styles.configCopyStacked,
+          ]}
+        >
           <Text style={[styles.configLabel, { color: colors.text }]}>
             Reviewer email
           </Text>
@@ -750,6 +758,7 @@ function RuntimeConfigEditor({
           placeholderTextColor={colors.textMuted}
           style={[
             styles.configInput,
+            stackWideFields && styles.configInputFullWidth,
             {
               borderColor: colors.border,
               backgroundColor: colors.background,
@@ -824,10 +833,16 @@ function RuntimeConfigEditor({
       <View
         style={[
           styles.configFieldRow,
+          stackWideFields && styles.configFieldRowStacked,
           { borderBottomColor: colors.border },
         ]}
       >
-        <View style={styles.configCopy}>
+        <View
+          style={[
+            styles.configCopy,
+            stackWideFields && styles.configCopyStacked,
+          ]}
+        >
           <Text style={[styles.configLabel, { color: colors.text }]}>
             Ad provider
           </Text>
@@ -847,6 +862,7 @@ function RuntimeConfigEditor({
           autoCorrect={false}
           style={[
             styles.configInput,
+            stackWideFields && styles.configInputFullWidth,
             {
               borderColor: colors.border,
               backgroundColor: colors.background,
@@ -2128,6 +2144,15 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     justifyContent: "flex-start",
   },
+  configFieldRowStacked: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    justifyContent: "flex-start",
+  },
+  configCopyStacked: {
+    flexBasis: "auto",
+    width: "100%",
+  },
   configLabel: {
     fontSize: 14,
     fontWeight: "800",
@@ -2151,6 +2176,10 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   telemetryEmailInputStacked: {
+    width: "100%",
+    minWidth: 0,
+  },
+  configInputFullWidth: {
     width: "100%",
     minWidth: 0,
   },

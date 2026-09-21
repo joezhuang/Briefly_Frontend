@@ -28,7 +28,8 @@ The setting affects new telemetry only and does not rewrite historical rows.
 
 On screens narrower than 640px, the test-account email editor switches from a
 side-by-side row to a vertical layout, with the multiline email field using the full
-available width.
+available width. The Runtime configuration's Reviewer email and Ad provider fields use
+the same vertical/full-width treatment on small screens.
 
 ## Local gates
 
