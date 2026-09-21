@@ -96,14 +96,18 @@ function DirectVideo({
     });
 
     return () => {
-      try {
-        player.pause();
-      } catch {}
-      onPlayingChange?.(false);
       timeSubscription.remove();
       playingSubscription.remove();
     };
   }, [onPlayingChange, onTimeUpdate, player]);
+
+  useEffect(() => {
+    return () => {
+      try {
+        player.pause();
+      } catch {}
+    };
+  }, [player]);
 
   return (
     <VideoView

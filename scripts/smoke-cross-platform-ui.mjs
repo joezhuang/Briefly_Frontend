@@ -101,7 +101,7 @@ const checks = [
     file: "src/components/story-video.tsx",
     needles: [
       "player.pause()",
-      "onPlayingChange?.(false)",
+      "}, [player]);",
     ],
   },
   {

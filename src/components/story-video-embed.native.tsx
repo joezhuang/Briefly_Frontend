@@ -110,9 +110,8 @@ export default function StoryVideoEmbed({
           true;
         `);
       } catch {}
-      onPlayingChange?.(false);
     };
-  }, [onPlayingChange]);
+  }, [identifiedSrc]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {

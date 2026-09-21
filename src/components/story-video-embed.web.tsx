@@ -102,7 +102,14 @@ export default function StoryVideoEmbed({
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("message", handleMessage);
+    };
+  }, [onPlayingChange, onTimeUpdate, src]);
 
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    const kind = provider(src);
+
+    return () => {
       const target = iframe?.contentWindow;
       try {
         if (kind === "youtube") {
@@ -120,15 +127,13 @@ export default function StoryVideoEmbed({
         }
       } catch {}
 
-      onPlayingChange?.(false);
-
       // Cross-origin media can outlive React state briefly. Blank the frame
-      // explicitly so an old embed cannot remain audible after unmount.
+      // explicitly so an old embed cannot remain audible after replacement.
       try {
         if (iframe) iframe.src = "about:blank";
       } catch {}
     };
-  }, [onPlayingChange, onTimeUpdate, src]);
+  }, [src]);
 
   return (
     <iframe
