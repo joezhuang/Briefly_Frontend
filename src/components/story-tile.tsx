@@ -31,6 +31,7 @@ export type StoryTileVideoStart = {
   posterUrl: string | null;
   headline: string;
   storyHref: string;
+  storyReady: boolean;
   currentTime: number;
   anchorWindowY: number;
   anchorHeight: number;
@@ -79,6 +80,46 @@ function normalizeLanguage(value: string | null | undefined) {
   if (normalized.startsWith("es")) return "es";
   if (normalized.startsWith("ja")) return "ja";
   return normalized;
+}
+
+function hasObviousHeadlineLanguageMismatch(
+  headline: string,
+  targetLanguage: string,
+) {
+  const text = String(headline ?? "").trim();
+  if (!text) return false;
+
+  const hasKana = /[\u3040-\u30ff]/.test(text);
+  const hasHan = /[\u3400-\u4dbf\u4e00-\u9fff]/.test(text);
+  const hasHangul = /[\uac00-\ud7af]/.test(text);
+  const hasCyrillic = /[\u0400-\u04ff]/.test(text);
+  const hasArabic = /[\u0600-\u06ff]/.test(text);
+  const hasLatin = /[A-Za-z]/.test(text);
+
+  if (targetLanguage === "en" || targetLanguage === "es") {
+    return hasKana || hasHan || hasHangul || hasCyrillic || hasArabic;
+  }
+
+  if (targetLanguage === "zh-CN" || targetLanguage === "zh-TW") {
+    return (
+      hasKana ||
+      hasHangul ||
+      hasCyrillic ||
+      hasArabic ||
+      (hasLatin && !hasHan)
+    );
+  }
+
+  if (targetLanguage === "ja") {
+    return (
+      hasHangul ||
+      hasCyrillic ||
+      hasArabic ||
+      (hasLatin && !hasHan && !hasKana)
+    );
+  }
+
+  return false;
 }
 
 const translationCopy: Record<string, { translate: string; original: string; retry: string; play: string; close: string; share: string; community: string }> = {
@@ -158,11 +199,16 @@ export function StoryTile({
   const contentLanguage = normalizeLanguage(article.content_language ?? article.language);
   const requestedLanguage = normalizeLanguage(article.requested_language ?? language);
   const presentationLanguage = normalizeLanguage(language);
+  const metadataLanguageMismatch = contentLanguage
+    ? contentLanguage !== presentationLanguage
+    : requestedLanguage !== presentationLanguage;
+  const visibleHeadlineMismatch = hasObviousHeadlineLanguageMismatch(
+    article.headline,
+    presentationLanguage,
+  );
   const showTranslate =
     !!presentationLanguage &&
-    (contentLanguage
-      ? contentLanguage !== presentationLanguage
-      : requestedLanguage !== presentationLanguage);
+    (metadataLanguageMismatch || visibleHeadlineMismatch);
 
   const playbackStoryHref = () => {
     const separator = storyHref.includes("?") ? "&" : "?";
@@ -181,6 +227,7 @@ export function StoryTile({
           posterUrl: imageUrl,
           headline: displayedHeadline,
           storyHref,
+          storyReady: articleReady,
           currentTime: lastVideoTimeRef.current,
           anchorWindowY: y,
           anchorHeight: measuredHeight || height,
