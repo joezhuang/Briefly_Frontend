@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Briefly">
-  <rect width="512" height="512" rx="112" fill="#171717"/>
-  <path fill="#F4F1EB" d="M142 104h124c73 0 116 31 116 87 0 34-18 60-50 74 42 12 65 42 65 86 0 67-48 105-132 105H142V104Zm78 67v68h45c25 0 39-12 39-34 0-23-14-34-42-34h-42Zm0 131v87h51c31 0 47-15 47-44 0-28-17-43-51-43h-47Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Briefly">
+  <circle cx="33" cy="66" r="31" fill="#184676" fill-opacity=".88"/>
+  <circle cx="67" cy="66" r="31" fill="#5B6E88" fill-opacity=".88"/>
+  <circle cx="50" cy="33" r="31" fill="#139AF3" fill-opacity=".88"/>
 </svg>
