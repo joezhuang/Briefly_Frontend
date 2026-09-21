@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -22,12 +23,17 @@ import {
   type HomepageFeedScope,
 } from "@/api/briefly";
 import { AppHeader } from "@/components/app-header";
+import { FloatingStoryVideo } from "@/components/floating-story-video";
 // Metro resolves the platform-specific .native/.web implementation at runtime.
 // eslint-disable-next-line import/no-unresolved
 import { HomeAdSlot } from "@/components/home-ad-slot";
 import { NewsLocationGate } from "@/components/news-location-gate";
 import { ScreenState } from "@/components/screen-state";
-import { StoryTile } from "@/components/story-tile";
+import {
+  StoryTile,
+  stopActiveHomepageVideo,
+  type StoryTileVideoStart,
+} from "@/components/story-tile";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -81,6 +87,10 @@ const GEO_COVERAGE_RETRY_MS = 5000;
 const GEO_COVERAGE_MAX_RETRIES = 24;
 const storyKey = (article: CanonicalArticle) =>
   String(article.article_version_id ?? article.event_id);
+
+type HomeVideoSession = StoryTileVideoStart & {
+  anchorScrollOffset: number;
+};
 
 function mergeUnique(
   current: CanonicalArticle[],
@@ -151,6 +161,12 @@ export default function HomeScreen() {
   const coverageRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const coverageRetryCountRef = useRef(0);
   const [coverageRetryTick, setCoverageRetryTick] = useState(0);
+  const homeScrollOffsetRef = useRef(rememberedHomeScrollOffsets.top);
+  const videoSessionRef = useRef<HomeVideoSession | null>(null);
+  const videoFloatingRef = useRef(false);
+  const [videoSession, setVideoSession] = useState<HomeVideoSession | null>(null);
+  const [videoFloating, setVideoFloating] = useState(false);
+  const [videoResumeTime, setVideoResumeTime] = useState(0);
 
   const copy = feedCopy[language] ?? feedCopy.en;
 
@@ -170,9 +186,42 @@ export default function HomeScreen() {
     setHasMore(value);
   }, []);
 
+  const handleHomeVideoStart = useCallback((started: StoryTileVideoStart) => {
+    const session: HomeVideoSession = {
+      ...started,
+      anchorScrollOffset: homeScrollOffsetRef.current,
+    };
+    videoSessionRef.current = session;
+    videoFloatingRef.current = false;
+    setVideoSession(session);
+    setVideoResumeTime(started.currentTime);
+    setVideoFloating(false);
+  }, []);
+
+  const handleHomeVideoTimeUpdate = useCallback(
+    (eventId: string, seconds: number) => {
+      const session = videoSessionRef.current;
+      if (!session || session.eventId !== eventId) return;
+      session.currentTime = Math.max(0, seconds);
+    },
+    [],
+  );
+
+  const handleHomeVideoStop = useCallback((eventId: string) => {
+    const session = videoSessionRef.current;
+    if (session && session.eventId !== eventId) return;
+    videoSessionRef.current = null;
+    videoFloatingRef.current = false;
+    setVideoSession(null);
+    setVideoFloating(false);
+    setVideoResumeTime(0);
+  }, []);
+
   const switchScope = useCallback(
     (nextScope: HomepageFeedScope) => {
       if (nextScope === scope) return;
+      stopActiveHomepageVideo();
+      handleHomeVideoStop(videoSessionRef.current?.eventId ?? "");
       setArticles([]);
       setHasMore(false);
       setError(null);
@@ -182,7 +231,7 @@ export default function HomeScreen() {
       );
       setScope(nextScope);
     },
-    [scope],
+    [handleHomeVideoStop, scope],
   );
 
   const switchScopeByDirection = useCallback(
@@ -533,8 +582,25 @@ export default function HomeScreen() {
     }) => {
       const { layoutMeasurement, contentOffset, contentSize } =
         event.nativeEvent;
-      rememberedHomeScrollOffsets[scope] = Math.max(0, contentOffset.y);
-      setShowTopButton(contentOffset.y > SHOW_TOP_BUTTON_OFFSET);
+      const scrollY = Math.max(0, contentOffset.y);
+      rememberedHomeScrollOffsets[scope] = scrollY;
+      homeScrollOffsetRef.current = scrollY;
+      setShowTopButton(scrollY > SHOW_TOP_BUTTON_OFFSET);
+
+      const session = videoSessionRef.current;
+      if (session) {
+        const currentCardY =
+          session.anchorWindowY - (scrollY - session.anchorScrollOffset);
+        const outsideViewport =
+          currentCardY + session.anchorHeight <= 8 ||
+          currentCardY >= layoutMeasurement.height - 8;
+
+        if (outsideViewport !== videoFloatingRef.current) {
+          videoFloatingRef.current = outsideViewport;
+          setVideoResumeTime(Math.max(0, session.currentTime));
+          setVideoFloating(outsideViewport);
+        }
+      }
       const distanceFromBottom =
         contentSize.height - (layoutMeasurement.height + contentOffset.y);
       if (distanceFromBottom <= LOAD_MORE_THRESHOLD) {
@@ -560,6 +626,31 @@ export default function HomeScreen() {
     appConfig.ad_provider === "admob" &&
     !(appConfig.ads_free_for_pro && userIsPro);
   const homeAdInterval = Math.max(1, appConfig?.home_ad_interval ?? 8);
+
+  const videoPropsFor = (article: CanonicalArticle) => {
+    const active = videoSession?.eventId === article.event_id;
+    return {
+      videoDetached: active && videoFloating,
+      videoResumeTime: active ? videoResumeTime : 0,
+      onVideoStart: handleHomeVideoStart,
+      onVideoTimeUpdate: handleHomeVideoTimeUpdate,
+      onVideoStop: handleHomeVideoStop,
+    };
+  };
+
+  const openFloatingVideoStory = () => {
+    const session = videoSessionRef.current;
+    if (!session) return;
+    const separator = session.storyHref.includes("?") ? "&" : "?";
+    const href =
+      `${session.storyHref}${separator}autoplayVideo=1&videoTime=${Math.max(
+        0,
+        session.currentTime,
+      ).toFixed(2)}`;
+    stopActiveHomepageVideo();
+    handleHomeVideoStop(session.eventId);
+    router.push(href as never);
+  };
 
   const scopeControls = (
     <View style={[styles.scopeTabs, !mobileHeader && styles.scopeTabsWide]}>
@@ -690,6 +781,7 @@ export default function HomeScreen() {
                   videoEnabled={homepageVideoEnabled}
                   analyticsSource="feed"
                   analyticsScope={scope}
+                  {...videoPropsFor(lead)}
                 />
               </View>
               <View style={styles.secondaryColumn}>
@@ -701,6 +793,7 @@ export default function HomeScreen() {
                     videoEnabled={homepageVideoEnabled}
                     analyticsSource="feed"
                     analyticsScope={scope}
+                    {...videoPropsFor(article)}
                   />
                 ))}
               </View>
@@ -713,6 +806,7 @@ export default function HomeScreen() {
                 videoEnabled={homepageVideoEnabled}
                 analyticsSource="feed"
                 analyticsScope={scope}
+                {...videoPropsFor(lead)}
               />
               <View style={tablet ? styles.twoColumnGrid : styles.stack}>
                 {secondary.map((article) => (
@@ -726,6 +820,7 @@ export default function HomeScreen() {
                       videoEnabled={homepageVideoEnabled}
                       analyticsSource="feed"
                       analyticsScope={scope}
+                      {...videoPropsFor(article)}
                     />
                   </View>
                 ))}
@@ -792,6 +887,7 @@ export default function HomeScreen() {
                       videoEnabled={homepageVideoEnabled}
                       analyticsSource="feed"
                       analyticsScope={scope}
+                      {...videoPropsFor(article)}
                     />
                   </View>
                 ))}
@@ -848,6 +944,23 @@ export default function HomeScreen() {
         maxToRenderPerBatch={2}
         windowSize={5}
       />
+
+      {videoFloating && videoSession && (
+        <FloatingStoryVideo
+          url={videoSession.url}
+          posterUrl={videoSession.posterUrl}
+          accessibilityLabel={videoSession.headline}
+          initialTime={videoResumeTime}
+          onTimeUpdate={(seconds) =>
+            handleHomeVideoTimeUpdate(videoSession.eventId, seconds)
+          }
+          onClose={() => {
+            stopActiveHomepageVideo();
+            handleHomeVideoStop(videoSession.eventId);
+          }}
+          onOpenStory={openFloatingVideoStory}
+        />
+      )}
 
       {showTopButton && (
         <Pressable
