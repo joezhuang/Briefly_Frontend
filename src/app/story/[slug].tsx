@@ -121,6 +121,7 @@ export default function StoryDetailScreen() {
     scope,
     community,
     autoplayVideo,
+    videoTime,
   } = useLocalSearchParams<{
     slug?: string | string[];
     eventId?: string | string[];
@@ -130,6 +131,7 @@ export default function StoryDetailScreen() {
     scope?: string | string[];
     community?: string | string[];
     autoplayVideo?: string | string[];
+    videoTime?: string | string[];
   }>();
 
   const resolvedSlug = useMemo(
@@ -164,6 +166,11 @@ export default function StoryDetailScreen() {
     () => (Array.isArray(autoplayVideo) ? autoplayVideo[0] : autoplayVideo) === "1",
     [autoplayVideo],
   );
+  const resolvedVideoTime = useMemo(() => {
+    const raw = Array.isArray(videoTime) ? videoTime[0] : videoTime;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  }, [videoTime]);
 
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
@@ -802,6 +809,7 @@ export default function StoryDetailScreen() {
         }
         focusCommunity={resolvedCommunity === "1"}
         autoStartVideo={resolvedAutoplayVideo}
+        initialVideoTime={resolvedVideoTime}
         shareHref={currentStoryHref}
         podcast={podcast}
         podcastBusy={podcastBusy}
