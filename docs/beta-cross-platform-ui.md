@@ -48,11 +48,17 @@ A 44×44 story-entry arrow stays at the top-left of the playing card, away from 
 player's own right-side controls, while the close-video control remains top-right. Opening the story therefore
 never requires hijacking taps intended for play/pause, scrubbing or fullscreen.
 
-If the user opens that story through the playing-video arrow, Home explicitly stops
-its player and passes an `autoplayVideo=1` handoff. The Story player then starts
-automatically. Normal story navigation does not set the flag and never autoplays.
-This preserves playback intent without introducing a global video player or duplicate
-audio. The handoff does not claim exact timestamp continuity.
+If the user opens that story through the playing-video arrow, Home records the latest
+playback time, stops its player, and passes `autoplayVideo=1&videoTime=<seconds>`.
+The Story player starts from that timestamp. Normal story navigation does not set the
+handoff and never autoplays.
+
+After explicit playback starts, Home and Story both detach the inline player when its
+video frame leaves the viewport and render a compact floating player at the top-right.
+The latest playback time is handed to the floating player, and when the original video
+frame returns to view the time is handed back to the inline player. Closing the
+floating player stops that floating session. Only one Home video session is active at
+a time, so the transition cannot create duplicate Home audio.
 
 ## Automated gates
 
@@ -65,7 +71,7 @@ npm run smoke:ui
 Expected:
 
 ```text
-Briefly cross-platform UI contract: 8/8 checks passed.
+Briefly cross-platform UI contract: 10/10 checks passed.
 ```
 
 ## Manual runtime matrix
@@ -80,6 +86,14 @@ Test around 1440px, 900px and phone-width 390px.
 - Coverage sources open in a new tab.
 - Settings panel stays in the viewport and scrolls.
 - Community actions remain readable and clickable.
+- Start a Home video, scroll its card fully out of view, and confirm the floating
+  player continues near the same timestamp.
+- Scroll the original card back into view and confirm playback returns inline near the
+  same timestamp.
+- Open the same story from the playing-video arrow and confirm Story starts from the
+  handed-off timestamp.
+- In Story, scroll the playing hero video out of view and back again; confirm floating
+  and inline playback preserve position.
 
 ### iOS
 
@@ -90,7 +104,10 @@ On a phone-sized simulator/device:
 - Feed/Follow/Community/Podcast controls are comfortably tappable;
 - with Community body input focused, contribution type and Publish still respond;
 - dragging dismisses the keyboard interactively;
-- video close control remains easy to hit.
+- video close control remains easy to hit;
+- Home and Story video floating/resume preserve playback position when scrolled away
+  and back;
+- opening Story from an actively playing Home video resumes from the handed-off time.
 
 ### Android
 
@@ -101,7 +118,10 @@ On a phone-sized emulator/device:
 - with Community input focused, type/Publish controls still respond;
 - dragging dismisses the keyboard;
 - Follow/Save/Community/Podcast controls do not overlap;
-- back navigation from Story returns to the previous Briefly surface when available.
+- back navigation from Story returns to the previous Briefly surface when available;
+- Home and Story video floating/resume preserve playback position when scrolled away
+  and back;
+- opening Story from an actively playing Home video resumes from the handed-off time.
 
 ## Closure gate
 

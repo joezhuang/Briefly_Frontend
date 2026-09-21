@@ -10,7 +10,7 @@ This runs:
 
 1. Expo lint;
 2. the 19-check integrated user-journey source gate;
-3. the 8-check cross-platform UI source gate;
+3. the cross-platform UI source gate (including floating/resumable video);
 4. the telemetry source gate;
 5. static validation that the new Briefly icon, adaptive icon, favicon, splash and
    rich-share fallback are still wired into the release configuration.
