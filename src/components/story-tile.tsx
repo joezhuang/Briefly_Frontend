@@ -109,6 +109,7 @@ export function StoryTile({
     })();
 
   const communityHref = `${storyHref}${storyHref.includes("?") ? "&" : "?"}community=1`;
+  const articleReady = article.article_version_id != null;
 
   const handleShare = async () => {
     const url = buildPublicStoryShareUrl(article, storyHref);
@@ -237,7 +238,7 @@ export function StoryTile({
           )}
 
           <View style={styles.mediaActions}>
-            {article.article_version_id != null && (
+            {articleReady && (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={copy.share}
@@ -254,20 +255,22 @@ export function StoryTile({
               </Pressable>
             )}
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={copy.community}
-              onPress={(event) => {
-                event.stopPropagation();
-                router.push(communityHref as never);
-              }}
-              style={({ pressed }) => [
-                styles.translateButton,
-                pressed && styles.translateButtonPressed,
-              ]}
-            >
-              <Text style={styles.translateText}>◌ {copy.community}</Text>
-            </Pressable>
+            {articleReady && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={copy.community}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  router.push(communityHref as never);
+                }}
+                style={({ pressed }) => [
+                  styles.translateButton,
+                  pressed && styles.translateButtonPressed,
+                ]}
+              >
+                <Text style={styles.translateText}>◌ {copy.community}</Text>
+              </Pressable>
+            )}
             {!!videoUrl && (
               <Pressable
                 accessibilityRole="button"
