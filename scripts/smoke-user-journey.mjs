@@ -32,6 +32,8 @@ const checks = [
       "/story/${article.slug}?",
       "router.push(storyHref as never)",
       "buildPublicStoryShareUrl(article, storyHref)",
+      "const articleReady = article.article_version_id != null",
+      "{articleReady && (",
     ],
   },
   {
