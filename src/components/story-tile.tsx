@@ -71,6 +71,16 @@ function subscribeActiveHomepageVideo(listener: ActiveVideoListener) {
   };
 }
 
+function normalizeLanguage(value: string | null | undefined) {
+  const normalized = String(value ?? "").trim().toLowerCase().replace(/_/g, "-");
+  if (normalized === "cn" || normalized === "zh" || normalized === "zh-cn" || normalized.startsWith("zh-hans")) return "zh-CN";
+  if (normalized === "tw" || normalized === "zh-tw" || normalized === "zh-hk" || normalized.startsWith("zh-hant")) return "zh-TW";
+  if (normalized.startsWith("en")) return "en";
+  if (normalized.startsWith("es")) return "es";
+  if (normalized.startsWith("ja")) return "ja";
+  return normalized;
+}
+
 const translationCopy: Record<string, { translate: string; original: string; retry: string; play: string; close: string; share: string; community: string }> = {
   en: { translate: "Translate", original: "Original", retry: "Retry", play: "Play", close: "Close video", share: "Share", community: "Community" },
   es: { translate: "Traducir", original: "Original", retry: "Reintentar", play: "Reproducir", close: "Cerrar video", share: "Compartir", community: "Comunidad" },
@@ -145,6 +155,9 @@ export function StoryTile({
 
   const communityHref = `${storyHref}${storyHref.includes("?") ? "&" : "?"}community=1`;
   const articleReady = article.article_version_id != null;
+  const contentLanguage = normalizeLanguage(article.content_language ?? article.language);
+  const requestedLanguage = normalizeLanguage(article.requested_language ?? language);
+  const showTranslate = !!contentLanguage && !!requestedLanguage && contentLanguage !== requestedLanguage;
 
   const playbackStoryHref = () => {
     const separator = storyHref.includes("?") ? "&" : "?";
@@ -263,22 +276,24 @@ export function StoryTile({
               }}
             />
           )}
-          <Pressable
-            accessibilityRole={Platform.OS === "web" ? "link" : "button"}
-            accessibilityLabel={displayedHeadline}
-            onPress={() => {
-              const nextHref = playbackStoryHref();
-              setActiveHomepageVideo(null);
-              onVideoStop?.(article.event_id);
-              router.push(nextHref as never);
-            }}
-            style={({ pressed }) => [
-              styles.videoStoryLink,
-              pressed && styles.actionButtonPressed,
-            ]}
-          >
-            <Text style={styles.arrowText}>→</Text>
-          </Pressable>
+          {articleReady && (
+            <Pressable
+              accessibilityRole={Platform.OS === "web" ? "link" : "button"}
+              accessibilityLabel={displayedHeadline}
+              onPress={() => {
+                const nextHref = playbackStoryHref();
+                setActiveHomepageVideo(null);
+                onVideoStop?.(article.event_id);
+                router.push(nextHref as never);
+              }}
+              style={({ pressed }) => [
+                styles.videoStoryLink,
+                pressed && styles.actionButtonPressed,
+              ]}
+            >
+              <Text style={styles.arrowText}>→</Text>
+            </Pressable>
+          )}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={copy.close}
@@ -396,34 +411,36 @@ export function StoryTile({
               </Pressable>
             )}
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                translationFailed
-                  ? copy.retry
-                  : translated
-                    ? copy.original
-                    : copy.translate
-              }
-              disabled={translating}
-              onPress={(event) => {
-                event.stopPropagation();
-                void handleTranslation();
-              }}
-              style={({ pressed }) => [
-                styles.actionIconButton,
-                translated && styles.actionIconButtonActive,
-                pressed && styles.actionButtonPressed,
-              ]}
-            >
-              {translating ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.actionIcon}>
-                  {translationFailed ? "↻" : translated ? "A" : "文"}
-                </Text>
-              )}
-            </Pressable>
+            {showTranslate && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  translationFailed
+                    ? copy.retry
+                    : translated
+                      ? copy.original
+                      : copy.translate
+                }
+                disabled={translating}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  void handleTranslation();
+                }}
+                style={({ pressed }) => [
+                  styles.actionIconButton,
+                  translated && styles.actionIconButtonActive,
+                  pressed && styles.actionButtonPressed,
+                ]}
+              >
+                {translating ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.actionIcon}>
+                    {translationFailed ? "↻" : translated ? "A" : "文"}
+                  </Text>
+                )}
+              </Pressable>
+            )}
           </View>
         </View>
 
