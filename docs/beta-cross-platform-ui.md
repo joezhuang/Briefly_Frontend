@@ -44,8 +44,8 @@ so adding controls cannot push the story-entry arrow downward or clip it out of 
 fixed-height tile.
 
 When a feed video is playing, its media surface remains dedicated to playback controls.
-The 44×44 story-entry arrow and close-video control sit together in a compact
-top-right action cluster. Opening the story therefore
+A 44×44 story-entry arrow stays at the top-left of the playing card, away from the
+player's own right-side controls, while the close-video control remains top-right. Opening the story therefore
 never requires hijacking taps intended for play/pause, scrubbing or fullscreen.
 
 If the user opens that story through the playing-video arrow, Home explicitly stops

@@ -52,7 +52,6 @@ const checks = [
       "width: 44",
       "height: 44",
       "styles.actionIconButton",
-      "styles.videoTopActions",
       "styles.videoStoryLink",
       "autoplayVideo=1",
       "setActiveHomepageVideo(null)",
