@@ -327,15 +327,15 @@ export function StoryTile({
               )}
             </Pressable>
           </View>
+        </View>
 
-          <View style={styles.metaRow}>
-            <Text style={styles.meta}>
-              {sourceCount}{" "}
-              {sourceCount === 1 ? t.source : t.sourcesPlural}
-            </Text>
-            <View style={styles.arrow}>
-              <Text style={styles.arrowText}>→</Text>
-            </View>
+        <View style={styles.metaRow}>
+          <Text style={styles.meta}>
+            {sourceCount}{" "}
+            {sourceCount === 1 ? t.source : t.sourcesPlural}
+          </Text>
+          <View style={styles.arrow}>
+            <Text style={styles.arrowText}>→</Text>
           </View>
         </View>
       </View>
@@ -352,14 +352,19 @@ const styles = StyleSheet.create({
   },
   overlay: { backgroundColor: "rgba(0, 0, 0, 0.42)" },
   fallbackOverlay: { backgroundColor: "rgba(0, 0, 0, 0.18)" },
-  content: { flex: 1, justifyContent: "space-between", padding: 22 },
+  content: {
+    flex: 1,
+    position: "relative",
+    justifyContent: "space-between",
+    padding: 22,
+  },
   category: {
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 1.4,
   },
-  bottom: { gap: 10 },
+  bottom: { gap: 10, paddingBottom: 54 },
   headline: {
     color: "#FFFFFF",
     fontWeight: "800",
@@ -419,10 +424,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   metaRow: {
+    position: "absolute",
+    left: 22,
+    right: 22,
+    bottom: 22,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 4,
   },
   meta: { color: "rgba(255,255,255,0.82)", fontSize: 13 },
   arrow: {

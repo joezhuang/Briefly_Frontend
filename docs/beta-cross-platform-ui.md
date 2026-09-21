@@ -36,6 +36,10 @@ Core beta controls now use a minimum 44pt target where they were previously 30â€
 Feed actions, Story actions, Follow, Community controls, Podcast controls, Header
 controls and retry states.
 
+The feed card's source-count + enter-story arrow row is anchored to the bottom edge of
+the card. Share / Community / Play / Translate may wrap upward, but adding actions can
+no longer push the story-entry arrow downward or clip it out of the fixed-height tile.
+
 ## Automated gates
 
 ```bash

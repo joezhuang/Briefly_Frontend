@@ -51,6 +51,11 @@ const checks = [
       "minHeight: 44",
       "shareBrieflyStory({",
       "BrieflyMediaFallback",
+      'bottom: { gap: 10, paddingBottom: 54 }',
+      'position: "absolute"',
+      "bottom: 22",
+      "left: 22",
+      "right: 22",
     ],
   },
   {
