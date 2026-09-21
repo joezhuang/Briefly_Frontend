@@ -16,12 +16,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   getBetaDashboard,
   getBetaDashboardAppConfig,
+  getBetaDashboardTelemetryConfig,
+  getBetaDashboardTelemetryHealth,
   getCommunityModerationQueue,
   setBetaDashboardErrorResolution,
   setCommunityContributionVisibility,
   updateBetaDashboardAppConfig,
+  updateBetaDashboardTelemetryConfig,
   type BetaDashboardErrorGroup,
   type BetaDashboardSnapshot,
+  type BetaDashboardTelemetryConfig,
+  type BetaDashboardTelemetryHealth,
   type BrieflyAppConfig,
   type CommunityModerationItem,
   type CommunityModerationQueue,
@@ -526,6 +531,147 @@ function ConfigToggle({
   );
 }
 
+function TelemetryConfigEditor({
+  config,
+  loading,
+  saving,
+  error,
+  saved,
+  onChange,
+  onSave,
+}: {
+  config: BetaDashboardTelemetryConfig | null;
+  loading: boolean;
+  saving: boolean;
+  error: boolean;
+  saved: boolean;
+  onChange: <K extends keyof BetaDashboardTelemetryConfig>(
+    key: K,
+    value: BetaDashboardTelemetryConfig[K],
+  ) => void;
+  onSave: () => void;
+}) {
+  const { colors } = useBrieflyTheme();
+
+  if (loading && !config) {
+    return <ScreenState loading message="Loading telemetry controls…" />;
+  }
+
+  if (!config) {
+    return (
+      <Text style={[styles.empty, { color: colors.textMuted }]}>
+        Telemetry controls are unavailable.
+      </Text>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.configPanel,
+        { borderColor: colors.border, backgroundColor: colors.surface },
+      ]}
+    >
+      <View
+        style={[
+          styles.configFieldRow,
+          { borderBottomColor: colors.border },
+        ]}
+      >
+        <View style={styles.configCopy}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Test account emails
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            One email per line or comma separated. Matching uses the trusted
+            authenticated account email and never stores the email in telemetry.
+          </Text>
+        </View>
+        <TextInput
+          value={config.test_account_emails.join("\n")}
+          onChangeText={(value) =>
+            onChange(
+              "test_account_emails",
+              value
+                .split(/[\n,]+/)
+                .map((item) => item.trim().toLowerCase())
+                .filter(Boolean)
+                .slice(0, 20),
+            )
+          }
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          multiline
+          placeholder="test@example.com"
+          placeholderTextColor={colors.textMuted}
+          style={[
+            styles.configInput,
+            styles.configInputMultiline,
+            {
+              borderColor: colors.border,
+              backgroundColor: colors.background,
+              color: colors.text,
+            },
+          ]}
+        />
+      </View>
+
+      <ConfigToggle
+        label="Include test accounts in product analytics"
+        detail="When off, new analytics batches from the listed authenticated accounts are accepted but filtered before database writes."
+        value={config.include_test_accounts_in_analytics}
+        onValueChange={(value) =>
+          onChange("include_test_accounts_in_analytics", value)
+        }
+      />
+
+      <ConfigToggle
+        label="Include test accounts in error monitoring"
+        detail="Independent from analytics so you can exclude test usage while still keeping test crashes and API/server failures."
+        value={config.include_test_accounts_in_error_monitoring}
+        onValueChange={(value) =>
+          onChange("include_test_accounts_in_error_monitoring", value)
+        }
+      />
+
+      <View style={styles.configActions}>
+        <Pressable
+          accessibilityRole="button"
+          disabled={saving}
+          onPress={onSave}
+          style={({ pressed }) => [
+            styles.configSaveButton,
+            {
+              backgroundColor: colors.text,
+              opacity: saving ? 0.5 : pressed ? 0.72 : 1,
+            },
+          ]}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color={colors.background} />
+          ) : (
+            <Text style={[styles.configSaveText, { color: colors.background }]}>
+              Save telemetry controls
+            </Text>
+          )}
+        </Pressable>
+        {saved && !error && (
+          <Text style={[styles.configStatus, { color: colors.textMuted }]}>
+            Saved. Applies to new telemetry only.
+          </Text>
+        )}
+        {error && (
+          <Text style={[styles.configStatus, { color: colors.accent }]}>
+            Save failed. Existing telemetry controls were not changed.
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+
 function RuntimeConfigEditor({
   config,
   loading,
@@ -780,6 +926,16 @@ export default function BetaDashboardScreen() {
   const [configSaving, setConfigSaving] = useState(false);
   const [configError, setConfigError] = useState(false);
   const [configSaved, setConfigSaved] = useState(false);
+  const [telemetryConfig, setTelemetryConfig] =
+    useState<BetaDashboardTelemetryConfig | null>(null);
+  const [telemetryConfigLoading, setTelemetryConfigLoading] = useState(true);
+  const [telemetryConfigSaving, setTelemetryConfigSaving] = useState(false);
+  const [telemetryConfigError, setTelemetryConfigError] = useState(false);
+  const [telemetryConfigSaved, setTelemetryConfigSaved] = useState(false);
+  const [telemetryHealth, setTelemetryHealth] =
+    useState<BetaDashboardTelemetryHealth | null>(null);
+  const [telemetryHealthLoading, setTelemetryHealthLoading] = useState(true);
+  const [telemetryHealthError, setTelemetryHealthError] = useState(false);
   const [dashboardTab, setDashboardTab] =
     useState<DashboardTab>("overview");
   const [socialBetaTab, setSocialBetaTab] =
@@ -864,6 +1020,56 @@ export default function BetaDashboardScreen() {
     };
   }, [account?.is_admin, authReady, user]);
 
+  useEffect(() => {
+    if (!authReady || !user || account?.is_admin !== true) return;
+
+    let active = true;
+    setTelemetryConfigLoading(true);
+    setTelemetryHealthLoading(true);
+
+    void Promise.allSettled([
+      getBetaDashboardTelemetryConfig(),
+      getBetaDashboardTelemetryHealth(),
+    ]).then(([configResult, healthResult]) => {
+      if (!active) return;
+
+      if (configResult.status === "fulfilled") {
+        setTelemetryConfig(configResult.value);
+        setTelemetryConfigError(false);
+      } else {
+        setTelemetryConfigError(true);
+      }
+      setTelemetryConfigLoading(false);
+
+      if (healthResult.status === "fulfilled") {
+        setTelemetryHealth(healthResult.value);
+        setTelemetryHealthError(false);
+      } else {
+        setTelemetryHealthError(true);
+      }
+      setTelemetryHealthLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [account?.is_admin, authReady, user]);
+
+  const refreshTelemetryHealth = useCallback(async () => {
+    if (!user || account?.is_admin !== true) return;
+
+    setTelemetryHealthLoading(true);
+    try {
+      const next = await getBetaDashboardTelemetryHealth();
+      setTelemetryHealth(next);
+      setTelemetryHealthError(false);
+    } catch {
+      setTelemetryHealthError(true);
+    } finally {
+      setTelemetryHealthLoading(false);
+    }
+  }, [account?.is_admin, user]);
+
   const refreshCommunityModeration = useCallback(async () => {
     if (!user || account?.is_admin !== true) return;
 
@@ -940,6 +1146,35 @@ export default function BetaDashboardScreen() {
       setConfigError(true);
     } finally {
       setConfigSaving(false);
+    }
+  };
+
+  const changeTelemetryConfig = <
+    K extends keyof BetaDashboardTelemetryConfig,
+  >(
+    key: K,
+    value: BetaDashboardTelemetryConfig[K],
+  ) => {
+    setTelemetryConfigSaved(false);
+    setTelemetryConfig((current) =>
+      current ? { ...current, [key]: value } : current,
+    );
+  };
+
+  const saveTelemetryConfig = async () => {
+    if (!telemetryConfig) return;
+    setTelemetryConfigSaving(true);
+    setTelemetryConfigSaved(false);
+    setTelemetryConfigError(false);
+    try {
+      const savedConfig =
+        await updateBetaDashboardTelemetryConfig(telemetryConfig);
+      setTelemetryConfig(savedConfig);
+      setTelemetryConfigSaved(true);
+    } catch {
+      setTelemetryConfigError(true);
+    } finally {
+      setTelemetryConfigSaving(false);
     }
   };
 
@@ -1405,6 +1640,92 @@ export default function BetaDashboardScreen() {
 
               {dashboardTab === "operations" && (
                 <>
+              <View style={styles.section}>
+                <SectionTitle
+                  title="Telemetry health"
+                  detail="Read-only storage verification for first-party analytics and error monitoring."
+                />
+                <View style={styles.windowRow}>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={telemetryHealthLoading}
+                    onPress={() => void refreshTelemetryHealth()}
+                    style={({ pressed }) => [
+                      styles.refreshButton,
+                      {
+                        borderColor: colors.border,
+                        opacity: telemetryHealthLoading
+                          ? 0.5
+                          : pressed
+                            ? 0.65
+                            : 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.windowText, { color: colors.text }]}>
+                      {telemetryHealthLoading ? "Checking…" : "Refresh telemetry"}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {telemetryHealthLoading && !telemetryHealth ? (
+                  <ActivityIndicator
+                    color={colors.accent}
+                    style={{ alignSelf: "flex-start", marginTop: 14 }}
+                  />
+                ) : telemetryHealthError || !telemetryHealth ? (
+                  <Text
+                    style={[
+                      styles.empty,
+                      { color: colors.textMuted, marginTop: 14 },
+                    ]}
+                  >
+                    Telemetry health is unavailable.
+                  </Text>
+                ) : (
+                  <>
+                    <View style={[styles.metricsGrid, { marginTop: 14 }]}>
+                      <MetricCard
+                        label="Analytics · 24h"
+                        value={number(telemetryHealth.analytics.events_24h)}
+                        detail={
+                          number(telemetryHealth.analytics.sessions_24h) +
+                          " sessions"
+                        }
+                      />
+                      <MetricCard
+                        label="Authenticated · 24h"
+                        value={number(
+                          telemetryHealth.analytics.authenticated_users_24h,
+                        )}
+                        detail="users represented in analytics"
+                      />
+                      <MetricCard
+                        label="Errors · 24h"
+                        value={number(telemetryHealth.errors.errors_24h)}
+                        detail={
+                          number(telemetryHealth.errors.client_errors_24h) +
+                          " client · " +
+                          number(telemetryHealth.errors.server_errors_24h) +
+                          " server"
+                        }
+                      />
+                      <MetricCard
+                        label="Unresolved errors"
+                        value={number(telemetryHealth.errors.unresolved_errors)}
+                        detail="all-time unresolved occurrences"
+                      />
+                    </View>
+                    <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                      Analytics last received:{" "}
+                      {formatTimestamp(telemetryHealth.analytics.last_received_at)}
+                      {" · "}Errors last received:{" "}
+                      {formatTimestamp(telemetryHealth.errors.last_received_at)}
+                    </Text>
+                  </>
+                )}
+              </View>
+
               <View style={styles.twoColumn}>
                 <View
                   style={[
@@ -1543,22 +1864,39 @@ export default function BetaDashboardScreen() {
               )}
 
               {dashboardTab === "settings" && (
-              <View style={styles.section}>
-                <SectionTitle
-                  title="Runtime configuration"
-                  detail="Admin-only controls backed by briefly_app_config. Changes take effect through the existing public app-config endpoint."
-                />
-                <RuntimeConfigEditor
-                  config={appConfig}
-                  loading={configLoading}
-                  saving={configSaving}
-                  error={configError}
-                  saved={configSaved}
-                  onChange={changeAppConfig}
-                  onSave={() => void saveAppConfig()}
-                />
-              </View>
+                <>
+                  <View style={styles.section}>
+                    <SectionTitle
+                      title="Runtime configuration"
+                      detail="Admin-only product controls backed by briefly_app_config."
+                    />
+                    <RuntimeConfigEditor
+                      config={appConfig}
+                      loading={configLoading}
+                      saving={configSaving}
+                      error={configError}
+                      saved={configSaved}
+                      onChange={changeAppConfig}
+                      onSave={() => void saveAppConfig()}
+                    />
+                  </View>
 
+                  <View style={styles.section}>
+                    <SectionTitle
+                      title="Test-account telemetry"
+                      detail="Private admin-only controls. Email is used only to classify the trusted authenticated account and is not written into analytics or error rows."
+                    />
+                    <TelemetryConfigEditor
+                      config={telemetryConfig}
+                      loading={telemetryConfigLoading}
+                      saving={telemetryConfigSaving}
+                      error={telemetryConfigError}
+                      saved={telemetryConfigSaved}
+                      onChange={changeTelemetryConfig}
+                      onSave={() => void saveTelemetryConfig()}
+                    />
+                  </View>
+                </>
               )}
 
               <Text style={[styles.generated, { color: colors.textMuted }]}>
@@ -1792,6 +2130,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     fontSize: 13,
+  },
+  configInputMultiline: {
+    minWidth: 280,
+    minHeight: 96,
+    paddingVertical: 10,
+    textAlignVertical: "top",
   },
   configInputSmall: {
     width: 90,

@@ -796,6 +796,30 @@ export function syncBrieflyWebSubscription() {
   }>("/api/subscriptions/web/sync", {});
 }
 
+export type BetaDashboardTelemetryConfig = {
+  test_account_emails: string[];
+  include_test_accounts_in_analytics: boolean;
+  include_test_accounts_in_error_monitoring: boolean;
+};
+
+export type BetaDashboardTelemetryHealth = {
+  status: "ok";
+  generated_at: string;
+  analytics: {
+    events_24h: number;
+    sessions_24h: number;
+    authenticated_users_24h: number;
+    last_received_at: string | null;
+  };
+  errors: {
+    errors_24h: number;
+    client_errors_24h: number;
+    server_errors_24h: number;
+    unresolved_errors: number;
+    last_received_at: string | null;
+  };
+};
+
 export type BrieflyAppConfig = {
   email_password_login_enabled: boolean;
   reviewer_email: string | null;
@@ -819,5 +843,26 @@ export function getBetaDashboardAppConfig() {
 
 export function updateBetaDashboardAppConfig(config: BrieflyAppConfig) {
   return postJson<BrieflyAppConfig>("/api/beta-dashboard/app-config", config);
+}
+
+export function getBetaDashboardTelemetryConfig() {
+  return getJson<BetaDashboardTelemetryConfig>(
+    "/api/beta-dashboard/telemetry-config",
+  );
+}
+
+export function updateBetaDashboardTelemetryConfig(
+  config: BetaDashboardTelemetryConfig,
+) {
+  return postJson<BetaDashboardTelemetryConfig>(
+    "/api/beta-dashboard/telemetry-config",
+    config,
+  );
+}
+
+export function getBetaDashboardTelemetryHealth() {
+  return getJson<BetaDashboardTelemetryHealth>(
+    "/api/beta-dashboard/telemetry-health",
+  );
 }
 
