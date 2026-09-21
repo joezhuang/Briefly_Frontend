@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -24,6 +24,18 @@ import { shareBrieflyStory } from "@/navigation/platform-share";
 import { buildPublicStoryShareUrl } from "@/navigation/story-share";
 
 type TileSize = "hero" | "secondary" | "standard";
+
+export type StoryTileVideoStart = {
+  eventId: string;
+  url: string;
+  posterUrl: string | null;
+  headline: string;
+  storyHref: string;
+  currentTime: number;
+  anchorWindowY: number;
+  anchorHeight: number;
+};
+
 type Props = {
   article: CanonicalArticle;
   size?: TileSize;
@@ -31,6 +43,11 @@ type Props = {
   videoEnabled?: boolean;
   analyticsSource?: string;
   analyticsScope?: string;
+  videoDetached?: boolean;
+  videoResumeTime?: number;
+  onVideoStart?: (session: StoryTileVideoStart) => void;
+  onVideoTimeUpdate?: (eventId: string, seconds: number) => void;
+  onVideoStop?: (eventId: string) => void;
 };
 
 type ActiveVideoListener = (eventId: string | null) => void;
@@ -40,6 +57,10 @@ const activeVideoListeners = new Set<ActiveVideoListener>();
 function setActiveHomepageVideo(eventId: string | null) {
   activeVideoEventId = eventId;
   activeVideoListeners.forEach((listener) => listener(eventId));
+}
+
+export function stopActiveHomepageVideo() {
+  setActiveHomepageVideo(null);
 }
 
 function subscribeActiveHomepageVideo(listener: ActiveVideoListener) {
@@ -65,6 +86,11 @@ export function StoryTile({
   videoEnabled = true,
   analyticsSource,
   analyticsScope,
+  videoDetached = false,
+  videoResumeTime = 0,
+  onVideoStart,
+  onVideoTimeUpdate,
+  onVideoStop,
 }: Props) {
   const { language, t } = useBrieflyLanguage();
   const [translation, setTranslation] = useState<CardTranslation | null>(null);
@@ -72,6 +98,8 @@ export function StoryTile({
   const [translating, setTranslating] = useState(false);
   const [translationFailed, setTranslationFailed] = useState(false);
   const [playingVideo, setPlayingVideo] = useState(false);
+  const tileRef = useRef<View | null>(null);
+  const lastVideoTimeRef = useRef(Math.max(0, videoResumeTime));
 
   useEffect(() => {
     return subscribeActiveHomepageVideo((eventId) => {
@@ -84,6 +112,12 @@ export function StoryTile({
       setActiveHomepageVideo(null);
     }
   }, [article.event_id, videoEnabled]);
+
+  useEffect(() => {
+    if (videoResumeTime > 0) {
+      lastVideoTimeRef.current = videoResumeTime;
+    }
+  }, [videoResumeTime]);
 
   const height = size === "hero" ? 520 : size === "secondary" ? 252 : 270;
   const headlineStyle =
@@ -110,9 +144,32 @@ export function StoryTile({
     })();
 
   const communityHref = `${storyHref}${storyHref.includes("?") ? "&" : "?"}community=1`;
-  const playingStoryHref =
-    `${storyHref}${storyHref.includes("?") ? "&" : "?"}autoplayVideo=1`;
   const articleReady = article.article_version_id != null;
+
+  const playbackStoryHref = () => {
+    const separator = storyHref.includes("?") ? "&" : "?";
+    const time = Math.max(0, lastVideoTimeRef.current);
+    return `${storyHref}${separator}autoplayVideo=1&videoTime=${time.toFixed(2)}`;
+  };
+
+  const reportVideoStart = () => {
+    lastVideoTimeRef.current = Math.max(0, videoResumeTime);
+    setActiveHomepageVideo(article.event_id);
+    requestAnimationFrame(() => {
+      tileRef.current?.measureInWindow((_, y, __, measuredHeight) => {
+        onVideoStart?.({
+          eventId: article.event_id,
+          url: videoUrl ?? "",
+          posterUrl: imageUrl,
+          headline: displayedHeadline,
+          storyHref,
+          currentTime: lastVideoTimeRef.current,
+          anchorWindowY: y,
+          anchorHeight: measuredHeight || height,
+        });
+      });
+    });
+  };
 
   const handleShare = async () => {
     const url = buildPublicStoryShareUrl(article, storyHref);
@@ -181,20 +238,39 @@ export function StoryTile({
 
   if (playingVideo && videoUrl) {
     return (
-      <View style={StyleSheet.flatten([styles.tile, { height }])}>
+      <View ref={tileRef} style={StyleSheet.flatten([styles.tile, { height }])}>
         <View style={StyleSheet.absoluteFill}>
-          <StoryVideo
-            url={videoUrl}
-            posterUrl={imageUrl}
-            accessibilityLabel={copy.play}
-            autoStart
-          />
+          {videoDetached ? (
+            imageUrl ? (
+              <Image
+                source={{ uri: imageUrl }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+              />
+            ) : (
+              <BrieflyMediaFallback style={StyleSheet.absoluteFill} />
+            )
+          ) : (
+            <StoryVideo
+              url={videoUrl}
+              posterUrl={imageUrl}
+              accessibilityLabel={copy.play}
+              autoStart
+              initialTime={videoResumeTime}
+              onTimeUpdate={(seconds) => {
+                lastVideoTimeRef.current = seconds;
+                onVideoTimeUpdate?.(article.event_id, seconds);
+              }}
+            />
+          )}
           <Pressable
             accessibilityRole={Platform.OS === "web" ? "link" : "button"}
             accessibilityLabel={displayedHeadline}
             onPress={() => {
+              const nextHref = playbackStoryHref();
               setActiveHomepageVideo(null);
-              router.push(playingStoryHref as never);
+              onVideoStop?.(article.event_id);
+              router.push(nextHref as never);
             }}
             style={({ pressed }) => [
               styles.videoStoryLink,
@@ -209,6 +285,7 @@ export function StoryTile({
             onPress={() => {
               if (activeVideoEventId === article.event_id) {
                 setActiveHomepageVideo(null);
+                onVideoStop?.(article.event_id);
               }
             }}
             style={({ pressed }) => [
@@ -225,6 +302,7 @@ export function StoryTile({
 
   return (
     <Pressable
+      ref={tileRef}
       accessibilityRole={Platform.OS === "web" ? "link" : "button"}
       accessibilityLabel={displayedHeadline}
       onPress={() => router.push(storyHref as never)}
@@ -307,7 +385,7 @@ export function StoryTile({
                 accessibilityLabel={copy.play}
                 onPress={(event) => {
                   event.stopPropagation();
-                  setActiveHomepageVideo(article.event_id);
+                  reportVideoStart();
                 }}
                 style={({ pressed }) => [
                   styles.actionIconButton,
