@@ -217,11 +217,15 @@ export default function HomeScreen() {
     setVideoResumeTime(0);
   }, []);
 
+  useEffect(() => {
+    stopActiveHomepageVideo();
+    const activeEventId = videoSessionRef.current?.eventId;
+    if (activeEventId) handleHomeVideoStop(activeEventId);
+  }, [handleHomeVideoStop, scope]);
+
   const switchScope = useCallback(
     (nextScope: HomepageFeedScope) => {
       if (nextScope === scope) return;
-      stopActiveHomepageVideo();
-      handleHomeVideoStop(videoSessionRef.current?.eventId ?? "");
       setArticles([]);
       setHasMore(false);
       setError(null);
@@ -231,7 +235,7 @@ export default function HomeScreen() {
       );
       setScope(nextScope);
     },
-    [handleHomeVideoStop, scope],
+    [scope],
   );
 
   const switchScopeByDirection = useCallback(

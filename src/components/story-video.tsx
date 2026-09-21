@@ -77,18 +77,17 @@ function DirectVideo({
   onTimeUpdate?: (seconds: number) => void;
   onPlayingChange?: (playing: boolean) => void;
 }) {
-  const startTimeRef = useRef(safeTime(initialTime));
+  const startTime = safeTime(initialTime);
   const player = useVideoPlayer(url, (instance) => {
     instance.loop = false;
     instance.timeUpdateEventInterval = 0.5;
-    if (startTimeRef.current > 0) {
-      instance.currentTime = startTimeRef.current;
+    if (startTime > 0) {
+      instance.currentTime = startTime;
     }
     instance.play();
   });
 
   useEffect(() => {
-    player.timeUpdateEventInterval = 0.5;
     const timeSubscription = player.addListener("timeUpdate", (payload) => {
       onTimeUpdate?.(Math.max(0, payload.currentTime || 0));
     });
@@ -128,11 +127,11 @@ export function StoryVideo({
 }: Props) {
   const [manuallyStarted, setManuallyStarted] = useState(false);
   const started = autoStart || manuallyStarted;
-  const startTimeRef = useRef(safeTime(initialTime));
+  const startTime = safeTime(initialTime);
   const startedNotifiedRef = useRef(false);
   const embed = useMemo(
-    () => embeddedUrl(url, startTimeRef.current),
-    [url],
+    () => embeddedUrl(url, startTime),
+    [startTime, url],
   );
 
   useEffect(() => {
@@ -148,7 +147,7 @@ export function StoryVideo({
           <StoryVideoEmbed
             src={embed}
             title={accessibilityLabel}
-            initialTime={startTimeRef.current}
+            initialTime={startTime}
             onTimeUpdate={onTimeUpdate}
             onPlayingChange={onPlayingChange}
             dom={{ useExpoDOMWebView: false }}
@@ -156,7 +155,7 @@ export function StoryVideo({
         ) : (
           <DirectVideo
             url={url}
-            initialTime={startTimeRef.current}
+            initialTime={startTime}
             onTimeUpdate={onTimeUpdate}
             onPlayingChange={onPlayingChange}
           />

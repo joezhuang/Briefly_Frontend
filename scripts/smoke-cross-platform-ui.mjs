@@ -92,8 +92,8 @@ const checks = [
       "timeUpdateEventInterval = 0.5",
       'player.addListener("timeUpdate"',
       'player.addListener("playingChange"',
-      "instance.currentTime = startTimeRef.current",
-      "initialTime={startTimeRef.current}",
+      "instance.currentTime = startTime",
+      "initialTime={startTime}",
     ],
   },
   {
