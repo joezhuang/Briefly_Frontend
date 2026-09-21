@@ -27,3 +27,11 @@ share-image endpoint.
 
 The rich-share fallback is served from the same Briefly deployment at
 `/briefly-share-default.png`, removing the previous dependency on a GitHub raw image.
+
+
+## Android adaptive icon spacing
+
+The Android adaptive foreground and monochrome mark are intentionally inset to about
+84% of the previous foreground scale. This gives the launcher icon more breathing room
+inside Android's variable circle/squircle/rounded-square masks while leaving the iOS
+icon and Android background unchanged.
