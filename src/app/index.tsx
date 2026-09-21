@@ -644,7 +644,7 @@ export default function HomeScreen() {
 
   const openFloatingVideoStory = () => {
     const session = videoSessionRef.current;
-    if (!session) return;
+    if (!session || !session.storyReady) return;
     const separator = session.storyHref.includes("?") ? "&" : "?";
     const href =
       `${session.storyHref}${separator}autoplayVideo=1&videoTime=${Math.max(
@@ -962,7 +962,9 @@ export default function HomeScreen() {
             stopActiveHomepageVideo();
             handleHomeVideoStop(videoSession.eventId);
           }}
-          onOpenStory={openFloatingVideoStory}
+          onOpenStory={
+            videoSession.storyReady ? openFloatingVideoStory : undefined
+          }
         />
       )}
 
