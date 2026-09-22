@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#252525",
   },
   overlay: { backgroundColor: "rgba(0, 0, 0, 0.42)" },
-  fallbackOverlay: { backgroundColor: "rgba(0, 0, 0, 0.18)" },
+  fallbackOverlay: { backgroundColor: "rgba(0, 0, 0, 0.52)" },
   content: {
     flex: 1,
     position: "relative",
