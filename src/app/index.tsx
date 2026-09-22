@@ -779,7 +779,7 @@ export default function HomeScreen() {
   const desktop = width >= 1000;
   const tablet = width >= 700 && width < 1000;
   const mobileHeader = width < 480;
-  const showWebScopeArrows = Platform.OS === "web" && width >= 1000;
+  const showWebScopeArrows = Platform.OS === "web";
   const webScopeArrowInset = Math.max(
     14,
     (width - layout.pageMax) / 2 - 58,
