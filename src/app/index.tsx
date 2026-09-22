@@ -141,6 +141,16 @@ function homeFeedMemoryKey(
     : `${scope}|${language}|${locationPreferenceKey(preference)}`;
 }
 
+function findRememberedHomeFeed(
+  scope: HomepageFeedScope,
+  language: string,
+  preference: NewsLocationPreference,
+) {
+  return rememberedHomeFeeds.get(
+    homeFeedMemoryKey(scope, language, preference),
+  );
+}
+
 function getRememberedHomeFeed(
   scope: HomepageFeedScope,
   language: string,
@@ -165,10 +175,16 @@ export default function HomeScreen() {
   const { language, t } = useBrieflyLanguage();
   const { ready: authReady, account } = useBrieflyAuth();
   const { colors } = useBrieflyTheme();
-  const initialHomeFeed = getRememberedHomeFeed("top", language, {
-    mode: "off",
-    location: null,
-  });
+  const initialHomeFeed =
+    findRememberedHomeFeed("top", language, {
+      mode: "off",
+      location: null,
+    }) ?? {
+      articles: [],
+      hasMore: false,
+      scrollOffset: 0,
+      lastFetchedAt: 0,
+    };
 
   const [scope, setScope] = useState<HomepageFeedScope>("top");
   const [appConfig, setAppConfig] = useState<BrieflyAppConfig | null>(null);
