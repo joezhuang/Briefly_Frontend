@@ -1,10 +1,9 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   AppState,
   FlatList,
-  PanResponder,
   Platform,
   Pressable,
   RefreshControl,
@@ -12,6 +11,7 @@ import {
   Text,
   useWindowDimensions,
   View,
+  type GestureResponderEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -27,6 +27,8 @@ import { FloatingStoryVideo } from "@/components/floating-story-video";
 // Metro resolves the platform-specific .native/.web implementation at runtime.
 // eslint-disable-next-line import/no-unresolved
 import { HomeAdSlot } from "@/components/home-ad-slot";
+// Metro resolves the platform-specific .native/.web implementation at runtime.
+// eslint-disable-next-line import/no-unresolved
 import { HomeInstallBanners } from "@/components/home-install-banners";
 import { NewsLocationGate } from "@/components/news-location-gate";
 import { ScreenState } from "@/components/screen-state";
@@ -219,6 +221,7 @@ export default function HomeScreen() {
   const homeScrollOffsetRef = useRef(initialHomeFeed.scrollOffset);
   const videoSessionRef = useRef<HomeVideoSession | null>(null);
   const videoFloatingRef = useRef(false);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [videoSession, setVideoSession] = useState<HomeVideoSession | null>(null);
   const [videoFloating, setVideoFloating] = useState(false);
   const [videoResumeTime, setVideoResumeTime] = useState(0);
@@ -332,31 +335,43 @@ export default function HomeScreen() {
     [scope, switchScope],
   );
 
-  const swipeResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gestureState) => {
-          if (Platform.OS === "web") return false;
-          const horizontal = Math.abs(gestureState.dx);
-          const vertical = Math.abs(gestureState.dy);
-          return horizontal > 18 && horizontal > vertical * SWIPE_DIRECTION_RATIO;
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          if (Platform.OS === "web") return;
-          const horizontal = Math.abs(gestureState.dx);
-          const vertical = Math.abs(gestureState.dy);
-          if (
-            horizontal < SWIPE_TRIGGER_DISTANCE ||
-            horizontal <= vertical * SWIPE_DIRECTION_RATIO
-          ) {
-            return;
-          }
-          switchScopeByDirection(gestureState.dx < 0 ? 1 : -1);
-        },
-        onPanResponderTerminationRequest: () => true,
-      }),
+  const handleSwipeTouchStart = useCallback(
+    (event: GestureResponderEvent) => {
+      if (Platform.OS === "web") return;
+      const touch = event.nativeEvent.touches[0] ?? event.nativeEvent;
+      swipeStartRef.current = { x: touch.pageX, y: touch.pageY };
+    },
+    [],
+  );
+
+  const handleSwipeTouchEnd = useCallback(
+    (event: GestureResponderEvent) => {
+      if (Platform.OS === "web") return;
+      const start = swipeStartRef.current;
+      swipeStartRef.current = null;
+      if (!start) return;
+
+      const touch = event.nativeEvent.changedTouches[0] ?? event.nativeEvent;
+      const dx = touch.pageX - start.x;
+      const dy = touch.pageY - start.y;
+      const horizontal = Math.abs(dx);
+      const vertical = Math.abs(dy);
+
+      if (
+        horizontal < SWIPE_TRIGGER_DISTANCE ||
+        horizontal <= vertical * SWIPE_DIRECTION_RATIO
+      ) {
+        return;
+      }
+
+      switchScopeByDirection(dx < 0 ? 1 : -1);
+    },
     [switchScopeByDirection],
   );
+
+  const handleSwipeTouchCancel = useCallback(() => {
+    swipeStartRef.current = null;
+  }, []);
 
   const location = newsLocation.location;
   const localArea = location?.region || location?.city || "";
@@ -620,26 +635,35 @@ export default function HomeScreen() {
     restoredScrollRef.current = remembered.scrollOffset <= 0;
     loadingMoreRef.current = false;
 
-    setArticles(remembered.articles);
-    setHasMore(remembered.hasMore);
-    setError(null);
-    setLoadingMore(false);
-    setShowTopButton(
-      remembered.scrollOffset > SHOW_TOP_BUTTON_OFFSET,
-    );
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
 
-    if (remembered.articles.length > 0) {
-      setLoading(false);
-      setRefreshing(false);
-      return;
-    }
+      setArticles(remembered.articles);
+      setHasMore(remembered.hasMore);
+      setError(null);
+      setLoadingMore(false);
+      setShowTopButton(
+        remembered.scrollOffset > SHOW_TOP_BUTTON_OFFSET,
+      );
 
-    Promise.resolve().then(() => void loadFeed("initial"));
+      if (remembered.articles.length > 0) {
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      void loadFeed("initial");
+    });
+
+    return () => {
+      active = false;
+    };
   }, [authReady, language, loadFeed, newsLocation, scope]);
 
   useEffect(() => {
-    // Retry bookkeeping is imperative state and belongs in an effect, not in the
-    // scope-switch callback that is captured by PanResponder during render.
+    // Retry bookkeeping is imperative state and belongs in an effect rather
+    // than the scope-switch callback used by the touch gesture handlers.
     coverageRetryCountRef.current = 0;
     if (coverageRetryTimerRef.current) {
       clearTimeout(coverageRetryTimerRef.current);
@@ -980,7 +1004,9 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView
-      {...swipeResponder.panHandlers}
+      onTouchStart={handleSwipeTouchStart}
+      onTouchEnd={handleSwipeTouchEnd}
+      onTouchCancel={handleSwipeTouchCancel}
       style={[styles.screen, { backgroundColor: colors.background }]}
     >
       <FlatList
