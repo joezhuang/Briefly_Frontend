@@ -139,7 +139,7 @@ export function HomeInstallBanners() {
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const text = copy[language] ?? copy.en;
-  const platform = useMemo(detectMobilePlatform, []);
+  const platform = useMemo(() => detectMobilePlatform(), []);
   const [installPrompt, setInstallPrompt] =
     useState<InstallPromptEvent | null>(null);
   const [showInstallInstructions, setShowInstallInstructions] = useState(false);
@@ -180,10 +180,14 @@ export function HomeInstallBanners() {
       void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     }
 
-    setWebHidden(isStandalone() || wasRecentlyDismissed(WEB_DISMISS_KEY));
-    setMobileHidden(
-      mobileLinks.length === 0 || wasRecentlyDismissed(MOBILE_DISMISS_KEY),
-    );
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      setWebHidden(isStandalone() || wasRecentlyDismissed(WEB_DISMISS_KEY));
+      setMobileHidden(
+        mobileLinks.length === 0 || wasRecentlyDismissed(MOBILE_DISMISS_KEY),
+      );
+    });
 
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
@@ -200,6 +204,7 @@ export function HomeInstallBanners() {
     window.addEventListener("appinstalled", handleInstalled);
 
     return () => {
+      active = false;
       window.removeEventListener(
         "beforeinstallprompt",
         handleBeforeInstallPrompt,

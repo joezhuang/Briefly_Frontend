@@ -27,6 +27,8 @@ import { FloatingStoryVideo } from "@/components/floating-story-video";
 // Metro resolves the platform-specific .native/.web implementation at runtime.
 // eslint-disable-next-line import/no-unresolved
 import { HomeAdSlot } from "@/components/home-ad-slot";
+// Metro resolves the platform-specific .native/.web implementation at runtime.
+// eslint-disable-next-line import/no-unresolved
 import { HomeInstallBanners } from "@/components/home-install-banners";
 import { NewsLocationGate } from "@/components/news-location-gate";
 import { ScreenState } from "@/components/screen-state";
@@ -59,11 +61,14 @@ const SHOW_TOP_BUTTON_OFFSET = 700;
 const SWIPE_TRIGGER_DISTANCE = 56;
 const SWIPE_DIRECTION_RATIO = 1.35;
 
-const rememberedHomeScrollOffsets: Record<HomepageFeedScope, number> = {
-  top: 0,
-  national: 0,
-  local: 0,
+type RememberedHomeFeed = {
+  articles: CanonicalArticle[];
+  hasMore: boolean;
+  scrollOffset: number;
+  lastFetchedAt: number;
 };
+
+const rememberedHomeFeeds = new Map<string, RememberedHomeFeed>();
 
 const feedCopy = {
   en: { top: "Top", national: "National", local: "Local", refresh: "Refresh" },
@@ -128,21 +133,72 @@ function locationPreferenceKey(preference: NewsLocationPreference) {
   ].join("|");
 }
 
+function homeFeedMemoryKey(
+  scope: HomepageFeedScope,
+  language: string,
+  preference: NewsLocationPreference,
+) {
+  return scope === "top"
+    ? `${scope}|${language}`
+    : `${scope}|${language}|${locationPreferenceKey(preference)}`;
+}
+
+function findRememberedHomeFeed(
+  scope: HomepageFeedScope,
+  language: string,
+  preference: NewsLocationPreference,
+) {
+  return rememberedHomeFeeds.get(
+    homeFeedMemoryKey(scope, language, preference),
+  );
+}
+
+function getRememberedHomeFeed(
+  scope: HomepageFeedScope,
+  language: string,
+  preference: NewsLocationPreference,
+): RememberedHomeFeed {
+  const key = homeFeedMemoryKey(scope, language, preference);
+  const existing = rememberedHomeFeeds.get(key);
+  if (existing) return existing;
+
+  const created: RememberedHomeFeed = {
+    articles: [],
+    hasMore: false,
+    scrollOffset: 0,
+    lastFetchedAt: 0,
+  };
+  rememberedHomeFeeds.set(key, created);
+  return created;
+}
+
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
   const { ready: authReady, account } = useBrieflyAuth();
   const { colors } = useBrieflyTheme();
+  const initialHomeFeed =
+    findRememberedHomeFeed("top", language, {
+      mode: "off",
+      location: null,
+    }) ?? {
+      articles: [],
+      hasMore: false,
+      scrollOffset: 0,
+      lastFetchedAt: 0,
+    };
 
   const [scope, setScope] = useState<HomepageFeedScope>("top");
   const [appConfig, setAppConfig] = useState<BrieflyAppConfig | null>(null);
-  const [articles, setArticles] = useState<CanonicalArticle[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [articles, setArticles] = useState<CanonicalArticle[]>(
+    initialHomeFeed.articles,
+  );
+  const [loading, setLoading] = useState(initialHomeFeed.articles.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
+  const [hasMore, setHasMore] = useState(initialHomeFeed.hasMore);
   const [showTopButton, setShowTopButton] = useState(
-    rememberedHomeScrollOffsets.top > SHOW_TOP_BUTTON_OFFSET,
+    initialHomeFeed.scrollOffset > SHOW_TOP_BUTTON_OFFSET,
   );
   const [error, setError] = useState<string | null>(null);
   const [newsLocation, setNewsLocation] = useState<NewsLocationPreference>({
@@ -152,19 +208,22 @@ export default function HomeScreen() {
   const [locationReady, setLocationReady] = useState(false);
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const lastFetchedAt = useRef(0);
+  const lastFetchedAt = useRef(initialHomeFeed.lastFetchedAt);
   const activeRequest = useRef(0);
-  const articlesRef = useRef<CanonicalArticle[]>([]);
+  const articlesRef = useRef<CanonicalArticle[]>(initialHomeFeed.articles);
   const listRef = useRef<FlatList<CanonicalArticle[]>>(null);
-  const restoredScrollRef = useRef(false);
+  const restoredScrollRef = useRef(initialHomeFeed.scrollOffset <= 0);
   const loadingMoreRef = useRef(false);
-  const hasMoreRef = useRef(false);
+  const hasMoreRef = useRef(initialHomeFeed.hasMore);
   const coverageRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const coverageRetryCountRef = useRef(0);
   const [coverageRetryTick, setCoverageRetryTick] = useState(0);
-  const homeScrollOffsetRef = useRef(rememberedHomeScrollOffsets.top);
+  const homeScrollOffsetRef = useRef(initialHomeFeed.scrollOffset);
   const videoSessionRef = useRef<HomeVideoSession | null>(null);
   const videoFloatingRef = useRef(false);
+  const [pendingSwipeDirection, setPendingSwipeDirection] = useState<
+    1 | -1 | null
+  >(null);
   const [videoSession, setVideoSession] = useState<HomeVideoSession | null>(null);
   const [videoFloating, setVideoFloating] = useState(false);
   const [videoResumeTime, setVideoResumeTime] = useState(0);
@@ -174,12 +233,14 @@ export default function HomeScreen() {
   const replaceArticles = useCallback((next: CanonicalArticle[]) => {
     articlesRef.current = next;
     setArticles(next);
+    return next;
   }, []);
 
   const appendArticles = useCallback((next: CanonicalArticle[]) => {
     const merged = mergeUnique(articlesRef.current, next);
     articlesRef.current = merged;
     setArticles(merged);
+    return merged;
   }, []);
 
   const updateHasMore = useCallback((value: boolean) => {
@@ -227,16 +288,43 @@ export default function HomeScreen() {
   const switchScope = useCallback(
     (nextScope: HomepageFeedScope) => {
       if (nextScope === scope) return;
-      setArticles([]);
-      setHasMore(false);
+
+      const currentMemory = getRememberedHomeFeed(
+        scope,
+        language,
+        newsLocation,
+      );
+      currentMemory.articles = articlesRef.current;
+      currentMemory.hasMore = hasMoreRef.current;
+      currentMemory.scrollOffset = homeScrollOffsetRef.current;
+      currentMemory.lastFetchedAt = lastFetchedAt.current;
+
+      const nextMemory = getRememberedHomeFeed(
+        nextScope,
+        language,
+        newsLocation,
+      );
+
+      activeRequest.current += 1;
+      restoredScrollRef.current = false;
+      loadingMoreRef.current = false;
+      articlesRef.current = nextMemory.articles;
+      hasMoreRef.current = nextMemory.hasMore;
+      lastFetchedAt.current = nextMemory.lastFetchedAt;
+      homeScrollOffsetRef.current = nextMemory.scrollOffset;
+
+      setArticles(nextMemory.articles);
+      setHasMore(nextMemory.hasMore);
       setError(null);
-      setLoading(true);
+      setLoading(nextMemory.articles.length === 0);
+      setRefreshing(false);
+      setLoadingMore(false);
       setShowTopButton(
-        rememberedHomeScrollOffsets[nextScope] > SHOW_TOP_BUTTON_OFFSET,
+        nextMemory.scrollOffset > SHOW_TOP_BUTTON_OFFSET,
       );
       setScope(nextScope);
     },
-    [scope],
+    [language, newsLocation, scope],
   );
 
   const switchScopeByDirection = useCallback(
@@ -256,7 +344,10 @@ export default function HomeScreen() {
           if (Platform.OS === "web") return false;
           const horizontal = Math.abs(gestureState.dx);
           const vertical = Math.abs(gestureState.dy);
-          return horizontal > 18 && horizontal > vertical * SWIPE_DIRECTION_RATIO;
+          return (
+            horizontal > 18 &&
+            horizontal > vertical * SWIPE_DIRECTION_RATIO
+          );
         },
         onPanResponderRelease: (_, gestureState) => {
           if (Platform.OS === "web") return;
@@ -268,12 +359,29 @@ export default function HomeScreen() {
           ) {
             return;
           }
-          switchScopeByDirection(gestureState.dx < 0 ? 1 : -1);
+
+          setPendingSwipeDirection(gestureState.dx < 0 ? 1 : -1);
         },
         onPanResponderTerminationRequest: () => true,
       }),
-    [switchScopeByDirection],
+    [],
   );
+
+  useEffect(() => {
+    if (pendingSwipeDirection === null) return;
+
+    const direction = pendingSwipeDirection;
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      setPendingSwipeDirection(null);
+      switchScopeByDirection(direction);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [pendingSwipeDirection, switchScopeByDirection]);
 
   const location = newsLocation.location;
   const localArea = location?.region || location?.city || "";
@@ -340,8 +448,10 @@ export default function HomeScreen() {
         });
         if (activeRequest.current !== requestId) return;
 
-        if (mode === "more") appendArticles(result.articles ?? []);
-        else replaceArticles(result.articles ?? []);
+        const nextArticles =
+          mode === "more"
+            ? appendArticles(result.articles ?? [])
+            : replaceArticles(result.articles ?? []);
 
         if (mode !== "more") {
           trackProductEvent("feed_view", {
@@ -349,7 +459,8 @@ export default function HomeScreen() {
           });
         }
 
-        updateHasMore(result.has_more === true);
+        const nextHasMore = result.has_more === true;
+        updateHasMore(nextHasMore);
 
         const coverageStatus =
           scope === "local"
@@ -386,7 +497,17 @@ export default function HomeScreen() {
           }
         }
 
-        lastFetchedAt.current = Date.now();
+        const fetchedAt = Date.now();
+        lastFetchedAt.current = fetchedAt;
+
+        const remembered = getRememberedHomeFeed(
+          scope,
+          language,
+          newsLocation,
+        );
+        remembered.articles = nextArticles;
+        remembered.hasMore = nextHasMore;
+        remembered.lastFetchedAt = fetchedAt;
       } catch (err: unknown) {
         if (activeRequest.current !== requestId) return;
         if (mode !== "more") {
@@ -511,15 +632,48 @@ export default function HomeScreen() {
     if (!authReady) return;
 
     activeRequest.current += 1;
-    articlesRef.current = [];
-    hasMoreRef.current = false;
-    restoredScrollRef.current = false;
-    Promise.resolve().then(() => void loadFeed("initial"));
-  }, [authReady, loadFeed, language, scope]);
+    const remembered = getRememberedHomeFeed(
+      scope,
+      language,
+      newsLocation,
+    );
+
+    articlesRef.current = remembered.articles;
+    hasMoreRef.current = remembered.hasMore;
+    lastFetchedAt.current = remembered.lastFetchedAt;
+    homeScrollOffsetRef.current = remembered.scrollOffset;
+    restoredScrollRef.current = remembered.scrollOffset <= 0;
+    loadingMoreRef.current = false;
+
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+
+      setArticles(remembered.articles);
+      setHasMore(remembered.hasMore);
+      setError(null);
+      setLoadingMore(false);
+      setShowTopButton(
+        remembered.scrollOffset > SHOW_TOP_BUTTON_OFFSET,
+      );
+
+      if (remembered.articles.length > 0) {
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      void loadFeed("initial");
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [authReady, language, loadFeed, newsLocation, scope]);
 
   useEffect(() => {
-    // Retry bookkeeping is imperative state and belongs in an effect, not in the
-    // scope-switch callback that is captured by PanResponder during render.
+    // Retry bookkeeping is imperative state and belongs in an effect rather
+    // than the scope-switch callback used by the touch gesture handlers.
     coverageRetryCountRef.current = 0;
     if (coverageRetryTimerRef.current) {
       clearTimeout(coverageRetryTimerRef.current);
@@ -588,7 +742,14 @@ export default function HomeScreen() {
       const { layoutMeasurement, contentOffset, contentSize } =
         event.nativeEvent;
       const scrollY = Math.max(0, contentOffset.y);
-      rememberedHomeScrollOffsets[scope] = scrollY;
+      if (!restoredScrollRef.current) return;
+
+      const remembered = getRememberedHomeFeed(
+        scope,
+        language,
+        newsLocation,
+      );
+      remembered.scrollOffset = scrollY;
       homeScrollOffsetRef.current = scrollY;
       setShowTopButton(scrollY > SHOW_TOP_BUTTON_OFFSET);
 
@@ -612,7 +773,7 @@ export default function HomeScreen() {
         void loadFeed("more");
       }
     },
-    [loadFeed, scope],
+    [language, loadFeed, newsLocation, scope],
   );
 
   const desktop = width >= 1000;
@@ -839,7 +1000,13 @@ export default function HomeScreen() {
   );
 
   const scrollToTop = () => {
-    rememberedHomeScrollOffsets[scope] = 0;
+    const remembered = getRememberedHomeFeed(
+      scope,
+      language,
+      newsLocation,
+    );
+    remembered.scrollOffset = 0;
+    homeScrollOffsetRef.current = 0;
     restoredScrollRef.current = true;
     setShowTopButton(false);
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
@@ -851,6 +1018,7 @@ export default function HomeScreen() {
       style={[styles.screen, { backgroundColor: colors.background }]}
     >
       <FlatList
+        key={homeFeedMemoryKey(scope, language, newsLocation)}
         ref={listRef}
         style={styles.list}
         data={locationUsable ? remainingBatches : []}
@@ -918,20 +1086,36 @@ export default function HomeScreen() {
         }
         contentContainerStyle={styles.scrollContent}
         onContentSizeChange={() => {
-          const rememberedOffset = rememberedHomeScrollOffsets[scope];
           if (
             restoredScrollRef.current ||
-            rememberedOffset <= 0 ||
             articlesRef.current.length === 0
           ) {
             return;
           }
 
-          restoredScrollRef.current = true;
+          const remembered = getRememberedHomeFeed(
+            scope,
+            language,
+            newsLocation,
+          );
+          const rememberedOffset = remembered.scrollOffset;
+
+          if (rememberedOffset <= 0) {
+            restoredScrollRef.current = true;
+            return;
+          }
+
           requestAnimationFrame(() => {
             listRef.current?.scrollToOffset({
               offset: rememberedOffset,
               animated: false,
+            });
+            requestAnimationFrame(() => {
+              homeScrollOffsetRef.current = rememberedOffset;
+              restoredScrollRef.current = true;
+              setShowTopButton(
+                rememberedOffset > SHOW_TOP_BUTTON_OFFSET,
+              );
             });
           });
         }}
