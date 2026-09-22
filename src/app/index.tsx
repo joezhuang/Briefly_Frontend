@@ -779,6 +779,15 @@ export default function HomeScreen() {
   const desktop = width >= 1000;
   const tablet = width >= 700 && width < 1000;
   const mobileHeader = width < 480;
+  const showWebScopeArrows = Platform.OS === "web" && width >= 1000;
+  const webScopeArrowInset = Math.max(
+    14,
+    (width - layout.pageMax) / 2 - 58,
+  );
+  const scopeIndex = scopes.indexOf(scope);
+  const previousScope =
+    scopes[(scopeIndex - 1 + scopes.length) % scopes.length];
+  const nextScope = scopes[(scopeIndex + 1) % scopes.length];
   const lead = articles[0];
   const secondary = articles.slice(1, 3);
   const remaining = articles.slice(3);
@@ -1135,6 +1144,56 @@ export default function HomeScreen() {
         windowSize={5}
       />
 
+      {showWebScopeArrows && (
+        <>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Previous category: ${copy[previousScope]}`}
+            accessibilityHint="Switches to the previous news category and restores its saved position"
+            onPress={() => switchScopeByDirection(-1)}
+            style={({ pressed }) => [
+              styles.scopeArrowButton,
+              {
+                left: webScopeArrowInset,
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                opacity: pressed ? 0.64 : 0.9,
+              },
+            ]}
+          >
+            <Text
+              accessible={false}
+              style={[styles.scopeArrowText, { color: colors.text }]}
+            >
+              ‹
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Next category: ${copy[nextScope]}`}
+            accessibilityHint="Switches to the next news category and restores its saved position"
+            onPress={() => switchScopeByDirection(1)}
+            style={({ pressed }) => [
+              styles.scopeArrowButton,
+              {
+                right: webScopeArrowInset,
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                opacity: pressed ? 0.64 : 0.9,
+              },
+            ]}
+          >
+            <Text
+              accessible={false}
+              style={[styles.scopeArrowText, { color: colors.text }]}
+            >
+              ›
+            </Text>
+          </Pressable>
+        </>
+      )}
+
       {videoFloating && videoSession && (
         <FloatingStoryVideo
           url={videoSession.url}
@@ -1244,6 +1303,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   loadMoreSpacer: { height: 32 },
+  scopeArrowButton: {
+    position: "absolute",
+    top: "50%",
+    width: 48,
+    height: 48,
+    marginTop: -24,
+    borderRadius: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 12,
+  },
+  scopeArrowText: {
+    fontSize: 34,
+    lineHeight: 38,
+    fontWeight: "500",
+    marginTop: -2,
+  },
   topButton: {
     position: "absolute",
     right: 18,
