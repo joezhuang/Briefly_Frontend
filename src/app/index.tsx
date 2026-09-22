@@ -208,11 +208,11 @@ export default function HomeScreen() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const lastFetchedAt = useRef(initialHomeFeed.lastFetchedAt);
   const activeRequest = useRef(0);
-  const articlesRef = useRef<CanonicalArticle[]>([]);
+  const articlesRef = useRef<CanonicalArticle[]>(initialHomeFeed.articles);
   const listRef = useRef<FlatList<CanonicalArticle[]>>(null);
   const restoredScrollRef = useRef(initialHomeFeed.scrollOffset <= 0);
   const loadingMoreRef = useRef(false);
-  const hasMoreRef = useRef(false);
+  const hasMoreRef = useRef(initialHomeFeed.hasMore);
   const coverageRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const coverageRetryCountRef = useRef(0);
   const [coverageRetryTick, setCoverageRetryTick] = useState(0);
@@ -984,6 +984,7 @@ export default function HomeScreen() {
       style={[styles.screen, { backgroundColor: colors.background }]}
     >
       <FlatList
+        key={homeFeedMemoryKey(scope, language, newsLocation)}
         ref={listRef}
         style={styles.list}
         data={locationUsable ? remainingBatches : []}
