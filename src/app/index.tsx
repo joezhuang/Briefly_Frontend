@@ -1,9 +1,10 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   AppState,
   FlatList,
+  PanResponder,
   Platform,
   Pressable,
   RefreshControl,
@@ -11,7 +12,6 @@ import {
   Text,
   useWindowDimensions,
   View,
-  type GestureResponderEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -221,7 +221,9 @@ export default function HomeScreen() {
   const homeScrollOffsetRef = useRef(initialHomeFeed.scrollOffset);
   const videoSessionRef = useRef<HomeVideoSession | null>(null);
   const videoFloatingRef = useRef(false);
-  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [pendingSwipeDirection, setPendingSwipeDirection] = useState<
+    1 | -1 | null
+  >(null);
   const [videoSession, setVideoSession] = useState<HomeVideoSession | null>(null);
   const [videoFloating, setVideoFloating] = useState(false);
   const [videoResumeTime, setVideoResumeTime] = useState(0);
@@ -335,43 +337,51 @@ export default function HomeScreen() {
     [scope, switchScope],
   );
 
-  const handleSwipeTouchStart = useCallback(
-    (event: GestureResponderEvent) => {
-      if (Platform.OS === "web") return;
-      const touch = event.nativeEvent.touches[0] ?? event.nativeEvent;
-      swipeStartRef.current = { x: touch.pageX, y: touch.pageY };
-    },
+  const swipeResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          if (Platform.OS === "web") return false;
+          const horizontal = Math.abs(gestureState.dx);
+          const vertical = Math.abs(gestureState.dy);
+          return (
+            horizontal > 18 &&
+            horizontal > vertical * SWIPE_DIRECTION_RATIO
+          );
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (Platform.OS === "web") return;
+          const horizontal = Math.abs(gestureState.dx);
+          const vertical = Math.abs(gestureState.dy);
+          if (
+            horizontal < SWIPE_TRIGGER_DISTANCE ||
+            horizontal <= vertical * SWIPE_DIRECTION_RATIO
+          ) {
+            return;
+          }
+
+          setPendingSwipeDirection(gestureState.dx < 0 ? 1 : -1);
+        },
+        onPanResponderTerminationRequest: () => true,
+      }),
     [],
   );
 
-  const handleSwipeTouchEnd = useCallback(
-    (event: GestureResponderEvent) => {
-      if (Platform.OS === "web") return;
-      const start = swipeStartRef.current;
-      swipeStartRef.current = null;
-      if (!start) return;
+  useEffect(() => {
+    if (pendingSwipeDirection === null) return;
 
-      const touch = event.nativeEvent.changedTouches[0] ?? event.nativeEvent;
-      const dx = touch.pageX - start.x;
-      const dy = touch.pageY - start.y;
-      const horizontal = Math.abs(dx);
-      const vertical = Math.abs(dy);
+    const direction = pendingSwipeDirection;
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      setPendingSwipeDirection(null);
+      switchScopeByDirection(direction);
+    });
 
-      if (
-        horizontal < SWIPE_TRIGGER_DISTANCE ||
-        horizontal <= vertical * SWIPE_DIRECTION_RATIO
-      ) {
-        return;
-      }
-
-      switchScopeByDirection(dx < 0 ? 1 : -1);
-    },
-    [switchScopeByDirection],
-  );
-
-  const handleSwipeTouchCancel = useCallback(() => {
-    swipeStartRef.current = null;
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [pendingSwipeDirection, switchScopeByDirection]);
 
   const location = newsLocation.location;
   const localArea = location?.region || location?.city || "";
@@ -1004,9 +1014,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView
-      onTouchStart={handleSwipeTouchStart}
-      onTouchEnd={handleSwipeTouchEnd}
-      onTouchCancel={handleSwipeTouchCancel}
+      {...swipeResponder.panHandlers}
       style={[styles.screen, { backgroundColor: colors.background }]}
     >
       <FlatList
