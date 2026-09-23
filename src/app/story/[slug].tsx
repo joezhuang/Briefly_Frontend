@@ -5,7 +5,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { trackProductEvent } from "@/analytics/product-analytics";
 import {
-  getBrieflyAppConfig,
   getBriefRepairStatus,
   getCanonicalArticleByEventId,
   getCanonicalArticleBySlug,
@@ -14,7 +13,6 @@ import {
   getPodcastAnalysisStatus,
   requestBriefRepair,
   requestPodcastAnalysis,
-  type BrieflyAppConfig,
   type BriefRepairStatus,
   type PodcastAnalysisStatus,
 } from "@/api/briefly";
@@ -35,6 +33,7 @@ import { StoryAdSlot } from "@/components/story-ad-slot";
 import { WebTranslateButton } from "@/components/web-translate-button";
 import { useAnalysisReadiness } from "@/context/analysis-readiness";
 import { useBrieflyAuth } from "@/context/auth";
+import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { useReadingHistory } from "@/context/reading-history";
 import { useBrieflyTheme } from "@/context/theme";
@@ -175,6 +174,7 @@ export default function StoryDetailScreen() {
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const { ready: authReady, user, account } = useBrieflyAuth();
+  const { config: appConfig } = useBrieflyAppConfig();
   const { watchAnalysis, watchPodcast } = useAnalysisReadiness();
   const { recordArticle } = useReadingHistory();
 
@@ -186,7 +186,6 @@ export default function StoryDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
-  const [appConfig, setAppConfig] = useState<BrieflyAppConfig | null>(null);
   const [podcastState, setPodcastState] = useState<PodcastState>({
     key: "",
     value: null,
@@ -269,14 +268,6 @@ export default function StoryDetailScreen() {
     briefRepairState.key === briefRepairKey ? briefRepairState.value : null;
   const briefRepairBusy =
     !!briefRepairKey && briefRepairBusyKey === briefRepairKey;
-
-  useEffect(() => {
-    if (!authReady) return;
-
-    void getBrieflyAppConfig()
-      .then(setAppConfig)
-      .catch(() => setAppConfig(null));
-  }, [authReady]);
 
   useEffect(() => {
     if (!resolvedSlug || !authReady) return;

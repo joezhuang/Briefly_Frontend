@@ -34,6 +34,7 @@ import {
 import { AppHeader } from "@/components/app-header";
 import { ScreenState } from "@/components/screen-state";
 import { useBrieflyAuth } from "@/context/auth";
+import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyTheme } from "@/context/theme";
 import { layout } from "@/theme/tokens";
 
@@ -1010,6 +1011,7 @@ function RuntimeConfigEditor({
 export default function BetaDashboardScreen() {
   const { width } = useWindowDimensions();
   const { ready: authReady, user, account } = useBrieflyAuth();
+  const { applyConfig: applyRuntimeConfig } = useBrieflyAppConfig();
   const { colors } = useBrieflyTheme();
   const [days, setDays] = useState<(typeof WINDOWS)[number]>(7);
   const [snapshot, setSnapshot] = useState<BetaDashboardSnapshot | null>(null);
@@ -1245,6 +1247,7 @@ export default function BetaDashboardScreen() {
     try {
       const savedConfig = await updateBetaDashboardAppConfig(appConfig);
       setAppConfig(savedConfig);
+      applyRuntimeConfig(savedConfig);
       setConfigSaved(true);
     } catch {
       setConfigError(true);

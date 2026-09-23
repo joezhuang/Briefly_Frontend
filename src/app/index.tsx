@@ -17,7 +17,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { trackProductEvent } from "@/analytics/product-analytics";
 import {
-  getBrieflyAppConfig,
   getHomepageArticleFeed,
   type BrieflyAppConfig,
   type HomepageFeedScope,
@@ -38,6 +37,7 @@ import {
   type StoryTileVideoStart,
 } from "@/components/story-tile";
 import { useBrieflyAuth } from "@/context/auth";
+import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
@@ -186,6 +186,7 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
   const { ready: authReady, account } = useBrieflyAuth();
+  const { config: appConfig, refresh: refreshAppConfig } = useBrieflyAppConfig();
   const { colors } = useBrieflyTheme();
   const initialHomeFeed =
     findRememberedHomeFeed("top", language, {
@@ -199,7 +200,6 @@ export default function HomeScreen() {
     };
 
   const [scope, setScope] = useState<HomepageFeedScope>("top");
-  const [appConfig, setAppConfig] = useState<BrieflyAppConfig | null>(null);
   const [articles, setArticles] = useState<CanonicalArticle[]>(
     initialHomeFeed.articles,
   );
@@ -651,14 +651,6 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!authReady) return;
 
-    void getBrieflyAppConfig()
-      .then(setAppConfig)
-      .catch(() => setAppConfig(null));
-  }, [authReady]);
-
-  useEffect(() => {
-    if (!authReady) return;
-
     activeRequest.current += 1;
     const remembered = getRememberedHomeFeed(
       scope,
@@ -926,7 +918,10 @@ export default function HomeScreen() {
           <View style={styles.headerActions}>
             {Platform.OS === "web" && (
               <Pressable
-                onPress={() => void loadFeed("refresh")}
+                onPress={() => {
+                  void refreshAppConfig();
+                  void loadFeed("refresh");
+                }}
                 disabled={refreshing || !locationUsable}
                 style={({ pressed }) => [
                   styles.refreshButton,
@@ -1183,7 +1178,10 @@ export default function HomeScreen() {
           Platform.OS === "web" || !locationUsable ? undefined : (
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => void loadFeed("refresh")}
+              onRefresh={() => {
+                void refreshAppConfig();
+                void loadFeed("refresh");
+              }}
             />
           )
         }

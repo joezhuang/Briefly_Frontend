@@ -12,6 +12,10 @@ import { AppErrorBoundary } from "@/components/app-error-boundary";
 import { GlobalPodcastPlayer } from "@/components/global-podcast-player";
 import { AnalysisReadinessProvider } from "@/context/analysis-readiness";
 import { BrieflyAuthProvider, useBrieflyAuth } from "@/context/auth";
+import {
+  BrieflyAppConfigProvider,
+  useBrieflyAppConfig,
+} from "@/context/app-config";
 import { LanguageProvider } from "@/context/language";
 import { PodcastPlayerProvider } from "@/context/podcast-player";
 import { ReadingHistoryProvider } from "@/context/reading-history";
@@ -118,6 +122,7 @@ function ProductAnalyticsSession() {
 
 function AppStack() {
   const { resolvedMode } = useBrieflyTheme();
+  const { config: appConfig } = useBrieflyAppConfig();
 
   return (
     <>
@@ -136,7 +141,7 @@ function AppStack() {
         <Stack.Screen name="story/[slug]" />
         <Stack.Screen name="share/[versionId]" />
       </Stack>
-      <GlobalPodcastPlayer />
+      {appConfig?.podcast_enabled !== false && <GlobalPodcastPlayer />}
     </>
   );
 }
@@ -151,16 +156,18 @@ export default function RootLayout() {
         <LanguageProvider>
           <BrieflyThemeProvider>
             <BrieflyAuthProvider>
-              <ProductAnalyticsSession />
-              <PodcastPlayerProvider>
-                <AnalysisReadinessProvider>
-                  <ReadingHistoryProvider>
-                    <SavedArticlesProvider>
-                      <AppStack />
-                    </SavedArticlesProvider>
-                  </ReadingHistoryProvider>
-                </AnalysisReadinessProvider>
-              </PodcastPlayerProvider>
+              <BrieflyAppConfigProvider>
+                <ProductAnalyticsSession />
+                <PodcastPlayerProvider>
+                  <AnalysisReadinessProvider>
+                    <ReadingHistoryProvider>
+                      <SavedArticlesProvider>
+                        <AppStack />
+                      </SavedArticlesProvider>
+                    </ReadingHistoryProvider>
+                  </AnalysisReadinessProvider>
+                </PodcastPlayerProvider>
+              </BrieflyAppConfigProvider>
             </BrieflyAuthProvider>
           </BrieflyThemeProvider>
         </LanguageProvider>
