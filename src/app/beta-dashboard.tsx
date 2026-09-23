@@ -644,77 +644,6 @@ function TelemetryConfigEditor({
         }
       />
 
-      <SectionTitle
-        title="Promotions"
-        detail="Control promotion presentation and select store-configured native offers. Native prices and eligibility remain controlled by Apple, Google Play, and RevenueCat."
-      />
-      <ConfigToggle
-        label="Promotion campaign"
-        detail="Show the current promotion on the Briefly Pro upgrade screen."
-        value={config.promotion_enabled}
-        onValueChange={(value) => onChange("promotion_enabled", value)}
-      />
-      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
-        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
-          <Text style={[styles.configLabel, { color: colors.text }]}>Promotion title</Text>
-          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Short campaign heading shown on the upgrade screen.</Text>
-        </View>
-        <TextInput
-          value={config.promotion_title ?? ""}
-          onChangeText={(value) => onChange("promotion_title", value || null)}
-          placeholder="Limited-time Briefly Pro offer"
-          placeholderTextColor={colors.textMuted}
-          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
-        />
-      </View>
-      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
-        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
-          <Text style={[styles.configLabel, { color: colors.text }]}>Promotion message</Text>
-          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Explain the offer without hard-coding a price that may differ by store or country.</Text>
-        </View>
-        <TextInput
-          value={config.promotion_message ?? ""}
-          onChangeText={(value) => onChange("promotion_message", value || null)}
-          multiline
-          placeholder="Choose a plan to see the available store offer."
-          placeholderTextColor={colors.textMuted}
-          style={[styles.configInput, styles.configInputMultiline, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
-        />
-      </View>
-      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
-        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
-          <Text style={[styles.configLabel, { color: colors.text }]}>Native RevenueCat offering ID</Text>
-          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Optional offering to use on iOS/Android while this campaign is enabled. Create the underlying products/offers in the stores and attach them to this RevenueCat offering.</Text>
-        </View>
-        <TextInput
-          value={config.native_revenuecat_offering_id ?? ""}
-          onChangeText={(value) => onChange("native_revenuecat_offering_id", value.trim() || null)}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="briefly_promo"
-          placeholderTextColor={colors.textMuted}
-          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
-        />
-      </View>
-      <ConfigToggle
-        label="iOS offer-code redemption"
-        detail="Show Redeem offer code on iOS. Redemption uses Apple's system sheet."
-        value={config.ios_offer_code_redemption_enabled}
-        onValueChange={(value) => onChange("ios_offer_code_redemption_enabled", value)}
-      />
-      <ConfigToggle
-        label="Android promo-code hint"
-        detail="Tell Android users where to redeem an eligible Google Play subscription promo code during checkout."
-        value={config.android_promo_code_hint_enabled}
-        onValueChange={(value) => onChange("android_promo_code_hint_enabled", value)}
-      />
-      <ConfigToggle
-        label="Web Stripe promotion codes"
-        detail="Allow a promotion-code field in Stripe Checkout. Codes can be created in the Web discount codes section below."
-        value={config.web_promotion_codes_enabled}
-        onValueChange={(value) => onChange("web_promotion_codes_enabled", value)}
-      />
-
       <View style={styles.configActions}>
         <Pressable
           accessibilityRole="button"
@@ -1046,6 +975,77 @@ function RuntimeConfigEditor({
           style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
         />
       </View>
+
+      <SectionTitle
+        title="Promotions"
+        detail="Control promotion presentation and select store-configured native offers. Native prices and eligibility remain controlled by Apple, Google Play, and RevenueCat."
+      />
+      <ConfigToggle
+        label="Promotion campaign"
+        detail="Show the current promotion on the Briefly Pro upgrade screen."
+        value={config.promotion_enabled}
+        onValueChange={(value) => onChange("promotion_enabled", value)}
+      />
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Promotion title</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Short campaign heading shown on the upgrade screen.</Text>
+        </View>
+        <TextInput
+          value={config.promotion_title ?? ""}
+          onChangeText={(value) => onChange("promotion_title", value || null)}
+          placeholder="Limited-time Briefly Pro offer"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Promotion message</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Explain the offer without hard-coding a price that may differ by store or country.</Text>
+        </View>
+        <TextInput
+          value={config.promotion_message ?? ""}
+          onChangeText={(value) => onChange("promotion_message", value || null)}
+          multiline
+          placeholder="Choose a plan to see the available store offer."
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, styles.configInputMultiline, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Native RevenueCat offering ID</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Optional offering to use on iOS/Android while this campaign is enabled. Create the underlying products/offers in the stores and attach them to this RevenueCat offering.</Text>
+        </View>
+        <TextInput
+          value={config.native_revenuecat_offering_id ?? ""}
+          onChangeText={(value) => onChange("native_revenuecat_offering_id", value.trim() || null)}
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="briefly_promo"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+      <ConfigToggle
+        label="iOS offer-code redemption"
+        detail="Show Redeem offer code on iOS. Redemption uses Apple's system sheet."
+        value={config.ios_offer_code_redemption_enabled}
+        onValueChange={(value) => onChange("ios_offer_code_redemption_enabled", value)}
+      />
+      <ConfigToggle
+        label="Android promo-code hint"
+        detail="Tell Android users where to redeem an eligible Google Play subscription promo code during checkout."
+        value={config.android_promo_code_hint_enabled}
+        onValueChange={(value) => onChange("android_promo_code_hint_enabled", value)}
+      />
+      <ConfigToggle
+        label="Web Stripe promotion codes"
+        detail="Allow a promotion-code field in Stripe Checkout. Codes can be created in the Web discount codes section below."
+        value={config.web_promotion_codes_enabled}
+        onValueChange={(value) => onChange("web_promotion_codes_enabled", value)}
+      />
 
       <View style={styles.configActions}>
         <Pressable
