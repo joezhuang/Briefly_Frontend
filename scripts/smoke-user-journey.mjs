@@ -26,6 +26,17 @@ const checks = [
     needles: ["getHomepageArticleFeed", "StoryTile", 'trackProductEvent("feed_view"'],
   },
   {
+    name: "Homepage feed response contract matches multilingual backend",
+    file: "src/api/briefly.ts",
+    needles: [
+      'feed_language: "en" | "multilingual"',
+      'canonical_article_language?: "en"',
+      "/api/article-feed?",
+      "national_coverage?:",
+      "local_coverage?:",
+    ],
+  },
+  {
     name: "Story tile opens the canonical story route",
     file: "src/components/story-tile.tsx",
     needles: [
