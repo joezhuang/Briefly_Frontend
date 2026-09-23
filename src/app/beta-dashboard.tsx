@@ -774,13 +774,13 @@ function CustomerSupportConsole() {
               title="Billing event history"
               detail="Append-only lifecycle events, newest first. This history is diagnostic and does not grant access."
             />
-            {result.billing_events.length === 0 ? (
+            {(result.billing_events ?? []).length === 0 ? (
               <Text style={[styles.empty, { color: colors.textMuted }]}>
                 No billing lifecycle events have been recorded for this account yet.
               </Text>
             ) : (
               <View style={styles.errorList}>
-                {result.billing_events.map((event, index) => (
+                {(result.billing_events ?? []).map((event, index) => (
                   <View
                     key={
                       event.id != null
