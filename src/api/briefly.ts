@@ -567,7 +567,8 @@ export type HomepageArticleFeed = {
     } | null;
     error?: string | null;
   } | null;
-  feed_language: "en";
+  feed_language: "en" | "multilingual";
+  canonical_article_language?: "en";
   presentation_language?: string;
   generation_mode?: "lazy";
   feed_localization?: string;
