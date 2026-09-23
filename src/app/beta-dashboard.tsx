@@ -18,6 +18,7 @@ import {
   deactivateBetaDashboardStripePromotion,
   getBetaDashboard,
   getBetaDashboardAppConfig,
+  getBetaDashboardCustomerSupport,
   getBetaDashboardStripePromotions,
   getBetaDashboardTelemetryConfig,
   getBetaDashboardTelemetryHealth,
@@ -26,6 +27,7 @@ import {
   setCommunityContributionVisibility,
   updateBetaDashboardAppConfig,
   updateBetaDashboardTelemetryConfig,
+  type BetaDashboardCustomerSupport,
   type BetaDashboardErrorGroup,
   type BetaDashboardSnapshot,
   type BetaDashboardTelemetryConfig,
@@ -47,6 +49,7 @@ const DASHBOARD_TABS = [
   { id: "overview", label: "Overview" },
   { id: "social", label: "Social Beta" },
   { id: "operations", label: "Operations" },
+  { id: "support", label: "Support" },
   { id: "settings", label: "Settings" },
 ] as const;
 const SOCIAL_BETA_TABS = [
@@ -500,6 +503,338 @@ function CommunityModerationCard({
           </Text>
         )}
       </Pressable>
+    </View>
+  );
+}
+
+function supportProviderLabel(
+  provider: BetaDashboardCustomerSupport["lifecycle"]["provider"],
+) {
+  if (provider === "stripe") return "Web / Stripe";
+  if (provider === "app_store") return "App Store";
+  if (provider === "play_store") return "Google Play";
+  return "None";
+}
+
+function CustomerSupportConsole() {
+  const { colors } = useBrieflyTheme();
+  const [query, setQuery] = useState("");
+  const [result, setResult] =
+    useState<BetaDashboardCustomerSupport | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const search = async () => {
+    const normalized = query.trim();
+    if (normalized.length < 3 || loading) return;
+
+    setLoading(true);
+    setMessage(null);
+    try {
+      const next = await getBetaDashboardCustomerSupport(normalized);
+      setResult(next);
+    } catch (caught) {
+      setResult(null);
+      const text = caught instanceof Error ? caught.message : "";
+      setMessage(
+        text.includes("(404)")
+          ? "No Briefly account matched that exact email or user ID."
+          : "Customer support data is unavailable.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <View style={styles.supportConsole}>
+      <View
+        style={[
+          styles.supportSearch,
+          { borderColor: colors.border, backgroundColor: colors.surface },
+        ]}
+      >
+        <View style={styles.supportSearchCopy}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Find Briefly account
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Search by exact account email or Supabase user ID. This console is
+            read-only and only exposes Briefly account and billing fields.
+          </Text>
+        </View>
+        <View style={styles.supportSearchControls}>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={() => void search()}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder="person@example.com or user UUID"
+            placeholderTextColor={colors.textMuted}
+            style={[
+              styles.supportSearchInput,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.background,
+                color: colors.text,
+              },
+            ]}
+          />
+          <Pressable
+            accessibilityRole="button"
+            disabled={query.trim().length < 3 || loading}
+            onPress={() => void search()}
+            style={({ pressed }) => [
+              styles.supportSearchButton,
+              {
+                backgroundColor: colors.text,
+                opacity:
+                  query.trim().length < 3 || loading
+                    ? 0.45
+                    : pressed
+                      ? 0.7
+                      : 1,
+              },
+            ]}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color={colors.background} />
+            ) : (
+              <Text
+                style={[styles.configSaveText, { color: colors.background }]}
+              >
+                Search
+              </Text>
+            )}
+          </Pressable>
+        </View>
+        {!!message && (
+          <Text style={[styles.configStatus, { color: colors.textMuted }]}>
+            {message}
+          </Text>
+        )}
+      </View>
+
+      {result && (
+        <>
+          <View style={styles.metricsGrid}>
+            <MetricCard
+              label="Briefly Pro"
+              value={result.lifecycle.is_pro ? "Active" : "No"}
+              detail={result.lifecycle.lifecycle_state.replaceAll("_", " ")}
+            />
+            <MetricCard
+              label="Provider"
+              value={supportProviderLabel(result.lifecycle.provider)}
+              detail={result.lifecycle.plan || "No plan recorded"}
+            />
+            <MetricCard
+              label="Consistency"
+              value={result.consistency.in_sync ? "In sync" : "Review"}
+              detail={
+                result.consistency.in_sync
+                  ? "Profile and canonical billing state agree"
+                  : result.consistency.issues.length + " issue(s)"
+              }
+            />
+            <MetricCard
+              label="Ledger sources"
+              value={number(result.ledger_sources.length)}
+              detail={
+                number(result.lifecycle.active_platforms.length) +
+                " active provider(s)"
+              }
+            />
+          </View>
+
+          <View style={styles.twoColumn}>
+            <View
+              style={[
+                styles.panel,
+                { borderColor: colors.border, backgroundColor: colors.surface },
+              ]}
+            >
+              <SectionTitle title="Account" />
+              <View style={styles.supportDetailList}>
+                <Text style={[styles.supportDetail, { color: colors.text }]}>
+                  {result.profile.email || "No email"}
+                </Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  User ID: {result.profile.id}
+                </Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  Profile Pro: {result.profile.is_pro ? "yes" : "no"}
+                </Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  Profile platform:{" "}
+                  {supportProviderLabel(result.profile.briefly_pro_platform)}
+                </Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  Stripe customer: {result.profile.stripe_customer_id || "—"}
+                </Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  First used Briefly:{" "}
+                  {formatTimestamp(result.profile.first_used_briefly_at)}
+                </Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  Last active Briefly:{" "}
+                  {formatTimestamp(result.profile.last_active_briefly_at)}
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={[
+                styles.panel,
+                { borderColor: colors.border, backgroundColor: colors.surface },
+              ]}
+            >
+              <SectionTitle title="Canonical subscription" />
+              <View style={styles.supportDetailList}>
+                <Text style={[styles.supportDetail, { color: colors.text }]}>
+                  {result.lifecycle.lifecycle_state.replaceAll("_", " ")}
+                </Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  Provider: {supportProviderLabel(result.lifecycle.provider)}
+                </Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  Provider status: {result.lifecycle.provider_status || "—"}
+                </Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  Plan: {result.lifecycle.plan || "—"}
+                </Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  Renews: {formatTimestamp(result.lifecycle.renews_at)}
+                </Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  Access until: {formatTimestamp(result.lifecycle.access_until)}
+                </Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  Grace period end:{" "}
+                  {formatTimestamp(result.lifecycle.grace_period_end)}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <SectionTitle
+              title="Profile / ledger consistency"
+              detail="Read-only diagnostics. No entitlement or provider state is changed here."
+            />
+            <View
+              style={[
+                styles.supportConsistency,
+                {
+                  borderColor: result.consistency.in_sync
+                    ? colors.border
+                    : colors.accent,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+            >
+              {result.consistency.in_sync &&
+              result.consistency.warnings.length === 0 ? (
+                <Text style={[styles.empty, { color: colors.textMuted }]}>
+                  No consistency issues detected.
+                </Text>
+              ) : (
+                <>
+                  {result.consistency.issues.map((item) => (
+                    <Text
+                      key={"issue-" + item}
+                      style={[styles.supportIssue, { color: colors.text }]}
+                    >
+                      Issue · {item}
+                    </Text>
+                  ))}
+                  {result.consistency.warnings.map((item) => (
+                    <Text
+                      key={"warning-" + item}
+                      style={[styles.supportWarning, { color: colors.textMuted }]}
+                    >
+                      Note · {item}
+                    </Text>
+                  ))}
+                </>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <SectionTitle
+              title="Subscription ledger"
+              detail="Newest provider records first. Provider IDs are shown for support diagnosis."
+            />
+            {result.ledger_sources.length === 0 ? (
+              <Text style={[styles.empty, { color: colors.textMuted }]}>
+                No Briefly subscription ledger rows for this account yet.
+              </Text>
+            ) : (
+              <View style={styles.errorList}>
+                {result.ledger_sources.map((source, index) => (
+                  <View
+                    key={
+                      source.id != null
+                        ? String(source.id)
+                        : source.provider +
+                          "-" +
+                          (source.external_subscription_id || index)
+                    }
+                    style={[
+                      styles.errorCard,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface,
+                      },
+                    ]}
+                  >
+                    <View style={styles.errorTop}>
+                      <View style={styles.errorTitleWrap}>
+                        <Text
+                          style={[styles.errorType, { color: colors.accent }]}
+                        >
+                          {source.provider.toUpperCase()} ·{" "}
+                          {source.is_active ? "ACTIVE" : "INACTIVE"}
+                        </Text>
+                        <Text
+                          style={[styles.errorMessage, { color: colors.text }]}
+                        >
+                          {source.status || "unknown"}
+                          {source.plan ? " · " + source.plan : ""}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.supportDetailList}>
+                      <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                        Subscription: {source.external_subscription_id || "—"}
+                      </Text>
+                      <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                        Customer: {source.external_customer_id || "—"}
+                      </Text>
+                      <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                        Product: {source.product_id || "—"} · Price:{" "}
+                        {source.price_id || "—"}
+                      </Text>
+                      <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                        Period end: {formatTimestamp(source.current_period_end)}
+                      </Text>
+                      <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                        Last event: {source.provider_event_type || "—"} ·{" "}
+                        {formatTimestamp(source.provider_event_at)}
+                      </Text>
+                      <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                        Ledger updated: {formatTimestamp(source.updated_at)}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -2549,6 +2884,16 @@ export default function BetaDashboardScreen() {
                 </>
               )}
 
+              {dashboardTab === "support" && (
+                <View style={styles.section}>
+                  <SectionTitle
+                    title="Customer support"
+                    detail="Read-only account and billing diagnostics for Briefly users."
+                  />
+                  <CustomerSupportConsole />
+                </View>
+              )}
+
               {dashboardTab === "settings" && (
                 <>
                   <View style={styles.section}>
@@ -2792,6 +3137,46 @@ const styles = StyleSheet.create({
   activityValue: { fontSize: 12, fontWeight: "600" },
   track: { height: 7, borderRadius: 999, overflow: "hidden" },
   fill: { height: "100%", borderRadius: 999 },
+  supportConsole: { gap: 18 },
+  supportSearch: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 18,
+    padding: 16,
+    gap: 12,
+  },
+  supportSearchCopy: { gap: 4 },
+  supportSearchControls: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 10,
+  },
+  supportSearchInput: {
+    flexGrow: 1,
+    flexBasis: 320,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    fontSize: 13,
+  },
+  supportSearchButton: {
+    minHeight: 44,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  supportDetailList: { gap: 7 },
+  supportDetail: { fontSize: 16, lineHeight: 22, fontWeight: "800" },
+  supportConsistency: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 18,
+    padding: 16,
+    gap: 8,
+  },
+  supportIssue: { fontSize: 13, lineHeight: 20, fontWeight: "800" },
+  supportWarning: { fontSize: 13, lineHeight: 20, fontWeight: "600" },
   configPanel: {
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 18,

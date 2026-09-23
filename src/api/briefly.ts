@@ -785,6 +785,57 @@ export function getBrieflySubscriptionStatus() {
   return getJson<BrieflySubscriptionStatus>("/api/subscriptions/status");
 }
 
+
+export type BetaDashboardSubscriptionSource = {
+  id: number | null;
+  provider: "stripe" | "app_store" | "play_store";
+  external_customer_id: string | null;
+  external_subscription_id: string | null;
+  product_id: string | null;
+  price_id: string | null;
+  plan: string | null;
+  status: string | null;
+  is_active: boolean;
+  cancel_at_period_end: boolean;
+  started_at: string | null;
+  current_period_end: string | null;
+  grace_period_end: string | null;
+  canceled_at: string | null;
+  ended_at: string | null;
+  provider_event_id: string | null;
+  provider_event_type: string | null;
+  provider_event_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type BetaDashboardCustomerSupport = {
+  profile: {
+    id: string;
+    email: string | null;
+    is_pro: boolean;
+    briefly_pro_platform: "stripe" | "app_store" | "play_store" | null;
+    stripe_customer_id: string | null;
+    uses_briefly: boolean | null;
+    first_used_briefly_at: string | null;
+    last_active_briefly_at: string | null;
+  };
+  lifecycle: BrieflySubscriptionStatus;
+  ledger_sources: BetaDashboardSubscriptionSource[];
+  consistency: {
+    in_sync: boolean;
+    issues: string[];
+    warnings: string[];
+  };
+};
+
+export function getBetaDashboardCustomerSupport(query: string) {
+  const params = new URLSearchParams({ q: query.trim() });
+  return getJson<BetaDashboardCustomerSupport>(
+    "/api/beta-dashboard/customer-support?" + params.toString(),
+  );
+}
+
 export type BrieflyWebPrice = {
   plan: "monthly" | "yearly";
   unit_amount: number;

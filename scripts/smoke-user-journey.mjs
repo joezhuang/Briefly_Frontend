@@ -202,6 +202,16 @@ const checks = [
     ],
   },
   {
+    name: "Admin dashboard exposes read-only customer support diagnostics",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      "getBetaDashboardCustomerSupport",
+      'title="Customer support"',
+      '"Profile / ledger consistency"',
+      '"Subscription ledger"',
+    ],
+  },
+  {
     name: "Journey analytics names remain registered",
     file: "src/analytics/product-analytics.ts",
     needles: [
