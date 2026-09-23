@@ -208,6 +208,8 @@ const checks = [
       "getBetaDashboardCustomerSupport",
       'title="Customer support"',
       '"Profile / ledger consistency"',
+      '"Billing event history"',
+      "result.billing_events",
       '"Subscription ledger"',
     ],
   },
