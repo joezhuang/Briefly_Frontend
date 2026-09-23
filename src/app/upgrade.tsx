@@ -22,9 +22,11 @@ import { useBrieflyTheme } from "@/context/theme";
 import { safeReturnTo } from "@/navigation/return-to";
 import {
   beginBrieflySubscription,
+  getBrieflyPlanPrices,
   redeemBrieflyOfferCode,
   restoreBrieflySubscription,
   type BrieflyPlan,
+  type BrieflyPlanPrices,
 } from "@/subscriptions";
 
 function purchaseSourceLabel(
@@ -169,6 +171,10 @@ export default function UpgradeScreen() {
   const [busy, setBusy] = useState<BrieflyPlan | "restore" | "redeem" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stripeSynced, setStripeSynced] = useState(false);
+  const [planPrices, setPlanPrices] = useState<BrieflyPlanPrices>({
+    monthly: null,
+    yearly: null,
+  });
 
   useEffect(() => {
     if (!user) {
@@ -177,6 +183,34 @@ export default function UpgradeScreen() {
       );
     }
   }, [returnPath, user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let active = true;
+    const offeringIdentifier =
+      appConfig?.promotion_enabled
+        ? appConfig.native_revenuecat_offering_id
+        : null;
+
+    void getBrieflyPlanPrices(user.id, offeringIdentifier)
+      .then((prices) => {
+        if (active) setPlanPrices(prices);
+      })
+      .catch(() => {
+        if (active) {
+          setPlanPrices({ monthly: null, yearly: null });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    appConfig?.native_revenuecat_offering_id,
+    appConfig?.promotion_enabled,
+    user,
+  ]);
 
   useEffect(() => {
     if (!user || Platform.OS !== "web" || stripeSynced) return;
@@ -412,9 +446,19 @@ export default function UpgradeScreen() {
                   (busy !== null || confirmingPayment) && styles.disabled,
                 ]}
               >
-                <Text style={[styles.planTitle, { color: colors.text }]}>
-                  {t.monthly}
-                </Text>
+                <View style={styles.planHeader}>
+                  <Text style={[styles.planTitle, { color: colors.text }]}>
+                    {t.monthly}
+                  </Text>
+                  {planPrices.monthly ? (
+                    <Text style={[styles.planPrice, { color: colors.text }]}>
+                      {planPrices.monthly}
+                      <Text style={[styles.planPeriod, { color: colors.textMuted }]}>
+                        {" / month"}
+                      </Text>
+                    </Text>
+                  ) : null}
+                </View>
                 <Text style={[styles.actionText, { color: colors.accent }]}>
                   {busy === "monthly" ? "…" : t.chooseMonthly}
                 </Text>
@@ -432,9 +476,24 @@ export default function UpgradeScreen() {
                   (busy !== null || confirmingPayment) && styles.disabled,
                 ]}
               >
-                <Text style={[styles.planTitle, { color: colors.background }]}>
-                  {t.yearly}
-                </Text>
+                <View style={styles.planHeader}>
+                  <Text style={[styles.planTitle, { color: colors.background }]}>
+                    {t.yearly}
+                  </Text>
+                  {planPrices.yearly ? (
+                    <Text style={[styles.planPrice, { color: colors.background }]}>
+                      {planPrices.yearly}
+                      <Text
+                        style={[
+                          styles.planPeriod,
+                          { color: colors.background, opacity: 0.75 },
+                        ]}
+                      >
+                        {" / year"}
+                      </Text>
+                    </Text>
+                  ) : null}
+                </View>
                 <Text style={[styles.actionText, { color: colors.background }]}>
                   {busy === "yearly" ? "…" : t.chooseYearly}
                 </Text>
@@ -641,9 +700,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
+  planHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 12,
+  },
   planTitle: {
     fontSize: 22,
     fontWeight: "900",
+  },
+  planPrice: {
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  planPeriod: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   actionText: {
     fontSize: 14,

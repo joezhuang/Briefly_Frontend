@@ -1,9 +1,40 @@
 import {
   createBrieflyWebCheckout,
   createBrieflyWebPortal,
+  getBrieflyWebPrices,
+  type BrieflyWebPrice,
 } from "@/api/briefly";
 
 export type BrieflyPlan = "monthly" | "yearly";
+
+export type BrieflyPlanPrices = {
+  monthly: string | null;
+  yearly: string | null;
+};
+
+function formatWebPrice(price: BrieflyWebPrice) {
+  try {
+    const formatter = new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: price.currency,
+    });
+    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits;
+    return formatter.format(price.unit_amount / 10 ** fractionDigits);
+  } catch {
+    return `${price.currency} ${price.unit_amount}`;
+  }
+}
+
+export async function getBrieflyPlanPrices(
+  _userId: string,
+  _offeringIdentifier?: string | null,
+): Promise<BrieflyPlanPrices> {
+  const prices = await getBrieflyWebPrices();
+  return {
+    monthly: formatWebPrice(prices.monthly),
+    yearly: formatWebPrice(prices.yearly),
+  };
+}
 
 export async function beginBrieflySubscription(
   plan: BrieflyPlan,

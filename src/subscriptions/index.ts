@@ -8,6 +8,11 @@ import {
 
 export type BrieflyPlan = "monthly" | "yearly";
 
+export type BrieflyPlanPrices = {
+  monthly: string | null;
+  yearly: string | null;
+};
+
 let purchasesConfigured = false;
 let configuredUserId: string | null = null;
 
@@ -135,6 +140,36 @@ export async function getBrieflySubscriptionStatus(userId: string) {
   );
   await syncActivePurchaseWithBackend(active);
   return active;
+}
+
+export async function getBrieflyPlanPrices(
+  userId: string,
+  offeringIdentifier?: string | null,
+): Promise<BrieflyPlanPrices> {
+  await ensureConfigured(userId);
+
+  const offerings = await Purchases.getOfferings();
+  const requestedOffering = offeringIdentifier?.trim() || null;
+  const offering = requestedOffering
+    ? offerings.all[requestedOffering]
+    : offerings.current;
+
+  if (!offering) {
+    return { monthly: null, yearly: null };
+  }
+
+  const priceFor = (plan: BrieflyPlan) => {
+    const identifier = packageIdentifier(plan);
+    const selected = offering.availablePackages.find(
+      (item) => item.identifier === identifier,
+    );
+    return selected?.product?.priceString ?? null;
+  };
+
+  return {
+    monthly: priceFor("monthly"),
+    yearly: priceFor("yearly"),
+  };
 }
 
 export async function beginBrieflySubscription(

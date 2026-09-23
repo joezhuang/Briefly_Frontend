@@ -756,6 +756,20 @@ export function getCurrentBrieflyAccount() {
   return getJson<BrieflyAccountState>("/api/me");
 }
 
+export type BrieflyWebPrice = {
+  plan: "monthly" | "yearly";
+  unit_amount: number;
+  currency: string;
+  interval: "month" | "year" | string | null;
+};
+
+export function getBrieflyWebPrices() {
+  return getJson<{
+    monthly: BrieflyWebPrice;
+    yearly: BrieflyWebPrice;
+  }>("/api/subscriptions/web/prices");
+}
+
 export function createBrieflyWebCheckout(
   plan: "monthly" | "yearly",
   successUrl: string,

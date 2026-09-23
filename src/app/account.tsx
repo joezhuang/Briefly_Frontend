@@ -225,7 +225,25 @@ export default function AccountScreen() {
               {busy === "manage" ? <ActivityIndicator color={colors.text} /> : <Text style={[styles.buttonText, { color: colors.text }]}>Manage subscription</Text>}
             </Pressable>
           </View>
-        ) : null}
+        ) : (
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Briefly Pro</Text>
+            <Text style={[styles.body, { color: colors.textMuted }]}>View Briefly Pro features, current monthly and yearly prices, and available offers.</Text>
+            <Pressable
+              disabled={!user || busy !== null}
+              onPress={() => router.push("/upgrade?returnTo=/account")}
+              style={[
+                styles.primaryButton,
+                { backgroundColor: colors.accent },
+                (!user || busy !== null) && styles.disabled,
+              ]}
+            >
+              <Text style={[styles.primaryButtonText, { color: colors.background }]}>
+                View Briefly Pro plans
+              </Text>
+            </Pressable>
+          </View>
+        )}
 
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Account access</Text>
@@ -272,6 +290,8 @@ const styles = StyleSheet.create({
   body: { fontSize: 14, lineHeight: 21 },
   button: { minHeight: 46, borderWidth: 1, borderRadius: 999, alignItems: "center", justifyContent: "center", paddingHorizontal: 16, marginTop: 4 },
   buttonText: { fontSize: 14, fontWeight: "800" },
+  primaryButton: { minHeight: 46, borderRadius: 999, alignItems: "center", justifyContent: "center", paddingHorizontal: 16, marginTop: 4 },
+  primaryButtonText: { fontSize: 14, fontWeight: "900" },
   dangerButton: { minHeight: 46, borderWidth: 1, borderRadius: 999, alignItems: "center", justifyContent: "center", paddingHorizontal: 16, marginTop: 4 },
   dangerText: { color: "#c83b3b", fontSize: 14, fontWeight: "900" },
   disabled: { opacity: 0.5 },
