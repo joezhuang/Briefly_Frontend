@@ -355,7 +355,14 @@ export default function HomeScreen() {
     const preferred = available.includes(appConfig.default_feed_scope)
       ? appConfig.default_feed_scope
       : available[0];
-    switchScope(preferred);
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      switchScope(preferred);
+    });
+    return () => {
+      active = false;
+    };
   }, [appConfig, scope, switchScope]);
 
   const swipeResponder = useMemo(
