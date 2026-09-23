@@ -846,7 +846,7 @@ export type BetaDashboardCustomerSupport = {
   };
   lifecycle: BrieflySubscriptionStatus;
   ledger_sources: BetaDashboardSubscriptionSource[];
-  billing_events: BetaDashboardBillingEvent[];
+  billing_events?: BetaDashboardBillingEvent[];
   consistency: {
     in_sync: boolean;
     issues: string[];
