@@ -229,6 +229,14 @@ export default function StoryDetailScreen() {
   const loading = loadingKey !== requestKey && !error && !article;
   const isPro = account?.translation_entitled === true;
   const storyVideoEnabled = appConfig?.story_video_enabled !== false;
+  const floatingVideoEnabled = appConfig?.floating_video_enabled !== false;
+  const communityEnabled = appConfig?.community_enabled !== false;
+  const evidenceEnabled = appConfig?.evidence_enabled !== false;
+  const timelineEnabled = appConfig?.timeline_enabled !== false;
+  const coverageEnabled = appConfig?.coverage_enabled !== false;
+  const podcastEnabled = appConfig?.podcast_enabled !== false;
+  const translationEnabled = appConfig?.translation_enabled !== false;
+  const followingEnabled = appConfig?.following_enabled !== false;
   const showStoryAd =
     !isWeb &&
     appConfig?.ads_enabled === true &&
@@ -673,6 +681,17 @@ export default function StoryDetailScreen() {
     );
   }
 
+  if (appConfig?.maintenance_mode) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <ScreenState
+          title="Briefly is temporarily unavailable"
+          message={appConfig.maintenance_message ?? "We are carrying out a short maintenance update. Please try again soon."}
+        />
+      </SafeAreaView>
+    );
+  }
+
   if (!article || error) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -708,6 +727,7 @@ export default function StoryDetailScreen() {
   }
 
   const canToggleOriginal =
+    translationEnabled &&
     !article.canonical_stale &&
     !isWeb &&
     language !== "en" &&
@@ -722,7 +742,8 @@ export default function StoryDetailScreen() {
     ),
     storyVideoEnabled,
   );
-  const showGoogleTranslate = language !== "en" && !!translateSourceUrl;
+  const showGoogleTranslate =
+    translationEnabled && language !== "en" && !!translateSourceUrl;
   const storyToolsText = storyToolsCopy[language] ?? storyToolsCopy.en;
 
   return (
@@ -768,7 +789,7 @@ export default function StoryDetailScreen() {
               />
             )}
             <StaleStoryNotice article={displayedArticle} />
-            {!!resolvedEventId && (
+            {timelineEnabled && !!resolvedEventId && (
               <EventTimeline
                 eventId={resolvedEventId}
                 refreshKey={
@@ -811,11 +832,17 @@ export default function StoryDetailScreen() {
         autoStartVideo={resolvedAutoplayVideo}
         initialVideoTime={resolvedVideoTime}
         shareHref={currentStoryHref}
-        podcast={podcast}
-        podcastBusy={podcastBusy}
+        podcast={podcastEnabled ? podcast : null}
+        podcastBusy={podcastEnabled && podcastBusy}
         podcastPro={isPro}
         podcastSignedIn={!!user}
-        onPodcastAction={() => void handlePodcastAction()}
+        onPodcastAction={podcastEnabled ? () => void handlePodcastAction() : undefined}
+        podcastEnabled={podcastEnabled}
+        translationEnabled={translationEnabled}
+        evidenceEnabled={evidenceEnabled}
+        coverageEnabled={coverageEnabled}
+        followingEnabled={followingEnabled}
+        floatingVideoEnabled={floatingVideoEnabled}
         briefRepair={
           (displayedArticle.content_language ?? displayedArticle.language) === "en"
             ? briefRepair
@@ -829,7 +856,7 @@ export default function StoryDetailScreen() {
           ) : undefined
         }
         community={
-          !!displayedArticle.event_id ? (
+          communityEnabled && !!displayedArticle.event_id ? (
             <EventCommunityPanel
               eventId={displayedArticle.event_id}
               returnTo={currentStoryHref}

@@ -89,6 +89,16 @@ const feedCopy = {
 } as const;
 
 const scopes: HomepageFeedScope[] = ["top", "national", "local"];
+
+function enabledHomeScopes(config: BrieflyAppConfig | null): HomepageFeedScope[] {
+  if (!config) return scopes;
+  const enabled = scopes.filter((item) => {
+    if (item === "top") return config.top_feed_enabled !== false;
+    if (item === "national") return config.national_feed_enabled !== false;
+    return config.local_feed_enabled !== false;
+  });
+  return enabled.length > 0 ? enabled : ["top"];
+}
 const GEO_COVERAGE_RETRY_MS = 5000;
 const GEO_COVERAGE_MAX_RETRIES = 24;
 const storyKey = (article: CanonicalArticle) =>
@@ -329,13 +339,24 @@ export default function HomeScreen() {
 
   const switchScopeByDirection = useCallback(
     (direction: 1 | -1) => {
-      const currentIndex = scopes.indexOf(scope);
+      const available = enabledHomeScopes(appConfig);
+      const currentIndex = Math.max(0, available.indexOf(scope));
       const nextIndex =
-        (currentIndex + direction + scopes.length) % scopes.length;
-      switchScope(scopes[nextIndex]);
+        (currentIndex + direction + available.length) % available.length;
+      switchScope(available[nextIndex]);
     },
-    [scope, switchScope],
+    [appConfig, scope, switchScope],
   );
+
+  useEffect(() => {
+    if (!appConfig) return;
+    const available = enabledHomeScopes(appConfig);
+    if (available.includes(scope)) return;
+    const preferred = available.includes(appConfig.default_feed_scope)
+      ? appConfig.default_feed_scope
+      : available[0];
+    switchScope(preferred);
+  }, [appConfig, scope, switchScope]);
 
   const swipeResponder = useMemo(
     () =>
@@ -754,7 +775,7 @@ export default function HomeScreen() {
       setShowTopButton(scrollY > SHOW_TOP_BUTTON_OFFSET);
 
       const session = videoSessionRef.current;
-      if (session) {
+      if (session && appConfig?.floating_video_enabled !== false) {
         const currentCardY =
           session.anchorWindowY - (scrollY - session.anchorScrollOffset);
         const outsideViewport =
@@ -773,7 +794,7 @@ export default function HomeScreen() {
         void loadFeed("more");
       }
     },
-    [language, loadFeed, newsLocation, scope],
+    [appConfig?.floating_video_enabled, language, loadFeed, newsLocation, scope],
   );
 
   const desktop = width >= 1000;
@@ -784,16 +805,19 @@ export default function HomeScreen() {
     14,
     (width - layout.pageMax) / 2 - 58,
   );
-  const scopeIndex = scopes.indexOf(scope);
+  const availableScopes = enabledHomeScopes(appConfig);
+  const scopeIndex = Math.max(0, availableScopes.indexOf(scope));
   const previousScope =
-    scopes[(scopeIndex - 1 + scopes.length) % scopes.length];
-  const nextScope = scopes[(scopeIndex + 1) % scopes.length];
+    availableScopes[(scopeIndex - 1 + availableScopes.length) % availableScopes.length];
+  const nextScope =
+    availableScopes[(scopeIndex + 1) % availableScopes.length];
   const lead = articles[0];
   const secondary = articles.slice(1, 3);
   const remaining = articles.slice(3);
   const remainingBatches = chunkArticles(remaining);
   const userIsPro = account?.translation_entitled === true;
   const homepageVideoEnabled = appConfig?.homepage_video_enabled !== false;
+  const floatingVideoEnabled = appConfig?.floating_video_enabled !== false;
   const showHomeAds =
     Platform.OS !== "web" &&
     appConfig?.ads_enabled === true &&
@@ -829,7 +853,7 @@ export default function HomeScreen() {
 
   const scopeControls = (
     <View style={[styles.scopeTabs, !mobileHeader && styles.scopeTabsWide]}>
-      {scopes.map((item) => {
+      {availableScopes.map((item) => {
         const selected = scope === item;
         return (
           <Pressable
@@ -868,6 +892,13 @@ export default function HomeScreen() {
     >
       <AppHeader />
       <HomeInstallBanners />
+      {appConfig?.announcement_enabled && !!appConfig.announcement_text && (
+        <View style={[styles.announcement, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
+          <Text style={[styles.announcementText, { color: colors.text }]}>
+            {appConfig.announcement_text}
+          </Text>
+        </View>
+      )}
 
       <View style={[styles.header, mobileHeader && styles.headerCompact]}>
         <View style={styles.headingRow}>
@@ -1020,6 +1051,17 @@ export default function HomeScreen() {
     setShowTopButton(false);
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
+
+  if (appConfig?.maintenance_mode) {
+    return (
+      <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+        <ScreenState
+          title="Briefly is temporarily unavailable"
+          message={appConfig.maintenance_message ?? "We are carrying out a short maintenance update. Please try again soon."}
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView
@@ -1194,7 +1236,7 @@ export default function HomeScreen() {
         </>
       )}
 
-      {videoFloating && videoSession && (
+      {floatingVideoEnabled && videoFloating && videoSession && (
         <FloatingStoryVideo
           url={videoSession.url}
           posterUrl={videoSession.posterUrl}
@@ -1247,6 +1289,14 @@ const styles = StyleSheet.create({
   },
   pageWithoutBottomPadding: { paddingBottom: 0 },
   pageCompact: { paddingHorizontal: layout.pagePaddingCompact },
+  announcement: {
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
+  },
+  announcementText: { fontSize: 14, lineHeight: 20, fontWeight: "700" },
   header: { paddingTop: 22, paddingBottom: 20, gap: 18 },
   headerCompact: { paddingTop: 14, paddingBottom: 12, gap: 12 },
   headingRow: {

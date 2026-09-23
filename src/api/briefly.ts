@@ -831,6 +831,23 @@ export type BrieflyAppConfig = {
   ad_provider: string;
   homepage_video_enabled: boolean;
   story_video_enabled: boolean;
+  floating_video_enabled: boolean;
+  maintenance_mode: boolean;
+  maintenance_message: string | null;
+  announcement_enabled: boolean;
+  announcement_text: string | null;
+  community_enabled: boolean;
+  evidence_enabled: boolean;
+  timeline_enabled: boolean;
+  coverage_enabled: boolean;
+  podcast_enabled: boolean;
+  translation_enabled: boolean;
+  following_enabled: boolean;
+  search_enabled: boolean;
+  top_feed_enabled: boolean;
+  national_feed_enabled: boolean;
+  local_feed_enabled: boolean;
+  default_feed_scope: HomepageFeedScope;
 };
 
 export function getBrieflyAppConfig() {

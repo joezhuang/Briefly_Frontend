@@ -884,6 +884,92 @@ function RuntimeConfigEditor({
         value={config.story_video_enabled}
         onValueChange={(value) => onChange("story_video_enabled", value)}
       />
+      <ConfigToggle
+        label="Floating video"
+        detail="Allow a playing source video to detach into a floating player while scrolling."
+        value={config.floating_video_enabled}
+        onValueChange={(value) => onChange("floating_video_enabled", value)}
+      />
+
+      <SectionTitle
+        title="Remote operations"
+        detail="Operational controls that can change without shipping a new app binary."
+      />
+      <ConfigToggle
+        label="Maintenance mode"
+        detail="Show a maintenance screen instead of the main news experience."
+        value={config.maintenance_mode}
+        onValueChange={(value) => onChange("maintenance_mode", value)}
+      />
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Maintenance message</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Optional message shown while maintenance mode is enabled.</Text>
+        </View>
+        <TextInput
+          value={config.maintenance_message ?? ""}
+          onChangeText={(value) => onChange("maintenance_message", value || null)}
+          multiline
+          placeholder="Briefly is temporarily unavailable."
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+      <ConfigToggle
+        label="Announcement banner"
+        detail="Show a short operational or product message on the home feed."
+        value={config.announcement_enabled}
+        onValueChange={(value) => onChange("announcement_enabled", value)}
+      />
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Announcement text</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Keep this concise; it appears near the top of the feed.</Text>
+        </View>
+        <TextInput
+          value={config.announcement_text ?? ""}
+          onChangeText={(value) => onChange("announcement_text", value || null)}
+          multiline
+          placeholder="New Briefly features are now available."
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+
+      <SectionTitle
+        title="Story features"
+        detail="Turn shipped Briefly features on or off remotely."
+      />
+      <ConfigToggle label="Community" detail="Show community perspectives and contributions." value={config.community_enabled} onValueChange={(value) => onChange("community_enabled", value)} />
+      <ConfigToggle label="Evidence" detail="Show event evidence and uncertainty." value={config.evidence_enabled} onValueChange={(value) => onChange("evidence_enabled", value)} />
+      <ConfigToggle label="Timeline" detail="Show event timelines in Story tools." value={config.timeline_enabled} onValueChange={(value) => onChange("timeline_enabled", value)} />
+      <ConfigToggle label="Coverage" detail="Show publisher coverage inside Explore this event." value={config.coverage_enabled} onValueChange={(value) => onChange("coverage_enabled", value)} />
+      <ConfigToggle label="Podcast" detail="Show Deeply podcast analysis controls." value={config.podcast_enabled} onValueChange={(value) => onChange("podcast_enabled", value)} />
+      <ConfigToggle label="Translation" detail="Show Briefly translation controls and notices." value={config.translation_enabled} onValueChange={(value) => onChange("translation_enabled", value)} />
+      <ConfigToggle label="Following" detail="Allow users to follow living events." value={config.following_enabled} onValueChange={(value) => onChange("following_enabled", value)} />
+
+      <SectionTitle
+        title="Home feeds"
+        detail="Control which top-level news feeds are available."
+      />
+      <ConfigToggle label="Top feed" detail="Show the Top feed." value={config.top_feed_enabled} onValueChange={(value) => onChange("top_feed_enabled", value)} />
+      <ConfigToggle label="National feed" detail="Show the National feed." value={config.national_feed_enabled} onValueChange={(value) => onChange("national_feed_enabled", value)} />
+      <ConfigToggle label="Local feed" detail="Show the Local feed." value={config.local_feed_enabled} onValueChange={(value) => onChange("local_feed_enabled", value)} />
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Default feed</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Use top, national, or local. If disabled, Briefly falls back to the first enabled feed.</Text>
+        </View>
+        <TextInput
+          value={config.default_feed_scope}
+          onChangeText={(value) => onChange("default_feed_scope", value.toLowerCase().replace(/[^a-z]/g, "") as BrieflyAppConfig["default_feed_scope"])}
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="top"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
 
       <View style={styles.configActions}>
         <Pressable
