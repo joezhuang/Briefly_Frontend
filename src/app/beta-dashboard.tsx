@@ -976,174 +976,6 @@ function RuntimeConfigEditor({
         />
       </View>
 
-      <SectionTitle
-        title="Promotions"
-        detail="Control promotion presentation and select store-configured native offers. Native prices and eligibility remain controlled by Apple, Google Play, and RevenueCat."
-      />
-      <View
-        style={[
-          styles.promotionGuide,
-          { borderColor: colors.border, backgroundColor: colors.background },
-        ]}
-      >
-        <Text style={[styles.promotionGuideTitle, { color: colors.text }]}>
-          Start here — choose the platform you want to discount
-        </Text>
-        <Text style={[styles.promotionGuideIntro, { color: colors.textMuted }]}>
-          Promotion campaign controls what Briefly shows. It does not create an
-          App Store or Google Play price by itself.
-        </Text>
-
-        <View style={styles.promotionGuideGrid}>
-          <View style={[styles.promotionGuideCard, { borderColor: colors.border }]}>
-            <Text style={[styles.promotionGuidePlatform, { color: colors.accent }]}>
-              WEB · STRIPE
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              1. Turn on “Web Stripe promotion codes”.
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              2. Save runtime config.
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              3. Scroll to “Web discount codes” below and create a code such as SAVE20.
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              4. Users enter that code in Stripe Checkout.
-            </Text>
-            <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
-              This is the only section here that directly creates a discount percentage.
-            </Text>
-          </View>
-
-          <View style={[styles.promotionGuideCard, { borderColor: colors.border }]}>
-            <Text style={[styles.promotionGuidePlatform, { color: colors.accent }]}>
-              IOS · APP STORE + REVENUECAT
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              1. Create the subscription offer or offer code in App Store Connect.
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              2. Make that product/offer available through a RevenueCat offering.
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              3. Paste that RevenueCat offering ID into “Native RevenueCat offering ID”.
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              4. Turn on “Promotion campaign”, then save.
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              5. Turn on “iOS offer-code redemption” only if you want the Redeem offer code button.
-            </Text>
-          </View>
-
-          <View style={[styles.promotionGuideCard, { borderColor: colors.border }]}>
-            <Text style={[styles.promotionGuidePlatform, { color: colors.accent }]}>
-              ANDROID · GOOGLE PLAY + REVENUECAT
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              1. Create the subscription base-plan offer or promotion in Google Play.
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              2. Make the promotional product available through a RevenueCat offering.
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              3. Paste that RevenueCat offering ID into “Native RevenueCat offering ID”.
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              4. Turn on “Promotion campaign”, then save.
-            </Text>
-            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-              5. “Android promo-code hint” only shows redemption guidance; it does not create the Google Play discount.
-            </Text>
-          </View>
-        </View>
-
-        <View style={[styles.promotionGuideSummary, { borderTopColor: colors.border }]}>
-          <Text style={[styles.promotionGuideSummaryTitle, { color: colors.text }]}>
-            What the fields below do
-          </Text>
-          <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
-            Promotion campaign = show the campaign and use the promotional RevenueCat offering on native.
-          </Text>
-          <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
-            Promotion title/message = marketing copy only; do not type a fixed price unless it is valid for every storefront you target.
-          </Text>
-          <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
-            Native RevenueCat offering ID = exact RevenueCat offering identifier to use for iOS/Android while the campaign is on. Leave blank to keep the normal current offering.
-          </Text>
-          <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
-            Web Stripe promotion codes = whether Stripe Checkout accepts codes created in the Web discount codes section.
-          </Text>
-        </View>
-      </View>
-      <ConfigToggle
-        label="Promotion campaign"
-        detail="Show the current promotion on the Briefly Pro upgrade screen."
-        value={config.promotion_enabled}
-        onValueChange={(value) => onChange("promotion_enabled", value)}
-      />
-      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
-        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
-          <Text style={[styles.configLabel, { color: colors.text }]}>Promotion title</Text>
-          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Short campaign heading shown on the upgrade screen.</Text>
-        </View>
-        <TextInput
-          value={config.promotion_title ?? ""}
-          onChangeText={(value) => onChange("promotion_title", value || null)}
-          placeholder="Limited-time Briefly Pro offer"
-          placeholderTextColor={colors.textMuted}
-          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
-        />
-      </View>
-      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
-        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
-          <Text style={[styles.configLabel, { color: colors.text }]}>Promotion message</Text>
-          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Explain the offer without hard-coding a price that may differ by store or country.</Text>
-        </View>
-        <TextInput
-          value={config.promotion_message ?? ""}
-          onChangeText={(value) => onChange("promotion_message", value || null)}
-          multiline
-          placeholder="Choose a plan to see the available store offer."
-          placeholderTextColor={colors.textMuted}
-          style={[styles.configInput, styles.configInputMultiline, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
-        />
-      </View>
-      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
-        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
-          <Text style={[styles.configLabel, { color: colors.text }]}>Native RevenueCat offering ID</Text>
-          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Optional offering to use on iOS/Android while this campaign is enabled. Create the underlying products/offers in the stores and attach them to this RevenueCat offering.</Text>
-        </View>
-        <TextInput
-          value={config.native_revenuecat_offering_id ?? ""}
-          onChangeText={(value) => onChange("native_revenuecat_offering_id", value.trim() || null)}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="briefly_promo"
-          placeholderTextColor={colors.textMuted}
-          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
-        />
-      </View>
-      <ConfigToggle
-        label="iOS offer-code redemption"
-        detail="Show Redeem offer code on iOS. Redemption uses Apple's system sheet."
-        value={config.ios_offer_code_redemption_enabled}
-        onValueChange={(value) => onChange("ios_offer_code_redemption_enabled", value)}
-      />
-      <ConfigToggle
-        label="Android promo-code hint"
-        detail="Tell Android users where to redeem an eligible Google Play subscription promo code during checkout."
-        value={config.android_promo_code_hint_enabled}
-        onValueChange={(value) => onChange("android_promo_code_hint_enabled", value)}
-      />
-      <ConfigToggle
-        label="Web Stripe promotion codes"
-        detail="Allow a promotion-code field in Stripe Checkout. Codes can be created in the Web discount codes section below."
-        value={config.web_promotion_codes_enabled}
-        onValueChange={(value) => onChange("web_promotion_codes_enabled", value)}
-      />
-
       <View style={styles.configActions}>
         <Pressable
           accessibilityRole="button"
@@ -1175,6 +1007,308 @@ function RuntimeConfigEditor({
             Save failed. Current settings were not replaced in the editor.
           </Text>
         )}
+      </View>
+    </View>
+  );
+}
+
+function PromotionsEditor({
+  config,
+  loading,
+  saving,
+  error,
+  saved,
+  stripeItems,
+  stripeLoading,
+  stripeError,
+  stripeCreating,
+  busyStripeId,
+  onChange,
+  onSave,
+  onCreateStripe,
+  onDeactivateStripe,
+}: {
+  config: BrieflyAppConfig | null;
+  loading: boolean;
+  saving: boolean;
+  error: boolean;
+  saved: boolean;
+  stripeItems: StripePromotion[];
+  stripeLoading: boolean;
+  stripeError: boolean;
+  stripeCreating: boolean;
+  busyStripeId: string | null;
+  onChange: <K extends keyof BrieflyAppConfig>(
+    key: K,
+    value: BrieflyAppConfig[K],
+  ) => void;
+  onSave: () => void;
+  onCreateStripe: (input: {
+    code: string;
+    percent_off: number;
+    duration: "once" | "forever";
+    max_redemptions: number | null;
+  }) => void;
+  onDeactivateStripe: (item: StripePromotion) => void;
+}) {
+  const { colors } = useBrieflyTheme();
+  const { width } = useWindowDimensions();
+  const stackWideFields = width < 640;
+
+  if (loading && !config) {
+    return <ScreenState loading message="Loading promotion controls…" />;
+  }
+
+  if (!config) {
+    return (
+      <Text style={[styles.empty, { color: colors.textMuted }]}>
+        Promotion controls are unavailable.
+      </Text>
+    );
+  }
+
+  return (
+    <View style={styles.promotionManager}>
+      <View
+        style={[
+          styles.configPanel,
+          { borderColor: colors.border, backgroundColor: colors.surface },
+        ]}
+      >
+        <View
+          style={[
+            styles.promotionGuide,
+            { borderColor: colors.border, backgroundColor: colors.background },
+          ]}
+        >
+          <Text style={[styles.promotionGuideTitle, { color: colors.text }]}>
+            Start here — choose the platform you want to discount
+          </Text>
+          <Text style={[styles.promotionGuideIntro, { color: colors.textMuted }]}>
+            Briefly controls when a campaign is shown and which native RevenueCat
+            offering is selected. Apple and Google still control native prices and
+            eligibility.
+          </Text>
+
+          <View style={styles.promotionGuideGrid}>
+            <View style={[styles.promotionGuideCard, { borderColor: colors.border }]}>
+              <Text style={[styles.promotionGuidePlatform, { color: colors.accent }]}>
+                WEB · STRIPE
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                1. Turn on “Accept Stripe promotion codes” below.
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                2. Save promotion settings.
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                3. In “Web / Stripe discount codes” in this same section, create a code such as SAVE20.
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                4. Users enter that code in Stripe Checkout.
+              </Text>
+              <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
+                Web is the only platform where Briefly directly creates the discount percentage.
+              </Text>
+            </View>
+
+            <View style={[styles.promotionGuideCard, { borderColor: colors.border }]}>
+              <Text style={[styles.promotionGuidePlatform, { color: colors.accent }]}>
+                IOS · APP STORE + REVENUECAT
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                1. Create the subscription offer or offer code in App Store Connect.
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                2. Make that product/offer available through a RevenueCat offering.
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                3. Paste the exact RevenueCat offering ID below.
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                4. Turn on “Promotion campaign”, then save promotion settings.
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                5. Turn on “iOS offer-code redemption” only when you want the Redeem offer code button.
+              </Text>
+            </View>
+
+            <View style={[styles.promotionGuideCard, { borderColor: colors.border }]}>
+              <Text style={[styles.promotionGuidePlatform, { color: colors.accent }]}>
+                ANDROID · GOOGLE PLAY + REVENUECAT
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                1. Create the subscription offer or promotion in Google Play.
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                2. Make the promotional product available through a RevenueCat offering.
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                3. Paste the exact RevenueCat offering ID below.
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                4. Turn on “Promotion campaign”, then save promotion settings.
+              </Text>
+              <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+                5. “Android promo-code guidance” only explains redemption; it does not create the Google Play discount.
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={[styles.promotionSubheader, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.promotionSubheaderTitle, { color: colors.text }]}>
+            1. Campaign presentation
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            These settings control what users see on the Briefly Pro upgrade screen.
+          </Text>
+        </View>
+
+        <ConfigToggle
+          label="Promotion campaign"
+          detail="Show the campaign on the Pro upgrade screen. On iOS/Android, also use the RevenueCat offering ID below when one is provided."
+          value={config.promotion_enabled}
+          onValueChange={(value) => onChange("promotion_enabled", value)}
+        />
+
+        <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+          <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+            <Text style={[styles.configLabel, { color: colors.text }]}>Promotion title</Text>
+            <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+              Short marketing heading shown on the upgrade screen. Example: “Launch offer”.
+            </Text>
+          </View>
+          <TextInput
+            value={config.promotion_title ?? ""}
+            onChangeText={(value) => onChange("promotion_title", value || null)}
+            placeholder="Limited-time Briefly Pro offer"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+          />
+        </View>
+
+        <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+          <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+            <Text style={[styles.configLabel, { color: colors.text }]}>Promotion message</Text>
+            <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+              Supporting marketing text. Avoid hard-coding a native price because prices can vary by storefront and currency.
+            </Text>
+          </View>
+          <TextInput
+            value={config.promotion_message ?? ""}
+            onChangeText={(value) => onChange("promotion_message", value || null)}
+            multiline
+            placeholder="Choose a plan to see the available offer."
+            placeholderTextColor={colors.textMuted}
+            style={[styles.configInput, styles.configInputMultiline, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+          />
+        </View>
+
+        <View style={[styles.promotionSubheader, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.promotionSubheaderTitle, { color: colors.text }]}>
+            2. iOS / Android
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Configure the actual native offer in Apple/Google first, then connect it through RevenueCat here.
+          </Text>
+        </View>
+
+        <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+          <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+            <Text style={[styles.configLabel, { color: colors.text }]}>Native RevenueCat offering ID</Text>
+            <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+              Exact RevenueCat offering identifier to use while Promotion campaign is ON. Example: briefly_promo. Leave blank to keep RevenueCat’s normal current offering.
+            </Text>
+          </View>
+          <TextInput
+            value={config.native_revenuecat_offering_id ?? ""}
+            onChangeText={(value) => onChange("native_revenuecat_offering_id", value.trim() || null)}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder="briefly_promo"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+          />
+        </View>
+
+        <ConfigToggle
+          label="iOS offer-code redemption"
+          detail="Show “Redeem offer code” on iOS. Apple’s system redemption sheet handles the code."
+          value={config.ios_offer_code_redemption_enabled}
+          onValueChange={(value) => onChange("ios_offer_code_redemption_enabled", value)}
+        />
+        <ConfigToggle
+          label="Android promo-code guidance"
+          detail="Show users guidance about Google Play promo-code redemption. This does not create or change a Google Play offer."
+          value={config.android_promo_code_hint_enabled}
+          onValueChange={(value) => onChange("android_promo_code_hint_enabled", value)}
+        />
+
+        <View style={[styles.promotionSubheader, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.promotionSubheaderTitle, { color: colors.text }]}>
+            3. Web / Stripe
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Briefly can create and manage Stripe percentage-off codes directly.
+          </Text>
+        </View>
+
+        <ConfigToggle
+          label="Accept Stripe promotion codes"
+          detail="When ON, new Stripe Checkout sessions show a promotion-code field. Create the actual codes immediately below."
+          value={config.web_promotion_codes_enabled}
+          onValueChange={(value) => onChange("web_promotion_codes_enabled", value)}
+        />
+
+        <View style={styles.configActions}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={saving}
+            onPress={onSave}
+            style={({ pressed }) => [
+              styles.configSaveButton,
+              {
+                backgroundColor: colors.text,
+                opacity: saving ? 0.5 : pressed ? 0.72 : 1,
+              },
+            ]}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color={colors.background} />
+            ) : (
+              <Text style={[styles.configSaveText, { color: colors.background }]}>
+                Save promotion settings
+              </Text>
+            )}
+          </Pressable>
+          {saved && !error && (
+            <Text style={[styles.configStatus, { color: colors.textMuted }]}>
+              Saved. Briefly clients pick up these settings through runtime config.
+            </Text>
+          )}
+          {error && (
+            <Text style={[styles.configStatus, { color: colors.accent }]}>
+              Save failed. Promotion settings were not updated remotely.
+            </Text>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.promotionStripeSection}>
+        <SectionTitle
+          title="Web / Stripe discount codes"
+          detail="Create, review, and deactivate the actual percentage-off codes used by Stripe Checkout."
+        />
+        <StripePromotionEditor
+          items={stripeItems}
+          loading={stripeLoading}
+          error={stripeError}
+          creating={stripeCreating}
+          busyId={busyStripeId}
+          onCreate={onCreateStripe}
+          onDeactivate={onDeactivateStripe}
+        />
       </View>
     </View>
   );
@@ -1244,7 +1378,7 @@ function StripePromotionEditor({
           4. Optionally set a total redemption limit.
         </Text>
         <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-          5. Press “Create Stripe code”. It becomes usable immediately in new Stripe Checkout sessions while Web Stripe promotion codes is enabled.
+          5. Press “Create Stripe code”. It becomes usable immediately in new Stripe Checkout sessions while “Accept Stripe promotion codes” is ON.
         </Text>
         <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
           Deactivating a code prevents new redemptions; it does not rewrite subscriptions that already used the code.
@@ -2435,17 +2569,24 @@ export default function BetaDashboardScreen() {
 
                   <View style={styles.section}>
                     <SectionTitle
-                      title="Web discount codes"
-                      detail="Create and deactivate percentage-off Stripe promotion codes for Briefly Pro web checkout. These do not change App Store or Google Play prices."
+                      title="Promotions"
+                      detail="One place to control campaign messaging, native App Store / Google Play offers through RevenueCat, and web Stripe discount codes."
                     />
-                    <StripePromotionEditor
-                      items={stripePromotions}
-                      loading={stripePromotionsLoading}
-                      error={stripePromotionsError}
-                      creating={stripePromotionCreating}
-                      busyId={busyStripePromotionId}
-                      onCreate={(input) => void createStripePromotion(input)}
-                      onDeactivate={(item) => void deactivateStripePromotion(item)}
+                    <PromotionsEditor
+                      config={appConfig}
+                      loading={configLoading}
+                      saving={configSaving}
+                      error={configError}
+                      saved={configSaved}
+                      stripeItems={stripePromotions}
+                      stripeLoading={stripePromotionsLoading}
+                      stripeError={stripePromotionsError}
+                      stripeCreating={stripePromotionCreating}
+                      busyStripeId={busyStripePromotionId}
+                      onChange={changeAppConfig}
+                      onSave={() => void saveAppConfig()}
+                      onCreateStripe={(input) => void createStripePromotion(input)}
+                      onDeactivateStripe={(item) => void deactivateStripePromotion(item)}
                     />
                   </View>
 
@@ -2766,6 +2907,19 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 12,
     lineHeight: 18,
+  },
+  promotionManager: { gap: 18 },
+  promotionStripeSection: { gap: 10 },
+  promotionSubheader: {
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 4,
+  },
+  promotionSubheaderTitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "900",
   },
   promotionGuide: {
     marginHorizontal: 16,
