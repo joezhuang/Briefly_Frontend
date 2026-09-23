@@ -18,6 +18,7 @@ import {
 import { trackProductEvent } from "@/analytics/product-analytics";
 import { BrieflyMediaFallback } from "@/components/briefly-brand";
 import { StoryVideo } from "@/components/story-video";
+import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import type { CanonicalArticle } from "@/models/article";
 import { shareBrieflyStory } from "@/navigation/platform-share";
@@ -144,6 +145,9 @@ export function StoryTile({
   onVideoStop,
 }: Props) {
   const { language, t } = useBrieflyLanguage();
+  const { config: appConfig } = useBrieflyAppConfig();
+  const communityEnabled = appConfig?.community_enabled !== false;
+  const translationEnabled = appConfig?.translation_enabled !== false;
   const [translation, setTranslation] = useState<CardTranslation | null>(null);
   const [showTranslation, setShowTranslation] = useState(false);
   const [translating, setTranslating] = useState(false);
@@ -207,6 +211,7 @@ export function StoryTile({
     presentationLanguage,
   );
   const showTranslate =
+    translationEnabled &&
     !!presentationLanguage &&
     (metadataLanguageMismatch || visibleHeadlineMismatch);
 
@@ -430,7 +435,7 @@ export function StoryTile({
               </Pressable>
             )}
 
-            {articleReady && (
+            {communityEnabled && articleReady && (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={copy.community}
