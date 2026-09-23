@@ -809,6 +809,30 @@ export type BetaDashboardSubscriptionSource = {
   updated_at: string | null;
 };
 
+export type BetaDashboardBillingEvent = {
+  id: number | null;
+  provider: "stripe" | "app_store" | "play_store";
+  event_type:
+    | "purchase"
+    | "renewal"
+    | "cancellation"
+    | "expiration"
+    | "restore"
+    | "payment_failure"
+    | "provider_change";
+  provider_event_id: string | null;
+  provider_event_type: string | null;
+  external_customer_id: string | null;
+  external_subscription_id: string | null;
+  product_id: string | null;
+  price_id: string | null;
+  plan: string | null;
+  status: string | null;
+  previous_provider: "stripe" | "app_store" | "play_store" | null;
+  occurred_at: string | null;
+  recorded_at: string | null;
+};
+
 export type BetaDashboardCustomerSupport = {
   profile: {
     id: string;
@@ -822,6 +846,7 @@ export type BetaDashboardCustomerSupport = {
   };
   lifecycle: BrieflySubscriptionStatus;
   ledger_sources: BetaDashboardSubscriptionSource[];
+  billing_events: BetaDashboardBillingEvent[];
   consistency: {
     in_sync: boolean;
     issues: string[];
