@@ -84,6 +84,8 @@ export default function AccountScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] =
     useState<BrieflySubscriptionStatus | null>(null);
+  const subscriptionIsPro =
+    subscriptionStatus?.is_pro ?? account?.translation_entitled === true;
 
   useEffect(() => {
     if (!user) {
@@ -273,12 +275,12 @@ export default function AccountScreen() {
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.label, { color: colors.textMuted }]}>SIGNED IN AS</Text>
           <Text style={[styles.value, { color: colors.text }]}>{user?.email ?? "Not signed in"}</Text>
-          {account?.translation_entitled ? (
+          {subscriptionIsPro ? (
             <Text style={[styles.pro, { color: colors.accent }]}>Briefly Pro active</Text>
           ) : null}
         </View>
 
-        {account?.translation_entitled ? (
+        {subscriptionIsPro ? (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Manage subscription</Text>
 
