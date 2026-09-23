@@ -27,6 +27,15 @@ import {
   type BrieflyPlan,
 } from "@/subscriptions";
 
+function purchaseSourceLabel(
+  platform: "stripe" | "app_store" | "play_store" | null | undefined,
+) {
+  if (platform === "stripe") return "the web";
+  if (platform === "app_store") return "the App Store";
+  if (platform === "play_store") return "Google Play";
+  return "another platform";
+}
+
 const proCopy = {
   en: {
     subtitle: "Go beyond reading. Listen to deeper analysis and update important stories when you choose.",
@@ -244,14 +253,9 @@ export default function UpgradeScreen() {
     try {
       const latestAccount = await refreshAccount().catch(() => null);
       if (latestAccount?.translation_entitled) {
-        const source =
-          latestAccount.briefly_pro_platform === "stripe"
-            ? "the web"
-            : latestAccount.briefly_pro_platform === "app_store"
-              ? "the App Store"
-              : latestAccount.briefly_pro_platform === "play_store"
-                ? "Google Play"
-                : "another platform";
+        const source = purchaseSourceLabel(
+          latestAccount.briefly_pro_platform,
+        );
         setError(
           `Briefly Pro is already active through ${source}. Another subscription was not started.`,
         );

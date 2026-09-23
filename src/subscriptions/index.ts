@@ -28,6 +28,15 @@ function entitlementIdentifier() {
   );
 }
 
+function purchaseSourceLabel(
+  platform: "stripe" | "app_store" | "play_store" | null,
+) {
+  if (platform === "stripe") return "the web";
+  if (platform === "app_store") return "the App Store";
+  if (platform === "play_store") return "Google Play";
+  return "another platform";
+}
+
 function packageIdentifier(plan: BrieflyPlan) {
   if (plan === "monthly") {
     return (
@@ -135,14 +144,7 @@ export async function beginBrieflySubscription(
 ) {
   const eligibility = await getBrieflyPurchaseEligibility();
   if (!eligibility.can_purchase) {
-    const source =
-      eligibility.briefly_pro_platform === "stripe"
-        ? "the web"
-        : eligibility.briefly_pro_platform === "app_store"
-          ? "the App Store"
-          : eligibility.briefly_pro_platform === "play_store"
-            ? "Google Play"
-            : "another platform";
+    const source = purchaseSourceLabel(eligibility.briefly_pro_platform);
     throw new Error(
       `Briefly Pro is already active through ${source}. Another subscription was not started.`,
     );
