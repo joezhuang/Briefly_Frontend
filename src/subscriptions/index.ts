@@ -191,8 +191,7 @@ export async function redeemBrieflyOfferCode(userId: string) {
 
   console.info(`[Briefly RevenueCat] presenting iOS offer-code redemption user=${userId}`);
   await Purchases.presentCodeRedemptionSheet();
-  await Purchases.invalidateCustomerInfoCache();
-  const customerInfo = await Purchases.getCustomerInfo();
+  const { customerInfo } = await Purchases.syncPurchasesForResult();
   const active = hasBrieflyPro(customerInfo);
   await syncActivePurchaseWithBackend(active);
   return active;
