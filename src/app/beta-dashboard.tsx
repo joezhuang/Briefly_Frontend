@@ -516,6 +516,13 @@ function supportProviderLabel(
   return "None";
 }
 
+function supportBillingEventLabel(eventType: string) {
+  return eventType
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 function CustomerSupportConsole() {
   const { colors } = useBrieflyTheme();
   const [query, setQuery] = useState("");
@@ -760,6 +767,75 @@ function CustomerSupportConsole() {
                 </>
               )}
             </View>
+          </View>
+
+          <View style={styles.section}>
+            <SectionTitle
+              title="Billing event history"
+              detail="Append-only lifecycle events, newest first. This history is diagnostic and does not grant access."
+            />
+            {result.billing_events.length === 0 ? (
+              <Text style={[styles.empty, { color: colors.textMuted }]}>
+                No billing lifecycle events have been recorded for this account yet.
+              </Text>
+            ) : (
+              <View style={styles.errorList}>
+                {result.billing_events.map((event, index) => (
+                  <View
+                    key={
+                      event.id != null
+                        ? String(event.id)
+                        : event.provider +
+                          "-" +
+                          (event.provider_event_id || index)
+                    }
+                    style={[
+                      styles.errorCard,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface,
+                      },
+                    ]}
+                  >
+                    <View style={styles.errorTop}>
+                      <View style={styles.errorTitleWrap}>
+                        <Text
+                          style={[styles.errorType, { color: colors.accent }]}
+                        >
+                          {supportBillingEventLabel(event.event_type)} ·{" "}
+                          {supportProviderLabel(event.provider)}
+                        </Text>
+                        <Text
+                          style={[styles.errorMessage, { color: colors.text }]}
+                        >
+                          {formatTimestamp(event.occurred_at)}
+                          {event.plan ? " · " + event.plan : ""}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.supportDetailList}>
+                      <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                        Provider status: {event.status || "—"}
+                      </Text>
+                      <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                        Provider event: {event.provider_event_type || "—"}
+                      </Text>
+                      <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                        Subscription: {event.external_subscription_id || "—"}
+                      </Text>
+                      {event.previous_provider && (
+                        <Text
+                          style={[styles.metaText, { color: colors.textMuted }]}
+                        >
+                          Previous provider:{" "}
+                          {supportProviderLabel(event.previous_provider)}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
 
           <View style={styles.section}>
