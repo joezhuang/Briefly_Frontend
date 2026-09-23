@@ -980,6 +980,103 @@ function RuntimeConfigEditor({
         title="Promotions"
         detail="Control promotion presentation and select store-configured native offers. Native prices and eligibility remain controlled by Apple, Google Play, and RevenueCat."
       />
+      <View
+        style={[
+          styles.promotionGuide,
+          { borderColor: colors.border, backgroundColor: colors.background },
+        ]}
+      >
+        <Text style={[styles.promotionGuideTitle, { color: colors.text }]}>
+          Start here — choose the platform you want to discount
+        </Text>
+        <Text style={[styles.promotionGuideIntro, { color: colors.textMuted }]}>
+          Promotion campaign controls what Briefly shows. It does not create an
+          App Store or Google Play price by itself.
+        </Text>
+
+        <View style={styles.promotionGuideGrid}>
+          <View style={[styles.promotionGuideCard, { borderColor: colors.border }]}>
+            <Text style={[styles.promotionGuidePlatform, { color: colors.accent }]}>
+              WEB · STRIPE
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              1. Turn on “Web Stripe promotion codes”.
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              2. Save runtime config.
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              3. Scroll to “Web discount codes” below and create a code such as SAVE20.
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              4. Users enter that code in Stripe Checkout.
+            </Text>
+            <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
+              This is the only section here that directly creates a discount percentage.
+            </Text>
+          </View>
+
+          <View style={[styles.promotionGuideCard, { borderColor: colors.border }]}>
+            <Text style={[styles.promotionGuidePlatform, { color: colors.accent }]}>
+              IOS · APP STORE + REVENUECAT
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              1. Create the subscription offer or offer code in App Store Connect.
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              2. Make that product/offer available through a RevenueCat offering.
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              3. Paste that RevenueCat offering ID into “Native RevenueCat offering ID”.
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              4. Turn on “Promotion campaign”, then save.
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              5. Turn on “iOS offer-code redemption” only if you want the Redeem offer code button.
+            </Text>
+          </View>
+
+          <View style={[styles.promotionGuideCard, { borderColor: colors.border }]}>
+            <Text style={[styles.promotionGuidePlatform, { color: colors.accent }]}>
+              ANDROID · GOOGLE PLAY + REVENUECAT
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              1. Create the subscription base-plan offer or promotion in Google Play.
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              2. Make the promotional product available through a RevenueCat offering.
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              3. Paste that RevenueCat offering ID into “Native RevenueCat offering ID”.
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              4. Turn on “Promotion campaign”, then save.
+            </Text>
+            <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+              5. “Android promo-code hint” only shows redemption guidance; it does not create the Google Play discount.
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.promotionGuideSummary, { borderTopColor: colors.border }]}>
+          <Text style={[styles.promotionGuideSummaryTitle, { color: colors.text }]}>
+            What the fields below do
+          </Text>
+          <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
+            Promotion campaign = show the campaign and use the promotional RevenueCat offering on native.
+          </Text>
+          <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
+            Promotion title/message = marketing copy only; do not type a fixed price unless it is valid for every storefront you target.
+          </Text>
+          <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
+            Native RevenueCat offering ID = exact RevenueCat offering identifier to use for iOS/Android while the campaign is on. Leave blank to keep the normal current offering.
+          </Text>
+          <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
+            Web Stripe promotion codes = whether Stripe Checkout accepts codes created in the Web discount codes section.
+          </Text>
+        </View>
+      </View>
       <ConfigToggle
         label="Promotion campaign"
         detail="Show the current promotion on the Briefly Pro upgrade screen."
@@ -1125,6 +1222,35 @@ function StripePromotionEditor({
 
   return (
     <View style={[styles.configPanel, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+      <View
+        style={[
+          styles.stripeGuide,
+          { borderBottomColor: colors.border, backgroundColor: colors.background },
+        ]}
+      >
+        <Text style={[styles.promotionGuideTitle, { color: colors.text }]}>
+          How to create a web discount code
+        </Text>
+        <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+          1. Enter the customer-facing code, for example SAVE20.
+        </Text>
+        <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+          2. Enter the percentage discount.
+        </Text>
+        <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+          3. Choose “First invoice” for a one-time discount or “Forever” for recurring discounted invoices.
+        </Text>
+        <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+          4. Optionally set a total redemption limit.
+        </Text>
+        <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
+          5. Press “Create Stripe code”. It becomes usable immediately in new Stripe Checkout sessions while Web Stripe promotion codes is enabled.
+        </Text>
+        <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
+          Deactivating a code prevents new redemptions; it does not rewrite subscriptions that already used the code.
+        </Text>
+      </View>
+
       <View style={[styles.configFieldRow, stacked && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
         <View style={[styles.configCopy, stacked && styles.configCopyStacked]}>
           <Text style={[styles.configLabel, { color: colors.text }]}>Promotion code</Text>
@@ -2640,6 +2766,67 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 12,
     lineHeight: 18,
+  },
+  promotionGuide: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
+  },
+  promotionGuideTitle: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: "900",
+  },
+  promotionGuideIntro: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  promotionGuideGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  promotionGuideCard: {
+    flexGrow: 1,
+    flexBasis: 280,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
+  },
+  promotionGuidePlatform: {
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: "900",
+    letterSpacing: 0.7,
+  },
+  promotionGuideStep: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "650",
+  },
+  promotionGuideNote: {
+    fontSize: 11,
+    lineHeight: 17,
+  },
+  promotionGuideSummary: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 10,
+    gap: 5,
+  },
+  promotionGuideSummaryTitle: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "900",
+  },
+  stripeGuide: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 6,
   },
   promoChoiceRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   promoChoice: {
