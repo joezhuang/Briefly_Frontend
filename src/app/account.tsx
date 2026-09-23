@@ -82,24 +82,33 @@ export default function AccountScreen() {
     "manage" | "restore" | "delete" | "signout" | null
   >(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [subscriptionStatus, setSubscriptionStatus] =
-    useState<BrieflySubscriptionStatus | null>(null);
-  const subscriptionIsPro =
-    subscriptionStatus?.is_pro ?? account?.translation_entitled === true;
+  const [subscriptionSnapshot, setSubscriptionSnapshot] = useState<{
+    userId: string;
+    status: BrieflySubscriptionStatus;
+  } | null>(null);
+  const subscriptionStatus =
+    user && subscriptionSnapshot?.userId === user.id
+      ? subscriptionSnapshot.status
+      : null;
+  const subscriptionIsPro = user
+    ? (subscriptionStatus?.is_pro ?? account?.translation_entitled === true)
+    : false;
 
   useEffect(() => {
-    if (!user) {
-      setSubscriptionStatus(null);
-      return;
-    }
+    if (!user) return;
 
     let active = true;
+    const userId = user.id;
+
     void getBrieflySubscriptionStatus()
       .then((status) => {
-        if (active) setSubscriptionStatus(status);
+        if (active) {
+          setSubscriptionSnapshot({ userId, status });
+        }
       })
       .catch(() => {
-        if (active) setSubscriptionStatus(null);
+        // Keep the account-level entitlement as the fallback if lifecycle
+        // details are temporarily unavailable.
       });
 
     return () => {
