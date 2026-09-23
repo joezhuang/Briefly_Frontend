@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,7 +19,9 @@ import {
 } from "@/api/account";
 import {
   createBrieflyWebPortal,
+  getBrieflySubscriptionStatus,
   syncBrieflyWebSubscription,
+  type BrieflySubscriptionStatus,
 } from "@/api/briefly";
 import { clearBrieflyAccessToken } from "@/auth/session";
 import { supabase } from "@/auth/supabase";
@@ -36,6 +38,43 @@ const WEB_RETURN_URL =
 
 type ProPlatform = "app_store" | "play_store" | "stripe" | null;
 
+function providerLabel(platform: ProPlatform) {
+  if (platform === "stripe") return "Web";
+  if (platform === "app_store") return "App Store";
+  if (platform === "play_store") return "Google Play";
+  return "Unknown";
+}
+
+function lifecycleLabel(status: BrieflySubscriptionStatus | null) {
+  switch (status?.lifecycle_state) {
+    case "trialing":
+      return "Trial active";
+    case "active":
+      return "Active";
+    case "canceling":
+      return "Cancelled";
+    case "grace_period":
+      return "Payment issue — grace period";
+    case "past_due":
+      return "Payment issue";
+    case "expired":
+      return "Expired";
+    default:
+      return "Free";
+  }
+}
+
+function formatLifecycleDate(value: string | null | undefined) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(parsed);
+}
+
 export default function AccountScreen() {
   const { user, account, refreshAccount, signOut } = useBrieflyAuth();
   const { colors } = useBrieflyTheme();
@@ -43,6 +82,28 @@ export default function AccountScreen() {
     "manage" | "restore" | "delete" | "signout" | null
   >(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] =
+    useState<BrieflySubscriptionStatus | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setSubscriptionStatus(null);
+      return;
+    }
+
+    let active = true;
+    void getBrieflySubscriptionStatus()
+      .then((status) => {
+        if (active) setSubscriptionStatus(status);
+      })
+      .catch(() => {
+        if (active) setSubscriptionStatus(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [account?.translation_entitled, user]);
 
   const notify = (title: string, body: string) => {
     if (Platform.OS === "web") {
@@ -220,6 +281,41 @@ export default function AccountScreen() {
         {account?.translation_entitled ? (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Manage subscription</Text>
+
+            <View style={styles.subscriptionSummary}>
+              <Text style={[styles.subscriptionState, { color: colors.text }]}>
+                {lifecycleLabel(subscriptionStatus)}
+              </Text>
+              {subscriptionStatus?.provider ? (
+                <Text style={[styles.subscriptionMeta, { color: colors.textMuted }]}>
+                  {providerLabel(subscriptionStatus.provider)}
+                  {subscriptionStatus.plan
+                    ? ` · ${subscriptionStatus.plan === "yearly" ? "Yearly" : subscriptionStatus.plan === "monthly" ? "Monthly" : subscriptionStatus.plan}`
+                    : ""}
+                </Text>
+              ) : null}
+
+              {subscriptionStatus?.renews_at ? (
+                <Text style={[styles.subscriptionMeta, { color: colors.textMuted }]}>
+                  Renews {formatLifecycleDate(subscriptionStatus.renews_at)}
+                </Text>
+              ) : null}
+
+              {subscriptionStatus?.lifecycle_state === "canceling" &&
+              subscriptionStatus.access_until ? (
+                <Text style={[styles.subscriptionMeta, { color: colors.textMuted }]}>
+                  Access until {formatLifecycleDate(subscriptionStatus.access_until)}
+                </Text>
+              ) : null}
+
+              {subscriptionStatus?.lifecycle_state === "grace_period" &&
+              subscriptionStatus.access_until ? (
+                <Text style={[styles.subscriptionMeta, { color: colors.textMuted }]}>
+                  Grace period until {formatLifecycleDate(subscriptionStatus.access_until)}
+                </Text>
+              ) : null}
+            </View>
+
             <Text style={[styles.body, { color: colors.textMuted }]}>Manage billing, renewal, or cancellation through the provider where your Briefly Pro subscription was purchased.</Text>
             <Pressable disabled={busy !== null} onPress={() => void manageSubscription()} style={[styles.button, { borderColor: colors.border }, busy !== null && styles.disabled]}>
               {busy === "manage" ? <ActivityIndicator color={colors.text} /> : <Text style={[styles.buttonText, { color: colors.text }]}>Manage subscription</Text>}
@@ -228,7 +324,11 @@ export default function AccountScreen() {
         ) : (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Briefly Pro</Text>
-            <Text style={[styles.body, { color: colors.textMuted }]}>View Briefly Pro features, current monthly and yearly prices, and available offers.</Text>
+            <Text style={[styles.body, { color: colors.textMuted }]}>
+              {subscriptionStatus?.lifecycle_state === "expired"
+                ? "Your previous Briefly Pro subscription has expired. You can subscribe again at any time."
+                : "View Briefly Pro features, current monthly and yearly prices, and available offers."}
+            </Text>
             <Pressable
               disabled={!user || busy !== null}
               onPress={() => router.push("/upgrade?returnTo=/account")}
@@ -287,6 +387,9 @@ const styles = StyleSheet.create({
   value: { fontSize: 16, fontWeight: "700" },
   pro: { fontSize: 13, fontWeight: "900" },
   sectionTitle: { fontSize: 18, fontWeight: "900" },
+  subscriptionSummary: { gap: 3, marginBottom: 2 },
+  subscriptionState: { fontSize: 16, fontWeight: "900" },
+  subscriptionMeta: { fontSize: 13, lineHeight: 19, fontWeight: "600" },
   body: { fontSize: 14, lineHeight: 21 },
   button: { minHeight: 46, borderWidth: 1, borderRadius: 999, alignItems: "center", justifyContent: "center", paddingHorizontal: 16, marginTop: 4 },
   buttonText: { fontSize: 14, fontWeight: "800" },

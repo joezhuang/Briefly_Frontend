@@ -752,8 +752,37 @@ export function setBetaDashboardErrorResolution(
   );
 }
 
+export type BrieflySubscriptionLifecycleState =
+  | "free"
+  | "trialing"
+  | "active"
+  | "canceling"
+  | "grace_period"
+  | "past_due"
+  | "expired";
+
+export type BrieflySubscriptionStatus = {
+  lifecycle_state: BrieflySubscriptionLifecycleState;
+  is_pro: boolean;
+  provider: "stripe" | "app_store" | "play_store" | null;
+  provider_status: string | null;
+  plan: string | null;
+  product_id: string | null;
+  cancel_at_period_end: boolean;
+  current_period_end: string | null;
+  grace_period_end: string | null;
+  renews_at: string | null;
+  access_until: string | null;
+  active_platforms: ("stripe" | "app_store" | "play_store")[];
+  legacy_fallback: boolean;
+};
+
 export function getCurrentBrieflyAccount() {
   return getJson<BrieflyAccountState>("/api/me");
+}
+
+export function getBrieflySubscriptionStatus() {
+  return getJson<BrieflySubscriptionStatus>("/api/subscriptions/status");
 }
 
 export type BrieflyWebPrice = {
