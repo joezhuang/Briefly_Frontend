@@ -56,14 +56,14 @@ export function BrieflyAppConfigProvider({ children }: PropsWithChildren) {
       })
       .catch(() => {
         // Keep the last known in-memory configuration on transient failures.
-      })
-      .finally(() => {
-        if (inFlightRef.current === request) {
-          inFlightRef.current = null;
-        }
       });
 
     inFlightRef.current = request;
+    void request.finally(() => {
+      if (inFlightRef.current === request) {
+        inFlightRef.current = null;
+      }
+    });
     return request;
   }, [applyConfig]);
 
