@@ -14,6 +14,7 @@ import { searchBrieflyArticles } from "@/api/search";
 import { AppHeader } from "@/components/app-header";
 import { ScreenState } from "@/components/screen-state";
 import { StoryTile } from "@/components/story-tile";
+import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
@@ -34,6 +35,7 @@ const searchCopy = {
 export default function SearchScreen() {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
+  const { config: appConfig } = useBrieflyAppConfig();
   const { colors } = useBrieflyTheme();
   const labels = searchCopy[language] ?? searchCopy.en;
 
@@ -43,11 +45,12 @@ export default function SearchScreen() {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
+  const searchEnabled = appConfig?.search_enabled !== false;
   const trimmedQuery = query.trim();
   const hasQuery = trimmedQuery.length > 0;
 
   useEffect(() => {
-    if (!trimmedQuery) return;
+    if (!searchEnabled || !trimmedQuery) return;
 
     let active = true;
     const timer = setTimeout(() => {
@@ -79,13 +82,29 @@ export default function SearchScreen() {
       active = false;
       clearTimeout(timer);
     };
-  }, [language, trimmedQuery, t.searchUnavailable]);
+  }, [language, searchEnabled, trimmedQuery, t.searchUnavailable]);
 
   const visibleArticles = hasQuery ? articles : [];
   const visibleError = hasQuery ? error : null;
   const showLoading = hasQuery && loading;
   const showNoMatches =
     hasQuery && hasSearched && !showLoading && visibleArticles.length === 0;
+
+  if (!searchEnabled) {
+    return (
+      <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={[styles.page, width < 480 && styles.pageCompact]}>
+            <AppHeader />
+            <ScreenState
+              title={t.searchUnavailable}
+              message="Search is currently disabled by Briefly."
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>

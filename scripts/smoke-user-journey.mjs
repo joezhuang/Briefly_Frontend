@@ -26,6 +26,24 @@ const checks = [
     needles: ["getHomepageArticleFeed", "StoryTile", 'trackProductEvent("feed_view"'],
   },
   {
+    name: "Runtime feature controls are enforced by navigation and screens",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      'label="Search"',
+      'onChange("search_enabled"',
+      'label="Following"',
+      'onChange("following_enabled"',
+    ],
+  },
+  {
+    name: "Search and Following screens consume runtime feature controls",
+    file: "src/app/search.tsx",
+    needles: [
+      "useBrieflyAppConfig",
+      "appConfig?.search_enabled !== false",
+    ],
+  },
+  {
     name: "Homepage feed response contract matches multilingual backend",
     file: "src/api/briefly.ts",
     needles: [

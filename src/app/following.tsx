@@ -21,6 +21,7 @@ import { trackProductEvent } from "@/analytics/product-analytics";
 import { AppHeader } from "@/components/app-header";
 import { ScreenState } from "@/components/screen-state";
 import { useBrieflyAuth } from "@/context/auth";
+import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import { layout } from "@/theme/tokens";
@@ -116,16 +117,18 @@ function storyHref(eventId: string, source: "following" | "following_update") {
 export default function FollowingScreen() {
   const { width } = useWindowDimensions();
   const { ready: authReady, user } = useBrieflyAuth();
+  const { config: appConfig } = useBrieflyAppConfig();
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const text = copy[language] ?? copy.en;
+  const followingEnabled = appConfig?.following_enabled !== false;
   const [events, setEvents] = useState<FollowedEvent[]>([]);
   const [updates, setUpdates] = useState<MeaningfulEventUpdate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!authReady || !followingEnabled) return;
     if (!user) {
       router.replace("/sign-in?returnTo=%2Ffollowing" as never);
       return;
@@ -155,7 +158,7 @@ export default function FollowingScreen() {
     return () => {
       active = false;
     };
-  }, [authReady, user]);
+  }, [authReady, followingEnabled, user]);
 
   const openEvent = (
     eventId: string,
@@ -179,6 +182,17 @@ export default function FollowingScreen() {
     void acknowledgeEventUpdate(update.event_id, update.development_id).catch(() => null);
     openEvent(update.event_id, "following_update");
   };
+
+  if (!followingEnabled) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={[styles.page, width < 480 && styles.pageCompact]}>
+          <AppHeader />
+          <ScreenState title={text.unavailable} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!authReady || !user) {
     return (

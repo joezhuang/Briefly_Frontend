@@ -12,6 +12,7 @@ import {
 
 import { BrieflyLogo } from "@/components/briefly-brand";
 import { useBrieflyAuth } from "@/context/auth";
+import { useBrieflyAppConfig } from "@/context/app-config";
 import { LANGUAGES, useBrieflyLanguage } from "@/context/language";
 import {
   BrieflyThemeMode,
@@ -137,6 +138,7 @@ export function AppHeader() {
   const pathname = usePathname();
   const { width } = useWindowDimensions();
   const { user, account } = useBrieflyAuth();
+  const { config: appConfig } = useBrieflyAppConfig();
   const { language, setLanguage, t } = useBrieflyLanguage();
   const { mode, setMode, colors } = useBrieflyTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -146,6 +148,9 @@ export function AppHeader() {
   const isPro = account?.translation_entitled === true;
   const compactNav = width < 1200;
   const phoneNav = width < 600;
+  const visibleNav = nav.filter(
+    (item) => item.href !== "/search" || appConfig?.search_enabled !== false,
+  );
 
   const themeLabel = (value: BrieflyThemeMode) => {
     if (value === "light") return t.themeLight;
@@ -175,7 +180,7 @@ export function AppHeader() {
 
         <View style={[styles.nav, compactNav && styles.navSingle]}>
           {renderNavLinks &&
-            nav.map((item) => {
+            visibleNav.map((item) => {
               const active =
                 item.href === "/"
                   ? pathname === "/"
@@ -279,7 +284,7 @@ export function AppHeader() {
             { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
           ]}
         >
-          {nav.map((item) => {
+          {visibleNav.map((item) => {
             const active =
               item.href === "/"
                 ? pathname === "/"
