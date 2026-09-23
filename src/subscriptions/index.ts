@@ -1,7 +1,10 @@
 import { Platform } from "react-native";
 import Purchases from "react-native-purchases";
 
-import { syncBrieflyNativeSubscription } from "@/api/account";
+import {
+  getBrieflyPurchaseEligibility,
+  syncBrieflyNativeSubscription,
+} from "@/api/account";
 
 export type BrieflyPlan = "monthly" | "yearly";
 
@@ -130,6 +133,21 @@ export async function beginBrieflySubscription(
   userId: string,
   offeringIdentifier?: string | null,
 ) {
+  const eligibility = await getBrieflyPurchaseEligibility();
+  if (!eligibility.can_purchase) {
+    const source =
+      eligibility.briefly_pro_platform === "stripe"
+        ? "the web"
+        : eligibility.briefly_pro_platform === "app_store"
+          ? "the App Store"
+          : eligibility.briefly_pro_platform === "play_store"
+            ? "Google Play"
+            : "another platform";
+    throw new Error(
+      `Briefly Pro is already active through ${source}. Another subscription was not started.`,
+    );
+  }
+
   await ensureConfigured(userId);
 
   const offerings = await Purchases.getOfferings();

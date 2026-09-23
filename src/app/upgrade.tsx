@@ -242,6 +242,22 @@ export default function UpgradeScreen() {
     setError(null);
 
     try {
+      const latestAccount = await refreshAccount().catch(() => null);
+      if (latestAccount?.translation_entitled) {
+        const source =
+          latestAccount.briefly_pro_platform === "stripe"
+            ? "the web"
+            : latestAccount.briefly_pro_platform === "app_store"
+              ? "the App Store"
+              : latestAccount.briefly_pro_platform === "play_store"
+                ? "Google Play"
+                : "another platform";
+        setError(
+          `Briefly Pro is already active through ${source}. Another subscription was not started.`,
+        );
+        return;
+      }
+
       const active = await beginBrieflySubscription(
         plan,
         user.id,

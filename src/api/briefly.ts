@@ -631,6 +631,7 @@ export type BrieflyAccountState = {
   email: string | null;
   translation_entitled: boolean;
   is_admin: boolean;
+  briefly_pro_platform: "stripe" | "app_store" | "play_store" | null;
 };
 
 export type BetaDashboardEventCount = {

@@ -14,6 +14,50 @@ function requireAccessToken() {
   return accessToken;
 }
 
+export async function getBrieflyPurchaseEligibility() {
+  let response: Response;
+  try {
+    response = await fetch(
+      `${requireApiBaseUrl()}/api/subscriptions/purchase-eligibility`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${requireAccessToken()}`,
+        },
+      },
+    );
+  } catch (error) {
+    captureApiError({
+      route: "/api/subscriptions/purchase-eligibility",
+      method: "GET",
+      error,
+    });
+    throw error;
+  }
+
+  if (response.status >= 500) {
+    captureApiError({
+      route: "/api/subscriptions/purchase-eligibility",
+      method: "GET",
+      statusCode: response.status,
+    });
+  }
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => "");
+    throw new Error(
+      `Purchase eligibility check failed (${response.status}): ${message || response.statusText}`,
+    );
+  }
+
+  return response.json() as Promise<{
+    can_purchase: boolean;
+    translation_entitled: boolean;
+    briefly_pro_platform: "stripe" | "app_store" | "play_store" | null;
+  }>;
+}
+
+
 export async function syncBrieflyNativeSubscription() {
   let response: Response;
   try {
