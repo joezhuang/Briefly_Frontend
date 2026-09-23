@@ -271,10 +271,16 @@ export function EventEvidencePanel({
   eventId,
   uncertainties = [],
   refreshKey,
+  evidenceEnabled = true,
+  timelineEnabled = true,
+  coverageEnabled = true,
 }: {
   eventId: string;
   uncertainties?: string[];
   refreshKey?: string | number | null;
+  evidenceEnabled?: boolean;
+  timelineEnabled?: boolean;
+  coverageEnabled?: boolean;
 }) {
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
@@ -292,8 +298,17 @@ export function EventEvidencePanel({
   const intelligence =
     intelligenceState?.eventId === eventId ? intelligenceState.value : null;
   const failed = failedEventId === eventId;
+  const enabledLenses: EventLens[] = [
+    ...(evidenceEnabled ? (["evidence"] as EventLens[]) : []),
+    ...(timelineEnabled ? (["timeline"] as EventLens[]) : []),
+    ...(coverageEnabled ? (["coverage"] as EventLens[]) : []),
+  ];
+  const requestedLens =
+    lensState.eventId === eventId ? lensState.lens : enabledLenses[0] ?? null;
   const activeLens =
-    lensState.eventId === eventId ? lensState.lens : "evidence";
+    requestedLens && enabledLenses.includes(requestedLens)
+      ? requestedLens
+      : enabledLenses[0] ?? null;
 
   const selectLens = (lens: EventLens) => {
     if (lens === activeLens) return;
@@ -305,6 +320,8 @@ export function EventEvidencePanel({
   };
 
   useEffect(() => {
+    if (!evidenceEnabled && !coverageEnabled) return;
+
     let active = true;
 
     void getEventIntelligence(eventId, 100)
@@ -317,14 +334,16 @@ export function EventEvidencePanel({
       .catch(() => {
         if (active) {
           setFailedEventId(eventId);
-          setLensState({ eventId, lens: "timeline" });
+          if (timelineEnabled) {
+            setLensState({ eventId, lens: "timeline" });
+          }
         }
       });
 
     return () => {
       active = false;
     };
-  }, [eventId, refreshKey]);
+  }, [coverageEnabled, evidenceEnabled, eventId, refreshKey, timelineEnabled]);
 
   const assessment = intelligence?.assessment;
   const corroborated = useMemo(
@@ -365,7 +384,8 @@ export function EventEvidencePanel({
     return { sources, languages, countries };
   }, [evidence]);
 
-  if (!intelligence && !failed) return null;
+  if (enabledLenses.length === 0) return null;
+  if (!intelligence && !failed && !timelineEnabled) return null;
 
   const sourceCount =
     assessment?.corroboration?.unique_source_count ?? evidenceStats.sources;
@@ -390,17 +410,23 @@ export function EventEvidencePanel({
     : null;
 
   const tabs: { id: EventLens; label: string; badge?: number }[] = [
-    {
-      id: "evidence",
-      label: text.title,
-      badge: intelligence ? evidence.length : undefined,
-    },
-    { id: "timeline", label: text.timeline },
-    {
-      id: "coverage",
-      label: text.coverage,
-      badge: evidenceStats.countries || undefined,
-    },
+    ...(evidenceEnabled
+      ? [{
+          id: "evidence" as EventLens,
+          label: text.title,
+          badge: intelligence ? evidence.length : undefined,
+        }]
+      : []),
+    ...(timelineEnabled
+      ? [{ id: "timeline" as EventLens, label: text.timeline }]
+      : []),
+    ...(coverageEnabled
+      ? [{
+          id: "coverage" as EventLens,
+          label: text.coverage,
+          badge: evidenceStats.countries || undefined,
+        }]
+      : []),
   ];
 
   return (
@@ -450,7 +476,7 @@ export function EventEvidencePanel({
         })}
       </View>
 
-      {activeLens === "evidence" && intelligence && (
+      {evidenceEnabled && activeLens === "evidence" && intelligence && (
         <View
           style={[
             styles.container,
@@ -527,8 +553,8 @@ export function EventEvidencePanel({
         </View>
       )}
 
-      {activeLens === "timeline" && <EventEvolutionPanel eventId={eventId} refreshKey={refreshKey} />}
-      {activeLens === "coverage" && intelligence && (
+      {timelineEnabled && activeLens === "timeline" && <EventEvolutionPanel eventId={eventId} refreshKey={refreshKey} />}
+      {coverageEnabled && activeLens === "coverage" && intelligence && (
         <EventCoveragePanel intelligence={intelligence} />
       )}
     </View>

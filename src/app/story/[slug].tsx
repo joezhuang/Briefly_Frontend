@@ -831,6 +831,7 @@ export default function StoryDetailScreen() {
         podcastEnabled={podcastEnabled}
         translationEnabled={translationEnabled}
         evidenceEnabled={evidenceEnabled}
+        timelineEnabled={timelineEnabled}
         coverageEnabled={coverageEnabled}
         followingEnabled={followingEnabled}
         floatingVideoEnabled={floatingVideoEnabled}
