@@ -1295,22 +1295,12 @@ function PromotionsEditor({
         </View>
       </View>
 
-      <View
-        style={[
-          styles.configPanel,
-          { borderColor: colors.border, backgroundColor: colors.surface },
-        ]}
-      >
-        <View style={[styles.promotionSubheader, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.promotionSubheaderTitle, { color: colors.text }]}>
-            4. Create & manage Stripe discount codes
-          </Text>
-          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
-            This belongs to the Web / Stripe promotion flow above. Create the actual customer-facing codes here.
-          </Text>
-        </View>
+      <View style={styles.promotionStripeSection}>
+        <SectionTitle
+          title="Web / Stripe discount codes"
+          detail="Create, review, and deactivate the actual percentage-off codes used by Stripe Checkout."
+        />
         <StripePromotionEditor
-          embedded
           items={stripeItems}
           loading={stripeLoading}
           error={stripeError}
@@ -1325,7 +1315,6 @@ function PromotionsEditor({
 }
 
 function StripePromotionEditor({
-  embedded = false,
   items,
   loading,
   error,
@@ -1334,7 +1323,6 @@ function StripePromotionEditor({
   onCreate,
   onDeactivate,
 }: {
-  embedded?: boolean;
   items: StripePromotion[];
   loading: boolean;
   error: boolean;
@@ -1367,16 +1355,7 @@ function StripePromotionEditor({
       (Number.isInteger(normalizedMax) && normalizedMax > 0));
 
   return (
-    <View
-      style={
-        embedded
-          ? styles.embeddedStripeEditor
-          : [
-              styles.configPanel,
-              { borderColor: colors.border, backgroundColor: colors.surface },
-            ]
-      }
-    >
+    <View style={[styles.configPanel, { borderColor: colors.border, backgroundColor: colors.surface }]}>
       <View
         style={[
           styles.stripeGuide,
@@ -1384,7 +1363,7 @@ function StripePromotionEditor({
         ]}
       >
         <Text style={[styles.promotionGuideTitle, { color: colors.text }]}>
-          Web / Stripe discount codes — step by step
+          How to create a web discount code
         </Text>
         <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
           1. Enter the customer-facing code, for example SAVE20.
@@ -1399,7 +1378,7 @@ function StripePromotionEditor({
           4. Optionally set a total redemption limit.
         </Text>
         <Text style={[styles.promotionGuideStep, { color: colors.text }]}>
-          5. Press “Create Stripe code”. It becomes usable in new Stripe Checkout sessions while “Accept Stripe promotion codes” above is ON.
+          5. Press “Create Stripe code”. It becomes usable immediately in new Stripe Checkout sessions while “Accept Stripe promotion codes” is ON.
         </Text>
         <Text style={[styles.promotionGuideNote, { color: colors.textMuted }]}>
           Deactivating a code prevents new redemptions; it does not rewrite subscriptions that already used the code.
@@ -2930,7 +2909,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   promotionManager: { gap: 18 },
-  embeddedStripeEditor: { width: "100%" },
+  promotionStripeSection: { gap: 10 },
   promotionSubheader: {
     paddingHorizontal: 16,
     paddingVertical: 13,
