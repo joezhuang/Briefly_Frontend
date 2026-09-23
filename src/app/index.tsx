@@ -219,6 +219,7 @@ export default function HomeScreen() {
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const lastFetchedAt = useRef(initialHomeFeed.lastFetchedAt);
+  const didApplyDefaultScopeRef = useRef(false);
   const activeRequest = useRef(0);
   const articlesRef = useRef<CanonicalArticle[]>(initialHomeFeed.articles);
   const listRef = useRef<FlatList<CanonicalArticle[]>>(null);
@@ -351,10 +352,17 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!appConfig) return;
     const available = enabledHomeScopes(appConfig);
-    if (available.includes(scope)) return;
     const preferred = available.includes(appConfig.default_feed_scope)
       ? appConfig.default_feed_scope
       : available[0];
+
+    if (!didApplyDefaultScopeRef.current) {
+      didApplyDefaultScopeRef.current = true;
+      if (scope === preferred) return;
+    } else if (available.includes(scope)) {
+      return;
+    }
+
     let active = true;
     Promise.resolve().then(() => {
       if (!active) return;

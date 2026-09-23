@@ -26,6 +26,25 @@ const checks = [
     needles: ["getHomepageArticleFeed", "StoryTile", 'trackProductEvent("feed_view"'],
   },
   {
+    name: "Remote operations and default feed controls affect the product",
+    file: "src/app/index.tsx",
+    needles: [
+      "didApplyDefaultScopeRef",
+      "appConfig.default_feed_scope",
+      "enabledHomeScopes(appConfig)",
+    ],
+  },
+  {
+    name: "Maintenance mode gates the news experience but preserves recovery routes",
+    file: "src/app/_layout.tsx",
+    needles: [
+      "appConfig?.maintenance_mode",
+      'pathname.startsWith("/beta-dashboard")',
+      'pathname.startsWith("/account")',
+      "appConfig.maintenance_message",
+    ],
+  },
+  {
     name: "Runtime feature controls are enforced by navigation and screens",
     file: "src/app/beta-dashboard.tsx",
     needles: [

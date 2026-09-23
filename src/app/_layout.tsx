@@ -1,15 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocales } from "expo-localization";
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { Fragment, PropsWithChildren, useEffect, useRef, useState } from "react";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 
 import { trackProductEvent } from "@/analytics/product-analytics";
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { AppErrorBoundary } from "@/components/app-error-boundary";
 import { GlobalPodcastPlayer } from "@/components/global-podcast-player";
+import { ScreenState } from "@/components/screen-state";
 import { AnalysisReadinessProvider } from "@/context/analysis-readiness";
 import { BrieflyAuthProvider, useBrieflyAuth } from "@/context/auth";
 import {
@@ -121,8 +122,34 @@ function ProductAnalyticsSession() {
 }
 
 function AppStack() {
-  const { resolvedMode } = useBrieflyTheme();
+  const pathname = usePathname();
+  const { resolvedMode, colors } = useBrieflyTheme();
   const { config: appConfig } = useBrieflyAppConfig();
+  const maintenanceAllowed =
+    pathname.startsWith("/beta-dashboard") ||
+    pathname.startsWith("/sign-in") ||
+    pathname.startsWith("/auth/callback") ||
+    pathname.startsWith("/account") ||
+    pathname.startsWith("/upgrade") ||
+    pathname.startsWith("/support") ||
+    pathname.startsWith("/legal");
+
+  if (appConfig?.maintenance_mode && !maintenanceAllowed) {
+    return (
+      <>
+        <StatusBar style={resolvedMode === "dark" ? "light" : "dark"} />
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+          <ScreenState
+            title="Briefly is temporarily unavailable"
+            message={
+              appConfig.maintenance_message ??
+              "We are carrying out a short maintenance update. Please try again soon."
+            }
+          />
+        </SafeAreaView>
+      </>
+    );
+  }
 
   return (
     <>
