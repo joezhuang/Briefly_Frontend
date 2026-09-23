@@ -820,6 +820,17 @@ export type BetaDashboardTelemetryHealth = {
   };
 };
 
+export type StripePromotion = {
+  id: string;
+  code: string;
+  active: boolean;
+  percent_off: number;
+  duration: string;
+  times_redeemed: number;
+  max_redemptions: number | null;
+  created: number;
+};
+
 export type BrieflyAppConfig = {
   email_password_login_enabled: boolean;
   reviewer_email: string | null;
@@ -848,6 +859,13 @@ export type BrieflyAppConfig = {
   national_feed_enabled: boolean;
   local_feed_enabled: boolean;
   default_feed_scope: HomepageFeedScope;
+  promotion_enabled: boolean;
+  promotion_title: string | null;
+  promotion_message: string | null;
+  native_revenuecat_offering_id: string | null;
+  ios_offer_code_redemption_enabled: boolean;
+  android_promo_code_hint_enabled: boolean;
+  web_promotion_codes_enabled: boolean;
 };
 
 export function getBrieflyAppConfig() {
@@ -860,6 +878,35 @@ export function getBetaDashboardAppConfig() {
 
 export function updateBetaDashboardAppConfig(config: BrieflyAppConfig) {
   return postJson<BrieflyAppConfig>("/api/beta-dashboard/app-config", config);
+}
+
+export function getBetaDashboardStripePromotions() {
+  return getJson<{ items: StripePromotion[] }>(
+    "/api/beta-dashboard/stripe-promotions",
+  );
+}
+
+export function createBetaDashboardStripePromotion(input: {
+  code: string;
+  percent_off: number;
+  duration: "once" | "forever";
+  max_redemptions: number | null;
+}) {
+  return postJson<StripePromotion>(
+    "/api/beta-dashboard/stripe-promotions",
+    input,
+  );
+}
+
+export function deactivateBetaDashboardStripePromotion(
+  promotionCodeId: string,
+) {
+  return postJson<StripePromotion>(
+    "/api/beta-dashboard/stripe-promotions/" +
+      encodeURIComponent(promotionCodeId) +
+      "/deactivate",
+    {},
+  );
 }
 
 export function getBetaDashboardTelemetryConfig() {

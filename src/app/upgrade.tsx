@@ -16,11 +16,13 @@ import {
   syncBrieflyWebSubscription,
 } from "@/api/briefly";
 import { useBrieflyAuth } from "@/context/auth";
+import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import { safeReturnTo } from "@/navigation/return-to";
 import {
   beginBrieflySubscription,
+  redeemBrieflyOfferCode,
   restoreBrieflySubscription,
   type BrieflyPlan,
 } from "@/subscriptions";
@@ -150,11 +152,12 @@ export default function UpgradeScreen() {
     returnTo?: string | string[];
   }>();
   const { language, t } = useBrieflyLanguage();
+  const { config: appConfig } = useBrieflyAppConfig();
   const { colors } = useBrieflyTheme();
   const currentProCopy = proCopy[language] ?? proCopy.en;
   const returnPath = safeReturnTo(returnTo);
 
-  const [busy, setBusy] = useState<BrieflyPlan | "restore" | null>(null);
+  const [busy, setBusy] = useState<BrieflyPlan | "restore" | "redeem" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stripeSynced, setStripeSynced] = useState(false);
 
@@ -239,11 +242,31 @@ export default function UpgradeScreen() {
     setError(null);
 
     try {
-      const active = await beginBrieflySubscription(plan, user.id);
+      const active = await beginBrieflySubscription(
+        plan,
+        user.id,
+        appConfig?.promotion_enabled
+          ? appConfig.native_revenuecat_offering_id
+          : null,
+      );
       if (active) {
         await refreshAccount();
         router.replace(returnPath as never);
       }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t.purchaseFailed);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const redeemOfferCode = async () => {
+    setBusy("redeem");
+    setError(null);
+
+    try {
+      const active = await redeemBrieflyOfferCode(user.id);
+      if (active) await refreshAccount();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t.purchaseFailed);
     } finally {
@@ -294,6 +317,27 @@ export default function UpgradeScreen() {
 
           {!isPro ? (
             <>
+              {appConfig?.promotion_enabled &&
+                (!!appConfig.promotion_title || !!appConfig.promotion_message) && (
+                  <View
+                    style={[
+                      styles.promotionCard,
+                      { backgroundColor: colors.surface, borderColor: colors.accent },
+                    ]}
+                  >
+                    {!!appConfig.promotion_title && (
+                      <Text style={[styles.promotionTitle, { color: colors.text }]}>
+                        {appConfig.promotion_title}
+                      </Text>
+                    )}
+                    {!!appConfig.promotion_message && (
+                      <Text style={[styles.promotionMessage, { color: colors.textMuted }]}>
+                        {appConfig.promotion_message}
+                      </Text>
+                    )}
+                  </View>
+                )}
+
               <View style={styles.featuresSection}>
                 <Text style={[styles.featuresHeading, { color: colors.text }]}>
                   {currentProCopy.included}
@@ -375,6 +419,42 @@ export default function UpgradeScreen() {
                   {busy === "yearly" ? "…" : t.chooseYearly}
                 </Text>
               </Pressable>
+
+              {Platform.OS === "ios" &&
+                appConfig?.ios_offer_code_redemption_enabled && (
+                  <Pressable
+                    disabled={busy !== null || confirmingPayment}
+                    onPress={() => void redeemOfferCode()}
+                    style={[
+                      styles.secondary,
+                      { borderColor: colors.border },
+                      (busy !== null || confirmingPayment) && styles.disabled,
+                    ]}
+                  >
+                    {busy === "redeem" ? (
+                      <ActivityIndicator color={colors.text} />
+                    ) : (
+                      <Text style={[styles.secondaryText, { color: colors.text }]}>
+                        Redeem offer code
+                      </Text>
+                    )}
+                  </Pressable>
+                )}
+
+              {Platform.OS === "android" &&
+                appConfig?.android_promo_code_hint_enabled && (
+                  <Text style={[styles.promotionHint, { color: colors.textMuted }]}>
+                    Have a Google Play promo code? Choose a plan, then use the
+                    redemption option in the Google Play payment flow when available.
+                  </Text>
+                )}
+
+              {Platform.OS === "web" &&
+                appConfig?.web_promotion_codes_enabled && (
+                  <Text style={[styles.promotionHint, { color: colors.textMuted }]}>
+                    Have a promo code? Choose a plan and enter it in Stripe Checkout.
+                  </Text>
+                )}
             </>
           ) : null}
 
@@ -462,6 +542,19 @@ const styles = StyleSheet.create({
   confirmingText: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  promotionCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    gap: 6,
+  },
+  promotionTitle: { fontSize: 18, lineHeight: 24, fontWeight: "900" },
+  promotionMessage: { fontSize: 14, lineHeight: 21 },
+  promotionHint: {
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
   },
   featuresSection: {
     gap: 12,

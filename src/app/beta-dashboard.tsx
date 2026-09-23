@@ -14,8 +14,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
+  createBetaDashboardStripePromotion,
+  deactivateBetaDashboardStripePromotion,
   getBetaDashboard,
   getBetaDashboardAppConfig,
+  getBetaDashboardStripePromotions,
   getBetaDashboardTelemetryConfig,
   getBetaDashboardTelemetryHealth,
   getCommunityModerationQueue,
@@ -30,6 +33,7 @@ import {
   type BrieflyAppConfig,
   type CommunityModerationItem,
   type CommunityModerationQueue,
+  type StripePromotion,
 } from "@/api/briefly";
 import { AppHeader } from "@/components/app-header";
 import { ScreenState } from "@/components/screen-state";
@@ -640,6 +644,77 @@ function TelemetryConfigEditor({
         }
       />
 
+      <SectionTitle
+        title="Promotions"
+        detail="Control promotion presentation and select store-configured native offers. Native prices and eligibility remain controlled by Apple, Google Play, and RevenueCat."
+      />
+      <ConfigToggle
+        label="Promotion campaign"
+        detail="Show the current promotion on the Briefly Pro upgrade screen."
+        value={config.promotion_enabled}
+        onValueChange={(value) => onChange("promotion_enabled", value)}
+      />
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Promotion title</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Short campaign heading shown on the upgrade screen.</Text>
+        </View>
+        <TextInput
+          value={config.promotion_title ?? ""}
+          onChangeText={(value) => onChange("promotion_title", value || null)}
+          placeholder="Limited-time Briefly Pro offer"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Promotion message</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Explain the offer without hard-coding a price that may differ by store or country.</Text>
+        </View>
+        <TextInput
+          value={config.promotion_message ?? ""}
+          onChangeText={(value) => onChange("promotion_message", value || null)}
+          multiline
+          placeholder="Choose a plan to see the available store offer."
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, styles.configInputMultiline, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Native RevenueCat offering ID</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Optional offering to use on iOS/Android while this campaign is enabled. Create the underlying products/offers in the stores and attach them to this RevenueCat offering.</Text>
+        </View>
+        <TextInput
+          value={config.native_revenuecat_offering_id ?? ""}
+          onChangeText={(value) => onChange("native_revenuecat_offering_id", value.trim() || null)}
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="briefly_promo"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+      <ConfigToggle
+        label="iOS offer-code redemption"
+        detail="Show Redeem offer code on iOS. Redemption uses Apple's system sheet."
+        value={config.ios_offer_code_redemption_enabled}
+        onValueChange={(value) => onChange("ios_offer_code_redemption_enabled", value)}
+      />
+      <ConfigToggle
+        label="Android promo-code hint"
+        detail="Tell Android users where to redeem an eligible Google Play subscription promo code during checkout."
+        value={config.android_promo_code_hint_enabled}
+        onValueChange={(value) => onChange("android_promo_code_hint_enabled", value)}
+      />
+      <ConfigToggle
+        label="Web Stripe promotion codes"
+        detail="Allow a promotion-code field in Stripe Checkout. Codes can be created in the Web discount codes section below."
+        value={config.web_promotion_codes_enabled}
+        onValueChange={(value) => onChange("web_promotion_codes_enabled", value)}
+      />
+
       <View style={styles.configActions}>
         <Pressable
           accessibilityRole="button"
@@ -1008,6 +1083,185 @@ function RuntimeConfigEditor({
   );
 }
 
+function StripePromotionEditor({
+  items,
+  loading,
+  error,
+  creating,
+  busyId,
+  onCreate,
+  onDeactivate,
+}: {
+  items: StripePromotion[];
+  loading: boolean;
+  error: boolean;
+  creating: boolean;
+  busyId: string | null;
+  onCreate: (input: {
+    code: string;
+    percent_off: number;
+    duration: "once" | "forever";
+    max_redemptions: number | null;
+  }) => void;
+  onDeactivate: (item: StripePromotion) => void;
+}) {
+  const { colors } = useBrieflyTheme();
+  const { width } = useWindowDimensions();
+  const stacked = width < 640;
+  const [code, setCode] = useState("");
+  const [percentOff, setPercentOff] = useState("20");
+  const [duration, setDuration] = useState<"once" | "forever">("once");
+  const [maxRedemptions, setMaxRedemptions] = useState("");
+
+  const normalizedPercent = Number(percentOff);
+  const normalizedMax = maxRedemptions ? Number(maxRedemptions) : null;
+  const canCreate =
+    code.trim().length >= 3 &&
+    Number.isFinite(normalizedPercent) &&
+    normalizedPercent > 0 &&
+    normalizedPercent <= 100 &&
+    (normalizedMax === null ||
+      (Number.isInteger(normalizedMax) && normalizedMax > 0));
+
+  return (
+    <View style={[styles.configPanel, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+      <View style={[styles.configFieldRow, stacked && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stacked && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Promotion code</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Creates a Stripe coupon and customer-facing code restricted to Briefly Pro web subscription products.</Text>
+        </View>
+        <TextInput
+          value={code}
+          onChangeText={(value) => setCode(value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 64))}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          placeholder="SAVE20"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, stacked && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+
+      <View style={[styles.configFieldRow, stacked && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stacked && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Discount percentage</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Percentage off for this Stripe code. Allowed: greater than 0 and up to 100.</Text>
+        </View>
+        <TextInput
+          value={percentOff}
+          onChangeText={(value) => setPercentOff(value.replace(/[^0-9.]/g, ""))}
+          keyboardType="decimal-pad"
+          style={[styles.configInputSmall, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+
+      <View style={[styles.configFieldRow, stacked && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stacked && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Duration</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Once discounts the first subscription invoice. Forever discounts recurring invoices while the subscription remains eligible.</Text>
+        </View>
+        <View style={styles.promoChoiceRow}>
+          {(["once", "forever"] as const).map((item) => (
+            <Pressable
+              key={item}
+              onPress={() => setDuration(item)}
+              style={[
+                styles.promoChoice,
+                {
+                  borderColor: duration === item ? colors.text : colors.border,
+                  backgroundColor: duration === item ? colors.text : colors.background,
+                },
+              ]}
+            >
+              <Text style={[styles.promoChoiceText, { color: duration === item ? colors.background : colors.text }]}>
+                {item === "once" ? "First invoice" : "Forever"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <View style={[styles.configFieldRow, stacked && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stacked && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Maximum redemptions</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Optional total use limit. Leave blank for no explicit redemption cap.</Text>
+        </View>
+        <TextInput
+          value={maxRedemptions}
+          onChangeText={(value) => setMaxRedemptions(value.replace(/[^0-9]/g, ""))}
+          keyboardType="number-pad"
+          placeholder="Unlimited"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInputSmall, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+
+      <View style={styles.configActions}>
+        <Pressable
+          disabled={!canCreate || creating}
+          onPress={() =>
+            onCreate({
+              code: code.trim(),
+              percent_off: normalizedPercent,
+              duration,
+              max_redemptions: normalizedMax,
+            })
+          }
+          style={[
+            styles.configSaveButton,
+            { backgroundColor: colors.text, opacity: !canCreate || creating ? 0.5 : 1 },
+          ]}
+        >
+          {creating ? (
+            <ActivityIndicator size="small" color={colors.background} />
+          ) : (
+            <Text style={[styles.configSaveText, { color: colors.background }]}>Create Stripe code</Text>
+          )}
+        </Pressable>
+        {error && <Text style={[styles.configStatus, { color: colors.accent }]}>Stripe promotion action failed.</Text>}
+      </View>
+
+      <View style={styles.promoList}>
+        {loading ? (
+          <View style={styles.promoLoading}>
+            <ActivityIndicator size="small" color={colors.textMuted} />
+            <Text style={[styles.configStatus, { color: colors.textMuted }]}>Loading Stripe codes…</Text>
+          </View>
+        ) : items.length === 0 ? (
+          <Text style={[styles.promoEmpty, { color: colors.textMuted }]}>No Briefly-managed Stripe promotion codes yet.</Text>
+        ) : (
+          items.map((item) => (
+            <View key={item.id} style={[styles.promoItem, { borderTopColor: colors.border }]}>
+              <View style={styles.promoItemCopy}>
+                <View style={styles.promoItemTitleRow}>
+                  <Text style={[styles.configLabel, { color: colors.text }]}>{item.code}</Text>
+                  <Text style={[styles.promoStatus, { color: item.active ? colors.accent : colors.textMuted }]}>
+                    {item.active ? "ACTIVE" : "INACTIVE"}
+                  </Text>
+                </View>
+                <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                  {item.percent_off}% off · {item.duration === "forever" ? "recurring" : "first invoice"} · {item.times_redeemed} redeemed
+                  {item.max_redemptions ? ` / ${item.max_redemptions}` : ""}
+                </Text>
+              </View>
+              {item.active && (
+                <Pressable
+                  disabled={busyId === item.id}
+                  onPress={() => onDeactivate(item)}
+                  style={[styles.resolveButton, { borderColor: colors.border }, busyId === item.id && styles.disabled]}
+                >
+                  <Text style={[styles.resolveText, { color: colors.text }]}>
+                    {busyId === item.id ? "…" : "Deactivate"}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          ))
+        )}
+      </View>
+    </View>
+  );
+}
+
 export default function BetaDashboardScreen() {
   const { width } = useWindowDimensions();
   const { ready: authReady, user, account } = useBrieflyAuth();
@@ -1034,6 +1288,11 @@ export default function BetaDashboardScreen() {
   const [configSaving, setConfigSaving] = useState(false);
   const [configError, setConfigError] = useState(false);
   const [configSaved, setConfigSaved] = useState(false);
+  const [stripePromotions, setStripePromotions] = useState<StripePromotion[]>([]);
+  const [stripePromotionsLoading, setStripePromotionsLoading] = useState(true);
+  const [stripePromotionsError, setStripePromotionsError] = useState(false);
+  const [stripePromotionCreating, setStripePromotionCreating] = useState(false);
+  const [busyStripePromotionId, setBusyStripePromotionId] = useState<string | null>(null);
   const [telemetryConfig, setTelemetryConfig] =
     useState<BetaDashboardTelemetryConfig | null>(null);
   const [telemetryConfigLoading, setTelemetryConfigLoading] = useState(true);
@@ -1121,6 +1380,28 @@ export default function BetaDashboardScreen() {
       })
       .finally(() => {
         if (active) setConfigLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [account?.is_admin, authReady, user]);
+
+  useEffect(() => {
+    if (!authReady || !user || account?.is_admin !== true) return;
+
+    let active = true;
+    getBetaDashboardStripePromotions()
+      .then((result) => {
+        if (!active) return;
+        setStripePromotions(result.items);
+        setStripePromotionsError(false);
+      })
+      .catch(() => {
+        if (active) setStripePromotionsError(true);
+      })
+      .finally(() => {
+        if (active) setStripePromotionsLoading(false);
       });
 
     return () => {
@@ -1253,6 +1534,44 @@ export default function BetaDashboardScreen() {
       setConfigError(true);
     } finally {
       setConfigSaving(false);
+    }
+  };
+
+  const createStripePromotion = async (input: {
+    code: string;
+    percent_off: number;
+    duration: "once" | "forever";
+    max_redemptions: number | null;
+  }) => {
+    setStripePromotionCreating(true);
+    setStripePromotionsError(false);
+    try {
+      const created = await createBetaDashboardStripePromotion(input);
+      setStripePromotions((current) => [
+        created,
+        ...current.filter((item) => item.id !== created.id),
+      ]);
+    } catch {
+      setStripePromotionsError(true);
+    } finally {
+      setStripePromotionCreating(false);
+    }
+  };
+
+  const deactivateStripePromotion = async (item: StripePromotion) => {
+    setBusyStripePromotionId(item.id);
+    setStripePromotionsError(false);
+    try {
+      const updated = await deactivateBetaDashboardStripePromotion(item.id);
+      setStripePromotions((current) =>
+        current.map((candidate) =>
+          candidate.id === updated.id ? updated : candidate,
+        ),
+      );
+    } catch {
+      setStripePromotionsError(true);
+    } finally {
+      setBusyStripePromotionId(null);
     }
   };
 
@@ -1990,6 +2309,22 @@ export default function BetaDashboardScreen() {
 
                   <View style={styles.section}>
                     <SectionTitle
+                      title="Web discount codes"
+                      detail="Create and deactivate percentage-off Stripe promotion codes for Briefly Pro web checkout. These do not change App Store or Google Play prices."
+                    />
+                    <StripePromotionEditor
+                      items={stripePromotions}
+                      loading={stripePromotionsLoading}
+                      error={stripePromotionsError}
+                      creating={stripePromotionCreating}
+                      busyId={busyStripePromotionId}
+                      onCreate={(input) => void createStripePromotion(input)}
+                      onDeactivate={(item) => void deactivateStripePromotion(item)}
+                    />
+                  </View>
+
+                  <View style={styles.section}>
+                    <SectionTitle
                       title="Test-account telemetry"
                       detail="Private admin-only controls. Email is used only to classify the trusted authenticated account and is not written into analytics or error rows."
                     />
@@ -2306,6 +2641,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
+  promoChoiceRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  promoChoice: {
+    minHeight: 38,
+    paddingHorizontal: 13,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promoChoiceText: { fontSize: 12, fontWeight: "800" },
+  promoList: { paddingBottom: 4 },
+  promoLoading: {
+    minHeight: 58,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  promoEmpty: { paddingHorizontal: 16, paddingVertical: 18, fontSize: 13 },
+  promoItem: {
+    minHeight: 70,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+    flexWrap: "wrap",
+  },
+  promoItemCopy: { flex: 1, minWidth: 220, gap: 5 },
+  promoItemTitleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  promoStatus: { fontSize: 10, fontWeight: "900", letterSpacing: 0.7 },
   errorList: { gap: 12 },
   errorCard: {
     borderWidth: StyleSheet.hairlineWidth,

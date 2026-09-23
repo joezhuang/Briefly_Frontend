@@ -128,13 +128,21 @@ export async function getBrieflySubscriptionStatus(userId: string) {
 export async function beginBrieflySubscription(
   plan: BrieflyPlan,
   userId: string,
+  offeringIdentifier?: string | null,
 ) {
   await ensureConfigured(userId);
 
   const offerings = await Purchases.getOfferings();
-  const offering = offerings.current;
+  const requestedOffering = offeringIdentifier?.trim() || null;
+  const offering = requestedOffering
+    ? offerings.all[requestedOffering]
+    : offerings.current;
   if (!offering) {
-    throw new Error("No Briefly subscription offering is available.");
+    throw new Error(
+      requestedOffering
+        ? `RevenueCat offering ${requestedOffering} is not available.`
+        : "No Briefly subscription offering is available.",
+    );
   }
 
   const identifier = packageIdentifier(plan);
@@ -143,7 +151,7 @@ export async function beginBrieflySubscription(
   );
 
   console.info(
-    `[Briefly RevenueCat] purchase requested user=${userId} plan=${plan} package=${identifier} available=${offering.availablePackages.map((item) => item.identifier).join(",") || "none"}`,
+    `[Briefly RevenueCat] purchase requested user=${userId} plan=${plan} offering=${offering.identifier} package=${identifier} available=${offering.availablePackages.map((item) => item.identifier).join(",") || "none"}`,
   );
 
   if (!selected) {
@@ -173,6 +181,21 @@ export async function beginBrieflySubscription(
     );
     throw error;
   }
+}
+
+export async function redeemBrieflyOfferCode(userId: string) {
+  await ensureConfigured(userId);
+  if (Platform.OS !== "ios") {
+    throw new Error("Offer-code redemption is only available on iOS.");
+  }
+
+  console.info(`[Briefly RevenueCat] presenting iOS offer-code redemption user=${userId}`);
+  await Purchases.presentCodeRedemptionSheet();
+  await Purchases.invalidateCustomerInfoCache();
+  const customerInfo = await Purchases.getCustomerInfo();
+  const active = hasBrieflyPro(customerInfo);
+  await syncActivePurchaseWithBackend(active);
+  return active;
 }
 
 export async function restoreBrieflySubscription(userId: string) {

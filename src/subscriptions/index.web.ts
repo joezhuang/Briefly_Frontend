@@ -8,6 +8,7 @@ export type BrieflyPlan = "monthly" | "yearly";
 export async function beginBrieflySubscription(
   plan: BrieflyPlan,
   _userId: string,
+  _offeringIdentifier?: string | null,
 ) {
   const origin = window.location.origin;
   const result = await createBrieflyWebCheckout(
@@ -18,6 +19,10 @@ export async function beginBrieflySubscription(
 
   window.location.assign(result.checkout_url);
   return false;
+}
+
+export async function redeemBrieflyOfferCode(_userId: string) {
+  throw new Error("Web promotion codes are redeemed in Stripe Checkout.");
 }
 
 export async function restoreBrieflySubscription(_userId: string) {
