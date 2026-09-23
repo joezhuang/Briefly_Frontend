@@ -83,7 +83,9 @@ function isPublicContentPath(path: string) {
     path.startsWith("/api/lazy-articles") ||
     path.startsWith("/api/event-timeline") ||
     path.startsWith("/api/location") ||
-    path.startsWith("/api/search")
+    path.startsWith("/api/article-search") ||
+    path.startsWith("/api/search") ||
+    /^\/api\/events\/[^/?]+\/(?:timeline|intelligence)(?:\?|$)/.test(path)
   );
 }
 
@@ -170,6 +172,18 @@ async function deleteJson<T>(path: string): Promise<T> {
     );
   }
   return response.json() as Promise<T>;
+}
+
+export function getBrieflyJson<T>(path: string): Promise<T> {
+  return getJson<T>(path);
+}
+
+export function postBrieflyJson<T>(path: string, body: unknown): Promise<T> {
+  return postJson<T>(path, body);
+}
+
+export function deleteBrieflyJson<T>(path: string): Promise<T> {
+  return deleteJson<T>(path);
 }
 
 function articleQuery(options?: { includeDraft?: boolean; language?: string }) {

@@ -11,11 +11,10 @@ import {
 } from "react-native";
 
 import { requestStaleStoryRefresh } from "@/api/briefly";
-import { getBrieflyAccessToken } from "@/auth/session";
+import { getEventTimeline } from "@/api/event-evolution";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
 
 export type EventTimelineItem = {
   id: string;
@@ -281,30 +280,10 @@ export function EventTimeline({
     let active = true;
 
     const load = async () => {
-      if (!API_BASE_URL) {
-        if (active) {
-          setLoadError("Missing EXPO_PUBLIC_BRIEFLY_API_URL");
-          setLoading(false);
-        }
-        return;
-      }
-
-      const timelineUrl = `${API_BASE_URL}/api/events/${encodeURIComponent(eventId)}/timeline`;
       setLoading(true);
       setLoadError(null);
       try {
-        const headers: Record<string, string> = {};
-        const token = getBrieflyAccessToken();
-        if (token) headers.Authorization = `Bearer ${token}`;
-
-        const response = await fetch(timelineUrl, { headers });
-        if (!response.ok) {
-          const detail = await response.text().catch(() => "");
-          throw new Error(
-            `Timeline request failed: ${response.status}${detail ? ` ${detail}` : ""}`,
-          );
-        }
-        const payload = (await response.json()) as TimelineResponse;
+        const payload = (await getEventTimeline(eventId)) as TimelineResponse;
         if (active) {
           setBackgroundItems(
             Array.isArray(payload.background) ? payload.background : [],
@@ -320,7 +299,7 @@ export function EventTimeline({
         const message = err instanceof Error ? err.message : "Unknown timeline request error";
         console.warn("[Briefly Timeline] request failed", {
           eventId,
-          url: timelineUrl,
+          route: `/api/events/${eventId}/timeline`,
           error: message,
         });
         if (active) {

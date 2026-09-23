@@ -1,8 +1,5 @@
-import { getBrieflyAccessToken } from "@/auth/session";
-import { captureApiError } from "@/monitoring/error-monitoring";
+import { getBrieflyJson } from "@/api/briefly";
 import type { CanonicalArticle } from "@/models/article";
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
 
 export type ArticleSearchResponse = {
   articles: CanonicalArticle[];
@@ -13,7 +10,7 @@ export type ArticleSearchResponse = {
   search_scope: "event_universe";
 };
 
-export async function searchBrieflyArticles(
+export function searchBrieflyArticles(
   query: string,
   options?: {
     language?: string;
@@ -21,8 +18,6 @@ export async function searchBrieflyArticles(
     limit?: number;
   },
 ): Promise<ArticleSearchResponse> {
-  if (!API_BASE_URL) throw new Error("Missing EXPO_PUBLIC_BRIEFLY_API_URL");
-
   const params = new URLSearchParams({
     q: query.trim(),
     language: options?.language ?? "en",
@@ -30,37 +25,7 @@ export async function searchBrieflyArticles(
     limit: String(options?.limit ?? 30),
   });
 
-  const headers: Record<string, string> = {};
-  const token = getBrieflyAccessToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
-  if (process.env.EXPO_PUBLIC_BRIEFLY_TEST_SUBSCRIBER === "true") {
-    headers["X-Briefly-Test-Subscriber"] = "1";
-  }
-
-  let response: Response;
-  try {
-    response = await fetch(
-      `${API_BASE_URL}/api/article-search?${params.toString()}`,
-      { headers },
-    );
-  } catch (error) {
-    captureApiError({ route: "/api/article-search", method: "GET", error });
-    throw error;
-  }
-  if (response.status >= 500) {
-    captureApiError({
-      route: "/api/article-search",
-      method: "GET",
-      statusCode: response.status,
-    });
-  }
-
-  if (!response.ok) {
-    const message = await response.text().catch(() => "");
-    throw new Error(
-      `Briefly search failed (${response.status}): ${message || response.statusText}`,
-    );
-  }
-
-  return response.json() as Promise<ArticleSearchResponse>;
+  return getBrieflyJson<ArticleSearchResponse>(
+    `/api/article-search?${params.toString()}`,
+  );
 }

@@ -1,6 +1,4 @@
-import { captureApiError } from "@/monitoring/error-monitoring";
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
+import { getBrieflyJson } from "@/api/briefly";
 
 export type EventClaimObservation = {
   claim_id: string;
@@ -78,35 +76,14 @@ export type EventIntelligence = {
   developments?: EventDevelopment[];
 };
 
-function requireApiBaseUrl() {
-  if (!API_BASE_URL) throw new Error("Missing EXPO_PUBLIC_BRIEFLY_API_URL");
-  return API_BASE_URL;
-}
-
-export async function getEventIntelligence(
+export function getEventIntelligence(
   eventId: string,
   evidenceLimit = 30,
 ): Promise<EventIntelligence> {
   const params = new URLSearchParams({
     evidence_limit: String(Math.max(1, Math.min(evidenceLimit, 100))),
   });
-  const route =
-    `/api/events/${encodeURIComponent(eventId)}/intelligence?${params.toString()}`;
-  let response: Response;
-  try {
-    response = await fetch(`${requireApiBaseUrl()}${route}`);
-  } catch (error) {
-    captureApiError({ route, method: "GET", error });
-    throw error;
-  }
-  if (response.status >= 500) {
-    captureApiError({ route, method: "GET", statusCode: response.status });
-  }
-  if (!response.ok) {
-    const message = await response.text().catch(() => "");
-    throw new Error(
-      `Briefly event intelligence request failed (${response.status}): ${message || response.statusText}`,
-    );
-  }
-  return response.json() as Promise<EventIntelligence>;
+  return getBrieflyJson<EventIntelligence>(
+    `/api/events/${encodeURIComponent(eventId)}/intelligence?${params.toString()}`,
+  );
 }
