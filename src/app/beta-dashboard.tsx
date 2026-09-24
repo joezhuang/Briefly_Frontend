@@ -58,6 +58,7 @@ const WINDOWS = [7, 30, 90] as const;
 const DASHBOARD_TABS = [
   { id: "overview", label: "Overview" },
   { id: "social", label: "Social Beta" },
+  { id: "subscriptions", label: "Subscriptions" },
   { id: "operations", label: "Operations" },
   { id: "support", label: "Support" },
   { id: "settings", label: "Settings" },
@@ -2963,6 +2964,29 @@ export default function BetaDashboardScreen() {
     [socialBeta.story_source_breakdown],
   );
 
+  const subscriptionConversion =
+    snapshot?.product.subscription_conversion;
+  const maxSubscriptionPlanCount = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...(subscriptionConversion?.plan_breakdown ?? []).map(
+          (item) => item.count,
+        ),
+      ),
+    [subscriptionConversion?.plan_breakdown],
+  );
+  const maxSubscriptionProviderCount = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...(subscriptionConversion?.purchase_provider_breakdown ?? []).map(
+          (item) => item.count,
+        ),
+      ),
+    [subscriptionConversion?.purchase_provider_breakdown],
+  );
+
   const toggleError = async (item: BetaDashboardErrorGroup) => {
     const resolved = item.unresolved_occurrences > 0;
     setBusyFingerprint(item.fingerprint);
@@ -3370,6 +3394,176 @@ export default function BetaDashboardScreen() {
                   </View>
                 )}
               </View>
+              )}
+
+              {dashboardTab === "subscriptions" &&
+                subscriptionConversion && (
+                <>
+                  <View style={styles.section}>
+                    <SectionTitle
+                      title="Subscription conversion"
+                      detail="Unique signed-in users in the selected window. Event counts are shown separately so repeated purchase attempts do not inflate conversion rates."
+                    />
+                    <View style={styles.funnelGrid}>
+                      <MetricCard
+                        label="Viewed upgrade"
+                        value={number(subscriptionConversion.upgrade_view_users)}
+                        detail={
+                          number(subscriptionConversion.upgrade_view_events) +
+                          " view event(s)"
+                        }
+                      />
+                      <MetricCard
+                        label="Selected a plan"
+                        value={number(subscriptionConversion.plan_select_users)}
+                        detail={
+                          percentage(subscriptionConversion.upgrade_to_plan_rate) +
+                          " of upgrade viewers"
+                        }
+                      />
+                      <MetricCard
+                        label="Started checkout"
+                        value={number(subscriptionConversion.checkout_start_users)}
+                        detail={
+                          percentage(subscriptionConversion.plan_to_checkout_rate) +
+                          " of plan selectors"
+                        }
+                      />
+                      <MetricCard
+                        label="Completed purchase"
+                        value={number(
+                          subscriptionConversion.purchase_complete_users,
+                        )}
+                        detail={
+                          percentage(
+                            subscriptionConversion.checkout_to_purchase_rate,
+                          ) + " of checkout starters"
+                        }
+                      />
+                      <MetricCard
+                        label="Upgrade → paid"
+                        value={percentage(
+                          subscriptionConversion.upgrade_to_purchase_rate,
+                        )}
+                        detail={
+                          number(
+                            subscriptionConversion.purchase_complete_events,
+                          ) + " completion event(s)"
+                        }
+                      />
+                      <MetricCard
+                        label="Checkout cancelled"
+                        value={percentage(
+                          subscriptionConversion.checkout_cancel_rate,
+                        )}
+                        detail={
+                          number(subscriptionConversion.checkout_cancel_users) +
+                          " user(s)"
+                        }
+                      />
+                      <MetricCard
+                        label="Restore success"
+                        value={percentage(
+                          subscriptionConversion.restore_success_rate,
+                        )}
+                        detail={
+                          number(subscriptionConversion.restore_success_users) +
+                          " of " +
+                          number(subscriptionConversion.restore_start_users) +
+                          " restore user(s)"
+                        }
+                      />
+                      <MetricCard
+                        label="Opened management"
+                        value={number(subscriptionConversion.manage_open_users)}
+                        detail="users who opened provider subscription management"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.twoColumn}>
+                    <View
+                      style={[
+                        styles.panel,
+                        {
+                          borderColor: colors.border,
+                          backgroundColor: colors.surface,
+                        },
+                      ]}
+                    >
+                      <SectionTitle
+                        title="Plan selections"
+                        detail="Selection attempts before provider checkout."
+                      />
+                      <View style={styles.activityList}>
+                        {subscriptionConversion.plan_breakdown.length === 0 ? (
+                          <Text style={[styles.empty, { color: colors.textMuted }]}>
+                            No subscription plan selections yet.
+                          </Text>
+                        ) : (
+                          subscriptionConversion.plan_breakdown.map((item) => (
+                            <ActivityBar
+                              key={item.name}
+                              label={
+                                item.name === "yearly"
+                                  ? "Yearly"
+                                  : item.name === "monthly"
+                                    ? "Monthly"
+                                    : item.name
+                              }
+                              value={item.count}
+                              max={maxSubscriptionPlanCount}
+                              detail={number(item.users) + " users"}
+                            />
+                          ))
+                        )}
+                      </View>
+                    </View>
+
+                    <View
+                      style={[
+                        styles.panel,
+                        {
+                          borderColor: colors.border,
+                          backgroundColor: colors.surface,
+                        },
+                      ]}
+                    >
+                      <SectionTitle
+                        title="Completed purchases by provider"
+                        detail="Client-confirmed Briefly Pro purchase completions."
+                      />
+                      <View style={styles.activityList}>
+                        {subscriptionConversion.purchase_provider_breakdown
+                          .length === 0 ? (
+                          <Text style={[styles.empty, { color: colors.textMuted }]}>
+                            No completed purchases yet.
+                          </Text>
+                        ) : (
+                          subscriptionConversion.purchase_provider_breakdown.map(
+                            (item) => (
+                              <ActivityBar
+                                key={item.name}
+                                label={
+                                  item.name === "stripe"
+                                    ? "Web / Stripe"
+                                    : item.name === "app_store"
+                                      ? "App Store"
+                                      : item.name === "play_store"
+                                        ? "Google Play"
+                                        : item.name
+                                }
+                                value={item.count}
+                                max={maxSubscriptionProviderCount}
+                                detail={number(item.users) + " users"}
+                              />
+                            ),
+                          )
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                </>
               )}
 
               {dashboardTab === "operations" && (

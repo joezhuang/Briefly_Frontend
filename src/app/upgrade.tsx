@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -15,6 +15,10 @@ import {
   confirmBrieflyWebCheckout,
   syncBrieflyWebSubscription,
 } from "@/api/briefly";
+import {
+  flushProductAnalytics,
+  trackProductEvent,
+} from "@/analytics/product-analytics";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
@@ -221,10 +225,12 @@ export default function UpgradeScreen() {
   const { user, account, refreshAccount } = useBrieflyAuth();
   const {
     payment,
+    plan: paymentPlan,
     session_id: sessionId,
     returnTo,
   } = useLocalSearchParams<{
     payment?: string;
+    plan?: string;
     session_id?: string;
     returnTo?: string | string[];
   }>();
@@ -237,6 +243,9 @@ export default function UpgradeScreen() {
   const [busy, setBusy] = useState<BrieflyPlan | "restore" | "redeem" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stripeSynced, setStripeSynced] = useState(false);
+  const upgradeViewTrackedRef = useRef(false);
+  const webPurchaseTrackedRef = useRef(false);
+  const webCancelTrackedRef = useRef(false);
   const [planPrices, setPlanPrices] = useState<BrieflyPlanPrices>({
     monthly: null,
     yearly: null,
@@ -249,6 +258,46 @@ export default function UpgradeScreen() {
       );
     }
   }, [returnPath, user]);
+
+  useEffect(() => {
+    if (!user || upgradeViewTrackedRef.current) return;
+    upgradeViewTrackedRef.current = true;
+
+    trackProductEvent("subscription_upgrade_view", {
+      properties: {
+        surface: "upgrade",
+        provider:
+          Platform.OS === "web"
+            ? "stripe"
+            : Platform.OS === "ios"
+              ? "app_store"
+              : "play_store",
+      },
+    });
+  }, [user]);
+
+  useEffect(() => {
+    if (
+      !user ||
+      Platform.OS !== "web" ||
+      payment !== "cancel" ||
+      webCancelTrackedRef.current
+    ) {
+      return;
+    }
+
+    webCancelTrackedRef.current = true;
+    trackProductEvent("subscription_checkout_cancel", {
+      properties: {
+        plan:
+          paymentPlan === "monthly" || paymentPlan === "yearly"
+            ? paymentPlan
+            : "unknown",
+        provider: "stripe",
+      },
+    });
+    void flushProductAnalytics();
+  }, [payment, paymentPlan, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -311,6 +360,20 @@ export default function UpgradeScreen() {
           const confirmation = await confirmBrieflyWebCheckout(sessionId);
           if (confirmation.translation_entitled) {
             await refreshAccount().catch(() => null);
+            if (active && !webPurchaseTrackedRef.current) {
+              webPurchaseTrackedRef.current = true;
+              trackProductEvent("subscription_purchase_complete", {
+                properties: {
+                  plan:
+                    paymentPlan === "monthly" || paymentPlan === "yearly"
+                      ? paymentPlan
+                      : "unknown",
+                  provider: "stripe",
+                  promotion: appConfig?.promotion_enabled === true,
+                },
+              });
+              await flushProductAnalytics().catch(() => undefined);
+            }
             if (active) router.replace(returnPath as never);
             return;
           }
@@ -322,6 +385,20 @@ export default function UpgradeScreen() {
       const synced = await syncBrieflyWebSubscription().catch(() => null);
       if (synced?.translation_entitled) {
         await refreshAccount().catch(() => null);
+        if (active && !webPurchaseTrackedRef.current) {
+          webPurchaseTrackedRef.current = true;
+          trackProductEvent("subscription_purchase_complete", {
+            properties: {
+              plan:
+                paymentPlan === "monthly" || paymentPlan === "yearly"
+                  ? paymentPlan
+                  : "unknown",
+              provider: "stripe",
+              promotion: appConfig?.promotion_enabled === true,
+            },
+          });
+          await flushProductAnalytics().catch(() => undefined);
+        }
         if (active) router.replace(returnPath as never);
         return;
       }
@@ -330,6 +407,20 @@ export default function UpgradeScreen() {
         const next = await refreshAccount().catch(() => null);
         if (!active) return;
         if (next?.translation_entitled) {
+          if (!webPurchaseTrackedRef.current) {
+            webPurchaseTrackedRef.current = true;
+            trackProductEvent("subscription_purchase_complete", {
+              properties: {
+                plan:
+                  paymentPlan === "monthly" || paymentPlan === "yearly"
+                    ? paymentPlan
+                    : "unknown",
+                provider: "stripe",
+                promotion: appConfig?.promotion_enabled === true,
+              },
+            });
+            await flushProductAnalytics().catch(() => undefined);
+          }
           router.replace(returnPath as never);
           return;
         }
@@ -342,13 +433,35 @@ export default function UpgradeScreen() {
     return () => {
       active = false;
     };
-  }, [payment, refreshAccount, returnPath, sessionId, t.purchaseFailed, user]);
+  }, [
+    appConfig?.promotion_enabled,
+    payment,
+    paymentPlan,
+    refreshAccount,
+    returnPath,
+    sessionId,
+    t.purchaseFailed,
+    user,
+  ]);
 
   if (!user) return null;
 
   const purchase = async (plan: BrieflyPlan) => {
     setBusy(plan);
     setError(null);
+
+    trackProductEvent("subscription_plan_select", {
+      properties: {
+        plan,
+        provider:
+          Platform.OS === "web"
+            ? "stripe"
+            : Platform.OS === "ios"
+              ? "app_store"
+              : "play_store",
+        promotion: appConfig?.promotion_enabled === true,
+      },
+    });
 
     try {
       const latestAccount = await refreshAccount().catch(() => null);
@@ -399,7 +512,25 @@ export default function UpgradeScreen() {
     setError(null);
 
     try {
+      if (Platform.OS !== "web") {
+        trackProductEvent("subscription_restore_start", {
+          properties: {
+            provider: Platform.OS === "ios" ? "app_store" : "play_store",
+            surface: "upgrade",
+          },
+        });
+      }
+
       const active = await restoreBrieflySubscription(user.id);
+      if (Platform.OS !== "web") {
+        trackProductEvent("subscription_restore_complete", {
+          properties: {
+            provider: Platform.OS === "ios" ? "app_store" : "play_store",
+            surface: "upgrade",
+            active,
+          },
+        });
+      }
       if (active) await refreshAccount();
     } catch (err: unknown) {
       setError(subscriptionErrorMessage(err, t.purchaseFailed));

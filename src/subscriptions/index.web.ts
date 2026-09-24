@@ -4,6 +4,10 @@ import {
   getBrieflyWebPrices,
   type BrieflyWebPrice,
 } from "@/api/briefly";
+import {
+  flushProductAnalytics,
+  trackProductEvent,
+} from "@/analytics/product-analytics";
 
 export type BrieflyPlan = "monthly" | "yearly";
 
@@ -49,10 +53,14 @@ export async function beginBrieflySubscription(
   const origin = window.location.origin;
   const result = await createBrieflyWebCheckout(
     plan,
-    `${origin}/upgrade?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-    `${origin}/upgrade?payment=cancel`,
+    `${origin}/upgrade?payment=success&plan=${plan}&session_id={CHECKOUT_SESSION_ID}`,
+    `${origin}/upgrade?payment=cancel&plan=${plan}`,
   );
 
+  trackProductEvent("subscription_checkout_start", {
+    properties: { plan, provider: "stripe" },
+  });
+  await flushProductAnalytics().catch(() => undefined);
   window.location.assign(result.checkout_url);
   return false;
 }
@@ -64,6 +72,10 @@ export async function redeemBrieflyOfferCode(_userId: string) {
 export async function restoreBrieflySubscription(_userId: string) {
   const origin = window.location.origin;
   const result = await createBrieflyWebPortal(`${origin}/upgrade`);
+  trackProductEvent("subscription_manage_open", {
+    properties: { provider: "stripe", surface: "upgrade" },
+  });
+  await flushProductAnalytics().catch(() => undefined);
   window.location.assign(result.portal_url);
   return false;
 }

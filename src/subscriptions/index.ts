@@ -5,6 +5,7 @@ import {
   getBrieflyPurchaseEligibility,
   syncBrieflyNativeSubscription,
 } from "@/api/account";
+import { trackProductEvent } from "@/analytics/product-analytics";
 
 export type BrieflyPlan = "monthly" | "yearly";
 
@@ -212,15 +213,38 @@ export async function beginBrieflySubscription(
   }
 
   try {
+    trackProductEvent("subscription_checkout_start", {
+      properties: {
+        plan,
+        provider: Platform.OS === "ios" ? "app_store" : "play_store",
+        promotion: Boolean(requestedOffering),
+      },
+    });
+
     const { customerInfo } = await Purchases.purchasePackage(selected);
     const active = hasBrieflyPro(customerInfo);
     console.info(
       `[Briefly RevenueCat] purchase completed user=${userId} plan=${plan} active=${active} entitlements=${activeEntitlementIds(customerInfo).join(",") || "none"}`,
     );
     await syncPurchaseStateWithBackend(active);
+    if (active) {
+      trackProductEvent("subscription_purchase_complete", {
+        properties: {
+          plan,
+          provider: Platform.OS === "ios" ? "app_store" : "play_store",
+          promotion: Boolean(requestedOffering),
+        },
+      });
+    }
     return active;
   } catch (error: unknown) {
     if (isRevenueCatPurchaseCancelled(error)) {
+      trackProductEvent("subscription_checkout_cancel", {
+        properties: {
+          plan,
+          provider: Platform.OS === "ios" ? "app_store" : "play_store",
+        },
+      });
       console.info(
         `[Briefly RevenueCat] purchase cancelled user=${userId} plan=${plan}`,
       );

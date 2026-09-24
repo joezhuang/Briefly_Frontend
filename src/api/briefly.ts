@@ -678,6 +678,12 @@ export type BetaDashboardBreakdown = {
   sessions: number;
 };
 
+export type BetaDashboardConversionBreakdown = {
+  name: string;
+  count: number;
+  users: number;
+};
+
 export type BetaDashboardErrorGroup = {
   fingerprint: string;
   occurrences: number;
@@ -733,6 +739,29 @@ export type BetaDashboardSnapshot = {
       lens_breakdown: BetaDashboardBreakdown[];
       podcast_breakdown: BetaDashboardBreakdown[];
       story_source_breakdown: BetaDashboardBreakdown[];
+    };
+    subscription_conversion: {
+      upgrade_view_users: number;
+      upgrade_view_events: number;
+      plan_select_users: number;
+      plan_select_events: number;
+      checkout_start_users: number;
+      checkout_start_events: number;
+      checkout_cancel_users: number;
+      checkout_cancel_events: number;
+      purchase_complete_users: number;
+      purchase_complete_events: number;
+      restore_start_users: number;
+      restore_success_users: number;
+      manage_open_users: number;
+      upgrade_to_plan_rate: number;
+      plan_to_checkout_rate: number;
+      checkout_to_purchase_rate: number;
+      upgrade_to_purchase_rate: number;
+      checkout_cancel_rate: number;
+      restore_success_rate: number;
+      plan_breakdown: BetaDashboardConversionBreakdown[];
+      purchase_provider_breakdown: BetaDashboardConversionBreakdown[];
     };
   };
   errors: {

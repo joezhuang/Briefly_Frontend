@@ -23,6 +23,7 @@ import {
   syncBrieflyWebSubscription,
   type BrieflySubscriptionStatus,
 } from "@/api/briefly";
+import { trackProductEvent } from "@/analytics/product-analytics";
 import { clearBrieflyAccessToken } from "@/auth/session";
 import { supabase } from "@/auth/supabase";
 import { useBrieflyAuth } from "@/context/auth";
@@ -172,6 +173,9 @@ export default function AccountScreen() {
       if (platform === "stripe") {
         const portal = await createBrieflyWebPortal(`${WEB_RETURN_URL}/account`);
         await Linking.openURL(portal.portal_url);
+        trackProductEvent("subscription_manage_open", {
+          properties: { provider: "stripe", surface: "account" },
+        });
         return;
       }
 
@@ -184,6 +188,9 @@ export default function AccountScreen() {
           return;
         }
         await manageBrieflyNativeSubscription(user.id);
+        trackProductEvent("subscription_manage_open", {
+          properties: { provider: "app_store", surface: "account" },
+        });
         return;
       }
 
@@ -196,6 +203,9 @@ export default function AccountScreen() {
           return;
         }
         await manageBrieflyNativeSubscription(user.id);
+        trackProductEvent("subscription_manage_open", {
+          properties: { provider: "play_store", surface: "account" },
+        });
       }
     } catch (error: unknown) {
       setMessage(
@@ -216,12 +226,25 @@ export default function AccountScreen() {
 
     setBusy("restore");
     setMessage(null);
+    const provider =
+      Platform.OS === "web"
+        ? "stripe"
+        : Platform.OS === "ios"
+          ? "app_store"
+          : "play_store";
+    trackProductEvent("subscription_restore_start", {
+      properties: { provider, surface: "account" },
+    });
+
     try {
       const active =
         Platform.OS === "web"
           ? (await syncBrieflyWebSubscription()).translation_entitled
           : await restoreBrieflySubscription(user.id);
 
+      trackProductEvent("subscription_restore_complete", {
+        properties: { provider, surface: "account", active },
+      });
       await refreshAccount().catch(() => null);
       setMessage(
         active

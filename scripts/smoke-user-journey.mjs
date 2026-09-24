@@ -295,6 +295,18 @@ const checks = [
     ],
   },
   {
+    name: "Subscription conversion analytics cover upgrade to paid",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      '{ id: "subscriptions", label: "Subscriptions" }',
+      'title="Subscription conversion"',
+      '"Completed purchase"',
+      '"Upgrade → paid"',
+      'title="Plan selections"',
+      'title="Completed purchases by provider"',
+    ],
+  },
+  {
     name: "Admin dashboard exposes billing operational health and reconciliation",
     file: "src/app/beta-dashboard.tsx",
     needles: [
@@ -334,6 +346,12 @@ const checks = [
       '"community_contribution_create"',
       '"community_contribution_report"',
       '"community_reaction"',
+      '"subscription_upgrade_view"',
+      '"subscription_plan_select"',
+      '"subscription_checkout_start"',
+      '"subscription_purchase_complete"',
+      '"subscription_restore_complete"',
+      '"subscription_manage_open"',
     ],
   },
 ];
