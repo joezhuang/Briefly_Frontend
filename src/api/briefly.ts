@@ -881,6 +881,96 @@ export function getBetaDashboardCustomerSupport(query: string) {
   );
 }
 
+export type BetaDashboardRevenueCatHealth = {
+  configured: boolean;
+  reachable: boolean;
+  active: boolean | null;
+  platform: "app_store" | "play_store" | null;
+  product_id: string | null;
+  purchase_date: string | null;
+  expires_at: string | null;
+  grace_period_end: string | null;
+  unsubscribe_detected_at: string | null;
+  billing_issue_detected_at: string | null;
+  store: string | null;
+  error: string | null;
+};
+
+export type BetaDashboardStripeSubscriptionHealth = {
+  id: string | null;
+  status: string;
+  is_active: boolean;
+  cancel_at_period_end: boolean;
+  customer_id: string | null;
+  product_id: string | null;
+  price_id: string | null;
+  plan: string | null;
+  started_at: string | null;
+  current_period_end: string | null;
+  canceled_at: string | null;
+  ended_at: string | null;
+};
+
+export type BetaDashboardStripeHealth = {
+  configured: boolean;
+  reachable: boolean;
+  linked: boolean;
+  customer_id: string | null;
+  active: boolean | null;
+  subscriptions: BetaDashboardStripeSubscriptionHealth[];
+  error: string | null;
+};
+
+export type BetaDashboardBillingOperationalHealth = {
+  checked_at: string;
+  user_id: string;
+  canonical: {
+    profile_is_pro: boolean;
+    profile_platform: "stripe" | "app_store" | "play_store" | null;
+    lifecycle_is_pro: boolean;
+    lifecycle_provider: "stripe" | "app_store" | "play_store" | null;
+    lifecycle_state: string | null;
+    active_platforms: ("stripe" | "app_store" | "play_store")[];
+  };
+  providers: {
+    revenuecat: BetaDashboardRevenueCatHealth;
+    stripe: BetaDashboardStripeHealth;
+  };
+  consistency: {
+    in_sync: boolean;
+    issues: string[];
+    warnings: string[];
+    repair_recommended: boolean;
+  };
+  reconciliation_history: BetaDashboardAdminAuditPage;
+};
+
+export type BetaDashboardBillingReconcileResult = {
+  status: "completed" | "partial";
+  user_id: string;
+  providers: Record<string, Record<string, unknown>>;
+  canonical: Record<string, unknown>;
+  support: BetaDashboardCustomerSupport | null;
+  health: BetaDashboardBillingOperationalHealth | null;
+};
+
+export function getBetaDashboardBillingHealth(userId: string) {
+  return getJson<BetaDashboardBillingOperationalHealth>(
+    "/api/beta-dashboard/customer-support/" +
+      encodeURIComponent(userId) +
+      "/billing-health",
+  );
+}
+
+export function reconcileBetaDashboardBilling(userId: string) {
+  return postJson<BetaDashboardBillingReconcileResult>(
+    "/api/beta-dashboard/customer-support/" +
+      encodeURIComponent(userId) +
+      "/reconcile",
+    { confirm: true },
+  );
+}
+
 export type BrieflyWebPrice = {
   plan: "monthly" | "yearly";
   unit_amount: number;
