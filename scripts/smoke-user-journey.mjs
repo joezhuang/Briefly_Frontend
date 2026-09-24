@@ -295,7 +295,20 @@ const checks = [
     ],
   },
   {
-    name: "Admin dashboard exposes read-only customer support diagnostics",
+    name: "Admin dashboard exposes billing operational health and reconciliation",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      "getBetaDashboardBillingHealth",
+      "reconcileBetaDashboardBilling",
+      'title="Billing operational health"',
+      '"Reconcile now"',
+      'title="Manual reconciliation history"',
+      '"RevenueCat"',
+      '"Stripe"',
+    ],
+  },
+  {
+    name: "Admin dashboard exposes customer support diagnostics",
     file: "src/app/beta-dashboard.tsx",
     needles: [
       "getBetaDashboardCustomerSupport",

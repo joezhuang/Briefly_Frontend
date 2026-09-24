@@ -3561,7 +3561,7 @@ export default function BetaDashboardScreen() {
                 <View style={styles.section}>
                   <SectionTitle
                     title="Customer support"
-                    detail="Read-only account and billing diagnostics for Briefly users."
+                    detail="Account diagnostics, live provider health, and audited reconciliation for Briefly billing."
                   />
                   <CustomerSupportConsole />
                 </View>
