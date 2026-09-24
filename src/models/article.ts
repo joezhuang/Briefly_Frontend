@@ -50,7 +50,9 @@ export type CanonicalArticle = {
   video_thumbnail_url?: string | null;
   category?: string | null;
   ranking_score?: number | null;
+  article_count?: number | null;
   source_count?: number | null;
+  source_url?: string | null;
   what_happened: string;
   why_it_matters: string;
   what_next: string;

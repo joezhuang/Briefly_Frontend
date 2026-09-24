@@ -1,6 +1,6 @@
 import * as WebBrowser from "expo-web-browser";
 import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Linking,
   Platform,
@@ -74,7 +74,7 @@ export function SingleSourceLocalArticle({
   const [launchFailed, setLaunchFailed] = useState(false);
   const url = coverage.url;
 
-  const openOriginal = async () => {
+  const openOriginal = useCallback(async () => {
     if (!validHttpUrl(url)) {
       setLaunchFailed(true);
       return;
@@ -106,13 +106,18 @@ export function SingleSourceLocalArticle({
         setLaunchFailed(true);
       }
     }
-  };
+  }, [
+    coverage.language,
+    coverage.source,
+    eventId,
+    url,
+  ]);
 
   useEffect(() => {
     if (openedRef.current) return;
     openedRef.current = true;
     void openOriginal();
-  }, [url]);
+  }, [openOriginal]);
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -139,8 +144,13 @@ export function SingleSourceLocalArticle({
           {coverage.source}
         </Text>
         <Text style={[styles.body, { color: colors.textMuted }]}>
-          {launchFailed ? text.body : text.body}
+          {text.body}
         </Text>
+        {launchFailed && (
+          <Text style={[styles.errorText, { color: colors.error }]}>
+            {text.open}
+          </Text>
+        )}
 
         <Pressable
           accessibilityRole="button"
@@ -226,5 +236,9 @@ const styles = StyleSheet.create({
   secondaryText: {
     fontSize: 14,
     fontWeight: "800",
+  },
+  errorText: {
+    fontSize: 13,
+    fontWeight: "700",
   },
 });

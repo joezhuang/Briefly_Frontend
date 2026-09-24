@@ -184,16 +184,19 @@ export function StoryTile({
         ? styles.secondaryHeadline
         : styles.standardHeadline;
   const sourceCount = article.source_count ?? article.sources_used?.length ?? 0;
-  const uniqueCoverage = (article.coverage ?? []).filter(
-    (item, index, items) =>
-      !!item.url &&
-      items.findIndex((candidate) => candidate.url === item.url) === index,
-  );
-  const singleSourceLocalCoverage =
+  const singleSourceLocalUrl =
     analyticsScope === "local" &&
-    uniqueCoverage.length === 1 &&
-    (sourceCount <= 1 || article.coverage?.length === 1)
-      ? uniqueCoverage[0]
+    article.article_count === 1 &&
+    !!article.source_url
+      ? article.source_url
+      : null;
+  const singleSourceLocalCoverage =
+    singleSourceLocalUrl
+      ? {
+          url: singleSourceLocalUrl,
+          source: article.coverage?.[0]?.source ?? "Original source",
+          language: article.coverage?.[0]?.language ?? article.content_language ?? article.language,
+        }
       : null;
   const videoUrl = videoEnabled ? article.video_url ?? null : null;
   const imageUrl = article.video_thumbnail_url || article.image_url || null;

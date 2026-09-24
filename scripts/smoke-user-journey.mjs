@@ -78,6 +78,8 @@ const checks = [
     file: "src/components/story-tile.tsx",
     needles: [
       'analyticsScope === "local"',
+      "article.article_count === 1",
+      "article.source_url",
       "singleSourceLocalCoverage",
       "WebBrowser.openBrowserAsync",
       'surface: "local_single_source_feed"',
@@ -88,7 +90,9 @@ const checks = [
     file: "src/app/story/[slug].tsx",
     needles: [
       'prepare: resolvedScope !== "local"',
-      "setSingleSourceLocal(uniqueCoverage[0])",
+      "canonicalResponse.article_count === 1",
+      "canonicalResponse.source_url",
+      "setSingleSourceLocal(coverage)",
       "SingleSourceLocalArticle",
       "prepare: true",
     ],

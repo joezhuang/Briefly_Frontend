@@ -312,22 +312,26 @@ export default function StoryDetailScreen() {
             resolvedScope === "local" &&
             canonicalResponse.article_version_id == null
           ) {
-            const uniqueCoverage = (canonicalResponse.coverage ?? []).filter(
-              (item, index, items) =>
-                !!item.url &&
-                items.findIndex((candidate) => candidate.url === item.url) ===
-                  index,
-            );
-            const sourceCount =
-              canonicalResponse.source_count ??
-              canonicalResponse.sources_used?.length ??
-              uniqueCoverage.length;
-
             if (
-              uniqueCoverage.length === 1 &&
-              (sourceCount <= 1 || canonicalResponse.coverage?.length === 1)
+              canonicalResponse.article_count === 1 &&
+              canonicalResponse.source_url
             ) {
-              setSingleSourceLocal(uniqueCoverage[0]);
+              const coverage =
+                (canonicalResponse.coverage ?? []).find(
+                  (item) => item.url === canonicalResponse.source_url,
+                ) ??
+                canonicalResponse.coverage?.[0] ?? {
+                  evidence_id: "",
+                  url: canonicalResponse.source_url,
+                  title: canonicalResponse.headline,
+                  source: "Original source",
+                  language:
+                    canonicalResponse.content_language ??
+                    canonicalResponse.language ??
+                    null,
+                  published_at: canonicalResponse.published_at,
+                };
+              setSingleSourceLocal(coverage);
               setLoadingKey(requestKey);
               setError(null);
               return;
