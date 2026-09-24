@@ -295,6 +295,35 @@ const checks = [
     ],
   },
   {
+    name: "Upgrade flow emits subscription conversion events",
+    file: "src/app/upgrade.tsx",
+    needles: [
+      '"subscription_upgrade_view"',
+      '"subscription_plan_select"',
+      '"subscription_purchase_complete"',
+      '"subscription_restore_start"',
+      '"subscription_restore_complete"',
+    ],
+  },
+  {
+    name: "Subscription clients emit provider checkout events",
+    file: "src/subscriptions/index.ts",
+    needles: [
+      '"subscription_checkout_start"',
+      '"subscription_checkout_cancel"',
+      '"subscription_purchase_complete"',
+    ],
+  },
+  {
+    name: "Account subscription actions emit restore and management events",
+    file: "src/app/account.tsx",
+    needles: [
+      '"subscription_restore_start"',
+      '"subscription_restore_complete"',
+      '"subscription_manage_open"',
+    ],
+  },
+  {
     name: "Subscription conversion analytics cover upgrade to paid",
     file: "src/app/beta-dashboard.tsx",
     needles: [
