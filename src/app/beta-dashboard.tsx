@@ -526,7 +526,11 @@ function supportProviderLabel(
   return "None";
 }
 
-function supportBillingEventLabel(eventType: string) {
+function supportBillingEventLabel(
+  eventType: string,
+  providerEventType?: string | null,
+) {
+  if (providerEventType === "TRANSFER") return "Transfer";
   return eventType
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -538,8 +542,28 @@ function CustomerSupportConsole() {
   const [query, setQuery] = useState("");
   const [result, setResult] =
     useState<BetaDashboardCustomerSupport | null>(null);
+  const [billingHealth, setBillingHealth] =
+    useState<BetaDashboardBillingOperationalHealth | null>(null);
+  const [billingHealthLoading, setBillingHealthLoading] = useState(false);
+  const [billingHealthError, setBillingHealthError] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  const loadBillingHealth = async (userId: string) => {
+    setBillingHealthLoading(true);
+    setBillingHealthError(false);
+    try {
+      const next = await getBetaDashboardBillingHealth(userId);
+      setBillingHealth(next);
+      return next;
+    } catch {
+      setBillingHealthError(true);
+      return null;
+    } finally {
+      setBillingHealthLoading(false);
+    }
+  };
 
   const search = async () => {
     const normalized = query.trim();
@@ -547,11 +571,15 @@ function CustomerSupportConsole() {
 
     setLoading(true);
     setMessage(null);
+    setBillingHealth(null);
+    setBillingHealthError(false);
     try {
       const next = await getBetaDashboardCustomerSupport(normalized);
       setResult(next);
+      await loadBillingHealth(next.profile.id);
     } catch (caught) {
       setResult(null);
+      setBillingHealth(null);
       const text = caught instanceof Error ? caught.message : "";
       setMessage(
         text.includes("(404)")
@@ -562,6 +590,85 @@ function CustomerSupportConsole() {
       setLoading(false);
     }
   };
+
+  const performReconciliation = async () => {
+    if (!result || reconciling) return;
+    setReconciling(true);
+    setMessage(null);
+    try {
+      const next = await reconcileBetaDashboardBilling(result.profile.id);
+      if (next.support) setResult(next.support);
+      if (next.health) {
+        setBillingHealth(next.health);
+        setBillingHealthError(false);
+      } else {
+        await loadBillingHealth(result.profile.id);
+      }
+      setMessage(
+        next.status === "partial"
+          ? "Reconciliation completed with one or more provider checks unavailable. Review the notes below."
+          : "Reconciliation completed. Briefly's ledger and profile were refreshed from the available provider state.",
+      );
+    } catch {
+      setMessage(
+        "Reconciliation failed. No store purchase, cancellation, refund, or renewal setting was changed.",
+      );
+    } finally {
+      setReconciling(false);
+    }
+  };
+
+  const confirmReconciliation = () => {
+    if (!result || reconciling) return;
+
+    const prompt =
+      "Reconcile this Briefly account from RevenueCat and Stripe now?\n\n" +
+      "This refreshes Briefly's local subscription ledger/profile only. It does not purchase, cancel, refund, or change auto-renew at Apple, Google, or Stripe.";
+
+    if (
+      Platform.OS === "web" &&
+      typeof window !== "undefined" &&
+      typeof window.confirm === "function"
+    ) {
+      if (window.confirm(prompt)) void performReconciliation();
+      return;
+    }
+
+    Alert.alert("Reconcile billing state?", prompt, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Reconcile",
+        onPress: () => void performReconciliation(),
+      },
+    ]);
+  };
+
+  const rc = billingHealth?.providers.revenuecat;
+  const stripeHealth = billingHealth?.providers.stripe;
+  const reconciliationHistory =
+    billingHealth?.reconciliation_history.items.filter(
+      (item) => item.action !== "billing_reconciliation.start",
+    ) ?? [];
+
+  const revenueCatState =
+    !rc?.configured
+      ? "Not configured"
+      : !rc.reachable
+        ? "Unavailable"
+        : rc.active
+          ? "Active"
+          : "Inactive";
+
+  const stripeState =
+    !stripeHealth?.configured
+      ? "Not configured"
+      : !stripeHealth.reachable
+        ? "Unavailable"
+        : !stripeHealth.linked
+          ? "No customer"
+          : stripeHealth.active
+            ? "Active"
+            : "Inactive";
 
   return (
     <View style={styles.supportConsole}>
@@ -576,8 +683,8 @@ function CustomerSupportConsole() {
             Find Briefly account
           </Text>
           <Text style={[styles.configDetail, { color: colors.textMuted }]}>
-            Search by exact account email or Supabase user ID. This console is
-            read-only and only exposes Briefly account and billing fields.
+            Search by exact account email or Supabase user ID. Provider checks are
+            diagnostic until you explicitly choose Reconcile now.
           </Text>
         </View>
         <View style={styles.supportSearchControls}>
@@ -738,7 +845,7 @@ function CustomerSupportConsole() {
           <View style={styles.section}>
             <SectionTitle
               title="Profile / ledger consistency"
-              detail="Read-only diagnostics. No entitlement or provider state is changed here."
+              detail="Local Briefly diagnostics. Provider state is checked separately below."
             />
             <View
               style={[
@@ -754,7 +861,7 @@ function CustomerSupportConsole() {
               {result.consistency.in_sync &&
               result.consistency.warnings.length === 0 ? (
                 <Text style={[styles.empty, { color: colors.textMuted }]}>
-                  No consistency issues detected.
+                  No local consistency issues detected.
                 </Text>
               ) : (
                 <>
@@ -781,8 +888,176 @@ function CustomerSupportConsole() {
 
           <View style={styles.section}>
             <SectionTitle
+              title="Billing operational health"
+              detail="Live RevenueCat / Stripe checks compared with Briefly's canonical ledger. Reconcile repairs Briefly state only; it never changes the provider subscription."
+            />
+
+            <View style={[styles.windowRow, { marginBottom: 14 }]}>
+              <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                Last checked: {formatTimestamp(billingHealth?.checked_at)}
+              </Text>
+              <Pressable
+                disabled={billingHealthLoading}
+                onPress={() => void loadBillingHealth(result.profile.id)}
+                style={[styles.resolveButton, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.resolveText, { color: colors.text }]}>
+                  {billingHealthLoading ? "Checking…" : "Check providers"}
+                </Text>
+              </Pressable>
+              <Pressable
+                disabled={reconciling}
+                onPress={confirmReconciliation}
+                style={[
+                  styles.supportSearchButton,
+                  {
+                    backgroundColor: colors.text,
+                    opacity: reconciling ? 0.5 : 1,
+                  },
+                ]}
+              >
+                {reconciling ? (
+                  <ActivityIndicator size="small" color={colors.background} />
+                ) : (
+                  <Text
+                    style={[styles.configSaveText, { color: colors.background }]}
+                  >
+                    Reconcile now
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+
+            {billingHealthLoading && !billingHealth ? (
+              <ActivityIndicator
+                color={colors.accent}
+                style={{ alignSelf: "flex-start", marginBottom: 14 }}
+              />
+            ) : billingHealthError && !billingHealth ? (
+              <Text style={[styles.empty, { color: colors.textMuted }]}>
+                Provider health is unavailable. The existing Briefly billing state
+                has not been changed.
+              </Text>
+            ) : billingHealth ? (
+              <>
+                <View style={styles.metricsGrid}>
+                  <MetricCard
+                    label="RevenueCat"
+                    value={revenueCatState}
+                    detail={
+                      rc?.reachable
+                        ? supportProviderLabel(rc.platform) +
+                          " · expires " +
+                          formatTimestamp(rc.expires_at)
+                        : rc?.error || "Native provider check unavailable"
+                    }
+                  />
+                  <MetricCard
+                    label="Stripe"
+                    value={stripeState}
+                    detail={
+                      stripeHealth?.reachable
+                        ? number(stripeHealth.subscriptions.length) +
+                          " subscription record(s)"
+                        : stripeHealth?.error || "Web provider check unavailable"
+                    }
+                  />
+                  <MetricCard
+                    label="Provider consistency"
+                    value={
+                      billingHealth.consistency.in_sync ? "In sync" : "Review"
+                    }
+                    detail={
+                      billingHealth.consistency.in_sync
+                        ? "Provider and canonical state agree"
+                        : billingHealth.consistency.issues.length + " issue(s)"
+                    }
+                  />
+                </View>
+
+                <View
+                  style={[
+                    styles.supportConsistency,
+                    {
+                      borderColor: billingHealth.consistency.in_sync
+                        ? colors.border
+                        : colors.accent,
+                      backgroundColor: colors.surface,
+                      marginBottom: 18,
+                    },
+                  ]}
+                >
+                  {billingHealth.consistency.in_sync &&
+                  billingHealth.consistency.warnings.length === 0 ? (
+                    <Text style={[styles.empty, { color: colors.textMuted }]}>
+                      RevenueCat, Stripe, the ledger, and the profile agree.
+                    </Text>
+                  ) : (
+                    <>
+                      {billingHealth.consistency.issues.map((item) => (
+                        <Text
+                          key={"provider-issue-" + item}
+                          style={[styles.supportIssue, { color: colors.text }]}
+                        >
+                          Issue · {item}
+                        </Text>
+                      ))}
+                      {billingHealth.consistency.warnings.map((item) => (
+                        <Text
+                          key={"provider-warning-" + item}
+                          style={[
+                            styles.supportWarning,
+                            { color: colors.textMuted },
+                          ]}
+                        >
+                          Note · {item}
+                        </Text>
+                      ))}
+                    </>
+                  )}
+                </View>
+
+                <View
+                  style={[
+                    styles.panel,
+                    {
+                      borderColor: colors.border,
+                      backgroundColor: colors.surface,
+                    },
+                  ]}
+                >
+                  <SectionTitle
+                    title="Manual reconciliation history"
+                    detail="Audited support repairs for this account. RevenueCat transfer events also appear in Billing event history below."
+                  />
+                  {reconciliationHistory.length === 0 ? (
+                    <Text style={[styles.empty, { color: colors.textMuted }]}>
+                      No manual reconciliation has been run for this account.
+                    </Text>
+                  ) : (
+                    <View style={styles.supportDetailList}>
+                      {reconciliationHistory.map((item) => (
+                        <Text
+                          key={item.id}
+                          style={[styles.metaText, { color: colors.textMuted }]}
+                        >
+                          {formatTimestamp(item.created_at)} ·{" "}
+                          {item.action.replaceAll("_", " ").replaceAll(".", " · ")}
+                          {" · "}
+                          {item.actor_email || item.actor_user_id || "Unknown admin"}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </>
+            ) : null}
+          </View>
+
+          <View style={styles.section}>
+            <SectionTitle
               title="Billing event history"
-              detail="Append-only lifecycle events, newest first. This history is diagnostic and does not grant access."
+              detail="Append-only provider lifecycle and transfer events, newest first. This history is diagnostic and does not grant access."
             />
             {(result.billing_events ?? []).length === 0 ? (
               <Text style={[styles.empty, { color: colors.textMuted }]}>
@@ -812,8 +1087,11 @@ function CustomerSupportConsole() {
                         <Text
                           style={[styles.errorType, { color: colors.accent }]}
                         >
-                          {supportBillingEventLabel(event.event_type)} ·{" "}
-                          {supportProviderLabel(event.provider)}
+                          {supportBillingEventLabel(
+                            event.event_type,
+                            event.provider_event_type,
+                          )}{" "}
+                          · {supportProviderLabel(event.provider)}
                         </Text>
                         <Text
                           style={[styles.errorMessage, { color: colors.text }]}
