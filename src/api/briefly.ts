@@ -1129,6 +1129,8 @@ export type BetaDashboardAdminAuditPage = {
   offset: number;
   limit: number;
   has_more: boolean;
+  available?: boolean;
+  error?: string | null;
 };
 
 export function getBetaDashboardAdminAuditLog(options?: {

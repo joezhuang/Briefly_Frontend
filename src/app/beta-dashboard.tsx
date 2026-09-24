@@ -645,6 +645,8 @@ function CustomerSupportConsole() {
 
   const rc = billingHealth?.providers.revenuecat;
   const stripeHealth = billingHealth?.providers.stripe;
+  const reconciliationAuditAvailable =
+    billingHealth?.reconciliation_history.available !== false;
   const reconciliationHistory =
     billingHealth?.reconciliation_history.items.filter(
       (item) => item.action !== "billing_reconciliation.start",
@@ -906,13 +908,14 @@ function CustomerSupportConsole() {
                 </Text>
               </Pressable>
               <Pressable
-                disabled={reconciling}
+                disabled={reconciling || !reconciliationAuditAvailable}
                 onPress={confirmReconciliation}
                 style={[
                   styles.supportSearchButton,
                   {
                     backgroundColor: colors.text,
-                    opacity: reconciling ? 0.5 : 1,
+                    opacity:
+                      reconciling || !reconciliationAuditAvailable ? 0.5 : 1,
                   },
                 ]}
               >
@@ -922,7 +925,9 @@ function CustomerSupportConsole() {
                   <Text
                     style={[styles.configSaveText, { color: colors.background }]}
                   >
-                    Reconcile now
+                    {reconciliationAuditAvailable
+                      ? "Reconcile now"
+                      : "Audit storage required"}
                   </Text>
                 )}
               </Pressable>
@@ -1030,7 +1035,13 @@ function CustomerSupportConsole() {
                     title="Manual reconciliation history"
                     detail="Audited support repairs for this account. RevenueCat transfer events also appear in Billing event history below."
                   />
-                  {reconciliationHistory.length === 0 ? (
+                  {!reconciliationAuditAvailable ? (
+                    <Text style={[styles.supportIssue, { color: colors.text }]}>
+                      Manual reconciliation history is unavailable. Phase 29 admin
+                      audit storage must be applied and reachable before Reconcile
+                      now can run safely.
+                    </Text>
+                  ) : reconciliationHistory.length === 0 ? (
                     <Text style={[styles.empty, { color: colors.textMuted }]}>
                       No manual reconciliation has been run for this account.
                     </Text>
@@ -1550,7 +1561,8 @@ function AdminAuditLogPanel({
         </View>
       ) : error && !page ? (
         <Text style={[styles.promoEmpty, { color: colors.textMuted }]}>
-          Admin audit log is unavailable.
+          Admin audit log is unavailable. Verify that Phase 29 admin audit storage
+          has been applied to the backend database and is reachable.
         </Text>
       ) : !page?.items.length ? (
         <Text style={[styles.promoEmpty, { color: colors.textMuted }]}>

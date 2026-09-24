@@ -303,6 +303,7 @@ const checks = [
       'title="Billing operational health"',
       "Reconcile now",
       'title="Manual reconciliation history"',
+      '"Audit storage required"',
       '"RevenueCat"',
       '"Stripe"',
     ],
