@@ -25,6 +25,11 @@ function formatWebPrice(price: BrieflyWebPrice) {
   }
 }
 
+export async function getBrieflySubscriptionStatus(_userId: string) {
+  // Native RevenueCat state is not used by the web build.
+  return false;
+}
+
 export async function getBrieflyPlanPrices(
   _userId: string,
   _offeringIdentifier?: string | null,
