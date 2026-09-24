@@ -301,7 +301,7 @@ const checks = [
       "getBetaDashboardBillingHealth",
       "reconcileBetaDashboardBilling",
       'title="Billing operational health"',
-      '"Reconcile now"',
+      "Reconcile now",
       'title="Manual reconciliation history"',
       '"RevenueCat"',
       '"Stripe"',

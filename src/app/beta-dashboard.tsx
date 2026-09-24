@@ -2600,8 +2600,36 @@ export default function BetaDashboardScreen() {
 
   useEffect(() => {
     if (!authReady || !user || account?.is_admin !== true) return;
-    void refreshAdminHistory();
-  }, [account?.is_admin, authReady, refreshAdminHistory, user]);
+
+    let active = true;
+
+    void Promise.allSettled([
+      getBetaDashboardAppConfigHistory(),
+      getBetaDashboardAdminAuditLog(),
+    ]).then(([historyResult, auditResult]) => {
+      if (!active) return;
+
+      if (historyResult.status === "fulfilled") {
+        setRuntimeConfigHistory(historyResult.value);
+        setRuntimeConfigHistoryError(false);
+      } else {
+        setRuntimeConfigHistoryError(true);
+      }
+      setRuntimeConfigHistoryLoading(false);
+
+      if (auditResult.status === "fulfilled") {
+        setAdminAuditLog(auditResult.value);
+        setAdminAuditLogError(false);
+      } else {
+        setAdminAuditLogError(true);
+      }
+      setAdminAuditLogLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [account?.is_admin, authReady, user]);
 
   useEffect(() => {
     if (!authReady || !user || account?.is_admin !== true) return;
