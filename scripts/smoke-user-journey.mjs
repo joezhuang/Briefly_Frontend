@@ -74,6 +74,26 @@ const checks = [
     ],
   },
   {
+    name: "Single-source Local stories bypass canonical extraction",
+    file: "src/components/story-tile.tsx",
+    needles: [
+      'analyticsScope === "local"',
+      "singleSourceLocalCoverage",
+      "WebBrowser.openBrowserAsync",
+      'surface: "local_single_source_feed"',
+    ],
+  },
+  {
+    name: "Direct Local story routes inspect coverage before generation",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      'prepare: resolvedScope !== "local"',
+      "setSingleSourceLocal(uniqueCoverage[0])",
+      "SingleSourceLocalArticle",
+      "prepare: true",
+    ],
+  },
+  {
     name: "Story tile opens the canonical story route",
     file: "src/components/story-tile.tsx",
     needles: [

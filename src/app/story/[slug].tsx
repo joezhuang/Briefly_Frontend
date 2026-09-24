@@ -22,6 +22,7 @@ import {
 } from "@/components/article-language-toggle";
 import { ArticleView } from "@/components/article-view";
 import { EventPreviewView } from "@/components/event-preview-view";
+import { SingleSourceLocalArticle } from "@/components/single-source-local-article";
 import { EventCommunityPanel } from "@/components/event-community-panel";
 import { EventTimeline } from "@/components/event-timeline";
 import { RelatedStoriesCarousel } from "@/components/related-stories-carousel";
@@ -37,7 +38,7 @@ import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { useReadingHistory } from "@/context/reading-history";
 import { useBrieflyTheme } from "@/context/theme";
-import type { CanonicalArticle } from "@/models/article";
+import type { ArticleCoverage, CanonicalArticle } from "@/models/article";
 
 const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
@@ -179,6 +180,8 @@ export default function StoryDetailScreen() {
   const { recordArticle } = useReadingHistory();
 
   const [article, setArticle] = useState<CanonicalArticle | null>(null);
+  const [singleSourceLocal, setSingleSourceLocal] =
+    useState<ArticleCoverage | null>(null);
   const [authoritativeArticle, setAuthoritativeArticle] =
     useState<CanonicalArticle | null>(null);
   const [languageMode, setLanguageMode] =
@@ -224,7 +227,7 @@ export default function StoryDetailScreen() {
     resolvedSlug,
   ]);
   const translateSourceUrl = getStoryUrl(currentStoryHref);
-  const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${language}:${reloadKey}`;
+  const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${resolvedScope ?? ""}:${language}:${reloadKey}`;
   const loading = loadingKey !== requestKey && !error && !article;
   const isPro = account?.translation_entitled === true;
   const storyVideoEnabled = appConfig?.story_video_enabled !== false;
@@ -287,6 +290,7 @@ export default function StoryDetailScreen() {
         setError(null);
         setLoadingKey("");
         setArticle(null);
+        setSingleSourceLocal(null);
         setAuthoritativeArticle(null);
         setLanguageMode("localized");
       }
@@ -295,13 +299,50 @@ export default function StoryDetailScreen() {
         let result: CanonicalArticle;
 
         if (resolvedEventId) {
-          const canonicalResponse = await getLazyCanonicalArticleByEventId(
+          let canonicalResponse = await getLazyCanonicalArticleByEventId(
             resolvedEventId,
             {
               includeDraft: PREVIEW_DRAFTS,
               language: articleRequestLanguage,
+              prepare: resolvedScope !== "local",
             },
           );
+
+          if (
+            resolvedScope === "local" &&
+            canonicalResponse.article_version_id == null
+          ) {
+            const uniqueCoverage = (canonicalResponse.coverage ?? []).filter(
+              (item, index, items) =>
+                !!item.url &&
+                items.findIndex((candidate) => candidate.url === item.url) ===
+                  index,
+            );
+            const sourceCount =
+              canonicalResponse.source_count ??
+              canonicalResponse.sources_used?.length ??
+              uniqueCoverage.length;
+
+            if (
+              uniqueCoverage.length === 1 &&
+              (sourceCount <= 1 || canonicalResponse.coverage?.length === 1)
+            ) {
+              setSingleSourceLocal(uniqueCoverage[0]);
+              setLoadingKey(requestKey);
+              setError(null);
+              return;
+            }
+
+            canonicalResponse = await getLazyCanonicalArticleByEventId(
+              resolvedEventId,
+              {
+                includeDraft: PREVIEW_DRAFTS,
+                language: articleRequestLanguage,
+                prepare: true,
+              },
+            );
+          }
+
           const canonical = preferredImage(canonicalResponse, resolvedImageUrl);
 
           if (!active) return;
@@ -325,6 +366,7 @@ export default function StoryDetailScreen() {
             return;
           }
 
+          setSingleSourceLocal(null);
           setAuthoritativeArticle(canonical);
 
           if (language !== "en") {
@@ -424,6 +466,7 @@ export default function StoryDetailScreen() {
     resolvedEventId,
     resolvedImageUrl,
     resolvedPreviewHeadline,
+    resolvedScope,
     language,
     articleRequestLanguage,
     isWeb,
@@ -678,6 +721,23 @@ export default function StoryDetailScreen() {
         <ScreenState
           title="Briefly is temporarily unavailable"
           message={appConfig.maintenance_message ?? "We are carrying out a short maintenance update. Please try again soon."}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (singleSourceLocal && resolvedEventId) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <SingleSourceLocalArticle
+          eventId={resolvedEventId}
+          headline={
+            resolvedPreviewHeadline ??
+            singleSourceLocal.title ??
+            resolvedSlug ??
+            "Local story"
+          }
+          coverage={singleSourceLocal}
         />
       </SafeAreaView>
     );

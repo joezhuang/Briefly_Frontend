@@ -213,11 +213,16 @@ export function getCanonicalArticleByEventId(
 
 export function getLazyCanonicalArticleByEventId(
   eventId: string,
-  options?: { includeDraft?: boolean; language?: string },
+  options?: {
+    includeDraft?: boolean;
+    language?: string;
+    prepare?: boolean;
+  },
 ) {
   const params = new URLSearchParams({
     language: options?.language ?? "en",
     include_draft: String(options?.includeDraft ?? false),
+    prepare: String(options?.prepare ?? true),
   });
   return getJson<CanonicalArticle>(
     `/api/lazy-articles/event/${encodeURIComponent(eventId)}?${params.toString()}`,
