@@ -100,18 +100,14 @@ function activeEntitlementIds(customerInfo: {
   return Object.keys(customerInfo.entitlements.active || {});
 }
 
-async function syncActivePurchaseWithBackend(active: boolean) {
-  if (!active) {
-    console.info(
-      `[Briefly RevenueCat] ${entitlementIdentifier()} is not active; backend grant sync skipped`,
-    );
-    return;
-  }
-
-  // RevenueCat webhooks remain the durable source of truth. This signed-in
-  // reconciliation removes the normal webhook delay after purchase/restore.
+async function syncPurchaseStateWithBackend(active: boolean) {
+  // RevenueCat webhooks remain the durable source of truth. Always reconcile
+  // signed-in native state, including a negative entitlement, so stale backend
+  // Pro flags are revoked after expiry or transfer.
   try {
-    console.info("[Briefly RevenueCat] syncing active entitlement with backend");
+    console.info(
+      `[Briefly RevenueCat] syncing entitlement state with backend active=${active}`,
+    );
     const result = await syncBrieflyNativeSubscription();
     console.info(
       `[Briefly RevenueCat] backend sync success entitled=${result.translation_entitled} platform=${result.briefly_pro_platform ?? "none"}`,
@@ -138,7 +134,7 @@ export async function getBrieflySubscriptionStatus(userId: string) {
   console.info(
     `[Briefly RevenueCat] status user=${userId} active=${active} entitlements=${activeEntitlementIds(customerInfo).join(",") || "none"}`,
   );
-  await syncActivePurchaseWithBackend(active);
+  await syncPurchaseStateWithBackend(active);
   return active;
 }
 
@@ -221,7 +217,7 @@ export async function beginBrieflySubscription(
     console.info(
       `[Briefly RevenueCat] purchase completed user=${userId} plan=${plan} active=${active} entitlements=${activeEntitlementIds(customerInfo).join(",") || "none"}`,
     );
-    await syncActivePurchaseWithBackend(active);
+    await syncPurchaseStateWithBackend(active);
     return active;
   } catch (error: unknown) {
     if (isRevenueCatPurchaseCancelled(error)) {
@@ -248,7 +244,7 @@ export async function redeemBrieflyOfferCode(userId: string) {
   await Purchases.presentCodeRedemptionSheet();
   const { customerInfo } = await Purchases.syncPurchasesForResult();
   const active = hasBrieflyPro(customerInfo);
-  await syncActivePurchaseWithBackend(active);
+  await syncPurchaseStateWithBackend(active);
   return active;
 }
 
@@ -260,7 +256,7 @@ export async function restoreBrieflySubscription(userId: string) {
   console.info(
     `[Briefly RevenueCat] restore completed user=${userId} active=${active} entitlements=${activeEntitlementIds(customerInfo).join(",") || "none"}`,
   );
-  await syncActivePurchaseWithBackend(active);
+  await syncPurchaseStateWithBackend(active);
   return active;
 }
 

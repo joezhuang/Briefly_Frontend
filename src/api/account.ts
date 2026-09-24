@@ -21,5 +21,9 @@ export function syncBrieflyNativeSubscription() {
 }
 
 export function deleteBrieflyAccount() {
-  return deleteBrieflyJson<{ deleted: true }>("/api/account");
+  return deleteBrieflyJson<{
+    deleted: true;
+    identity_deleted: boolean;
+    shared_identity_preserved: boolean;
+  }>("/api/account");
 }

@@ -27,7 +27,10 @@ import { clearBrieflyAccessToken } from "@/auth/session";
 import { supabase } from "@/auth/supabase";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyTheme } from "@/context/theme";
-import { restoreBrieflySubscription } from "@/subscriptions";
+import {
+  disconnectBrieflySubscriptionUser,
+  restoreBrieflySubscription,
+} from "@/subscriptions";
 
 const APPLE_SUBSCRIPTIONS_URL = "https://apps.apple.com/account/subscriptions";
 const GOOGLE_PLAY_SUBSCRIPTIONS_URL =
@@ -239,6 +242,9 @@ export default function AccountScreen() {
     setMessage(null);
     try {
       await deleteBrieflyAccount();
+      if (Platform.OS === "ios" || Platform.OS === "android") {
+        await disconnectBrieflySubscriptionUser().catch(() => null);
+      }
       clearBrieflyAccessToken();
       if (supabase) {
         await supabase.auth.signOut({ scope: "local" }).catch(() => null);
@@ -253,7 +259,7 @@ export default function AccountScreen() {
 
   const confirmDelete = () => {
     const warning =
-      "This permanently deletes your Briefly account. This cannot be undone. Your store subscription is managed separately by Apple, Google, or Stripe and may need to be cancelled there.";
+      "This permanently deletes your Briefly data and Briefly access. If this sign-in is also used by Deeply, your Deeply account and Deeply data are kept. Your store subscription is managed separately by Apple, Google, or Stripe and may need to be cancelled there.";
 
     if (Platform.OS === "web") {
       if (window.confirm(warning)) void performDelete();
@@ -374,7 +380,7 @@ export default function AccountScreen() {
 
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Delete account</Text>
-          <Text style={[styles.body, { color: colors.textMuted }]}>Permanently delete your Briefly account and associated Briefly profile data. Deleting the account does not automatically cancel a subscription billed by Apple, Google, or Stripe.</Text>
+          <Text style={[styles.body, { color: colors.textMuted }]}>Permanently delete Briefly-owned account data and access. If your sign-in is shared with Deeply, Deeply account data is preserved. Deleting Briefly does not automatically cancel a subscription billed by Apple, Google, or Stripe.</Text>
           <Pressable disabled={!user || busy !== null} onPress={confirmDelete} style={[styles.dangerButton, { borderColor: "#c83b3b" }, (!user || busy !== null) && styles.disabled]}>
             {busy === "delete" ? <ActivityIndicator color="#c83b3b" /> : <Text style={styles.dangerText}>Delete account</Text>}
           </Pressable>

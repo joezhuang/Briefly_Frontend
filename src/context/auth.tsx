@@ -21,7 +21,10 @@ import {
 } from "@/api/briefly";
 import { saveAuthReturnPath } from "@/auth/return-path";
 import { supabase } from "@/auth/supabase";
-import { disconnectBrieflySubscriptionUser } from "@/subscriptions";
+import {
+  disconnectBrieflySubscriptionUser,
+  getBrieflySubscriptionStatus,
+} from "@/subscriptions";
 
 const BRIEFLY_MOBILE_AUTH_CALLBACK = "briefly://auth/callback";
 
@@ -40,6 +43,21 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+async function loadCurrentBrieflyAccount(session: Session) {
+  if (Platform.OS === "ios" || Platform.OS === "android") {
+    try {
+      await getBrieflySubscriptionStatus(session.user.id);
+    } catch (error) {
+      console.warn(
+        "[Briefly RevenueCat] signed-in entitlement reconciliation unavailable",
+        error,
+      );
+    }
+  }
+
+  return getCurrentBrieflyAccount();
+}
 
 export function BrieflyAuthProvider({ children }: PropsWithChildren) {
   const [ready, setReady] = useState(!supabase);
@@ -63,7 +81,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
         setSession(data.session);
         setBrieflyAccessToken(data.session?.access_token ?? null);
         if (data.session) {
-          void getCurrentBrieflyAccount()
+          void loadCurrentBrieflyAccount(data.session)
             .then(setAccount)
             .catch(() => setAccount(null));
         } else {
@@ -80,7 +98,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
       setSession(nextSession);
       setBrieflyAccessToken(nextSession?.access_token ?? null);
       if (nextSession) {
-        void getCurrentBrieflyAccount()
+        void loadCurrentBrieflyAccount(nextSession)
           .then(setAccount)
           .catch(() => setAccount(null));
       } else {
@@ -110,7 +128,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
     setSession(data.session);
     setBrieflyAccessToken(data.session?.access_token ?? null);
     if (data.session) {
-      setAccount(await getCurrentBrieflyAccount());
+      setAccount(await loadCurrentBrieflyAccount(data.session));
     }
   };
 
@@ -181,7 +199,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
 
     setSession(sessionData.session);
     setBrieflyAccessToken(sessionData.session?.access_token ?? null);
-    setAccount(await getCurrentBrieflyAccount());
+    setAccount(await loadCurrentBrieflyAccount(sessionData.session));
   };
 
   const refreshAccount = useCallback(async () => {
