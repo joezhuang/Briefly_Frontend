@@ -499,7 +499,16 @@ export default function UpgradeScreen() {
 
     try {
       const active = await redeemBrieflyOfferCode(user.id);
-      if (active) await refreshAccount();
+      if (active) {
+        trackProductEvent("subscription_purchase_complete", {
+          properties: {
+            plan: "offer_code",
+            provider: "app_store",
+            promotion: true,
+          },
+        });
+        await refreshAccount();
+      }
     } catch (err: unknown) {
       setError(subscriptionErrorMessage(err, t.purchaseFailed));
     } finally {
