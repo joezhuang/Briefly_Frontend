@@ -308,10 +308,7 @@ export default function StoryDetailScreen() {
             },
           );
 
-          if (
-            resolvedScope === "local" &&
-            canonicalResponse.article_version_id == null
-          ) {
+          if (resolvedScope === "local") {
             if (
               canonicalResponse.article_count === 1 &&
               canonicalResponse.source_url
@@ -337,14 +334,16 @@ export default function StoryDetailScreen() {
               return;
             }
 
-            canonicalResponse = await getLazyCanonicalArticleByEventId(
-              resolvedEventId,
-              {
-                includeDraft: PREVIEW_DRAFTS,
-                language: articleRequestLanguage,
-                prepare: true,
-              },
-            );
+            if (canonicalResponse.article_version_id == null) {
+              canonicalResponse = await getLazyCanonicalArticleByEventId(
+                resolvedEventId,
+                {
+                  includeDraft: PREVIEW_DRAFTS,
+                  language: articleRequestLanguage,
+                  prepare: true,
+                },
+              );
+            }
           }
 
           const canonical = preferredImage(canonicalResponse, resolvedImageUrl);
