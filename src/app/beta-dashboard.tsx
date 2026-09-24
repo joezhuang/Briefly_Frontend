@@ -2,6 +2,8 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,16 +19,21 @@ import {
   createBetaDashboardStripePromotion,
   deactivateBetaDashboardStripePromotion,
   getBetaDashboard,
+  getBetaDashboardAdminAuditLog,
   getBetaDashboardAppConfig,
+  getBetaDashboardAppConfigHistory,
   getBetaDashboardCustomerSupport,
   getBetaDashboardStripePromotions,
   getBetaDashboardTelemetryConfig,
   getBetaDashboardTelemetryHealth,
   getCommunityModerationQueue,
   setBetaDashboardErrorResolution,
+  rollbackBetaDashboardAppConfig,
   setCommunityContributionVisibility,
   updateBetaDashboardAppConfig,
   updateBetaDashboardTelemetryConfig,
+  type BetaDashboardAdminAuditItem,
+  type BetaDashboardAdminAuditPage,
   type BetaDashboardCustomerSupport,
   type BetaDashboardErrorGroup,
   type BetaDashboardSnapshot,
@@ -1092,6 +1099,219 @@ function TelemetryConfigEditor({
 }
 
 
+function auditChangedFields(item: BetaDashboardAdminAuditItem) {
+  const value = item.metadata?.changed_fields;
+  if (!Array.isArray(value)) return [];
+  return value.filter((field): field is string => typeof field === "string");
+}
+
+function RuntimeConfigHistoryPanel({
+  page,
+  loading,
+  error,
+  busyId,
+  onRefresh,
+  onRollback,
+}: {
+  page: BetaDashboardAdminAuditPage | null;
+  loading: boolean;
+  error: boolean;
+  busyId: number | null;
+  onRefresh: () => void;
+  onRollback: (item: BetaDashboardAdminAuditItem) => void;
+}) {
+  const { colors } = useBrieflyTheme();
+
+  return (
+    <View
+      style={[
+        styles.configPanel,
+        { borderColor: colors.border, backgroundColor: colors.surface },
+      ]}
+    >
+      <View style={[styles.auditToolbar, { borderBottomColor: colors.border }]}>
+        <View style={styles.auditToolbarCopy}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Recent runtime changes
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Every saved change records the administrator, changed fields, and the
+            previous configuration. Restore re-applies the state from before that
+            change and creates a new audit event.
+          </Text>
+        </View>
+        <Pressable
+          disabled={loading}
+          onPress={onRefresh}
+          style={[styles.resolveButton, { borderColor: colors.border }]}
+        >
+          <Text style={[styles.resolveText, { color: colors.text }]}>
+            {loading ? "Refreshing…" : "Refresh"}
+          </Text>
+        </Pressable>
+      </View>
+
+      {loading && !page ? (
+        <View style={styles.auditLoading}>
+          <ActivityIndicator size="small" color={colors.textMuted} />
+          <Text style={[styles.configStatus, { color: colors.textMuted }]}>
+            Loading runtime history…
+          </Text>
+        </View>
+      ) : error && !page ? (
+        <Text style={[styles.promoEmpty, { color: colors.textMuted }]}>
+          Runtime history is unavailable.
+        </Text>
+      ) : !page?.items.length ? (
+        <Text style={[styles.promoEmpty, { color: colors.textMuted }]}>
+          No runtime configuration changes have been recorded yet.
+        </Text>
+      ) : (
+        <View style={styles.auditList}>
+          {page.items.map((item) => {
+            const changed = auditChangedFields(item);
+            const rollbackSource = item.metadata?.rollback_of_audit_id;
+            const canRollback =
+              item.before_value !== null && busyId !== item.id;
+            return (
+              <View
+                key={item.id}
+                style={[styles.auditItem, { borderTopColor: colors.border }]}
+              >
+                <View style={styles.auditItemCopy}>
+                  <Text style={[styles.configLabel, { color: colors.text }]}>
+                    {item.action === "runtime_config.rollback"
+                      ? "Runtime rollback"
+                      : "Runtime configuration saved"}
+                  </Text>
+                  <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                    {formatTimestamp(item.created_at)} ·{" "}
+                    {item.actor_email || item.actor_user_id || "Unknown admin"}
+                  </Text>
+                  <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                    {changed.length
+                      ? "Changed: " + changed.join(", ")
+                      : "No field-level differences recorded"}
+                    {typeof rollbackSource === "number"
+                      ? " · rollback of #" + rollbackSource
+                      : ""}
+                  </Text>
+                </View>
+                <Pressable
+                  disabled={!canRollback}
+                  onPress={() => onRollback(item)}
+                  style={[
+                    styles.resolveButton,
+                    { borderColor: colors.border },
+                    !canRollback && styles.disabled,
+                  ]}
+                >
+                  <Text style={[styles.resolveText, { color: colors.text }]}>
+                    {busyId === item.id ? "Restoring…" : "Restore previous"}
+                  </Text>
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function AdminAuditLogPanel({
+  page,
+  loading,
+  error,
+  onRefresh,
+}: {
+  page: BetaDashboardAdminAuditPage | null;
+  loading: boolean;
+  error: boolean;
+  onRefresh: () => void;
+}) {
+  const { colors } = useBrieflyTheme();
+
+  return (
+    <View
+      style={[
+        styles.configPanel,
+        { borderColor: colors.border, backgroundColor: colors.surface },
+      ]}
+    >
+      <View style={[styles.auditToolbar, { borderBottomColor: colors.border }]}>
+        <View style={styles.auditToolbarCopy}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Recent administrative actions
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Append-only history for runtime settings, telemetry controls,
+            moderation, error resolution, and Briefly-managed Stripe promotions.
+          </Text>
+        </View>
+        <Pressable
+          disabled={loading}
+          onPress={onRefresh}
+          style={[styles.resolveButton, { borderColor: colors.border }]}
+        >
+          <Text style={[styles.resolveText, { color: colors.text }]}>
+            {loading ? "Refreshing…" : "Refresh"}
+          </Text>
+        </Pressable>
+      </View>
+
+      {loading && !page ? (
+        <View style={styles.auditLoading}>
+          <ActivityIndicator size="small" color={colors.textMuted} />
+          <Text style={[styles.configStatus, { color: colors.textMuted }]}>
+            Loading audit log…
+          </Text>
+        </View>
+      ) : error && !page ? (
+        <Text style={[styles.promoEmpty, { color: colors.textMuted }]}>
+          Admin audit log is unavailable.
+        </Text>
+      ) : !page?.items.length ? (
+        <Text style={[styles.promoEmpty, { color: colors.textMuted }]}>
+          No administrative actions have been recorded yet.
+        </Text>
+      ) : (
+        <View style={styles.auditList}>
+          {page.items.map((item) => {
+            const changed = auditChangedFields(item);
+            return (
+              <View
+                key={item.id}
+                style={[styles.auditItem, { borderTopColor: colors.border }]}
+              >
+                <View style={styles.auditItemCopy}>
+                  <Text style={[styles.configLabel, { color: colors.text }]}>
+                    {item.action.replaceAll("_", " ").replaceAll(".", " · ")}
+                  </Text>
+                  <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                    {item.resource_type}
+                    {item.resource_key ? " · " + item.resource_key : ""}
+                  </Text>
+                  <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                    {formatTimestamp(item.created_at)} ·{" "}
+                    {item.actor_email || item.actor_user_id || "Unknown admin"}
+                  </Text>
+                  {!!changed.length && (
+                    <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                      Changed: {changed.join(", ")}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
+
+
 function RuntimeConfigEditor({
   config,
   loading,
@@ -1960,6 +2180,17 @@ export default function BetaDashboardScreen() {
   const [configSaving, setConfigSaving] = useState(false);
   const [configError, setConfigError] = useState(false);
   const [configSaved, setConfigSaved] = useState(false);
+  const [runtimeConfigHistory, setRuntimeConfigHistory] =
+    useState<BetaDashboardAdminAuditPage | null>(null);
+  const [runtimeConfigHistoryLoading, setRuntimeConfigHistoryLoading] =
+    useState(true);
+  const [runtimeConfigHistoryError, setRuntimeConfigHistoryError] =
+    useState(false);
+  const [adminAuditLog, setAdminAuditLog] =
+    useState<BetaDashboardAdminAuditPage | null>(null);
+  const [adminAuditLogLoading, setAdminAuditLogLoading] = useState(true);
+  const [adminAuditLogError, setAdminAuditLogError] = useState(false);
+  const [busyRollbackId, setBusyRollbackId] = useState<number | null>(null);
   const [stripePromotions, setStripePromotions] = useState<StripePromotion[]>([]);
   const [stripePromotionsLoading, setStripePromotionsLoading] = useState(true);
   const [stripePromotionsError, setStripePromotionsError] = useState(false);
@@ -2058,6 +2289,38 @@ export default function BetaDashboardScreen() {
       active = false;
     };
   }, [account?.is_admin, authReady, user]);
+
+  const refreshAdminHistory = useCallback(async () => {
+    if (!user || account?.is_admin !== true) return;
+
+    setRuntimeConfigHistoryLoading(true);
+    setAdminAuditLogLoading(true);
+    const [historyResult, auditResult] = await Promise.allSettled([
+      getBetaDashboardAppConfigHistory(),
+      getBetaDashboardAdminAuditLog(),
+    ]);
+
+    if (historyResult.status === "fulfilled") {
+      setRuntimeConfigHistory(historyResult.value);
+      setRuntimeConfigHistoryError(false);
+    } else {
+      setRuntimeConfigHistoryError(true);
+    }
+    setRuntimeConfigHistoryLoading(false);
+
+    if (auditResult.status === "fulfilled") {
+      setAdminAuditLog(auditResult.value);
+      setAdminAuditLogError(false);
+    } else {
+      setAdminAuditLogError(true);
+    }
+    setAdminAuditLogLoading(false);
+  }, [account?.is_admin, user]);
+
+  useEffect(() => {
+    if (!authReady || !user || account?.is_admin !== true) return;
+    void refreshAdminHistory();
+  }, [account?.is_admin, authReady, refreshAdminHistory, user]);
 
   useEffect(() => {
     if (!authReady || !user || account?.is_admin !== true) return;
@@ -2174,7 +2437,10 @@ export default function BetaDashboardScreen() {
         item.contribution_id,
         item.status === "hidden",
       );
-      await refreshCommunityModeration();
+      await Promise.all([
+        refreshCommunityModeration(),
+        refreshAdminHistory(),
+      ]);
     } catch {
       setCommunityModerationError(true);
     } finally {
@@ -2202,6 +2468,7 @@ export default function BetaDashboardScreen() {
       setAppConfig(savedConfig);
       applyRuntimeConfig(savedConfig);
       setConfigSaved(true);
+      await refreshAdminHistory();
     } catch {
       setConfigError(true);
     } finally {
@@ -2223,6 +2490,7 @@ export default function BetaDashboardScreen() {
         created,
         ...current.filter((item) => item.id !== created.id),
       ]);
+      await refreshAdminHistory();
     } catch {
       setStripePromotionsError(true);
     } finally {
@@ -2240,6 +2508,7 @@ export default function BetaDashboardScreen() {
           candidate.id === updated.id ? updated : candidate,
         ),
       );
+      await refreshAdminHistory();
     } catch {
       setStripePromotionsError(true);
     } finally {
@@ -2269,11 +2538,57 @@ export default function BetaDashboardScreen() {
         await updateBetaDashboardTelemetryConfig(telemetryConfig);
       setTelemetryConfig(savedConfig);
       setTelemetryConfigSaved(true);
+      await refreshAdminHistory();
     } catch {
       setTelemetryConfigError(true);
     } finally {
       setTelemetryConfigSaving(false);
     }
+  };
+
+  const performRuntimeRollback = async (
+    item: BetaDashboardAdminAuditItem,
+  ) => {
+    setBusyRollbackId(item.id);
+    setConfigError(false);
+    try {
+      const restored = await rollbackBetaDashboardAppConfig(item.id);
+      setAppConfig(restored);
+      applyRuntimeConfig(restored);
+      setConfigSaved(true);
+      await refreshAdminHistory();
+    } catch {
+      setConfigError(true);
+    } finally {
+      setBusyRollbackId(null);
+    }
+  };
+
+  const confirmRuntimeRollback = (item: BetaDashboardAdminAuditItem) => {
+    const changed = auditChangedFields(item);
+    const message =
+      "Restore the runtime configuration from before this change?" +
+      (changed.length ? "\n\nFields: " + changed.join(", ") : "");
+
+    if (
+      Platform.OS === "web" &&
+      typeof window !== "undefined" &&
+      typeof window.confirm === "function"
+    ) {
+      if (window.confirm(message)) {
+        void performRuntimeRollback(item);
+      }
+      return;
+    }
+
+    Alert.alert("Restore runtime configuration?", message, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Restore",
+        style: "destructive",
+        onPress: () => void performRuntimeRollback(item),
+      },
+    ]);
   };
 
   const maxEventCount = useMemo(
@@ -2332,7 +2647,7 @@ export default function BetaDashboardScreen() {
     setBusyFingerprint(item.fingerprint);
     try {
       await setBetaDashboardErrorResolution(item.fingerprint, resolved);
-      await refreshDashboard();
+      await Promise.all([refreshDashboard(), refreshAdminHistory()]);
     } finally {
       setBusyFingerprint(null);
     }
@@ -2991,6 +3306,21 @@ export default function BetaDashboardScreen() {
 
                   <View style={styles.section}>
                     <SectionTitle
+                      title="Runtime configuration history"
+                      detail="Review who changed runtime controls and restore the state from before any recorded change."
+                    />
+                    <RuntimeConfigHistoryPanel
+                      page={runtimeConfigHistory}
+                      loading={runtimeConfigHistoryLoading}
+                      error={runtimeConfigHistoryError}
+                      busyId={busyRollbackId}
+                      onRefresh={() => void refreshAdminHistory()}
+                      onRollback={confirmRuntimeRollback}
+                    />
+                  </View>
+
+                  <View style={styles.section}>
+                    <SectionTitle
                       title="Promotions"
                       detail="One place to control campaign messaging, native App Store / Google Play offers through RevenueCat, and web Stripe discount codes."
                     />
@@ -3025,6 +3355,19 @@ export default function BetaDashboardScreen() {
                       saved={telemetryConfigSaved}
                       onChange={changeTelemetryConfig}
                       onSave={() => void saveTelemetryConfig()}
+                    />
+                  </View>
+
+                  <View style={styles.section}>
+                    <SectionTitle
+                      title="Admin audit log"
+                      detail="Append-only accountability trail for state-changing Beta Dashboard actions."
+                    />
+                    <AdminAuditLogPanel
+                      page={adminAuditLog}
+                      loading={adminAuditLogLoading}
+                      error={adminAuditLogError}
+                      onRefresh={() => void refreshAdminHistory()}
                     />
                   </View>
                 </>
@@ -3258,6 +3601,48 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 18,
     overflow: "hidden",
+  },
+  auditToolbar: {
+    minHeight: 78,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+    flexWrap: "wrap",
+  },
+  auditToolbarCopy: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 420,
+    gap: 4,
+  },
+  auditLoading: {
+    minHeight: 64,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  auditList: { paddingBottom: 4 },
+  auditItem: {
+    minHeight: 78,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+    flexWrap: "wrap",
+  },
+  auditItemCopy: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 520,
+    gap: 5,
   },
   configRow: {
     minHeight: 68,

@@ -283,6 +283,18 @@ const checks = [
     ],
   },
   {
+    name: "Admin dashboard exposes audit history and runtime rollback",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      "getBetaDashboardAdminAuditLog",
+      "getBetaDashboardAppConfigHistory",
+      "rollbackBetaDashboardAppConfig",
+      'title="Runtime configuration history"',
+      'title="Admin audit log"',
+      '"Restore previous"',
+    ],
+  },
+  {
     name: "Admin dashboard exposes read-only customer support diagnostics",
     file: "src/app/beta-dashboard.tsx",
     needles: [

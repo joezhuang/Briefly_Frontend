@@ -1020,6 +1020,62 @@ export function updateBetaDashboardAppConfig(config: BrieflyAppConfig) {
   return postJson<BrieflyAppConfig>("/api/beta-dashboard/app-config", config);
 }
 
+export type BetaDashboardAdminAuditItem = {
+  id: number;
+  actor_user_id: string | null;
+  actor_email: string | null;
+  action: string;
+  resource_type: string;
+  resource_key: string | null;
+  before_value: Record<string, unknown> | null;
+  after_value: Record<string, unknown> | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type BetaDashboardAdminAuditPage = {
+  items: BetaDashboardAdminAuditItem[];
+  count: number;
+  offset: number;
+  limit: number;
+  has_more: boolean;
+};
+
+export function getBetaDashboardAdminAuditLog(options?: {
+  limit?: number;
+  offset?: number;
+}) {
+  const params = new URLSearchParams({
+    limit: String(options?.limit ?? 50),
+    offset: String(options?.offset ?? 0),
+  });
+  return getJson<BetaDashboardAdminAuditPage>(
+    "/api/beta-dashboard/audit-log?" + params.toString(),
+  );
+}
+
+export function getBetaDashboardAppConfigHistory(options?: {
+  limit?: number;
+  offset?: number;
+}) {
+  const params = new URLSearchParams({
+    limit: String(options?.limit ?? 30),
+    offset: String(options?.offset ?? 0),
+  });
+  return getJson<BetaDashboardAdminAuditPage>(
+    "/api/beta-dashboard/app-config/history?" + params.toString(),
+  );
+}
+
+export function rollbackBetaDashboardAppConfig(auditId: number) {
+  return postJson<BrieflyAppConfig>(
+    "/api/beta-dashboard/app-config/history/" +
+      encodeURIComponent(String(auditId)) +
+      "/rollback",
+    { confirm: true },
+  );
+}
+
 export function getBetaDashboardStripePromotions() {
   return getJson<{ items: StripePromotion[] }>(
     "/api/beta-dashboard/stripe-promotions",
