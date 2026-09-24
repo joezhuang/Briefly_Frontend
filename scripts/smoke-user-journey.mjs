@@ -35,6 +35,15 @@ const checks = [
     ],
   },
   {
+    name: "Google OAuth always requests explicit account selection",
+    file: "src/context/auth.tsx",
+    needles: [
+      'provider === "google"',
+      'prompt: "select_account"',
+      "queryParams: providerQueryParams",
+    ],
+  },
+  {
     name: "Maintenance mode gates the news experience but preserves recovery routes",
     file: "src/app/_layout.tsx",
     needles: [

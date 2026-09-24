@@ -147,6 +147,9 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
         ? `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
         : BRIEFLY_MOBILE_AUTH_CALLBACK;
 
+    const providerQueryParams =
+      provider === "google" ? { prompt: "select_account" } : undefined;
+
     if (Platform.OS === "web") {
       if (typeof window !== "undefined" && window.sessionStorage) {
         window.sessionStorage.setItem("briefly.auth.returnTo", returnTo);
@@ -154,7 +157,10 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider as Provider,
-        options: { redirectTo },
+        options: {
+          redirectTo,
+          queryParams: providerQueryParams,
+        },
       });
       if (error) throw error;
       return;
@@ -165,6 +171,7 @@ export function BrieflyAuthProvider({ children }: PropsWithChildren) {
       options: {
         redirectTo,
         skipBrowserRedirect: true,
+        queryParams: providerQueryParams,
       },
     });
 
