@@ -38,6 +38,72 @@ function purchaseSourceLabel(
   return "another platform";
 }
 
+function revenueCatAccountOwnershipMessage(error: unknown) {
+  if (
+    (Platform.OS !== "ios" && Platform.OS !== "android") ||
+    !error ||
+    typeof error !== "object"
+  ) {
+    return null;
+  }
+
+  const candidate = error as {
+    code?: unknown;
+    readableErrorCode?: unknown;
+    readable_error_code?: unknown;
+    message?: unknown;
+    underlyingErrorMessage?: unknown;
+    underlying_error_message?: unknown;
+  };
+  const details = [
+    candidate.code,
+    candidate.readableErrorCode,
+    candidate.readable_error_code,
+    candidate.message,
+    candidate.underlyingErrorMessage,
+    candidate.underlying_error_message,
+  ]
+    .filter((value) => value !== null && value !== undefined)
+    .map((value) => String(value))
+    .join(" ")
+    .toUpperCase();
+
+  const store = Platform.OS === "ios" ? "App Store" : "Google Play";
+
+  if (
+    details.includes("RECEIPT_ALREADY_IN_USE") ||
+    details.includes("ANOTHER ACTIVE SUBSCRIBER") ||
+    (details.includes("RECEIPT") && details.includes("ANOTHER SUBSCRIBER"))
+  ) {
+    return (
+      `This ${store} purchase is linked to another Briefly account. ` +
+      `Sign in to the Briefly account that owns it, or use a different ${store} account to subscribe.`
+    );
+  }
+
+  if (
+    details.includes("PRODUCT_ALREADY_PURCHASED") ||
+    details.includes("ITEM_ALREADY_OWNED") ||
+    details.includes("PRODUCT ALREADY PURCHASED") ||
+    details.includes("ITEM ALREADY OWNED")
+  ) {
+    return (
+      `This ${store} account already owns this subscription. Try Restore Purchases. ` +
+      "If it belongs to another Briefly account, sign in to that Briefly account " +
+      `or use a different ${store} account.`
+    );
+  }
+
+  return null;
+}
+
+function subscriptionErrorMessage(error: unknown, fallback: string) {
+  return (
+    revenueCatAccountOwnershipMessage(error) ||
+    (error instanceof Error ? error.message : fallback)
+  );
+}
+
 const proCopy = {
   en: {
     subtitle: "Go beyond reading. Listen to deeper analysis and update important stories when you choose.",
@@ -308,7 +374,7 @@ export default function UpgradeScreen() {
         router.replace(returnPath as never);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t.purchaseFailed);
+      setError(subscriptionErrorMessage(err, t.purchaseFailed));
     } finally {
       setBusy(null);
     }
@@ -322,7 +388,7 @@ export default function UpgradeScreen() {
       const active = await redeemBrieflyOfferCode(user.id);
       if (active) await refreshAccount();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t.purchaseFailed);
+      setError(subscriptionErrorMessage(err, t.purchaseFailed));
     } finally {
       setBusy(null);
     }
@@ -336,7 +402,7 @@ export default function UpgradeScreen() {
       const active = await restoreBrieflySubscription(user.id);
       if (active) await refreshAccount();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t.purchaseFailed);
+      setError(subscriptionErrorMessage(err, t.purchaseFailed));
     } finally {
       setBusy(null);
     }
