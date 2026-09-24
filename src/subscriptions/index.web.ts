@@ -68,6 +68,10 @@ export async function restoreBrieflySubscription(_userId: string) {
   return false;
 }
 
+export async function manageBrieflyNativeSubscription(_userId: string) {
+  throw new Error("Native subscription management is unavailable on web.");
+}
+
 export async function disconnectBrieflySubscriptionUser() {
   // Native RevenueCat identity is not used by the web build.
 }

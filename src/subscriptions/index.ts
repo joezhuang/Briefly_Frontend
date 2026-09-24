@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import Purchases from "react-native-purchases";
 
 import {
@@ -258,6 +258,32 @@ export async function restoreBrieflySubscription(userId: string) {
   );
   await syncPurchaseStateWithBackend(active);
   return active;
+}
+
+export async function manageBrieflyNativeSubscription(userId: string) {
+  await ensureConfigured(userId);
+
+  const customerInfo = await Purchases.getCustomerInfo();
+  if (!hasBrieflyPro(customerInfo)) {
+    throw new Error("No active Briefly Pro store subscription was found.");
+  }
+
+  if (Platform.OS === "ios") {
+    // Present StoreKit's native management sheet. This is important for
+    // TestFlight/sandbox purchases, which may not appear on the generic
+    // production App Store subscriptions URL.
+    await Purchases.showManageSubscriptions();
+    return;
+  }
+
+  const managementURL = customerInfo.managementURL;
+  if (!managementURL) {
+    throw new Error(
+      "Google Play did not provide a subscription management link for this purchase.",
+    );
+  }
+
+  await Linking.openURL(managementURL);
 }
 
 export async function disconnectBrieflySubscriptionUser() {

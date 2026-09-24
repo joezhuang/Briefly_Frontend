@@ -29,12 +29,10 @@ import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyTheme } from "@/context/theme";
 import {
   disconnectBrieflySubscriptionUser,
+  manageBrieflyNativeSubscription,
   restoreBrieflySubscription,
 } from "@/subscriptions";
 
-const APPLE_SUBSCRIPTIONS_URL = "https://apps.apple.com/account/subscriptions";
-const GOOGLE_PLAY_SUBSCRIPTIONS_URL =
-  "https://play.google.com/store/account/subscriptions?package=com.hybridgalaxy.briefly";
 const WEB_RETURN_URL =
   process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, "") ||
   "https://briefly-news-analysis.vercel.app";
@@ -185,7 +183,7 @@ export default function AccountScreen() {
           );
           return;
         }
-        await Linking.openURL(APPLE_SUBSCRIPTIONS_URL);
+        await manageBrieflyNativeSubscription(user.id);
         return;
       }
 
@@ -197,7 +195,7 @@ export default function AccountScreen() {
           );
           return;
         }
-        await Linking.openURL(GOOGLE_PLAY_SUBSCRIPTIONS_URL);
+        await manageBrieflyNativeSubscription(user.id);
       }
     } catch (error: unknown) {
       setMessage(
