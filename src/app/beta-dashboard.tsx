@@ -1362,7 +1362,6 @@ function TelemetryConfigEditor({
     value: BetaDashboardTelemetryConfig[K],
   ) => void;
   onSave: () => void;
-  effectiveRuntimeConfig: BrieflyAppConfig | null;
 }) {
   const { colors } = useBrieflyTheme();
   const { width } = useWindowDimensions();
@@ -1828,6 +1827,7 @@ function RuntimeConfigEditor({
     value: BrieflyAppConfig[K],
   ) => void;
   onSave: () => void;
+  effectiveRuntimeConfig: BrieflyAppConfig | null;
 }) {
   const { colors } = useBrieflyTheme();
   const { width } = useWindowDimensions();
