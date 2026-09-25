@@ -1,7 +1,10 @@
 import {
   createBrieflyWebCheckout,
   createBrieflyWebPortal,
+  createBrieflyWebSupportCheckout,
   getBrieflyWebPrices,
+  getBrieflyWebSupportPrices,
+  type BrieflySupportProduct,
   type BrieflyWebPrice,
 } from "@/api/briefly";
 import {
@@ -10,11 +13,14 @@ import {
 } from "@/analytics/product-analytics";
 
 export type BrieflyPlan = "monthly" | "yearly";
+export type { BrieflySupportProduct } from "@/api/briefly";
 
 export type BrieflyPlanPrices = {
   monthly: string | null;
   yearly: string | null;
 };
+
+export type BrieflySupportPrices = Record<BrieflySupportProduct, string | null>;
 
 function formatWebPrice(price: BrieflyWebPrice) {
   try {
@@ -43,6 +49,47 @@ export async function getBrieflyPlanPrices(
     monthly: formatWebPrice(prices.monthly),
     yearly: formatWebPrice(prices.yearly),
   };
+}
+
+export async function getBrieflySupportPrices(
+  _userId: string,
+  _offeringIdentifier?: string | null,
+): Promise<BrieflySupportPrices> {
+  const result = await getBrieflyWebSupportPrices();
+  return {
+    tip_small: result.items.tip_small
+      ? formatWebPrice(result.items.tip_small)
+      : null,
+    tip_medium: result.items.tip_medium
+      ? formatWebPrice(result.items.tip_medium)
+      : null,
+    tip_large: result.items.tip_large
+      ? formatWebPrice(result.items.tip_large)
+      : null,
+    pass_1m: result.items.pass_1m
+      ? formatWebPrice(result.items.pass_1m)
+      : null,
+  };
+}
+
+export async function beginBrieflySupportPurchase(
+  product: BrieflySupportProduct,
+  _userId: string,
+  _offeringIdentifier?: string | null,
+) {
+  const origin = window.location.origin;
+  const result = await createBrieflyWebSupportCheckout(
+    product,
+    `${origin}/support-briefly?payment=success&product=${product}&session_id={CHECKOUT_SESSION_ID}`,
+    `${origin}/support-briefly?payment=cancel&product=${product}`,
+  );
+
+  trackProductEvent("support_checkout_start", {
+    properties: { product, provider: "stripe" },
+  });
+  await flushProductAnalytics().catch(() => undefined);
+  window.location.assign(result.checkout_url);
+  return null;
 }
 
 export async function beginBrieflySubscription(

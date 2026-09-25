@@ -27,6 +27,7 @@ import { trackProductEvent } from "@/analytics/product-analytics";
 import { clearBrieflyAccessToken } from "@/auth/session";
 import { supabase } from "@/auth/supabase";
 import { useBrieflyAuth } from "@/context/auth";
+import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyTheme } from "@/context/theme";
 import {
   disconnectBrieflySubscriptionUser,
@@ -79,7 +80,15 @@ function formatLifecycleDate(value: string | null | undefined) {
 
 export default function AccountScreen() {
   const { user, account, refreshAccount, signOut } = useBrieflyAuth();
+  const { config: appConfig } = useBrieflyAppConfig();
   const { colors } = useBrieflyTheme();
+  const supportAvailable =
+    appConfig?.support_enabled === true &&
+    (Platform.OS === "web"
+      ? appConfig.support_web_enabled
+      : Platform.OS === "ios"
+        ? appConfig.support_ios_enabled
+        : appConfig.support_android_enabled);
   const [busy, setBusy] = useState<
     "manage" | "restore" | "delete" | "signout" | null
   >(null);
@@ -382,6 +391,30 @@ export default function AccountScreen() {
             </Pressable>
           </View>
         )}
+
+        {supportAvailable ? (
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {appConfig?.support_title || "Support Briefly"}
+            </Text>
+            <Text style={[styles.body, { color: colors.textMuted }]}>
+              Make a one-time contribution, or choose a one-month Supporter Pass with no automatic renewal.
+            </Text>
+            <Pressable
+              disabled={!user || busy !== null}
+              onPress={() => router.push("/support-briefly")}
+              style={[
+                styles.button,
+                { borderColor: colors.border },
+                (!user || busy !== null) && styles.disabled,
+              ]}
+            >
+              <Text style={[styles.buttonText, { color: colors.text }]}>
+                View support options
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Account access</Text>

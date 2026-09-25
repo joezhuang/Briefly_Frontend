@@ -1154,6 +1154,50 @@ export function createBrieflyWebCheckout(
   );
 }
 
+export type BrieflySupportProduct =
+  | "tip_small"
+  | "tip_medium"
+  | "tip_large"
+  | "pass_1m";
+
+export type BrieflyWebSupportPrice = {
+  product: BrieflySupportProduct;
+  unit_amount: number;
+  currency: string;
+};
+
+export function getBrieflyWebSupportPrices() {
+  return getJson<{
+    items: Partial<Record<BrieflySupportProduct, BrieflyWebSupportPrice>>;
+  }>("/api/subscriptions/web/support/prices");
+}
+
+export function createBrieflyWebSupportCheckout(
+  product: BrieflySupportProduct,
+  successUrl: string,
+  cancelUrl: string,
+) {
+  return postJson<{ checkout_url: string }>(
+    "/api/subscriptions/web/support/checkout",
+    {
+      product,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    },
+  );
+}
+
+export function confirmBrieflyWebSupportCheckout(sessionId: string) {
+  return postJson<{
+    status: "confirmed";
+    translation_entitled: boolean;
+    briefly_pro_platform: "stripe" | null;
+    access_until: string | null;
+  }>("/api/subscriptions/web/support/confirm", {
+    session_id: sessionId,
+  });
+}
+
 export function createBrieflyWebPortal(returnUrl: string) {
   return postJson<{ portal_url: string }>(
     "/api/subscriptions/web/portal",
@@ -1368,6 +1412,15 @@ export type BrieflyAppConfig = {
   ios_offer_code_redemption_enabled: boolean;
   android_promo_code_hint_enabled: boolean;
   web_promotion_codes_enabled: boolean;
+  support_enabled: boolean;
+  support_tip_enabled: boolean;
+  supporter_pass_enabled: boolean;
+  support_web_enabled: boolean;
+  support_ios_enabled: boolean;
+  support_android_enabled: boolean;
+  support_title: string;
+  support_message: string;
+  native_support_offering_id: string | null;
   rollout_enabled: boolean;
   rollout_feature:
     | "community"
@@ -1395,6 +1448,17 @@ function normalizeBrieflyAppConfig(
 ): BrieflyAppConfig {
   return {
     ...value,
+    support_enabled: value.support_enabled ?? false,
+    support_tip_enabled: value.support_tip_enabled ?? false,
+    supporter_pass_enabled: value.supporter_pass_enabled ?? false,
+    support_web_enabled: value.support_web_enabled ?? false,
+    support_ios_enabled: value.support_ios_enabled ?? false,
+    support_android_enabled: value.support_android_enabled ?? false,
+    support_title: value.support_title ?? "Support Briefly",
+    support_message:
+      value.support_message ??
+      "Help Briefly stay independent with a one-time contribution, or choose a one-month Supporter Pass.",
+    native_support_offering_id: value.native_support_offering_id ?? null,
     rollout_enabled: value.rollout_enabled ?? false,
     rollout_feature: value.rollout_feature ?? "community",
     rollout_web_percentage: value.rollout_web_percentage ?? 100,

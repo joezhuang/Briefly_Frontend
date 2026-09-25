@@ -237,6 +237,13 @@ export default function UpgradeScreen() {
   const { language, t } = useBrieflyLanguage();
   const { config: appConfig } = useBrieflyAppConfig();
   const { colors } = useBrieflyTheme();
+  const supportAvailable =
+    appConfig?.support_enabled === true &&
+    (Platform.OS === "web"
+      ? appConfig.support_web_enabled
+      : Platform.OS === "ios"
+        ? appConfig.support_ios_enabled
+        : appConfig.support_android_enabled);
   const currentProCopy = proCopy[language] ?? proCopy.en;
   const returnPath = safeReturnTo(returnTo);
 
@@ -743,6 +750,31 @@ export default function UpgradeScreen() {
             </>
           ) : null}
 
+          {supportAvailable ? (
+            <View
+              style={[
+                styles.supportCard,
+                { borderColor: colors.border, backgroundColor: colors.surface },
+              ]}
+            >
+              <Text style={[styles.supportTitle, { color: colors.text }]}>
+                Prefer a one-time payment?
+              </Text>
+              <Text style={[styles.supportBody, { color: colors.textMuted }]}>
+                Support Briefly directly, or get one month of Pro with a
+                Supporter Pass that does not auto-renew.
+              </Text>
+              <Pressable
+                onPress={() => router.push("/support-briefly")}
+                style={[styles.supportButton, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.supportButtonText, { color: colors.text }]}>
+                  Support Briefly
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+
           <Pressable
             disabled={busy !== null || confirmingPayment}
             onPress={() => void restore()}
@@ -938,6 +970,32 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     fontSize: 15,
+    fontWeight: "800",
+  },
+  supportCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 18,
+    padding: 16,
+    gap: 9,
+  },
+  supportTitle: {
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  supportBody: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  supportButton: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  supportButtonText: {
+    fontSize: 14,
     fontWeight: "800",
   },
   finePrint: {

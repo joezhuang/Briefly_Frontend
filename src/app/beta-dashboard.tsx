@@ -2092,6 +2092,89 @@ function RuntimeConfigEditor({
       <ConfigToggle label="Search" detail="Allow users to search the canonical event universe." value={config.search_enabled} onValueChange={(value) => onChange("search_enabled", value)} />
 
       <SectionTitle
+        title="Support monetization"
+        detail="Remote controls for one-time contributions and the fixed-duration Supporter Pass. These are rollout controls, not reviewer-specific behavior."
+      />
+      <ConfigToggle
+        label="Support Briefly"
+        detail="Master switch for all support purchase entry points."
+        value={config.support_enabled}
+        onValueChange={(value) => onChange("support_enabled", value)}
+      />
+      <ConfigToggle
+        label="One-time tips"
+        detail="Offer one-time support contributions that do not grant Pro."
+        value={config.support_tip_enabled}
+        onValueChange={(value) => onChange("support_tip_enabled", value)}
+      />
+      <ConfigToggle
+        label="1-month Supporter Pass"
+        detail="Offer one payment for one month of Briefly Pro with no automatic renewal."
+        value={config.supporter_pass_enabled}
+        onValueChange={(value) => onChange("supporter_pass_enabled", value)}
+      />
+      <ConfigToggle
+        label="Support on Web"
+        detail="Allow Stripe one-time support purchases."
+        value={config.support_web_enabled}
+        onValueChange={(value) => onChange("support_web_enabled", value)}
+      />
+      <ConfigToggle
+        label="Support on iOS"
+        detail="Allow App Store support products through RevenueCat."
+        value={config.support_ios_enabled}
+        onValueChange={(value) => onChange("support_ios_enabled", value)}
+      />
+      <ConfigToggle
+        label="Support on Android"
+        detail="Allow Google Play support products through RevenueCat."
+        value={config.support_android_enabled}
+        onValueChange={(value) => onChange("support_android_enabled", value)}
+      />
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Support title</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Heading shown on the Support Briefly screen.</Text>
+        </View>
+        <TextInput
+          value={config.support_title}
+          onChangeText={(value) => onChange("support_title", value)}
+          placeholder="Support Briefly"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Support message</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Short explanation shown above the support choices.</Text>
+        </View>
+        <TextInput
+          value={config.support_message}
+          onChangeText={(value) => onChange("support_message", value)}
+          multiline
+          placeholder="Help Briefly stay independent."
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>RevenueCat support offering</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Offering identifier containing the three tip packages and the one-month Supporter Pass.</Text>
+        </View>
+        <TextInput
+          value={config.native_support_offering_id ?? ""}
+          onChangeText={(value) => onChange("native_support_offering_id", value.trim() || null)}
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="briefly_support"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+
+      <SectionTitle
         title="Controlled rollout"
         detail="Gradually expose one backend-enforced feature to stable cohorts. The ordinary feature switch above remains the hard-off control."
       />

@@ -125,6 +125,18 @@ const checks = [
     ],
   },
   {
+    name: "Support monetization is remotely controlled and cross-platform",
+    file: "src/app/support-briefly.tsx",
+    needles: [
+      "support_enabled",
+      "support_tip_enabled",
+      "supporter_pass_enabled",
+      "beginBrieflySupportPurchase",
+      "confirmBrieflyWebSupportCheckout",
+      "does not auto-renew",
+    ],
+  },
+  {
     name: "Homepage ready podcasts queue without interrupting active playback",
     file: "src/components/story-tile.tsx",
     needles: [

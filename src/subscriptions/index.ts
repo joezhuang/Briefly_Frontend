@@ -8,11 +8,18 @@ import {
 import { trackProductEvent } from "@/analytics/product-analytics";
 
 export type BrieflyPlan = "monthly" | "yearly";
+export type BrieflySupportProduct =
+  | "tip_small"
+  | "tip_medium"
+  | "tip_large"
+  | "pass_1m";
 
 export type BrieflyPlanPrices = {
   monthly: string | null;
   yearly: string | null;
 };
+
+export type BrieflySupportPrices = Record<BrieflySupportProduct, string | null>;
 
 let purchasesConfigured = false;
 let configuredUserId: string | null = null;
@@ -41,6 +48,28 @@ function purchaseSourceLabel(
   if (platform === "app_store") return "the App Store";
   if (platform === "play_store") return "Google Play";
   return "another platform";
+}
+
+function supportPackageIdentifier(product: BrieflySupportProduct) {
+  const configured: Record<BrieflySupportProduct, string | undefined> = {
+    tip_small:
+      process.env.EXPO_PUBLIC_REVENUECAT_SUPPORT_TIP_SMALL_PACKAGE_ID?.trim(),
+    tip_medium:
+      process.env.EXPO_PUBLIC_REVENUECAT_SUPPORT_TIP_MEDIUM_PACKAGE_ID?.trim(),
+    tip_large:
+      process.env.EXPO_PUBLIC_REVENUECAT_SUPPORT_TIP_LARGE_PACKAGE_ID?.trim(),
+    pass_1m:
+      process.env.EXPO_PUBLIC_REVENUECAT_SUPPORTER_PASS_1M_PACKAGE_ID?.trim(),
+  };
+  return (
+    configured[product] ||
+    {
+      tip_small: "support_tip_small",
+      tip_medium: "support_tip_medium",
+      tip_large: "support_tip_large",
+      pass_1m: "supporter_pass_1m",
+    }[product]
+  );
 }
 
 function packageIdentifier(plan: BrieflyPlan) {
@@ -167,6 +196,121 @@ export async function getBrieflyPlanPrices(
     monthly: priceFor("monthly"),
     yearly: priceFor("yearly"),
   };
+}
+
+export async function getBrieflySupportPrices(
+  userId: string,
+  offeringIdentifier?: string | null,
+): Promise<BrieflySupportPrices> {
+  await ensureConfigured(userId);
+  const offerings = await Purchases.getOfferings();
+  const requestedOffering = offeringIdentifier?.trim() || null;
+  const offering = requestedOffering
+    ? offerings.all[requestedOffering]
+    : offerings.current;
+
+  const result: BrieflySupportPrices = {
+    tip_small: null,
+    tip_medium: null,
+    tip_large: null,
+    pass_1m: null,
+  };
+  if (!offering) return result;
+
+  for (const product of Object.keys(result) as BrieflySupportProduct[]) {
+    const identifier = supportPackageIdentifier(product);
+    const selected = offering.availablePackages.find(
+      (item) => item.identifier === identifier,
+    );
+    result[product] = selected?.product?.priceString ?? null;
+  }
+  return result;
+}
+
+export async function beginBrieflySupportPurchase(
+  product: BrieflySupportProduct,
+  userId: string,
+  offeringIdentifier?: string | null,
+) {
+  if (product === "pass_1m") {
+    const eligibility = await getBrieflyPurchaseEligibility();
+    if (!eligibility.can_purchase) {
+      const source = purchaseSourceLabel(eligibility.briefly_pro_platform);
+      throw new Error(
+        `Briefly Pro is already active through ${source}. A Supporter Pass was not started.`,
+      );
+    }
+  }
+
+  await ensureConfigured(userId);
+  const offerings = await Purchases.getOfferings();
+  const requestedOffering = offeringIdentifier?.trim() || null;
+  const offering = requestedOffering
+    ? offerings.all[requestedOffering]
+    : offerings.current;
+  if (!offering) {
+    throw new Error(
+      requestedOffering
+        ? `RevenueCat offering ${requestedOffering} is not available.`
+        : "No Briefly support offering is available.",
+    );
+  }
+
+  const identifier = supportPackageIdentifier(product);
+  const selected = offering.availablePackages.find(
+    (item) => item.identifier === identifier,
+  );
+  if (!selected) {
+    throw new Error(
+      `RevenueCat package ${identifier} is not available in the support offering.`,
+    );
+  }
+
+  try {
+    trackProductEvent("support_checkout_start", {
+      properties: {
+        product,
+        provider: Platform.OS === "ios" ? "app_store" : "play_store",
+      },
+    });
+    await Purchases.purchasePackage(selected);
+
+    if (product === "pass_1m") {
+      const synced = await syncBrieflyNativeSubscription();
+      trackProductEvent("support_purchase_complete", {
+        properties: {
+          product,
+          provider: Platform.OS === "ios" ? "app_store" : "play_store",
+          pro_granted: synced.translation_entitled,
+        },
+      });
+      return synced;
+    }
+
+    trackProductEvent("support_purchase_complete", {
+      properties: {
+        product,
+        provider: Platform.OS === "ios" ? "app_store" : "play_store",
+        pro_granted: false,
+      },
+    });
+    return {
+      status: "synced" as const,
+      translation_entitled: false,
+      briefly_pro_platform: null,
+    };
+  } catch (error: unknown) {
+    if (isRevenueCatPurchaseCancelled(error)) {
+      trackProductEvent("support_checkout_cancel", {
+        properties: {
+          product,
+          provider: Platform.OS === "ios" ? "app_store" : "play_store",
+        },
+      });
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function beginBrieflySubscription(
