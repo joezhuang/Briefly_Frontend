@@ -286,7 +286,7 @@ export function EventCommunityPanel({
   const [withdrawTarget, setWithdrawTarget] = useState<number | null>(null);
   const [reportTarget, setReportTarget] = useState<number | null>(null);
   const [reportedIds, setReportedIds] = useState<Set<number>>(() => new Set());
-  const trackedCommunityViewEventId = useRef<string | null>(null);
+  const trackedCommunityPanelLoadEventId = useRef<string | null>(null);
 
   const community =
     communityState?.eventId === eventId ? communityState.value : null;
@@ -304,8 +304,8 @@ export function EventCommunityPanel({
         if (!active) return;
         setCommunityState({ eventId, value });
         setFailedEventId((current) => (current === eventId ? null : current));
-        if (trackedCommunityViewEventId.current !== eventId) {
-          trackedCommunityViewEventId.current = eventId;
+        if (trackedCommunityPanelLoadEventId.current !== eventId) {
+          trackedCommunityPanelLoadEventId.current = eventId;
           trackProductEvent("community_panel_load", {
             eventId,
             properties: {
@@ -328,8 +328,8 @@ export function EventCommunityPanel({
     const value = await getEventCommunity(eventId);
     setCommunityState({ eventId, value });
     setFailedEventId((current) => (current === eventId ? null : current));
-    if (trackedCommunityViewEventId.current !== eventId) {
-      trackedCommunityViewEventId.current = eventId;
+    if (trackedCommunityPanelLoadEventId.current !== eventId) {
+      trackedCommunityPanelLoadEventId.current = eventId;
       trackProductEvent("community_panel_load", {
         eventId,
         properties: {

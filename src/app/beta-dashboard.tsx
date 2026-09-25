@@ -3398,7 +3398,7 @@ export default function BetaDashboardScreen() {
                         )}
                         detail={
                           number(communityEngagement.community_panel_load_users) +
-                          " signed-in viewer(s) · panel load, not scroll visibility"
+                          " signed-in user(s) · panel load, not scroll visibility"
                         }
                       />
                       <MetricCard
@@ -3408,7 +3408,7 @@ export default function BetaDashboardScreen() {
                         )}
                         detail={
                           percentage(communityEngagement.panel_load_to_start_rate) +
-                          " of signed-in viewers"
+                          " of signed-in users with Community loaded"
                         }
                       />
                       <MetricCard
@@ -3416,7 +3416,7 @@ export default function BetaDashboardScreen() {
                         value={number(communityEngagement.contributor_users)}
                         detail={
                           percentage(communityEngagement.participation_rate) +
-                          " of signed-in viewers"
+                          " of signed-in users with Community loaded"
                         }
                       />
                       <MetricCard
@@ -3435,7 +3435,7 @@ export default function BetaDashboardScreen() {
                         value={number(communityEngagement.reaction_users)}
                         detail={
                           percentage(communityEngagement.reaction_rate) +
-                          " of signed-in viewers"
+                          " of signed-in users with Community loaded"
                         }
                       />
                       <MetricCard
@@ -3443,7 +3443,7 @@ export default function BetaDashboardScreen() {
                         value={number(communityEngagement.source_open_users)}
                         detail={
                           percentage(communityEngagement.source_open_rate) +
-                          " of signed-in viewers"
+                          " of signed-in users with Community loaded"
                         }
                       />
                       <MetricCard
@@ -3473,7 +3473,7 @@ export default function BetaDashboardScreen() {
                         value={number(communityEngagement.report_users)}
                         detail={
                           percentage(communityEngagement.report_rate) +
-                          " of signed-in viewers"
+                          " of signed-in users with Community loaded"
                         }
                       />
                       <MetricCard
