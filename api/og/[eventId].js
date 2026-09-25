@@ -1,5 +1,10 @@
 const DEFAULT_API_BASE = "https://briefly-api.deeplyapp.uk";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const SUPPORTED_SHARE_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+]);
 
 function first(value) {
   return Array.isArray(value) ? value[0] : value;
@@ -103,7 +108,7 @@ function imageCandidates(article, origin) {
 async function fetchImageCandidate(imageUrl) {
   const upstream = await fetch(imageUrl, {
     headers: {
-      Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      Accept: "image/jpeg,image/png,image/gif,image/*;q=0.5,*/*;q=0.1",
       "User-Agent":
         "Mozilla/5.0 (compatible; BrieflyShareCard/1.0; +https://briefly-news-analysis.vercel.app)",
     },
@@ -119,9 +124,9 @@ async function fetchImageCandidate(imageUrl) {
     upstream.headers.get("content-type") || "",
   ).split(";")[0].trim().toLowerCase();
 
-  if (!contentType.startsWith("image/")) {
+  if (!SUPPORTED_SHARE_IMAGE_TYPES.has(contentType)) {
     throw new Error(
-      `Upstream did not return an image: ${contentType || "unknown"}`,
+      `Upstream image format is not social-crawler safe: ${contentType || "unknown"}`,
     );
   }
 
