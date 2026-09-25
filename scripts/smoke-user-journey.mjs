@@ -368,7 +368,7 @@ const checks = [
       '"Health status"',
       '"Sessions with client errors"',
       '"Unresolved fatal"',
-      '"No configured health threshold is currently breached."',
+      "No configured health threshold is currently breached.",
     ],
   },
   {
