@@ -1278,6 +1278,60 @@ function ConfigToggle({
   );
 }
 
+function TelemetryThresholdField({
+  label,
+  detail,
+  value,
+  onChange,
+  decimals = false,
+}: {
+  label: string;
+  detail: string;
+  value: number;
+  onChange: (value: number) => void;
+  decimals?: boolean;
+}) {
+  const { colors } = useBrieflyTheme();
+
+  return (
+    <View
+      style={[
+        styles.configFieldRow,
+        { borderBottomColor: colors.border },
+      ]}
+    >
+      <View style={styles.configCopy}>
+        <Text style={[styles.configLabel, { color: colors.text }]}>{label}</Text>
+        <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+          {detail}
+        </Text>
+      </View>
+      <TextInput
+        value={String(value)}
+        onChangeText={(next) => {
+          const cleaned = decimals
+            ? next.replace(/[^0-9.]/g, "")
+            : next.replace(/[^0-9]/g, "");
+          if (!cleaned) return;
+          const parsed = decimals ? Number.parseFloat(cleaned) : Number(cleaned);
+          if (!Number.isFinite(parsed)) return;
+          onChange(parsed);
+        }}
+        keyboardType={decimals ? "decimal-pad" : "number-pad"}
+        style={[
+          styles.configInputSmall,
+          {
+            borderColor: colors.border,
+            backgroundColor: colors.background,
+            color: colors.text,
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+
 function TelemetryConfigEditor({
   config,
   loading,
@@ -1383,6 +1437,102 @@ function TelemetryConfigEditor({
         value={config.include_test_accounts_in_error_monitoring}
         onValueChange={(value) =>
           onChange("include_test_accounts_in_error_monitoring", value)
+        }
+      />
+
+      <ConfigToggle
+        label="Health alerts enabled"
+        detail="Evaluate warning and critical thresholds in Beta Dashboard → Operations. Metrics continue to load even when alerts are disabled."
+        value={config.health_alerts_enabled}
+        onValueChange={(value) => onChange("health_alerts_enabled", value)}
+      />
+
+      <TelemetryThresholdField
+        label="Minimum sessions for error-rate alerts"
+        detail="Avoid noisy percentage alerts during very small beta samples."
+        value={config.health_error_rate_min_sessions}
+        onChange={(value) =>
+          onChange(
+            "health_error_rate_min_sessions",
+            Math.max(1, Math.min(1_000_000, Math.round(value))),
+          )
+        }
+      />
+      <TelemetryThresholdField
+        label="Warning · sessions with client errors (%)"
+        detail="Warning when at least this percentage of analytics sessions have a recorded client error in 24 hours."
+        value={config.health_warning_error_session_rate}
+        decimals
+        onChange={(value) =>
+          onChange(
+            "health_warning_error_session_rate",
+            Math.max(0.1, Math.min(100, value)),
+          )
+        }
+      />
+      <TelemetryThresholdField
+        label="Critical · sessions with client errors (%)"
+        detail="Must be greater than or equal to the warning threshold."
+        value={config.health_critical_error_session_rate}
+        decimals
+        onChange={(value) =>
+          onChange(
+            "health_critical_error_session_rate",
+            Math.max(
+              config.health_warning_error_session_rate,
+              Math.min(100, value),
+            ),
+          )
+        }
+      />
+      <TelemetryThresholdField
+        label="Warning · server errors / 24h"
+        detail="Warning threshold for server error occurrences during the last 24 hours."
+        value={config.health_warning_server_errors_24h}
+        onChange={(value) =>
+          onChange(
+            "health_warning_server_errors_24h",
+            Math.max(1, Math.min(1_000_000, Math.round(value))),
+          )
+        }
+      />
+      <TelemetryThresholdField
+        label="Critical · server errors / 24h"
+        detail="Must be greater than or equal to the server-error warning threshold."
+        value={config.health_critical_server_errors_24h}
+        onChange={(value) =>
+          onChange(
+            "health_critical_server_errors_24h",
+            Math.max(
+              config.health_warning_server_errors_24h,
+              Math.min(1_000_000, Math.round(value)),
+            ),
+          )
+        }
+      />
+      <TelemetryThresholdField
+        label="Warning · unresolved errors"
+        detail="Warning threshold for all currently unresolved error occurrences."
+        value={config.health_warning_unresolved_errors}
+        onChange={(value) =>
+          onChange(
+            "health_warning_unresolved_errors",
+            Math.max(1, Math.min(1_000_000, Math.round(value))),
+          )
+        }
+      />
+      <TelemetryThresholdField
+        label="Critical · unresolved errors"
+        detail="Must be greater than or equal to the unresolved-error warning threshold. Any unresolved fatal error is always critical."
+        value={config.health_critical_unresolved_errors}
+        onChange={(value) =>
+          onChange(
+            "health_critical_unresolved_errors",
+            Math.max(
+              config.health_warning_unresolved_errors,
+              Math.min(1_000_000, Math.round(value)),
+            ),
+          )
         }
       />
 
@@ -3840,8 +3990,8 @@ export default function BetaDashboardScreen() {
                 <>
               <View style={styles.section}>
                 <SectionTitle
-                  title="Telemetry health"
-                  detail="Read-only storage verification for first-party analytics and error monitoring."
+                  title="Telemetry health & alerts"
+                  detail="Read-only first-party telemetry health. Warning/critical thresholds are configurable in Settings and do not change product behavior."
                 />
                 <View style={styles.windowRow}>
                   <Pressable
@@ -3884,6 +4034,16 @@ export default function BetaDashboardScreen() {
                   <>
                     <View style={[styles.metricsGrid, { marginTop: 14 }]}>
                       <MetricCard
+                        label="Health status"
+                        value={telemetryHealth.status.toUpperCase()}
+                        detail={
+                          telemetryHealth.alerts_enabled
+                            ? number(telemetryHealth.alerts.length) +
+                              " active alert(s)"
+                            : "threshold alerts disabled"
+                        }
+                      />
+                      <MetricCard
                         label="Analytics · 24h"
                         value={number(telemetryHealth.analytics.events_24h)}
                         detail={
@@ -3892,28 +4052,127 @@ export default function BetaDashboardScreen() {
                         }
                       />
                       <MetricCard
-                        label="Authenticated · 24h"
-                        value={number(
-                          telemetryHealth.analytics.authenticated_users_24h,
-                        )}
-                        detail="users represented in analytics"
+                        label="Sessions with client errors"
+                        value={
+                          telemetryHealth.errors.error_session_rate == null
+                            ? "—"
+                            : percentage(
+                                telemetryHealth.errors.error_session_rate,
+                              )
+                        }
+                        detail={
+                          telemetryHealth.errors.error_session_rate == null
+                            ? "needs at least " +
+                              number(
+                                telemetryHealth.thresholds
+                                  .error_rate_min_sessions,
+                              ) +
+                              " sessions"
+                            : number(
+                                telemetryHealth.errors.error_sessions_24h,
+                              ) + " affected session(s)"
+                        }
                       />
                       <MetricCard
-                        label="Errors · 24h"
-                        value={number(telemetryHealth.errors.errors_24h)}
+                        label="Server errors · 24h"
+                        value={number(
+                          telemetryHealth.errors.server_errors_24h,
+                        )}
                         detail={
-                          number(telemetryHealth.errors.client_errors_24h) +
-                          " client · " +
-                          number(telemetryHealth.errors.server_errors_24h) +
-                          " server"
+                          "warning " +
+                          number(
+                            telemetryHealth.thresholds
+                              .warning_server_errors_24h,
+                          ) +
+                          " · critical " +
+                          number(
+                            telemetryHealth.thresholds
+                              .critical_server_errors_24h,
+                          )
                         }
                       />
                       <MetricCard
                         label="Unresolved errors"
                         value={number(telemetryHealth.errors.unresolved_errors)}
-                        detail="all-time unresolved occurrences"
+                        detail={
+                          "warning " +
+                          number(
+                            telemetryHealth.thresholds
+                              .warning_unresolved_errors,
+                          ) +
+                          " · critical " +
+                          number(
+                            telemetryHealth.thresholds
+                              .critical_unresolved_errors,
+                          )
+                        }
+                      />
+                      <MetricCard
+                        label="Unresolved fatal"
+                        value={number(
+                          telemetryHealth.errors.unresolved_fatal_errors,
+                        )}
+                        detail="any unresolved fatal error is critical"
                       />
                     </View>
+
+                    <View
+                      style={[
+                        styles.supportConsistency,
+                        {
+                          borderColor: colors.border,
+                          backgroundColor: colors.surface,
+                          marginTop: 14,
+                          marginBottom: 14,
+                        },
+                      ]}
+                    >
+                      {!telemetryHealth.alerts_enabled ? (
+                        <Text style={[styles.empty, { color: colors.textMuted }]}>
+                          Health alerts are disabled. Raw telemetry metrics are
+                          still available above.
+                        </Text>
+                      ) : telemetryHealth.alerts.length === 0 ? (
+                        <Text style={[styles.empty, { color: colors.textMuted }]}>
+                          No configured health threshold is currently breached.
+                        </Text>
+                      ) : (
+                        telemetryHealth.alerts.map((alert) => (
+                          <Text
+                            key={alert.code}
+                            style={[
+                              styles.supportIssue,
+                              {
+                                color:
+                                  alert.severity === "critical"
+                                    ? colors.error
+                                    : colors.text,
+                              },
+                            ]}
+                          >
+                            {alert.severity.toUpperCase()} · {alert.message}
+                          </Text>
+                        ))
+                      )}
+                    </View>
+
+                    <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                      Error-session thresholds:{" "}
+                      {percentage(
+                        telemetryHealth.thresholds
+                          .warning_error_session_rate,
+                      )}{" "}
+                      warning ·{" "}
+                      {percentage(
+                        telemetryHealth.thresholds
+                          .critical_error_session_rate,
+                      )}{" "}
+                      critical · minimum{" "}
+                      {number(
+                        telemetryHealth.thresholds.error_rate_min_sessions,
+                      )}{" "}
+                      sessions
+                    </Text>
                     <Text style={[styles.metaText, { color: colors.textMuted }]}>
                       Analytics last received:{" "}
                       {formatTimestamp(telemetryHealth.analytics.last_received_at)}
@@ -4129,8 +4388,8 @@ export default function BetaDashboardScreen() {
 
                   <View style={styles.section}>
                     <SectionTitle
-                      title="Test-account telemetry"
-                      detail="Private admin-only controls. Email is used only to classify the trusted authenticated account and is not written into analytics or error rows."
+                      title="Telemetry & health thresholds"
+                      detail="Private admin-only controls for test-account filtering and warning/critical operational health thresholds."
                     />
                     <TelemetryConfigEditor
                       config={telemetryConfig}

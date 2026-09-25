@@ -361,6 +361,27 @@ const checks = [
     ],
   },
   {
+    name: "Beta dashboard evaluates telemetry health thresholds",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      'title="Telemetry health & alerts"',
+      '"Health status"',
+      '"Sessions with client errors"',
+      '"Unresolved fatal"',
+      '"No configured health threshold is currently breached."',
+    ],
+  },
+  {
+    name: "Admin dashboard configures health alert thresholds",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      '"Health alerts enabled"',
+      '"Minimum sessions for error-rate alerts"',
+      '"Warning · server errors / 24h"',
+      '"Critical · unresolved errors"',
+    ],
+  },
+  {
     name: "Admin dashboard exposes billing operational health and reconciliation",
     file: "src/app/beta-dashboard.tsx",
     needles: [

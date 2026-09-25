@@ -1088,11 +1088,43 @@ export type BetaDashboardTelemetryConfig = {
   test_account_emails: string[];
   include_test_accounts_in_analytics: boolean;
   include_test_accounts_in_error_monitoring: boolean;
+  health_alerts_enabled: boolean;
+  health_error_rate_min_sessions: number;
+  health_warning_error_session_rate: number;
+  health_critical_error_session_rate: number;
+  health_warning_server_errors_24h: number;
+  health_critical_server_errors_24h: number;
+  health_warning_unresolved_errors: number;
+  health_critical_unresolved_errors: number;
+};
+
+export type BetaDashboardTelemetryAlert = {
+  code:
+    | "unresolved_fatal_errors"
+    | "server_errors_24h"
+    | "unresolved_errors"
+    | "error_session_rate";
+  severity: "warning" | "critical";
+  metric: string;
+  value: number;
+  threshold: number;
+  message: string;
 };
 
 export type BetaDashboardTelemetryHealth = {
-  status: "ok";
+  status: "ok" | "warning" | "critical";
   generated_at: string;
+  alerts_enabled: boolean;
+  thresholds: {
+    error_rate_min_sessions: number;
+    warning_error_session_rate: number;
+    critical_error_session_rate: number;
+    warning_server_errors_24h: number;
+    critical_server_errors_24h: number;
+    warning_unresolved_errors: number;
+    critical_unresolved_errors: number;
+  };
+  alerts: BetaDashboardTelemetryAlert[];
   analytics: {
     events_24h: number;
     sessions_24h: number;
@@ -1103,7 +1135,11 @@ export type BetaDashboardTelemetryHealth = {
     errors_24h: number;
     client_errors_24h: number;
     server_errors_24h: number;
+    fatal_errors_24h: number;
+    error_sessions_24h: number;
+    error_session_rate: number | null;
     unresolved_errors: number;
+    unresolved_fatal_errors: number;
     last_received_at: string | null;
   };
 };
