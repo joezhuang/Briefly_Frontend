@@ -220,6 +220,7 @@ export function getLazyCanonicalArticleByEventId(
     includeDraft?: boolean;
     language?: string;
     prepare?: boolean;
+    sourceScope?: HomepageFeedScope;
   },
 ) {
   const params = new URLSearchParams({
@@ -227,6 +228,9 @@ export function getLazyCanonicalArticleByEventId(
     include_draft: String(options?.includeDraft ?? false),
     prepare: String(options?.prepare ?? true),
   });
+  if (options?.sourceScope) {
+    params.set("source_scope", options.sourceScope);
+  }
   return getJson<CanonicalArticle>(
     `/api/lazy-articles/event/${encodeURIComponent(eventId)}?${params.toString()}`,
   );

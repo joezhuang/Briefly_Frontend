@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 import { useState } from "react";
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
+import { trackProductEvent } from "@/analytics/product-analytics";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
@@ -11,6 +12,8 @@ const previewCopy = {
   en: {
     preparing: "Briefly is preparing this analysis from the event evidence.",
     waiting: "You do not need to wait here. Keep browsing other stories and Briefly will notify you in the app when this analysis is ready to read.",
+    sourceOnly: "Local source coverage",
+    sourceOnlyBody: "This story is currently Local-only, so Briefly is not spending AI generation on it. Open any original report below. If the event also becomes a Top or National story, Briefly can generate the shared analysis.",
     failed: "Briefly could not prepare an authoritative analysis from the available source material.",
     retry: "Retry",
     retrying: "Retrying…",
@@ -21,6 +24,8 @@ const previewCopy = {
   es: {
     preparing: "Briefly está preparando este análisis a partir de la evidencia del evento.",
     waiting: "No necesitas esperar aquí. Sigue explorando otras noticias y Briefly te avisará dentro de la app cuando el análisis esté listo para leer.",
+    sourceOnly: "Cobertura local de fuentes",
+    sourceOnlyBody: "Esta noticia por ahora es solo local, así que Briefly no gasta generación de IA en ella. Abre cualquiera de las fuentes originales de abajo. Si también pasa a Top o Nacional, Briefly podrá generar el análisis compartido.",
     failed: "Briefly no pudo preparar un análisis autorizado con las fuentes disponibles.",
     retry: "Reintentar",
     retrying: "Reintentando…",
@@ -31,6 +36,8 @@ const previewCopy = {
   ja: {
     preparing: "イベントの根拠情報からBriefly分析を準備しています。",
     waiting: "ここで待つ必要はありません。他のニュースを見ながらお待ちください。分析が読めるようになったらBriefly内でお知らせします。",
+    sourceOnly: "地域ニュースの元記事",
+    sourceOnlyBody: "現在このニュースはLocalのみのため、BrieflyはAI生成を行いません。下の元記事を開いて読めます。TopまたはNationalでも扱われるようになれば、共有分析を生成できます。",
     failed: "利用可能な情報から信頼できるBriefly分析を作成できませんでした。",
     retry: "再試行",
     retrying: "再試行中…",
@@ -41,6 +48,8 @@ const previewCopy = {
   "zh-CN": {
     preparing: "Briefly 正在根据事件证据准备这篇分析。",
     waiting: "你不需要停留在这里等待。可以继续浏览其他新闻，分析准备好后 Briefly 会在应用内通知你。",
+    sourceOnly: "本地新闻来源",
+    sourceOnlyBody: "这条新闻目前只属于 Local，因此 Briefly 不会为它消耗 AI 生成成本。你可以打开下方任一原始报道。如果它也进入 Top 或 National，Briefly 就可以生成共享分析。",
     failed: "Briefly 无法根据现有来源生成可靠的权威分析。",
     retry: "重试",
     retrying: "正在重试…",
@@ -51,6 +60,8 @@ const previewCopy = {
   "zh-TW": {
     preparing: "Briefly 正在根據事件證據準備這篇分析。",
     waiting: "你不需要停留在這裡等待。可以繼續瀏覽其他新聞，分析準備好後 Briefly 會在應用內通知你。",
+    sourceOnly: "本地新聞來源",
+    sourceOnlyBody: "這則新聞目前只屬於 Local，因此 Briefly 不會為它消耗 AI 生成成本。你可以開啟下方任一原始報導。如果它也進入 Top 或 National，Briefly 就可以產生共享分析。",
     failed: "Briefly 無法根據現有來源產生可靠的權威分析。",
     retry: "重試",
     retrying: "正在重試…",
@@ -63,9 +74,11 @@ const previewCopy = {
 export function EventPreviewView({
   article,
   onRetry,
+  sourceScope,
 }: {
   article: CanonicalArticle;
   onRetry?: () => void;
+  sourceScope?: "top" | "national" | "local";
 }) {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
@@ -73,10 +86,25 @@ export function EventPreviewView({
   const copy = previewCopy[language] ?? previewCopy.en;
   const sourceCount = article.source_count ?? article.coverage?.length ?? 0;
   const failed = article.generation_status === "failed";
+  const sourceOnly = article.generation_status === "source_only";
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
 
-  const openCoverage = async (url: string) => {
+  const openCoverage = async (
+    url: string,
+    source: string,
+    sourceLanguage?: string | null,
+  ) => {
+    trackProductEvent("source_open", {
+      eventId: article.event_id,
+      articleVersionId: article.article_version_id,
+      properties: {
+        surface: sourceOnly ? "local_source_only_story" : "event_preview",
+        source,
+        language: sourceLanguage ?? null,
+      },
+    });
+
     if (Platform.OS === "web" && typeof window !== "undefined") {
       window.open(url, "_blank", "noopener,noreferrer");
       return;
@@ -101,6 +129,7 @@ export function EventPreviewView({
           process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true",
         ),
       });
+      if (sourceScope) params.set("source_scope", sourceScope);
       const response = await fetch(
         `${apiBase}/api/lazy-articles/event/${encodeURIComponent(article.event_id)}/retry?${params.toString()}`,
         { method: "POST" },
@@ -151,11 +180,11 @@ export function EventPreviewView({
 
         <View style={[styles.statusCard, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}> 
           <Text style={[styles.statusTitle, { color: colors.text }]}> 
-            {failed ? copy.failed : copy.preparing}
+            {sourceOnly ? copy.sourceOnly : failed ? copy.failed : copy.preparing}
           </Text>
           {!failed && (
             <Text style={[styles.statusBody, { color: colors.textMuted }]}>
-              {copy.waiting}
+              {sourceOnly ? copy.sourceOnlyBody : copy.waiting}
             </Text>
           )}
           {failed && onRetry && (
@@ -186,7 +215,9 @@ export function EventPreviewView({
             {article.coverage.map((item) => (
               <Pressable
                 key={item.evidence_id}
-                onPress={() => void openCoverage(item.url)}
+                onPress={() =>
+                  void openCoverage(item.url, item.source, item.language)
+                }
                 style={[styles.coverageRow, { borderColor: colors.border }]}
               >
                 <View style={styles.coverageCopy}>

@@ -37,7 +37,13 @@ export type CanonicalArticle = {
     | "ready"
     | "failed"
     | "disabled"
-    | "pro_required";
+    | "pro_required"
+    | "source_only";
+  generation_policy?:
+    | "local_only"
+    | "top_eligible"
+    | "national_eligible"
+    | "existing_canonical";
   canonical_stale?: boolean;
   latest_evidence_at?: string | null;
   stale_refresh_entitled?: boolean;

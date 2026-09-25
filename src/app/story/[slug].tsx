@@ -22,7 +22,6 @@ import {
 } from "@/components/article-language-toggle";
 import { ArticleView } from "@/components/article-view";
 import { EventPreviewView } from "@/components/event-preview-view";
-import { SingleSourceLocalArticle } from "@/components/single-source-local-article";
 import { EventCommunityPanel } from "@/components/event-community-panel";
 import { EventTimeline } from "@/components/event-timeline";
 import { RelatedStoriesCarousel } from "@/components/related-stories-carousel";
@@ -38,7 +37,7 @@ import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { useReadingHistory } from "@/context/reading-history";
 import { useBrieflyTheme } from "@/context/theme";
-import type { ArticleCoverage, CanonicalArticle } from "@/models/article";
+import type { CanonicalArticle } from "@/models/article";
 
 const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
@@ -180,8 +179,6 @@ export default function StoryDetailScreen() {
   const { recordArticle } = useReadingHistory();
 
   const [article, setArticle] = useState<CanonicalArticle | null>(null);
-  const [singleSourceLocal, setSingleSourceLocal] =
-    useState<ArticleCoverage | null>(null);
   const [authoritativeArticle, setAuthoritativeArticle] =
     useState<CanonicalArticle | null>(null);
   const [languageMode, setLanguageMode] =
@@ -290,7 +287,6 @@ export default function StoryDetailScreen() {
         setError(null);
         setLoadingKey("");
         setArticle(null);
-        setSingleSourceLocal(null);
         setAuthoritativeArticle(null);
         setLanguageMode("localized");
       }
@@ -299,52 +295,20 @@ export default function StoryDetailScreen() {
         let result: CanonicalArticle;
 
         if (resolvedEventId) {
-          let canonicalResponse = await getLazyCanonicalArticleByEventId(
+          const canonicalResponse = await getLazyCanonicalArticleByEventId(
             resolvedEventId,
             {
               includeDraft: PREVIEW_DRAFTS,
               language: articleRequestLanguage,
-              prepare: resolvedScope !== "local",
+              prepare: true,
+              sourceScope:
+                resolvedScope === "top" ||
+                resolvedScope === "national" ||
+                resolvedScope === "local"
+                  ? resolvedScope
+                  : undefined,
             },
           );
-
-          if (resolvedScope === "local") {
-            if (
-              canonicalResponse.article_count === 1 &&
-              canonicalResponse.source_url
-            ) {
-              const coverage =
-                (canonicalResponse.coverage ?? []).find(
-                  (item) => item.url === canonicalResponse.source_url,
-                ) ??
-                canonicalResponse.coverage?.[0] ?? {
-                  evidence_id: "",
-                  url: canonicalResponse.source_url,
-                  title: canonicalResponse.headline,
-                  source: "Original source",
-                  language:
-                    canonicalResponse.content_language ??
-                    canonicalResponse.language ??
-                    null,
-                  published_at: canonicalResponse.published_at,
-                };
-              setSingleSourceLocal(coverage);
-              setLoadingKey(requestKey);
-              setError(null);
-              return;
-            }
-
-            if (canonicalResponse.article_version_id == null) {
-              canonicalResponse = await getLazyCanonicalArticleByEventId(
-                resolvedEventId,
-                {
-                  includeDraft: PREVIEW_DRAFTS,
-                  language: articleRequestLanguage,
-                  prepare: true,
-                },
-              );
-            }
-          }
 
           const canonical = preferredImage(canonicalResponse, resolvedImageUrl);
 
@@ -369,7 +333,6 @@ export default function StoryDetailScreen() {
             return;
           }
 
-          setSingleSourceLocal(null);
           setAuthoritativeArticle(canonical);
 
           if (language !== "en") {
@@ -729,23 +692,6 @@ export default function StoryDetailScreen() {
     );
   }
 
-  if (singleSourceLocal && resolvedEventId) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-        <SingleSourceLocalArticle
-          eventId={resolvedEventId}
-          headline={
-            resolvedPreviewHeadline ??
-            singleSourceLocal.title ??
-            resolvedSlug ??
-            "Local story"
-          }
-          coverage={singleSourceLocal}
-        />
-      </SafeAreaView>
-    );
-  }
-
   if (!article || error) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -770,8 +716,16 @@ export default function StoryDetailScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <EventPreviewView
           article={previewArticle}
+          sourceScope={
+            resolvedScope === "top" ||
+            resolvedScope === "national" ||
+            resolvedScope === "local"
+              ? resolvedScope
+              : undefined
+          }
           onRetry={
-            article.generation_status === "processing"
+            article.generation_status === "processing" ||
+            article.generation_status === "source_only"
               ? undefined
               : () => setReloadKey((value) => value + 1)
           }

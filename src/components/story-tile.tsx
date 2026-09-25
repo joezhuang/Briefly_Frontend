@@ -1,11 +1,9 @@
-import * as WebBrowser from "expo-web-browser";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -184,20 +182,6 @@ export function StoryTile({
         ? styles.secondaryHeadline
         : styles.standardHeadline;
   const sourceCount = article.source_count ?? article.sources_used?.length ?? 0;
-  const singleSourceLocalUrl =
-    analyticsScope === "local" &&
-    article.article_count === 1 &&
-    !!article.source_url
-      ? article.source_url
-      : null;
-  const singleSourceLocalCoverage =
-    singleSourceLocalUrl
-      ? {
-          url: singleSourceLocalUrl,
-          source: article.coverage?.[0]?.source ?? "Original source",
-          language: article.coverage?.[0]?.language ?? article.content_language ?? article.language,
-        }
-      : null;
   const videoUrl = videoEnabled ? article.video_url ?? null : null;
   const imageUrl = article.video_thumbnail_url || article.image_url || null;
   const storyHref =
@@ -257,31 +241,7 @@ export function StoryTile({
     });
   };
 
-  const openStory = async () => {
-    if (singleSourceLocalCoverage?.url) {
-      trackProductEvent("source_open", {
-        eventId: article.event_id,
-        articleVersionId: article.article_version_id,
-        properties: {
-          surface: "local_single_source_feed",
-          source: singleSourceLocalCoverage.source,
-          language: singleSourceLocalCoverage.language ?? null,
-        },
-      });
-
-      if (Platform.OS === "web" && typeof window !== "undefined") {
-        window.location.assign(singleSourceLocalCoverage.url);
-        return;
-      }
-
-      try {
-        await WebBrowser.openBrowserAsync(singleSourceLocalCoverage.url);
-      } catch {
-        await Linking.openURL(singleSourceLocalCoverage.url);
-      }
-      return;
-    }
-
+  const openStory = () => {
     router.push(storyHref as never);
   };
 
@@ -421,7 +381,7 @@ export function StoryTile({
       ref={tileRef}
       accessibilityRole={Platform.OS === "web" ? "link" : "button"}
       accessibilityLabel={displayedHeadline}
-      onPress={() => void openStory()}
+      onPress={openStory}
       style={StyleSheet.flatten([styles.tile, { height }])}
     >
       {imageUrl ? (
