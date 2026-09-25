@@ -1112,7 +1112,7 @@ export type BetaDashboardTelemetryAlert = {
 };
 
 export type BetaDashboardTelemetryHealth = {
-  status: "ok" | "warning" | "critical";
+  status: "ok" | "warning" | "critical" | "disabled";
   generated_at: string;
   alerts_enabled: boolean;
   thresholds: {
