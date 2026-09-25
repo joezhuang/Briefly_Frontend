@@ -411,7 +411,7 @@ const checks = [
     needles: [
       "getBrieflyRolloutHeaders",
       "await getBrieflyRolloutHeaders()",
-      '"X-Briefly-Rollout-Id"',
+      '"@/rollouts/identity"',
     ],
   },
   {
