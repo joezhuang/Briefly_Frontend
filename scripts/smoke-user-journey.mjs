@@ -383,6 +383,29 @@ const checks = [
     ],
   },
   {
+    name: "Controlled rollout settings expose stable platform percentages",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      'title="Controlled rollout"',
+      '"Percentage rollout"',
+      '"Cohort key"',
+      '"Web rollout (%)"',
+      '"iOS rollout (%)"',
+      '"Android rollout (%)"',
+      "unidentified",
+    ],
+  },
+  {
+    name: "API requests send stable rollout identity",
+    file: "src/rollouts/identity.ts",
+    needles: [
+      '"briefly.rollout-id.v1"',
+      '"X-Briefly-Rollout-Id"',
+      '"X-Briefly-Platform"',
+      "AsyncStorage",
+    ],
+  },
+  {
     name: "Beta dashboard evaluates telemetry health thresholds",
     file: "src/app/beta-dashboard.tsx",
     needles: [

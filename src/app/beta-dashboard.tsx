@@ -75,6 +75,16 @@ const SOCIAL_BETA_TABS = [
 type DashboardTab = (typeof DASHBOARD_TABS)[number]["id"];
 type SocialBetaTab = (typeof SOCIAL_BETA_TABS)[number]["id"];
 
+const ROLLOUT_FEATURES = [
+  { id: "community", label: "Community" },
+  { id: "timeline", label: "Timeline" },
+  { id: "podcast", label: "Podcast" },
+  { id: "translation", label: "Translation" },
+  { id: "following", label: "Following" },
+  { id: "search", label: "Search" },
+] as const;
+
+
 const EMPTY_COMMUNITY_ENGAGEMENT = {
   community_panel_load_sessions: 0,
   contribution_start_sessions: 0,
@@ -1352,6 +1362,7 @@ function TelemetryConfigEditor({
     value: BetaDashboardTelemetryConfig[K],
   ) => void;
   onSave: () => void;
+  effectiveRuntimeConfig: BrieflyAppConfig | null;
 }) {
   const { colors } = useBrieflyTheme();
   const { width } = useWindowDimensions();
@@ -1805,6 +1816,7 @@ function RuntimeConfigEditor({
   saved,
   onChange,
   onSave,
+  effectiveRuntimeConfig,
 }: {
   config: BrieflyAppConfig | null;
   loading: boolean;
@@ -2069,6 +2081,175 @@ function RuntimeConfigEditor({
       <ConfigToggle label="Translation" detail="Show Briefly translation controls and notices." value={config.translation_enabled} onValueChange={(value) => onChange("translation_enabled", value)} />
       <ConfigToggle label="Following" detail="Allow users to follow living events." value={config.following_enabled} onValueChange={(value) => onChange("following_enabled", value)} />
       <ConfigToggle label="Search" detail="Allow users to search the canonical event universe." value={config.search_enabled} onValueChange={(value) => onChange("search_enabled", value)} />
+
+      <SectionTitle
+        title="Controlled rollout"
+        detail="Gradually expose one backend-enforced feature to stable cohorts. The ordinary feature switch above remains the hard-off control."
+      />
+      <ConfigToggle
+        label="Percentage rollout"
+        detail="When enabled, updated clients are deterministically included or excluded using the selected feature, cohort key, platform, and stable account/install identity."
+        value={config.rollout_enabled}
+        onValueChange={(value) => onChange("rollout_enabled", value)}
+      />
+      <View
+        style={[
+          styles.configFieldRow,
+          stackWideFields && styles.configFieldRowStacked,
+          { borderBottomColor: colors.border },
+        ]}
+      >
+        <View
+          style={[
+            styles.configCopy,
+            stackWideFields && styles.configCopyStacked,
+          ]}
+        >
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Rollout feature
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Only features already enforced by the backend are eligible.
+          </Text>
+        </View>
+        <View style={styles.promoChoiceRow}>
+          {ROLLOUT_FEATURES.map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={() => onChange("rollout_feature", item.id)}
+              style={[
+                styles.promoChoice,
+                {
+                  borderColor:
+                    config.rollout_feature === item.id
+                      ? colors.text
+                      : colors.border,
+                  backgroundColor:
+                    config.rollout_feature === item.id
+                      ? colors.text
+                      : colors.background,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.promoChoiceText,
+                  {
+                    color:
+                      config.rollout_feature === item.id
+                        ? colors.background
+                        : colors.text,
+                  },
+                ]}
+              >
+                {item.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <View
+        style={[
+          styles.configFieldRow,
+          stackWideFields && styles.configFieldRowStacked,
+          { borderBottomColor: colors.border },
+        ]}
+      >
+        <View
+          style={[
+            styles.configCopy,
+            stackWideFields && styles.configCopyStacked,
+          ]}
+        >
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Cohort key
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Keep this unchanged to preserve membership. Change it deliberately
+            to reshuffle users for a new rollout experiment.
+          </Text>
+        </View>
+        <TextInput
+          value={config.rollout_cohort_key}
+          onChangeText={(value) =>
+            onChange(
+              "rollout_cohort_key",
+              value.replace(/[^A-Za-z0-9._-]/g, "").slice(0, 64) || "default",
+            )
+          }
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={[
+            styles.configInput,
+            stackWideFields && styles.configInputFullWidth,
+            {
+              borderColor: colors.border,
+              backgroundColor: colors.background,
+              color: colors.text,
+            },
+          ]}
+        />
+      </View>
+
+      <TelemetryThresholdField
+        label="Web rollout (%)"
+        detail="Percentage of identified Web clients included in the selected feature cohort."
+        value={config.rollout_web_percentage}
+        onChange={(value) =>
+          onChange(
+            "rollout_web_percentage",
+            Math.max(0, Math.min(100, Math.round(value))),
+          )
+        }
+      />
+      <TelemetryThresholdField
+        label="iOS rollout (%)"
+        detail="Percentage of identified iOS clients included in the selected feature cohort."
+        value={config.rollout_ios_percentage}
+        onChange={(value) =>
+          onChange(
+            "rollout_ios_percentage",
+            Math.max(0, Math.min(100, Math.round(value))),
+          )
+        }
+      />
+      <TelemetryThresholdField
+        label="Android rollout (%)"
+        detail="Percentage of identified Android clients included in the selected feature cohort."
+        value={config.rollout_android_percentage}
+        onChange={(value) =>
+          onChange(
+            "rollout_android_percentage",
+            Math.max(0, Math.min(100, Math.round(value))),
+          )
+        }
+      />
+
+      <View
+        style={[
+          styles.supportConsistency,
+          {
+            borderColor: colors.border,
+            backgroundColor: colors.background,
+            marginHorizontal: 16,
+            marginVertical: 14,
+          },
+        ]}
+      >
+        <Text style={[styles.supportWarning, { color: colors.textMuted }]}>
+          Current dashboard client:{" "}
+          {effectiveRuntimeConfig?.rollout_assignment ?? "not evaluated"}
+          {effectiveRuntimeConfig?.rollout_bucket != null
+            ? " · bucket " +
+              effectiveRuntimeConfig.rollout_bucket.toFixed(2)
+            : ""}
+        </Text>
+        <Text style={[styles.supportWarning, { color: colors.textMuted }]}>
+          Legacy clients that do not send a rollout identity remain allowed for
+          compatibility. Use the master feature switch for an immediate hard off.
+        </Text>
+      </View>
 
       <SectionTitle
         title="Home feeds"
@@ -2642,7 +2823,10 @@ function StripePromotionEditor({
 export default function BetaDashboardScreen() {
   const { width } = useWindowDimensions();
   const { ready: authReady, user, account } = useBrieflyAuth();
-  const { applyConfig: applyRuntimeConfig } = useBrieflyAppConfig();
+  const {
+    config: effectiveRuntimeConfig,
+    refresh: refreshRuntimeConfig,
+  } = useBrieflyAppConfig();
   const { colors } = useBrieflyTheme();
   const [days, setDays] = useState<(typeof WINDOWS)[number]>(7);
   const [snapshot, setSnapshot] = useState<BetaDashboardSnapshot | null>(null);
@@ -2982,7 +3166,7 @@ export default function BetaDashboardScreen() {
     try {
       const savedConfig = await updateBetaDashboardAppConfig(appConfig);
       setAppConfig(savedConfig);
-      applyRuntimeConfig(savedConfig);
+      await refreshRuntimeConfig();
       setConfigSaved(true);
       await refreshAdminHistory();
     } catch {
@@ -3073,7 +3257,7 @@ export default function BetaDashboardScreen() {
     try {
       const restored = await rollbackBetaDashboardAppConfig(item.id);
       setAppConfig(restored);
-      applyRuntimeConfig(restored);
+      await refreshRuntimeConfig();
       setConfigSaved(true);
       await refreshAdminHistory();
     } catch {
@@ -4574,6 +4758,7 @@ export default function BetaDashboardScreen() {
                       saved={configSaved}
                       onChange={changeAppConfig}
                       onSave={() => void saveAppConfig()}
+                      effectiveRuntimeConfig={effectiveRuntimeConfig}
                     />
                   </View>
 

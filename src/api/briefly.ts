@@ -6,6 +6,7 @@ import {
 import { supabase } from "@/auth/supabase";
 import { captureApiError } from "@/monitoring/error-monitoring";
 import type { CanonicalArticle } from "@/models/article";
+import { getBrieflyRolloutHeaders } from "@/rollouts/identity";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
 
@@ -49,8 +50,10 @@ function requireApiBaseUrl() {
   return API_BASE_URL;
 }
 
-function requestHeaders(options?: { includeAuth?: boolean }) {
-  const headers: Record<string, string> = {};
+async function requestHeaders(options?: { includeAuth?: boolean }) {
+  const headers: Record<string, string> = {
+    ...(await getBrieflyRolloutHeaders()),
+  };
   const accessToken = getBrieflyAccessToken();
 
   if (options?.includeAuth !== false && accessToken) {
@@ -92,7 +95,7 @@ function isPublicContentPath(path: string) {
 async function getJson<T>(path: string): Promise<T> {
   const accessToken = getBrieflyAccessToken();
   let response = await monitoredFetch(path, {
-    headers: requestHeaders(),
+    headers: await requestHeaders(),
   });
 
   if (response.status === 401 && accessToken) {
@@ -100,11 +103,11 @@ async function getJson<T>(path: string): Promise<T> {
 
     if (refreshedToken) {
       response = await monitoredFetch(path, {
-        headers: requestHeaders(),
+        headers: await requestHeaders(),
       });
     } else if (isPublicContentPath(path)) {
       response = await monitoredFetch(path, {
-        headers: requestHeaders({ includeAuth: false }),
+        headers: await requestHeaders({ includeAuth: false }),
       });
     }
   }
@@ -119,11 +122,11 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const request = () =>
+  const request = async () =>
     monitoredFetch(path, {
       method: "POST",
       headers: {
-        ...requestHeaders(),
+        ...(await requestHeaders()),
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
@@ -149,10 +152,10 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function deleteJson<T>(path: string): Promise<T> {
-  const request = () =>
+  const request = async () =>
     monitoredFetch(path, {
       method: "DELETE",
-      headers: requestHeaders(),
+      headers: await requestHeaders(),
     });
 
   const accessToken = getBrieflyAccessToken();
@@ -1311,18 +1314,58 @@ export type BrieflyAppConfig = {
   ios_offer_code_redemption_enabled: boolean;
   android_promo_code_hint_enabled: boolean;
   web_promotion_codes_enabled: boolean;
+  rollout_enabled: boolean;
+  rollout_feature:
+    | "community"
+    | "timeline"
+    | "podcast"
+    | "translation"
+    | "following"
+    | "search";
+  rollout_web_percentage: number;
+  rollout_ios_percentage: number;
+  rollout_android_percentage: number;
+  rollout_cohort_key: string;
+  rollout_assignment?:
+    | "inactive"
+    | "included"
+    | "excluded"
+    | "unidentified_allowed"
+    | "globally_disabled"
+    | "invalid";
+  rollout_bucket?: number | null;
 };
 
-export function getBrieflyAppConfig() {
-  return getJson<BrieflyAppConfig>("/api/app-config");
+function normalizeBrieflyAppConfig(
+  value: BrieflyAppConfig,
+): BrieflyAppConfig {
+  return {
+    ...value,
+    rollout_enabled: value.rollout_enabled ?? false,
+    rollout_feature: value.rollout_feature ?? "community",
+    rollout_web_percentage: value.rollout_web_percentage ?? 100,
+    rollout_ios_percentage: value.rollout_ios_percentage ?? 100,
+    rollout_android_percentage: value.rollout_android_percentage ?? 100,
+    rollout_cohort_key: value.rollout_cohort_key ?? "default",
+  };
 }
 
-export function getBetaDashboardAppConfig() {
-  return getJson<BrieflyAppConfig>("/api/beta-dashboard/app-config");
+export async function getBrieflyAppConfig() {
+  return normalizeBrieflyAppConfig(
+    await getJson<BrieflyAppConfig>("/api/app-config"),
+  );
 }
 
-export function updateBetaDashboardAppConfig(config: BrieflyAppConfig) {
-  return postJson<BrieflyAppConfig>("/api/beta-dashboard/app-config", config);
+export async function getBetaDashboardAppConfig() {
+  return normalizeBrieflyAppConfig(
+    await getJson<BrieflyAppConfig>("/api/beta-dashboard/app-config"),
+  );
+}
+
+export async function updateBetaDashboardAppConfig(config: BrieflyAppConfig) {
+  return normalizeBrieflyAppConfig(
+    await postJson<BrieflyAppConfig>("/api/beta-dashboard/app-config", config),
+  );
 }
 
 export type BetaDashboardAdminAuditItem = {
@@ -1374,12 +1417,14 @@ export function getBetaDashboardAppConfigHistory(options?: {
   );
 }
 
-export function rollbackBetaDashboardAppConfig(auditId: number) {
-  return postJson<BrieflyAppConfig>(
-    "/api/beta-dashboard/app-config/history/" +
-      encodeURIComponent(String(auditId)) +
-      "/rollback",
-    { confirm: true },
+export async function rollbackBetaDashboardAppConfig(auditId: number) {
+  return normalizeBrieflyAppConfig(
+    await postJson<BrieflyAppConfig>(
+      "/api/beta-dashboard/app-config/history/" +
+        encodeURIComponent(String(auditId)) +
+        "/rollback",
+      { confirm: true },
+    ),
   );
 }
 
