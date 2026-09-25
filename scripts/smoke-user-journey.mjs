@@ -388,11 +388,11 @@ const checks = [
     needles: [
       'title="Controlled rollout"',
       '"Percentage rollout"',
-      '"Cohort key"',
+      "Cohort key",
       '"Web rollout (%)"',
       '"iOS rollout (%)"',
       '"Android rollout (%)"',
-      "unidentified",
+      "Legacy clients that do not send a rollout identity remain allowed",
     ],
   },
   {
