@@ -527,7 +527,11 @@ export function StoryTile({
                   pressed && styles.actionButtonPressed,
                 ]}
               >
-                <Text style={styles.actionIcon}>🎧</Text>
+                <SymbolView
+                  name={{ ios: "headphones", android: "headphones", web: "headphones" }}
+                  size={20}
+                  tintColor="#FFFFFF"
+                />
               </Pressable>
             )}
 
