@@ -248,7 +248,7 @@ export default function StoryDetailScreen() {
     article?.article_version_id ??
     null;
   const podcastRequestKey =
-    isPro && podcastSourceVersionId
+    podcastSourceVersionId
       ? `${podcastSourceVersionId}:${language}`
       : "";
   const podcast =
