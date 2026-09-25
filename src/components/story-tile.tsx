@@ -1,5 +1,6 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
+import { SymbolView } from "expo-symbols";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -468,7 +469,11 @@ export function StoryTile({
                   pressed && styles.actionButtonPressed,
                 ]}
               >
-                <Text style={styles.actionIcon}>↗</Text>
+                <SymbolView
+                  name={{ ios: "square.and.arrow.up", android: "share", web: "share" }}
+                  size={20}
+                  tintColor="#FFFFFF"
+                />
               </Pressable>
             )}
 
@@ -485,7 +490,11 @@ export function StoryTile({
                   pressed && styles.actionButtonPressed,
                 ]}
               >
-                <Text style={styles.actionIcon}>◎</Text>
+                <SymbolView
+                  name={{ ios: "bubble.left", android: "chat_bubble", web: "chat_bubble" }}
+                  size={20}
+                  tintColor="#FFFFFF"
+                />
               </Pressable>
             )}
             {!!videoUrl && (
