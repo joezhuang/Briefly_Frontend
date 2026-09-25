@@ -699,6 +699,44 @@ export type BetaDashboardErrorGroup = {
   message: string;
 };
 
+export type BetaDashboardReleaseClientVersion = {
+  platform: "web" | "ios" | "android" | "unknown";
+  app_version: string;
+  events: number;
+  sessions: number;
+  authenticated_users: number;
+  first_seen: string | null;
+  last_seen: string | null;
+};
+
+export type BetaDashboardReleaseErrorVersion = {
+  source: "client" | "server";
+  platform: "web" | "ios" | "android" | "unknown" | "server";
+  app_version: string;
+  errors: number;
+  unresolved_errors: number;
+  fatal_errors: number;
+  sessions: number;
+  first_seen: string | null;
+  last_seen: string | null;
+};
+
+export type BetaDashboardReleaseVisibility = {
+  backend: {
+    release_id: string | null;
+    git_sha: string | null;
+    git_short_sha: string | null;
+    git_branch: string | null;
+    revision_source: "environment" | "git" | "unavailable";
+    environment: string | null;
+    deployed_at: string | null;
+    process_started_at: string;
+    dirty: boolean | null;
+  };
+  client_versions: BetaDashboardReleaseClientVersion[];
+  error_versions: BetaDashboardReleaseErrorVersion[];
+};
+
 export type BetaDashboardSnapshot = {
   window_days: number;
   generated_at: string;
@@ -792,6 +830,7 @@ export type BetaDashboardSnapshot = {
       plan_breakdown: BetaDashboardConversionBreakdown[];
       purchase_provider_breakdown: BetaDashboardConversionBreakdown[];
     };
+    release_visibility?: BetaDashboardReleaseVisibility;
   };
   errors: {
     summary: {

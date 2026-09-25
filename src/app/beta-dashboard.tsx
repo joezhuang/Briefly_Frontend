@@ -52,6 +52,7 @@ import { ScreenState } from "@/components/screen-state";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyTheme } from "@/context/theme";
+import { brieflyRuntimeRelease } from "@/release/runtime-release";
 import { layout } from "@/theme/tokens";
 
 const WINDOWS = [7, 30, 90] as const;
@@ -2697,6 +2698,7 @@ export default function BetaDashboardScreen() {
   const socialBeta = snapshot?.product.social_beta ?? EMPTY_SOCIAL_BETA;
   const communityEngagement =
     socialBeta.community_engagement ?? EMPTY_COMMUNITY_ENGAGEMENT;
+  const releaseVisibility = snapshot?.product.release_visibility ?? null;
 
   const refreshDashboard = useCallback(async () => {
     if (!user) return;
@@ -3124,6 +3126,28 @@ export default function BetaDashboardScreen() {
         ...(snapshot?.product.platforms ?? []).map((item) => item.events),
       ),
     [snapshot],
+  );
+
+  const maxClientVersionSessions = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...(releaseVisibility?.client_versions ?? []).map(
+          (item) => item.sessions,
+        ),
+      ),
+    [releaseVisibility?.client_versions],
+  );
+
+  const maxReleaseErrors = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...(releaseVisibility?.error_versions ?? []).map(
+          (item) => item.errors,
+        ),
+      ),
+    [releaseVisibility?.error_versions],
   );
 
   const maxLensCount = useMemo(
@@ -4000,6 +4024,196 @@ export default function BetaDashboardScreen() {
 
               {dashboardTab === "operations" && (
                 <>
+              <View style={styles.section}>
+                <SectionTitle
+                  title="Version & release visibility"
+                  detail="Shows the dashboard runtime, deployed backend revision, observed client releases, and error distribution for the selected window."
+                />
+
+                <View style={styles.metricsGrid}>
+                  <MetricCard
+                    label="Dashboard runtime"
+                    value={
+                      brieflyRuntimeRelease.telemetryVersion ||
+                      brieflyRuntimeRelease.appVersion ||
+                      "unknown"
+                    }
+                    detail={
+                      brieflyRuntimeRelease.platform +
+                      (brieflyRuntimeRelease.nativeBuildVersion
+                        ? " · native build " +
+                          brieflyRuntimeRelease.nativeBuildVersion
+                        : "") +
+                      (brieflyRuntimeRelease.releaseChannel
+                        ? " · " + brieflyRuntimeRelease.releaseChannel
+                        : "")
+                    }
+                  />
+                  <MetricCard
+                    label="Frontend revision"
+                    value={
+                      brieflyRuntimeRelease.sourceRevision
+                        ? brieflyRuntimeRelease.sourceRevision.slice(0, 12)
+                        : "not embedded"
+                    }
+                    detail={
+                      brieflyRuntimeRelease.runtimeVersion ||
+                      "No explicit runtime version"
+                    }
+                  />
+                  <MetricCard
+                    label="Backend release"
+                    value={
+                      releaseVisibility?.backend.release_id ||
+                      releaseVisibility?.backend.git_short_sha ||
+                      "unavailable"
+                    }
+                    detail={
+                      releaseVisibility
+                        ? [
+                            releaseVisibility.backend.git_branch,
+                            releaseVisibility.backend.environment,
+                            releaseVisibility.backend.dirty === true
+                              ? "dirty working tree"
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ") || "revision metadata available"
+                        : "Deploy #7 backend to populate"
+                    }
+                  />
+                  <MetricCard
+                    label="Backend started"
+                    value={
+                      releaseVisibility
+                        ? formatTimestamp(
+                            releaseVisibility.backend.process_started_at,
+                          )
+                        : "—"
+                    }
+                    detail={
+                      releaseVisibility?.backend.deployed_at
+                        ? "deployed " +
+                          formatTimestamp(
+                            releaseVisibility.backend.deployed_at,
+                          )
+                        : releaseVisibility
+                          ? "deployment timestamp not configured"
+                          : "release metadata unavailable"
+                    }
+                  />
+                </View>
+
+                {!releaseVisibility ? (
+                  <Text
+                    style={[
+                      styles.empty,
+                      { color: colors.textMuted, marginTop: 14 },
+                    ]}
+                  >
+                    Release visibility will populate when the #7 backend is deployed.
+                  </Text>
+                ) : (
+                  <View style={[styles.twoColumn, { marginTop: 14 }]}>
+                    <View
+                      style={[
+                        styles.panel,
+                        {
+                          borderColor: colors.border,
+                          backgroundColor: colors.surface,
+                        },
+                      ]}
+                    >
+                      <SectionTitle
+                        title="Observed client releases"
+                        detail={
+                          String(days) +
+                          "-day analytics sessions grouped by platform and embedded app/build version."
+                        }
+                      />
+                      <View style={styles.activityList}>
+                        {releaseVisibility.client_versions.length === 0 ? (
+                          <Text
+                            style={[styles.empty, { color: colors.textMuted }]}
+                          >
+                            No client release telemetry in this window.
+                          </Text>
+                        ) : (
+                          releaseVisibility.client_versions.map((item) => (
+                            <ActivityBar
+                              key={item.platform + "-" + item.app_version}
+                              label={
+                                item.platform.toUpperCase() +
+                                " · " +
+                                item.app_version
+                              }
+                              value={item.sessions}
+                              max={maxClientVersionSessions}
+                              detail={
+                                number(item.authenticated_users) +
+                                " users · last " +
+                                formatTimestamp(item.last_seen)
+                              }
+                            />
+                          ))
+                        )}
+                      </View>
+                    </View>
+
+                    <View
+                      style={[
+                        styles.panel,
+                        {
+                          borderColor: colors.border,
+                          backgroundColor: colors.surface,
+                        },
+                      ]}
+                    >
+                      <SectionTitle
+                        title="Errors by release"
+                        detail="Client errors use app/build version. New server errors are stamped with the backend release identifier."
+                      />
+                      <View style={styles.activityList}>
+                        {releaseVisibility.error_versions.length === 0 ? (
+                          <Text
+                            style={[styles.empty, { color: colors.textMuted }]}
+                          >
+                            No release-attributed errors in this window.
+                          </Text>
+                        ) : (
+                          releaseVisibility.error_versions.map((item) => (
+                            <ActivityBar
+                              key={
+                                item.source +
+                                "-" +
+                                item.platform +
+                                "-" +
+                                item.app_version
+                              }
+                              label={
+                                item.source.toUpperCase() +
+                                " · " +
+                                item.platform.toUpperCase() +
+                                " · " +
+                                item.app_version
+                              }
+                              value={item.errors}
+                              max={maxReleaseErrors}
+                              detail={
+                                number(item.unresolved_errors) +
+                                " unresolved · " +
+                                number(item.fatal_errors) +
+                                " fatal"
+                              }
+                            />
+                          ))
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                )}
+              </View>
+
               <View style={styles.section}>
                 <SectionTitle
                   title="Telemetry health & alerts"

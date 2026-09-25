@@ -361,6 +361,28 @@ const checks = [
     ],
   },
   {
+    name: "Beta dashboard exposes version and release visibility",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      'title="Version & release visibility"',
+      '"Dashboard runtime"',
+      '"Backend release"',
+      'title="Observed client releases"',
+      'title="Errors by release"',
+    ],
+  },
+  {
+    name: "Client telemetry includes build-aware release identity",
+    file: "src/release/runtime-release.ts",
+    needles: [
+      '"build."',
+      '"web."',
+      "nativeBuildVersion",
+      "telemetryVersion",
+      "EXPO_PUBLIC_BRIEFLY_GIT_SHA",
+    ],
+  },
+  {
     name: "Beta dashboard evaluates telemetry health thresholds",
     file: "src/app/beta-dashboard.tsx",
     needles: [

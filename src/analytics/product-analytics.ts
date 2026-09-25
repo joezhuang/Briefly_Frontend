@@ -1,7 +1,5 @@
-import Constants from "expo-constants";
-import { Platform } from "react-native";
-
 import { getBrieflyAccessToken } from "@/auth/session";
+import { brieflyRuntimeRelease } from "@/release/runtime-release";
 import { telemetrySessionId } from "@/telemetry/session";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
@@ -57,11 +55,9 @@ type QueuedAnalyticsEvent = {
   occurred_at: string;
 };
 
-const appVersion = Constants.expoConfig?.version ?? null;
+const appVersion = brieflyRuntimeRelease.telemetryVersion;
 const platform: QueuedAnalyticsEvent["platform"] =
-  Platform.OS === "web" || Platform.OS === "ios" || Platform.OS === "android"
-    ? Platform.OS
-    : "unknown";
+  brieflyRuntimeRelease.platform;
 
 let queue: QueuedAnalyticsEvent[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
