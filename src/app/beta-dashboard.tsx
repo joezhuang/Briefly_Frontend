@@ -4074,12 +4074,15 @@ export default function BetaDashboardScreen() {
                         }
                         detail={
                           telemetryHealth.errors.error_session_rate == null
-                            ? "needs at least " +
-                              number(
-                                telemetryHealth.thresholds
-                                  .error_rate_min_sessions,
-                              ) +
-                              " sessions"
+                            ? telemetryHealth.errors.error_session_rate_reason ===
+                              "test_account_filters_differ"
+                              ? "rate paused because analytics/error test-account filters differ"
+                              : "needs at least " +
+                                number(
+                                  telemetryHealth.thresholds
+                                    .error_rate_min_sessions,
+                                ) +
+                                " sessions"
                             : number(
                                 telemetryHealth.errors.error_sessions_24h,
                               ) + " affected session(s)"

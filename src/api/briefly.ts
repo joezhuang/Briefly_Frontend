@@ -1138,6 +1138,10 @@ export type BetaDashboardTelemetryHealth = {
     fatal_errors_24h: number;
     error_sessions_24h: number;
     error_session_rate: number | null;
+    error_session_rate_reason:
+      | "insufficient_sessions"
+      | "test_account_filters_differ"
+      | null;
     unresolved_errors: number;
     unresolved_fatal_errors: number;
     last_received_at: string | null;
@@ -1213,6 +1217,8 @@ function normalizeBetaDashboardTelemetryHealth(
       fatal_errors_24h: value.errors?.fatal_errors_24h ?? 0,
       error_sessions_24h: value.errors?.error_sessions_24h ?? 0,
       error_session_rate: value.errors?.error_session_rate ?? null,
+      error_session_rate_reason:
+        value.errors?.error_session_rate_reason ?? "insufficient_sessions",
       unresolved_errors: value.errors?.unresolved_errors ?? 0,
       unresolved_fatal_errors: value.errors?.unresolved_fatal_errors ?? 0,
       last_received_at: value.errors?.last_received_at ?? null,
