@@ -20,6 +20,7 @@ import { BrieflyMediaFallback } from "@/components/briefly-brand";
 import { StoryVideo } from "@/components/story-video";
 import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
+import { usePodcastPlayer } from "@/context/podcast-player";
 import type { CanonicalArticle } from "@/models/article";
 import { shareBrieflyStory } from "@/navigation/platform-share";
 import { buildPublicStoryShareUrl } from "@/navigation/story-share";
@@ -123,12 +124,12 @@ function hasObviousHeadlineLanguageMismatch(
   return false;
 }
 
-const translationCopy: Record<string, { translate: string; original: string; retry: string; play: string; close: string; share: string; community: string }> = {
-  en: { translate: "Translate", original: "Original", retry: "Retry", play: "Play", close: "Close video", share: "Share", community: "Community" },
-  es: { translate: "Traducir", original: "Original", retry: "Reintentar", play: "Reproducir", close: "Cerrar video", share: "Compartir", community: "Comunidad" },
-  ja: { translate: "翻訳", original: "原文", retry: "再試行", play: "再生", close: "動画を閉じる", share: "共有", community: "コミュニティ" },
-  "zh-CN": { translate: "翻译", original: "原文", retry: "重试", play: "播放", close: "关闭视频", share: "分享", community: "社区" },
-  "zh-TW": { translate: "翻譯", original: "原文", retry: "重試", play: "播放", close: "關閉影片", share: "分享", community: "社群" },
+const translationCopy: Record<string, { translate: string; original: string; retry: string; play: string; listen: string; close: string; share: string; community: string }> = {
+  en: { translate: "Translate", original: "Original", retry: "Retry", play: "Play", listen: "Listen to podcast", close: "Close video", share: "Share", community: "Community" },
+  es: { translate: "Traducir", original: "Original", retry: "Reintentar", play: "Reproducir", listen: "Escuchar pódcast", close: "Cerrar video", share: "Compartir", community: "Comunidad" },
+  ja: { translate: "翻訳", original: "原文", retry: "再試行", play: "再生", listen: "ポッドキャストを聴く", close: "動画を閉じる", share: "共有", community: "コミュニティ" },
+  "zh-CN": { translate: "翻译", original: "原文", retry: "重试", play: "播放", listen: "收听播客", close: "关闭视频", share: "分享", community: "社区" },
+  "zh-TW": { translate: "翻譯", original: "原文", retry: "重試", play: "播放", listen: "收聽 Podcast", close: "關閉影片", share: "分享", community: "社群" },
 };
 
 export function StoryTile({
@@ -146,8 +147,10 @@ export function StoryTile({
 }: Props) {
   const { language, t } = useBrieflyLanguage();
   const { config: appConfig } = useBrieflyAppConfig();
+  const { currentTrack, status: podcastStatus, play: playPodcast, addToQueue: addPodcastToQueue } = usePodcastPlayer();
   const communityEnabled = appConfig?.community_enabled !== false;
   const translationEnabled = appConfig?.translation_enabled !== false;
+  const podcastEnabled = appConfig?.podcast_enabled !== false;
   const [translation, setTranslation] = useState<CardTranslation | null>(null);
   const [showTranslation, setShowTranslation] = useState(false);
   const [translating, setTranslating] = useState(false);
@@ -183,6 +186,7 @@ export function StoryTile({
         : styles.standardHeadline;
   const sourceCount = article.source_count ?? article.sources_used?.length ?? 0;
   const videoUrl = videoEnabled ? article.video_url ?? null : null;
+  const podcastUrl = podcastEnabled ? article.podcast_audio_url ?? null : null;
   const imageUrl = article.video_thumbnail_url || article.image_url || null;
   const storyHref =
     href ??
@@ -243,6 +247,35 @@ export function StoryTile({
 
   const openStory = () => {
     router.push(storyHref as never);
+  };
+
+  const handlePodcast = () => {
+    if (!podcastUrl) return;
+
+    const track = {
+      id: podcastUrl,
+      title: displayedHeadline,
+      source: podcastUrl,
+    };
+    const playerBusy = podcastStatus.playing === true;
+
+    if (playerBusy) {
+      addPodcastToQueue(track);
+    } else {
+      playPodcast(track);
+    }
+
+    trackProductEvent("podcast_action", {
+      eventId: article.event_id,
+      articleVersionId:
+        article.podcast_article_version_id ?? article.article_version_id,
+      properties: {
+        action: playerBusy ? "queue" : "play",
+        language: article.podcast_language ?? language,
+        surface: "homepage_card",
+        already_current: currentTrack?.id === podcastUrl,
+      },
+    });
   };
 
   const handleShare = async () => {
@@ -469,6 +502,23 @@ export function StoryTile({
                 ]}
               >
                 <Text style={styles.actionIcon}>▶</Text>
+              </Pressable>
+            )}
+
+            {!!podcastUrl && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={copy.listen}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  handlePodcast();
+                }}
+                style={({ pressed }) => [
+                  styles.actionIconButton,
+                  pressed && styles.actionButtonPressed,
+                ]}
+              >
+                <Text style={styles.actionIcon}>🎧</Text>
               </Pressable>
             )}
 
