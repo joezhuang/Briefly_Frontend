@@ -1463,12 +1463,13 @@ function TelemetryConfigEditor({
         detail="Warning when at least this percentage of analytics sessions have a recorded client error in 24 hours."
         value={config.health_warning_error_session_rate}
         decimals
-        onChange={(value) =>
-          onChange(
-            "health_warning_error_session_rate",
-            Math.max(0.1, Math.min(100, value)),
-          )
-        }
+        onChange={(value) => {
+          const next = Math.max(0.1, Math.min(100, value));
+          onChange("health_warning_error_session_rate", next);
+          if (config.health_critical_error_session_rate < next) {
+            onChange("health_critical_error_session_rate", next);
+          }
+        }}
       />
       <TelemetryThresholdField
         label="Critical · sessions with client errors (%)"
@@ -1489,12 +1490,16 @@ function TelemetryConfigEditor({
         label="Warning · server errors / 24h"
         detail="Warning threshold for server error occurrences during the last 24 hours."
         value={config.health_warning_server_errors_24h}
-        onChange={(value) =>
-          onChange(
-            "health_warning_server_errors_24h",
-            Math.max(1, Math.min(1_000_000, Math.round(value))),
-          )
-        }
+        onChange={(value) => {
+          const next = Math.max(
+            1,
+            Math.min(1_000_000, Math.round(value)),
+          );
+          onChange("health_warning_server_errors_24h", next);
+          if (config.health_critical_server_errors_24h < next) {
+            onChange("health_critical_server_errors_24h", next);
+          }
+        }}
       />
       <TelemetryThresholdField
         label="Critical · server errors / 24h"
@@ -1514,12 +1519,16 @@ function TelemetryConfigEditor({
         label="Warning · unresolved errors"
         detail="Warning threshold for all currently unresolved error occurrences."
         value={config.health_warning_unresolved_errors}
-        onChange={(value) =>
-          onChange(
-            "health_warning_unresolved_errors",
-            Math.max(1, Math.min(1_000_000, Math.round(value))),
-          )
-        }
+        onChange={(value) => {
+          const next = Math.max(
+            1,
+            Math.min(1_000_000, Math.round(value)),
+          );
+          onChange("health_warning_unresolved_errors", next);
+          if (config.health_critical_unresolved_errors < next) {
+            onChange("health_critical_unresolved_errors", next);
+          }
+        }}
       />
       <TelemetryThresholdField
         label="Critical · unresolved errors"
@@ -3043,7 +3052,10 @@ export default function BetaDashboardScreen() {
         await updateBetaDashboardTelemetryConfig(telemetryConfig);
       setTelemetryConfig(savedConfig);
       setTelemetryConfigSaved(true);
-      await refreshAdminHistory();
+      await Promise.all([
+        refreshAdminHistory(),
+        refreshTelemetryHealth(),
+      ]);
     } catch {
       setTelemetryConfigError(true);
     } finally {
