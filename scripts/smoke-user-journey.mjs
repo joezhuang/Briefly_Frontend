@@ -415,6 +415,28 @@ const checks = [
     ],
   },
   {
+    name: "Beta dashboard exposes AI usage and cost metering",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      'title="AI usage & cost"',
+      '"Model calls"',
+      '"Cloud provider cost"',
+      'title="AI operations"',
+      'title="Models & providers"',
+      "unpriced cloud call(s)",
+    ],
+  },
+  {
+    name: "AI metering contract remains optional during backend rollout",
+    file: "src/api/briefly.ts",
+    needles: [
+      "BetaDashboardAiUsage",
+      "ai_usage?: BetaDashboardAiUsage",
+      "unpriced_cloud_calls",
+      "estimated_token_calls",
+    ],
+  },
+  {
     name: "Beta dashboard evaluates telemetry health thresholds",
     file: "src/app/beta-dashboard.tsx",
     needles: [

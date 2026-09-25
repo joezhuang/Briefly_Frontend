@@ -144,6 +144,15 @@ function percentage(value: number | null | undefined) {
   return Number(value ?? 0).toFixed(1) + "%";
 }
 
+function usd(value: number | null | undefined) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  }).format(value ?? 0);
+}
+
 function formatTimestamp(value: string | null | undefined) {
   if (!value) return "—";
   const date = new Date(value);
@@ -2883,6 +2892,7 @@ export default function BetaDashboardScreen() {
   const communityEngagement =
     socialBeta.community_engagement ?? EMPTY_COMMUNITY_ENGAGEMENT;
   const releaseVisibility = snapshot?.product.release_visibility ?? null;
+  const aiUsage = snapshot?.product.ai_usage ?? null;
 
   const refreshDashboard = useCallback(async () => {
     if (!user) return;
@@ -3332,6 +3342,24 @@ export default function BetaDashboardScreen() {
         ),
       ),
     [releaseVisibility?.error_versions],
+  );
+
+  const maxAiOperationCalls = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...(aiUsage?.operations ?? []).map((item) => item.calls),
+      ),
+    [aiUsage?.operations],
+  );
+
+  const maxAiModelCalls = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...(aiUsage?.models ?? []).map((item) => item.calls),
+      ),
+    [aiUsage?.models],
   );
 
   const maxLensCount = useMemo(
@@ -4395,6 +4423,219 @@ export default function BetaDashboardScreen() {
                       </View>
                     </View>
                   </View>
+                )}
+              </View>
+
+              <View style={styles.section}>
+                <SectionTitle
+                  title="AI usage & cost"
+                  detail={
+                    "Model-call metering for the selected " +
+                    String(days) +
+                    "-day window. Provider-reported usage/cost is preferred; configured estimates are used when available. Local Ollama has zero provider cost."
+                  }
+                />
+
+                {!aiUsage?.available ? (
+                  <Text
+                    style={[
+                      styles.empty,
+                      { color: colors.textMuted, marginTop: 14 },
+                    ]}
+                  >
+                    AI usage metering is unavailable until the Phase 30 migration
+                    is applied.
+                  </Text>
+                ) : (
+                  <>
+                    <View style={styles.metricsGrid}>
+                      <MetricCard
+                        label="Model calls"
+                        value={number(aiUsage.summary.calls)}
+                        detail={
+                          number(aiUsage.summary.successful_calls) +
+                          " successful · " +
+                          number(aiUsage.summary.failed_calls) +
+                          " failed"
+                        }
+                      />
+                      <MetricCard
+                        label="Cloud provider cost"
+                        value={usd(aiUsage.summary.cost_usd)}
+                        detail={
+                          number(aiUsage.summary.priced_calls) +
+                          " priced call(s) · " +
+                          number(aiUsage.summary.unpriced_cloud_calls) +
+                          " unpriced cloud call(s)"
+                        }
+                      />
+                      <MetricCard
+                        label="Input tokens"
+                        value={number(aiUsage.summary.input_tokens)}
+                        detail={
+                          number(aiUsage.summary.estimated_token_calls) +
+                          " call(s) used char-based token estimates"
+                        }
+                      />
+                      <MetricCard
+                        label="Output tokens"
+                        value={number(aiUsage.summary.output_tokens)}
+                        detail={number(aiUsage.summary.total_tokens) + " total tokens"}
+                      />
+                      <MetricCard
+                        label="Local model calls"
+                        value={number(aiUsage.summary.local_calls)}
+                        detail="Ollama · zero provider cost"
+                      />
+                      <MetricCard
+                        label="Average model latency"
+                        value={
+                          number(Math.round(aiUsage.summary.avg_latency_ms)) +
+                          " ms"
+                        }
+                        detail={number(aiUsage.summary.cloud_calls) + " cloud call(s)"}
+                      />
+                    </View>
+
+                    {aiUsage.summary.unpriced_cloud_calls > 0 ? (
+                      <View
+                        style={[
+                          styles.supportConsistency,
+                          {
+                            borderColor: colors.border,
+                            backgroundColor: colors.surface,
+                            marginTop: 14,
+                            marginBottom: 14,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.supportWarning,
+                            { color: colors.textMuted },
+                          ]}
+                        >
+                          Some cloud calls have no provider-reported cost and no
+                          configured model price. Their token usage is still counted,
+                          but the displayed USD total is incomplete.
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    <View style={[styles.twoColumn, { marginTop: 14 }]}>
+                      <View
+                        style={[
+                          styles.panel,
+                          {
+                            borderColor: colors.border,
+                            backgroundColor: colors.surface,
+                          },
+                        ]}
+                      >
+                        <SectionTitle
+                          title="AI operations"
+                          detail="Canonical generation, repair, localization and podcast model work."
+                        />
+                        <View style={styles.activityList}>
+                          {aiUsage.operations.length === 0 ? (
+                            <Text
+                              style={[styles.empty, { color: colors.textMuted }]}
+                            >
+                              No metered model calls in this window.
+                            </Text>
+                          ) : (
+                            aiUsage.operations.map((item) => (
+                              <ActivityBar
+                                key={item.product + "-" + item.operation}
+                                label={
+                                  item.product.toUpperCase() +
+                                  " · " +
+                                  item.operation.replace(/_/g, " ")
+                                }
+                                value={item.calls}
+                                max={maxAiOperationCalls}
+                                detail={
+                                  number(item.total_tokens) +
+                                  " tokens · " +
+                                  usd(item.cost_usd) +
+                                  (item.failed_calls
+                                    ? " · " +
+                                      number(item.failed_calls) +
+                                      " failed"
+                                    : "")
+                                }
+                              />
+                            ))
+                          )}
+                        </View>
+                      </View>
+
+                      <View
+                        style={[
+                          styles.panel,
+                          {
+                            borderColor: colors.border,
+                            backgroundColor: colors.surface,
+                          },
+                        ]}
+                      >
+                        <SectionTitle
+                          title="Models & providers"
+                          detail="Model-level call, token and provider-cost distribution."
+                        />
+                        <View style={styles.activityList}>
+                          {aiUsage.models.length === 0 ? (
+                            <Text
+                              style={[styles.empty, { color: colors.textMuted }]}
+                            >
+                              No model/provider usage in this window.
+                            </Text>
+                          ) : (
+                            aiUsage.models.map((item) => (
+                              <ActivityBar
+                                key={
+                                  item.product +
+                                  "-" +
+                                  item.provider +
+                                  "-" +
+                                  item.model +
+                                  "-" +
+                                  item.tier
+                                }
+                                label={
+                                  item.provider.toUpperCase() +
+                                  " · " +
+                                  item.model
+                                }
+                                value={item.calls}
+                                max={maxAiModelCalls}
+                                detail={
+                                  item.product +
+                                  " · " +
+                                  item.tier +
+                                  " · " +
+                                  number(item.total_tokens) +
+                                  " tokens · " +
+                                  usd(item.cost_usd)
+                                }
+                              />
+                            ))
+                          )}
+                        </View>
+                      </View>
+                    </View>
+
+                    <Text
+                      style={[
+                        styles.metaText,
+                        { color: colors.textMuted, marginTop: 12 },
+                      ]}
+                    >
+                      Metering stores counts, tokens, latency, model identifiers and
+                      cost metadata only — never prompts or generated article text.
+                      TTS, web research/search APIs and storage costs are not included.
+                    </Text>
+                  </>
                 )}
               </View>
 

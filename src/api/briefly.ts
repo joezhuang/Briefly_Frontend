@@ -740,6 +740,55 @@ export type BetaDashboardReleaseVisibility = {
   error_versions: BetaDashboardReleaseErrorVersion[];
 };
 
+export type BetaDashboardAiUsageOperation = {
+  product: string;
+  operation: string;
+  calls: number;
+  failed_calls: number;
+  total_tokens: number;
+  cost_usd: number;
+  unpriced_cloud_calls: number;
+};
+
+export type BetaDashboardAiUsageModel = {
+  product: string;
+  provider: string;
+  model: string;
+  tier: string;
+  calls: number;
+  failed_calls: number;
+  total_tokens: number;
+  cost_usd: number;
+  unpriced_calls: number;
+};
+
+export type BetaDashboardAiUsage = {
+  available: boolean;
+  summary: {
+    calls: number;
+    successful_calls: number;
+    failed_calls: number;
+    cloud_calls: number;
+    local_calls: number;
+    input_tokens: number;
+    output_tokens: number;
+    total_tokens: number;
+    cost_usd: number;
+    priced_calls: number;
+    unpriced_cloud_calls: number;
+    estimated_token_calls: number;
+    avg_latency_ms: number;
+  };
+  operations: BetaDashboardAiUsageOperation[];
+  models: BetaDashboardAiUsageModel[];
+  daily: {
+    day: string;
+    calls: number;
+    total_tokens: number;
+    cost_usd: number;
+  }[];
+};
+
 export type BetaDashboardSnapshot = {
   window_days: number;
   generated_at: string;
@@ -834,6 +883,7 @@ export type BetaDashboardSnapshot = {
       purchase_provider_breakdown: BetaDashboardConversionBreakdown[];
     };
     release_visibility?: BetaDashboardReleaseVisibility;
+    ai_usage?: BetaDashboardAiUsage;
   };
   errors: {
     summary: {
