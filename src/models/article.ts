@@ -54,6 +54,9 @@ export type CanonicalArticle = {
   image_url?: string | null;
   video_url?: string | null;
   video_thumbnail_url?: string | null;
+  podcast_audio_url?: string | null;
+  podcast_article_version_id?: number | null;
+  podcast_language?: string | null;
   category?: string | null;
   ranking_score?: number | null;
   article_count?: number | null;
