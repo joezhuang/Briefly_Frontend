@@ -1144,6 +1144,82 @@ export type BetaDashboardTelemetryHealth = {
   };
 };
 
+const DEFAULT_BETA_DASHBOARD_TELEMETRY_CONFIG: BetaDashboardTelemetryConfig = {
+  test_account_emails: [],
+  include_test_accounts_in_analytics: true,
+  include_test_accounts_in_error_monitoring: true,
+  health_alerts_enabled: true,
+  health_error_rate_min_sessions: 20,
+  health_warning_error_session_rate: 5,
+  health_critical_error_session_rate: 15,
+  health_warning_server_errors_24h: 5,
+  health_critical_server_errors_24h: 20,
+  health_warning_unresolved_errors: 10,
+  health_critical_unresolved_errors: 30,
+};
+
+const DEFAULT_BETA_DASHBOARD_HEALTH_THRESHOLDS =
+  {
+    error_rate_min_sessions: 20,
+    warning_error_session_rate: 5,
+    critical_error_session_rate: 15,
+    warning_server_errors_24h: 5,
+    critical_server_errors_24h: 20,
+    warning_unresolved_errors: 10,
+    critical_unresolved_errors: 30,
+  } satisfies BetaDashboardTelemetryHealth["thresholds"];
+
+type BetaDashboardTelemetryHealthWire = Partial<
+  Omit<BetaDashboardTelemetryHealth, "analytics" | "errors" | "thresholds">
+> & {
+  thresholds?: Partial<BetaDashboardTelemetryHealth["thresholds"]>;
+  analytics?: Partial<BetaDashboardTelemetryHealth["analytics"]>;
+  errors?: Partial<BetaDashboardTelemetryHealth["errors"]>;
+};
+
+function normalizeBetaDashboardTelemetryConfig(
+  value: Partial<BetaDashboardTelemetryConfig>,
+): BetaDashboardTelemetryConfig {
+  return {
+    ...DEFAULT_BETA_DASHBOARD_TELEMETRY_CONFIG,
+    ...value,
+    test_account_emails: value.test_account_emails ?? [],
+  };
+}
+
+function normalizeBetaDashboardTelemetryHealth(
+  value: BetaDashboardTelemetryHealthWire,
+): BetaDashboardTelemetryHealth {
+  return {
+    status: value.status ?? "ok",
+    generated_at: value.generated_at ?? new Date().toISOString(),
+    alerts_enabled: value.alerts_enabled ?? false,
+    thresholds: {
+      ...DEFAULT_BETA_DASHBOARD_HEALTH_THRESHOLDS,
+      ...(value.thresholds ?? {}),
+    },
+    alerts: value.alerts ?? [],
+    analytics: {
+      events_24h: value.analytics?.events_24h ?? 0,
+      sessions_24h: value.analytics?.sessions_24h ?? 0,
+      authenticated_users_24h:
+        value.analytics?.authenticated_users_24h ?? 0,
+      last_received_at: value.analytics?.last_received_at ?? null,
+    },
+    errors: {
+      errors_24h: value.errors?.errors_24h ?? 0,
+      client_errors_24h: value.errors?.client_errors_24h ?? 0,
+      server_errors_24h: value.errors?.server_errors_24h ?? 0,
+      fatal_errors_24h: value.errors?.fatal_errors_24h ?? 0,
+      error_sessions_24h: value.errors?.error_sessions_24h ?? 0,
+      error_session_rate: value.errors?.error_session_rate ?? null,
+      unresolved_errors: value.errors?.unresolved_errors ?? 0,
+      unresolved_fatal_errors: value.errors?.unresolved_fatal_errors ?? 0,
+      last_received_at: value.errors?.last_received_at ?? null,
+    },
+  };
+}
+
 export type StripePromotion = {
   id: string;
   code: string;
@@ -1291,24 +1367,27 @@ export function deactivateBetaDashboardStripePromotion(
   );
 }
 
-export function getBetaDashboardTelemetryConfig() {
-  return getJson<BetaDashboardTelemetryConfig>(
+export async function getBetaDashboardTelemetryConfig() {
+  const value = await getJson<Partial<BetaDashboardTelemetryConfig>>(
     "/api/beta-dashboard/telemetry-config",
   );
+  return normalizeBetaDashboardTelemetryConfig(value);
 }
 
-export function updateBetaDashboardTelemetryConfig(
+export async function updateBetaDashboardTelemetryConfig(
   config: BetaDashboardTelemetryConfig,
 ) {
-  return postJson<BetaDashboardTelemetryConfig>(
+  const value = await postJson<Partial<BetaDashboardTelemetryConfig>>(
     "/api/beta-dashboard/telemetry-config",
     config,
   );
+  return normalizeBetaDashboardTelemetryConfig(value);
 }
 
-export function getBetaDashboardTelemetryHealth() {
-  return getJson<BetaDashboardTelemetryHealth>(
+export async function getBetaDashboardTelemetryHealth() {
+  const value = await getJson<BetaDashboardTelemetryHealthWire>(
     "/api/beta-dashboard/telemetry-health",
   );
+  return normalizeBetaDashboardTelemetryHealth(value);
 }
 
