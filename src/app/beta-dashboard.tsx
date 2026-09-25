@@ -66,12 +66,43 @@ const DASHBOARD_TABS = [
 const SOCIAL_BETA_TABS = [
   { id: "overview", label: "Overview" },
   { id: "acquisition", label: "Acquisition" },
+  { id: "community", label: "Community" },
   { id: "lenses", label: "Lenses" },
   { id: "deeply", label: "Podcast" },
 ] as const;
 
 type DashboardTab = (typeof DASHBOARD_TABS)[number]["id"];
 type SocialBetaTab = (typeof SOCIAL_BETA_TABS)[number]["id"];
+
+const EMPTY_COMMUNITY_ENGAGEMENT = {
+  community_view_sessions: 0,
+  contribution_start_sessions: 0,
+  contribution_create_events: 0,
+  reaction_events: 0,
+  report_events: 0,
+  source_open_events: 0,
+  withdraw_events: 0,
+  sourced_contribution_events: 0,
+  active_events: 0,
+  community_view_users: 0,
+  contribution_start_users: 0,
+  contributor_users: 0,
+  reaction_users: 0,
+  report_users: 0,
+  source_open_users: 0,
+  returning_contributors: 0,
+  view_to_start_rate: 0,
+  participation_rate: 0,
+  start_to_publish_rate: 0,
+  reaction_rate: 0,
+  report_rate: 0,
+  source_open_rate: 0,
+  returning_contributor_rate: 0,
+  sourced_contribution_rate: 0,
+  kind_breakdown: [],
+  reaction_breakdown: [],
+  report_breakdown: [],
+} as const;
 
 const EMPTY_SOCIAL_BETA: BetaDashboardSnapshot["product"]["social_beta"] = {
   feed_view_sessions: 0,
@@ -2505,6 +2536,8 @@ export default function BetaDashboardScreen() {
   const [socialBetaTab, setSocialBetaTab] =
     useState<SocialBetaTab>("overview");
   const socialBeta = snapshot?.product.social_beta ?? EMPTY_SOCIAL_BETA;
+  const communityEngagement =
+    socialBeta.community_engagement ?? EMPTY_COMMUNITY_ENGAGEMENT;
 
   const refreshDashboard = useCallback(async () => {
     if (!user) return;
@@ -2964,6 +2997,31 @@ export default function BetaDashboardScreen() {
     [socialBeta.story_source_breakdown],
   );
 
+  const maxCommunityKindCount = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...communityEngagement.kind_breakdown.map((item) => item.count),
+      ),
+    [communityEngagement.kind_breakdown],
+  );
+  const maxCommunityReactionCount = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...communityEngagement.reaction_breakdown.map((item) => item.count),
+      ),
+    [communityEngagement.reaction_breakdown],
+  );
+  const maxCommunityReportCount = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...communityEngagement.report_breakdown.map((item) => item.count),
+      ),
+    [communityEngagement.report_breakdown],
+  );
+
   const subscriptionConversion =
     snapshot?.product.subscription_conversion;
   const maxSubscriptionPlanCount = useMemo(
@@ -3328,6 +3386,218 @@ export default function BetaDashboardScreen() {
                       )}
                     </View>
                   </View>
+                )}
+
+                {socialBetaTab === "community" && (
+                  <>
+                    <View style={styles.funnelGrid}>
+                      <MetricCard
+                        label="Community reach"
+                        value={number(
+                          communityEngagement.community_view_sessions,
+                        )}
+                        detail={
+                          number(communityEngagement.community_view_users) +
+                          " signed-in viewer(s)"
+                        }
+                      />
+                      <MetricCard
+                        label="Opened composer"
+                        value={number(
+                          communityEngagement.contribution_start_users,
+                        )}
+                        detail={
+                          percentage(communityEngagement.view_to_start_rate) +
+                          " of signed-in viewers"
+                        }
+                      />
+                      <MetricCard
+                        label="Published"
+                        value={number(communityEngagement.contributor_users)}
+                        detail={
+                          percentage(communityEngagement.participation_rate) +
+                          " of signed-in viewers"
+                        }
+                      />
+                      <MetricCard
+                        label="Composer → publish"
+                        value={percentage(
+                          communityEngagement.start_to_publish_rate,
+                        )}
+                        detail={
+                          number(
+                            communityEngagement.contribution_create_events,
+                          ) + " contribution event(s)"
+                        }
+                      />
+                      <MetricCard
+                        label="Reacted"
+                        value={number(communityEngagement.reaction_users)}
+                        detail={
+                          percentage(communityEngagement.reaction_rate) +
+                          " of signed-in viewers"
+                        }
+                      />
+                      <MetricCard
+                        label="Opened a Community source"
+                        value={number(communityEngagement.source_open_users)}
+                        detail={
+                          percentage(communityEngagement.source_open_rate) +
+                          " of signed-in viewers"
+                        }
+                      />
+                      <MetricCard
+                        label="Returning contributors"
+                        value={number(
+                          communityEngagement.returning_contributors,
+                        )}
+                        detail={
+                          percentage(
+                            communityEngagement.returning_contributor_rate,
+                          ) + " of contributors"
+                        }
+                      />
+                      <MetricCard
+                        label="Source-backed contributions"
+                        value={percentage(
+                          communityEngagement.sourced_contribution_rate,
+                        )}
+                        detail={
+                          number(
+                            communityEngagement.sourced_contribution_events,
+                          ) + " contribution(s)"
+                        }
+                      />
+                      <MetricCard
+                        label="Reports"
+                        value={number(communityEngagement.report_users)}
+                        detail={
+                          percentage(communityEngagement.report_rate) +
+                          " of signed-in viewers"
+                        }
+                      />
+                      <MetricCard
+                        label="Active events"
+                        value={number(communityEngagement.active_events)}
+                        detail="events with Community actions"
+                      />
+                    </View>
+
+                    <View style={styles.twoColumn}>
+                      <View
+                        style={[
+                          styles.panel,
+                          styles.tabPanel,
+                          {
+                            borderColor: colors.border,
+                            backgroundColor: colors.surface,
+                          },
+                        ]}
+                      >
+                        <SectionTitle
+                          title="Contribution types"
+                          detail="Published Community contributions by type."
+                        />
+                        <View style={styles.activityList}>
+                          {communityEngagement.kind_breakdown.length === 0 ? (
+                            <Text
+                              style={[styles.empty, { color: colors.textMuted }]}
+                            >
+                              No Community contributions yet.
+                            </Text>
+                          ) : (
+                            communityEngagement.kind_breakdown.map((item) => (
+                              <ActivityBar
+                                key={item.name}
+                                label={item.name}
+                                value={item.count}
+                                max={maxCommunityKindCount}
+                                detail={number(item.users) + " users"}
+                              />
+                            ))
+                          )}
+                        </View>
+                      </View>
+
+                      <View
+                        style={[
+                          styles.panel,
+                          styles.tabPanel,
+                          {
+                            borderColor: colors.border,
+                            backgroundColor: colors.surface,
+                          },
+                        ]}
+                      >
+                        <SectionTitle
+                          title="Reaction actions"
+                          detail="Reaction mutations, including removal when a reaction becomes none."
+                        />
+                        <View style={styles.activityList}>
+                          {communityEngagement.reaction_breakdown.length === 0 ? (
+                            <Text
+                              style={[styles.empty, { color: colors.textMuted }]}
+                            >
+                              No Community reactions yet.
+                            </Text>
+                          ) : (
+                            communityEngagement.reaction_breakdown.map((item) => (
+                              <ActivityBar
+                                key={item.name}
+                                label={
+                                  item.name === "up"
+                                    ? "Helpful"
+                                    : item.name === "down"
+                                      ? "Not helpful"
+                                      : item.name === "none"
+                                        ? "Reaction removed"
+                                        : item.name
+                                }
+                                value={item.count}
+                                max={maxCommunityReactionCount}
+                                detail={number(item.users) + " users"}
+                              />
+                            ))
+                          )}
+                        </View>
+                      </View>
+                    </View>
+
+                    <View
+                      style={[
+                        styles.panel,
+                        styles.tabPanel,
+                        {
+                          borderColor: colors.border,
+                          backgroundColor: colors.surface,
+                        },
+                      ]}
+                    >
+                      <SectionTitle
+                        title="Report reasons"
+                        detail="Safety signal only. Reports do not affect contribution ranking."
+                      />
+                      <View style={styles.activityList}>
+                        {communityEngagement.report_breakdown.length === 0 ? (
+                          <Text
+                            style={[styles.empty, { color: colors.textMuted }]}
+                          >
+                            No Community reports yet.
+                          </Text>
+                        ) : (
+                          communityEngagement.report_breakdown.map((item) => (
+                            <ActivityBar
+                              key={item.name}
+                              label={item.name.replaceAll("_", " ")}
+                              value={item.count}
+                              max={maxCommunityReportCount}
+                              detail={number(item.users) + " users"}
+                            />
+                          ))
+                        )}
+                      </View>
+                    </View>
+                  </>
                 )}
 
                 {socialBetaTab === "lenses" && (

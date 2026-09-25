@@ -249,6 +249,20 @@ const checks = [
     ],
   },
   {
+    name: "Community analytics measure reach and participation",
+    file: "src/components/event-community-panel.tsx",
+    needles: [
+      '"community_view"',
+      '"community_contribution_start"',
+      '"community_view"',
+      '"community_contribution_start"',
+      '"community_contribution_create"',
+      '"community_source_open"',
+      '"has_source"',
+      '"contribution_count"',
+    ],
+  },
+  {
     name: "Community supports create, reaction, report and withdrawal",
     file: "src/components/event-community-panel.tsx",
     needles: [
@@ -324,6 +338,19 @@ const checks = [
     ],
   },
   {
+    name: "Social Beta exposes Community engagement analytics",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      '{ id: "community", label: "Community" }',
+      '"Community reach"',
+      '"Published"',
+      '"Returning contributors"',
+      'title="Contribution types"',
+      'title="Reaction actions"',
+      'title="Report reasons"',
+    ],
+  },
+  {
     name: "Subscription conversion analytics cover upgrade to paid",
     file: "src/app/beta-dashboard.tsx",
     needles: [
@@ -375,6 +402,7 @@ const checks = [
       '"community_contribution_create"',
       '"community_contribution_report"',
       '"community_reaction"',
+      '"community_source_open"',
       '"subscription_upgrade_view"',
       '"subscription_plan_select"',
       '"subscription_checkout_start"',

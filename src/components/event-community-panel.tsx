@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -286,6 +286,7 @@ export function EventCommunityPanel({
   const [withdrawTarget, setWithdrawTarget] = useState<number | null>(null);
   const [reportTarget, setReportTarget] = useState<number | null>(null);
   const [reportedIds, setReportedIds] = useState<Set<number>>(() => new Set());
+  const trackedCommunityViewEventId = useRef<string | null>(null);
 
   const community =
     communityState?.eventId === eventId ? communityState.value : null;
@@ -303,6 +304,16 @@ export function EventCommunityPanel({
         if (!active) return;
         setCommunityState({ eventId, value });
         setFailedEventId((current) => (current === eventId ? null : current));
+        if (trackedCommunityViewEventId.current !== eventId) {
+          trackedCommunityViewEventId.current = eventId;
+          trackProductEvent("community_view", {
+            eventId,
+            properties: {
+              has_contributions: value.count > 0,
+              contribution_count: value.count,
+            },
+          });
+        }
       })
       .catch(() => {
         if (active) setFailedEventId(eventId);
@@ -317,9 +328,24 @@ export function EventCommunityPanel({
     const value = await getEventCommunity(eventId);
     setCommunityState({ eventId, value });
     setFailedEventId((current) => (current === eventId ? null : current));
+    if (trackedCommunityViewEventId.current !== eventId) {
+      trackedCommunityViewEventId.current = eventId;
+      trackProductEvent("community_view", {
+        eventId,
+        properties: {
+          has_contributions: value.count > 0,
+          contribution_count: value.count,
+        },
+      });
+    }
   };
 
   const startContributing = () => {
+    trackProductEvent("community_contribution_start", {
+      eventId,
+      properties: { authenticated: Boolean(user) },
+    });
+
     if (!user) {
       router.push(`/sign-in?returnTo=${encodeURIComponent(returnTo)}` as never);
       return;
@@ -343,7 +369,10 @@ export function EventCommunityPanel({
       });
       trackProductEvent("community_contribution_create", {
         eventId,
-        properties: { kind },
+        properties: {
+          kind,
+          has_source: Boolean(sourceUrl.trim()),
+        },
       });
       setComposerState({ eventId, open: false });
       setBody("");
@@ -670,7 +699,13 @@ export function EventCommunityPanel({
               {!!item.source_url && (
                 <Pressable
                   accessibilityRole="link"
-                  onPress={() => void Linking.openURL(item.source_url!)}
+                  onPress={() => {
+                    trackProductEvent("community_source_open", {
+                      eventId,
+                      properties: { kind: item.contribution_type },
+                    });
+                    void Linking.openURL(item.source_url!);
+                  }}
                   style={({ pressed }) => [
                     styles.sourceLinkButton,
                     { opacity: pressed ? 0.6 : 1 },

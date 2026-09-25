@@ -739,6 +739,35 @@ export type BetaDashboardSnapshot = {
       lens_breakdown: BetaDashboardBreakdown[];
       podcast_breakdown: BetaDashboardBreakdown[];
       story_source_breakdown: BetaDashboardBreakdown[];
+      community_engagement?: {
+        community_view_sessions: number;
+        contribution_start_sessions: number;
+        contribution_create_events: number;
+        reaction_events: number;
+        report_events: number;
+        source_open_events: number;
+        withdraw_events: number;
+        sourced_contribution_events: number;
+        active_events: number;
+        community_view_users: number;
+        contribution_start_users: number;
+        contributor_users: number;
+        reaction_users: number;
+        report_users: number;
+        source_open_users: number;
+        returning_contributors: number;
+        view_to_start_rate: number;
+        participation_rate: number;
+        start_to_publish_rate: number;
+        reaction_rate: number;
+        report_rate: number;
+        source_open_rate: number;
+        returning_contributor_rate: number;
+        sourced_contribution_rate: number;
+        kind_breakdown: BetaDashboardConversionBreakdown[];
+        reaction_breakdown: BetaDashboardConversionBreakdown[];
+        report_breakdown: BetaDashboardConversionBreakdown[];
+      };
     };
     subscription_conversion: {
       upgrade_view_users: number;
