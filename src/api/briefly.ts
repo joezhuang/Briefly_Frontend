@@ -740,7 +740,7 @@ export type BetaDashboardSnapshot = {
       podcast_breakdown: BetaDashboardBreakdown[];
       story_source_breakdown: BetaDashboardBreakdown[];
       community_engagement?: {
-        community_view_sessions: number;
+        community_panel_load_sessions: number;
         contribution_start_sessions: number;
         contribution_create_events: number;
         reaction_events: number;
@@ -749,7 +749,7 @@ export type BetaDashboardSnapshot = {
         withdraw_events: number;
         sourced_contribution_events: number;
         active_events: number;
-        community_view_users: number;
+        community_panel_load_users: number;
         contribution_start_users: number;
         contributor_users: number;
         reaction_users: number;

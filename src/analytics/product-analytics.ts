@@ -25,7 +25,7 @@ export type ProductAnalyticsEventName =
   | "event_lens_select"
   | "source_open"
   | "podcast_action"
-  | "community_view"
+  | "community_panel_load"
   | "community_contribution_start"
   | "community_contribution_create"
   | "community_contribution_withdraw"

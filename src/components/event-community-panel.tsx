@@ -306,7 +306,7 @@ export function EventCommunityPanel({
         setFailedEventId((current) => (current === eventId ? null : current));
         if (trackedCommunityViewEventId.current !== eventId) {
           trackedCommunityViewEventId.current = eventId;
-          trackProductEvent("community_view", {
+          trackProductEvent("community_panel_load", {
             eventId,
             properties: {
               has_contributions: value.count > 0,
@@ -330,7 +330,7 @@ export function EventCommunityPanel({
     setFailedEventId((current) => (current === eventId ? null : current));
     if (trackedCommunityViewEventId.current !== eventId) {
       trackedCommunityViewEventId.current = eventId;
-      trackProductEvent("community_view", {
+      trackProductEvent("community_panel_load", {
         eventId,
         properties: {
           has_contributions: value.count > 0,

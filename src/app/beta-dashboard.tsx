@@ -75,7 +75,7 @@ type DashboardTab = (typeof DASHBOARD_TABS)[number]["id"];
 type SocialBetaTab = (typeof SOCIAL_BETA_TABS)[number]["id"];
 
 const EMPTY_COMMUNITY_ENGAGEMENT = {
-  community_view_sessions: 0,
+  community_panel_load_sessions: 0,
   contribution_start_sessions: 0,
   contribution_create_events: 0,
   reaction_events: 0,
@@ -84,7 +84,7 @@ const EMPTY_COMMUNITY_ENGAGEMENT = {
   withdraw_events: 0,
   sourced_contribution_events: 0,
   active_events: 0,
-  community_view_users: 0,
+  community_panel_load_users: 0,
   contribution_start_users: 0,
   contributor_users: 0,
   reaction_users: 0,
@@ -3392,13 +3392,13 @@ export default function BetaDashboardScreen() {
                   <>
                     <View style={styles.funnelGrid}>
                       <MetricCard
-                        label="Community reach"
+                        label="Community-loaded sessions"
                         value={number(
-                          communityEngagement.community_view_sessions,
+                          communityEngagement.community_panel_load_sessions,
                         )}
                         detail={
-                          number(communityEngagement.community_view_users) +
-                          " signed-in viewer(s)"
+                          number(communityEngagement.community_panel_load_users) +
+                          " signed-in viewer(s) · panel load, not scroll visibility"
                         }
                       />
                       <MetricCard

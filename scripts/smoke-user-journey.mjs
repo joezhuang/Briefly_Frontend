@@ -252,7 +252,7 @@ const checks = [
     name: "Community analytics measure reach and participation",
     file: "src/components/event-community-panel.tsx",
     needles: [
-      '"community_view"',
+      '"community_panel_load"',
       '"community_contribution_start"',
       '"community_contribution_create"',
       '"community_source_open"',
@@ -340,7 +340,7 @@ const checks = [
     file: "src/app/beta-dashboard.tsx",
     needles: [
       '{ id: "community", label: "Community" }',
-      '"Community reach"',
+      '"Community-loaded sessions"',
       '"Published"',
       '"Returning contributors"',
       'title="Contribution types"',
@@ -397,7 +397,7 @@ const checks = [
       '"event_lens_select"',
       '"source_open"',
       '"podcast_action"',
-      '"community_view"',
+      '"community_panel_load"',
       '"community_contribution_start"',
       '"community_contribution_create"',
       '"community_contribution_report"',
