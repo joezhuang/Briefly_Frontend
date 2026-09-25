@@ -125,6 +125,18 @@ const checks = [
     ],
   },
   {
+    name: "Homepage ready podcasts queue without interrupting active playback",
+    file: "src/components/story-tile.tsx",
+    needles: [
+      "article.podcast_audio_url",
+      "usePodcastPlayer",
+      "podcastStatus.playing === true",
+      "addPodcastToQueue(track)",
+      "playPodcast(track)",
+      'surface: "homepage_card"',
+    ],
+  },
+  {
     name: "Story screen composes article, Community, and podcast actions",
     file: "src/app/story/[slug].tsx",
     needles: [
