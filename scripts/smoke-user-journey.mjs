@@ -406,6 +406,15 @@ const checks = [
     ],
   },
   {
+    name: "Following requests participate in the same rollout cohort",
+    file: "src/api/event-follow.ts",
+    needles: [
+      "getBrieflyRolloutHeaders",
+      "await getBrieflyRolloutHeaders()",
+      '"X-Briefly-Rollout-Id"',
+    ],
+  },
+  {
     name: "Beta dashboard evaluates telemetry health thresholds",
     file: "src/app/beta-dashboard.tsx",
     needles: [

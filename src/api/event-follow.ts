@@ -5,6 +5,7 @@ import {
 } from "@/auth/session";
 import { supabase } from "@/auth/supabase";
 import { captureApiError } from "@/monitoring/error-monitoring";
+import { getBrieflyRolloutHeaders } from "@/rollouts/identity";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BRIEFLY_API_URL?.replace(/\/$/, "");
 
@@ -23,6 +24,7 @@ async function requestJson<T>(
       const response = await fetch(`${requireApiBaseUrl()}${path}`, {
         ...init,
         headers: {
+          ...(await getBrieflyRolloutHeaders()),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...(init.body ? { "Content-Type": "application/json" } : {}),
           ...(init.headers ?? {}),
