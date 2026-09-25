@@ -256,8 +256,8 @@ const checks = [
       '"community_contribution_start"',
       '"community_contribution_create"',
       '"community_source_open"',
-      '"has_source"',
-      '"contribution_count"',
+      "has_source:",
+      "contribution_count:",
     ],
   },
   {
