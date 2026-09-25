@@ -91,7 +91,7 @@ const EMPTY_COMMUNITY_ENGAGEMENT = {
   report_users: 0,
   source_open_users: 0,
   returning_contributors: 0,
-  view_to_start_rate: 0,
+  panel_load_to_start_rate: 0,
   participation_rate: 0,
   start_to_publish_rate: 0,
   reaction_rate: 0,
@@ -3407,7 +3407,7 @@ export default function BetaDashboardScreen() {
                           communityEngagement.contribution_start_users,
                         )}
                         detail={
-                          percentage(communityEngagement.view_to_start_rate) +
+                          percentage(communityEngagement.panel_load_to_start_rate) +
                           " of signed-in viewers"
                         }
                       />

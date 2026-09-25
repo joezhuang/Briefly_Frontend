@@ -756,7 +756,7 @@ export type BetaDashboardSnapshot = {
         report_users: number;
         source_open_users: number;
         returning_contributors: number;
-        view_to_start_rate: number;
+        panel_load_to_start_rate: number;
         participation_rate: number;
         start_to_publish_rate: number;
         reaction_rate: number;
