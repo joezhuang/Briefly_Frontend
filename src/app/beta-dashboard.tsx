@@ -4464,7 +4464,7 @@ export default function BetaDashboardScreen() {
                         value={usd(aiUsage.summary.cost_usd)}
                         detail={
                           number(aiUsage.summary.priced_calls) +
-                          " priced call(s) · " +
+                          " priced cloud call(s) · " +
                           number(aiUsage.summary.unpriced_cloud_calls) +
                           " unpriced cloud call(s)"
                         }
