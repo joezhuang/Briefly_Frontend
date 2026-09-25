@@ -254,8 +254,6 @@ const checks = [
     needles: [
       '"community_view"',
       '"community_contribution_start"',
-      '"community_view"',
-      '"community_contribution_start"',
       '"community_contribution_create"',
       '"community_source_open"',
       '"has_source"',
@@ -399,6 +397,8 @@ const checks = [
       '"event_lens_select"',
       '"source_open"',
       '"podcast_action"',
+      '"community_view"',
+      '"community_contribution_start"',
       '"community_contribution_create"',
       '"community_contribution_report"',
       '"community_reaction"',
