@@ -375,8 +375,8 @@ const checks = [
     name: "Client telemetry includes build-aware release identity",
     file: "src/release/runtime-release.ts",
     needles: [
-      '"build."',
-      '"web."',
+      "+build.",
+      "+web.",
       "nativeBuildVersion",
       "telemetryVersion",
       "EXPO_PUBLIC_BRIEFLY_GIT_SHA",
