@@ -137,6 +137,14 @@ const checks = [
     ],
   },
   {
+    name: "Support screen returns signed-out users to the support route",
+    file: "src/app/support-briefly.tsx",
+    needles: [
+      'returnTo=%2Fsupport-briefly',
+      'router.replace("/sign-in',
+    ],
+  },
+  {
     name: "Homepage ready podcasts queue without interrupting active playback",
     file: "src/components/story-tile.tsx",
     needles: [

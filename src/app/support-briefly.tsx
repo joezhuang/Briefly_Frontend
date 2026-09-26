@@ -99,7 +99,7 @@ export default function SupportScreen() {
 
   useEffect(() => {
     if (!user) {
-      router.replace("/sign-in?returnTo=%2Fsupport");
+      router.replace("/sign-in?returnTo=%2Fsupport-briefly");
       return;
     }
     if (!available) return;
