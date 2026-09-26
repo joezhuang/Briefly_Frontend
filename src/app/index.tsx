@@ -183,7 +183,7 @@ function getRememberedHomeFeed(
 }
 
 export default function HomeScreen() {
-  const { width } = useWindowDimensions();
+  const { width, height: viewportHeight } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
   const { ready: authReady, account } = useBrieflyAuth();
   const { config: appConfig, refresh: refreshAppConfig } = useBrieflyAppConfig();
@@ -807,6 +807,8 @@ export default function HomeScreen() {
   const desktop = width >= 1000;
   const tablet = width >= 700 && width < 1000;
   const mobileHeader = width < 480;
+  const mobileLeadFit =
+    width < 700 || Math.min(width, viewportHeight) < 700;
   const showWebScopeArrows = Platform.OS === "web";
   const webScopeArrowInset = Math.max(
     14,
@@ -1020,6 +1022,7 @@ export default function HomeScreen() {
               <StoryTile
                 article={lead}
                 size="hero"
+                fitViewport={mobileLeadFit}
                 videoEnabled={homepageVideoEnabled}
                 analyticsSource="feed"
                 analyticsScope={scope}

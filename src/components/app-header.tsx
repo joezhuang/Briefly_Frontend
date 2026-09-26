@@ -261,11 +261,9 @@ export function AppHeader() {
               accessibilityLabel={navExpanded ? labels.close : "Navigation"}
               onPress={() => setNavExpanded((value) => !value)}
               style={({ pressed }) => [
-                styles.compactIconButton,
+                styles.menuButton,
                 {
-                  borderColor: colors.border,
-                  backgroundColor: colors.surfaceMuted,
-                  opacity: pressed ? 0.68 : 1,
+                  opacity: pressed ? 0.58 : 1,
                 },
               ]}
             >
@@ -613,9 +611,15 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 20,
   },
+  menuButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   menuIcon: {
-    fontSize: 19,
-    lineHeight: 22,
+    fontSize: 22,
+    lineHeight: 24,
     fontWeight: "800",
   },
   phoneMenu: {

@@ -9,6 +9,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -47,6 +48,7 @@ type Props = {
   videoEnabled?: boolean;
   analyticsSource?: string;
   analyticsScope?: string;
+  fitViewport?: boolean;
   videoDetached?: boolean;
   videoResumeTime?: number;
   onVideoStart?: (session: StoryTileVideoStart) => void;
@@ -140,12 +142,14 @@ export function StoryTile({
   videoEnabled = true,
   analyticsSource,
   analyticsScope,
+  fitViewport = false,
   videoDetached = false,
   videoResumeTime = 0,
   onVideoStart,
   onVideoTimeUpdate,
   onVideoStop,
 }: Props) {
+  const { height: viewportHeight } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
   const { config: appConfig } = useBrieflyAppConfig();
   const { currentTrack, status: podcastStatus, play: playPodcast, addToQueue: addPodcastToQueue } = usePodcastPlayer();
@@ -178,10 +182,24 @@ export function StoryTile({
     }
   }, [videoResumeTime]);
 
-  const height = size === "hero" ? 520 : size === "secondary" ? 252 : 270;
+  const viewportHeroHeight = Math.max(
+    250,
+    Math.min(520, Math.floor(viewportHeight - 260)),
+  );
+  const compactHero = size === "hero" && fitViewport && viewportHeroHeight < 430;
+  const height =
+    size === "hero"
+      ? fitViewport
+        ? viewportHeroHeight
+        : 520
+      : size === "secondary"
+        ? 252
+        : 270;
   const headlineStyle =
     size === "hero"
-      ? styles.heroHeadline
+      ? compactHero
+        ? styles.heroHeadlineCompact
+        : styles.heroHeadline
       : size === "secondary"
         ? styles.secondaryHeadline
         : styles.standardHeadline;
@@ -444,12 +462,16 @@ export function StoryTile({
         <View style={styles.bottom}>
           <Text
             style={[styles.headline, headlineStyle]}
-            numberOfLines={size === "hero" ? 4 : 3}
+            numberOfLines={
+              size === "hero" ? (compactHero ? 3 : 4) : 3
+            }
           >
             {displayedHeadline}
           </Text>
 
-          {size === "hero" && !!displayedStandfirst && (
+          {size === "hero" &&
+            !!displayedStandfirst &&
+            (!fitViewport || height >= 390) && (
             <Text style={styles.standfirst} numberOfLines={3}>
               {displayedStandfirst}
             </Text>
@@ -612,6 +634,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 5,
   },
   heroHeadline: { fontSize: 38, lineHeight: 43 },
+  heroHeadlineCompact: { fontSize: 27, lineHeight: 31 },
   secondaryHeadline: { fontSize: 23, lineHeight: 27 },
   standardHeadline: { fontSize: 22, lineHeight: 27 },
   standfirst: {
