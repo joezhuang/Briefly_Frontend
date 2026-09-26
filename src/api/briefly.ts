@@ -910,6 +910,41 @@ export function getBetaDashboard(days = 7) {
   );
 }
 
+export type BetaDashboardTopFeedModerationItem = {
+  event_id: string;
+  headline: string;
+  hidden: boolean;
+  reason: string | null;
+  hidden_at: string | null;
+  hidden_by_user_id: string | null;
+  hidden_by_email: string | null;
+};
+
+export type BetaDashboardTopFeedModerationPage = {
+  available: boolean;
+  items: BetaDashboardTopFeedModerationItem[];
+  count: number;
+};
+
+export function getBetaDashboardTopFeedModeration() {
+  return getJson<BetaDashboardTopFeedModerationPage>(
+    "/api/beta-dashboard/top-feed-moderation",
+  );
+}
+
+export function setBetaDashboardTopFeedVisibility(
+  eventId: string,
+  visible: boolean,
+  reason?: string | null,
+) {
+  return postJson<BetaDashboardTopFeedModerationItem>(
+    "/api/beta-dashboard/top-feed/" +
+      encodeURIComponent(eventId) +
+      "/visibility",
+    { visible, reason: reason ?? null },
+  );
+}
+
 export function setBetaDashboardErrorResolution(
   fingerprint: string,
   resolved: boolean,

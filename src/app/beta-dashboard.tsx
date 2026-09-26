@@ -27,8 +27,11 @@ import {
   getBetaDashboardStripePromotions,
   getBetaDashboardTelemetryConfig,
   getBetaDashboardTelemetryHealth,
+  getBetaDashboardTopFeedModeration,
   getCommunityModerationQueue,
+  getHomepageArticleFeed,
   setBetaDashboardErrorResolution,
+  setBetaDashboardTopFeedVisibility,
   reconcileBetaDashboardBilling,
   rollbackBetaDashboardAppConfig,
   setCommunityContributionVisibility,
@@ -42,7 +45,9 @@ import {
   type BetaDashboardSnapshot,
   type BetaDashboardTelemetryConfig,
   type BetaDashboardTelemetryHealth,
+  type BetaDashboardTopFeedModerationPage,
   type BrieflyAppConfig,
+  type HomepageArticleFeed,
   type CommunityModerationItem,
   type CommunityModerationQueue,
   type StripePromotion,
@@ -1265,6 +1270,220 @@ function CustomerSupportConsole() {
     </View>
   );
 }
+
+function TopFeedModerationConsole() {
+  const { colors } = useBrieflyTheme();
+  const [feed, setFeed] = useState<HomepageArticleFeed | null>(null);
+  const [hidden, setHidden] =
+    useState<BetaDashboardTopFeedModerationPage | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [busyEventId, setBusyEventId] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [nextFeed, nextHidden] = await Promise.all([
+        getHomepageArticleFeed({ scope: "top", language: "en", limit: 30, offset: 0 }),
+        getBetaDashboardTopFeedModeration(),
+      ]);
+      setFeed(nextFeed);
+      setHidden(nextHidden);
+      setError(false);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const applyVisibility = async (
+    eventId: string,
+    visible: boolean,
+    headline: string,
+  ) => {
+    if (busyEventId) return;
+
+    const prompt = visible
+      ? `Restore “${headline}” to Top eligibility?`
+      : `Hide “${headline}” from Top? The event will remain available in search, history, saved/following surfaces, and direct story URLs.`;
+
+    if (
+      Platform.OS === "web" &&
+      typeof window !== "undefined" &&
+      typeof window.confirm === "function"
+    ) {
+      if (!window.confirm(prompt)) return;
+    } else {
+      const accepted = await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          visible ? "Restore to Top?" : "Hide from Top?",
+          prompt,
+          [
+            { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+            {
+              text: visible ? "Restore" : "Hide",
+              style: visible ? "default" : "destructive",
+              onPress: () => resolve(true),
+            },
+          ],
+          { cancelable: true, onDismiss: () => resolve(false) },
+        );
+      });
+      if (!accepted) return;
+    }
+
+    setBusyEventId(eventId);
+    try {
+      await setBetaDashboardTopFeedVisibility(
+        eventId,
+        visible,
+        visible ? null : "Admin removed event from Top",
+      );
+      await refresh();
+    } finally {
+      setBusyEventId(null);
+    }
+  };
+
+  return (
+    <View
+      style={[
+        styles.configPanel,
+        { borderColor: colors.border, backgroundColor: colors.surface },
+      ]}
+    >
+      <View style={[styles.auditToolbar, { borderBottomColor: colors.border }]}>
+        <View style={styles.auditToolbarCopy}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Current Top feed
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Hide a bad canonical event from Top without deleting it. Hidden events
+            remain available everywhere else and can be restored here.
+          </Text>
+        </View>
+        <Pressable
+          disabled={loading}
+          onPress={() => void refresh()}
+          style={[styles.resolveButton, { borderColor: colors.border }]}
+        >
+          <Text style={[styles.resolveText, { color: colors.text }]}>
+            {loading ? "Refreshing…" : "Refresh"}
+          </Text>
+        </Pressable>
+      </View>
+
+      {error && !feed ? (
+        <Text style={[styles.promoEmpty, { color: colors.textMuted }]}>
+          Top feed moderation is unavailable. Verify the Phase 32 backend migration.
+        </Text>
+      ) : loading && !feed ? (
+        <View style={styles.auditLoading}>
+          <ActivityIndicator size="small" color={colors.textMuted} />
+          <Text style={[styles.configStatus, { color: colors.textMuted }]}>
+            Loading Top feed…
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.auditList}>
+          {(feed?.articles ?? []).map((article, index) => (
+            <View
+              key={article.event_id}
+              style={[styles.auditItem, { borderTopColor: colors.border }]}
+            >
+              <View style={styles.auditItemCopy}>
+                <Text style={[styles.configLabel, { color: colors.text }]}>
+                  {index + 1}. {article.headline}
+                </Text>
+                <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                  {article.source_count ?? article.article_count ?? 0} source/article signals ·{" "}
+                  {article.event_id}
+                </Text>
+              </View>
+              <Pressable
+                disabled={busyEventId === article.event_id}
+                onPress={() =>
+                  void applyVisibility(article.event_id, false, article.headline)
+                }
+                style={[
+                  styles.resolveButton,
+                  { borderColor: colors.border },
+                  busyEventId === article.event_id && styles.disabled,
+                ]}
+              >
+                <Text style={[styles.resolveText, { color: colors.text }]}>
+                  {busyEventId === article.event_id ? "Hiding…" : "Hide from Top"}
+                </Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      )}
+
+      <View style={[styles.auditToolbar, { borderTopColor: colors.border }]}>
+        <View style={styles.auditToolbarCopy}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Hidden from Top
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            {hidden?.count ?? 0} event(s) currently suppressed from Top only.
+          </Text>
+        </View>
+      </View>
+
+      {!hidden?.items.length ? (
+        <Text style={[styles.promoEmpty, { color: colors.textMuted }]}>
+          No events are manually hidden from Top.
+        </Text>
+      ) : (
+        <View style={styles.auditList}>
+          {hidden.items.map((item) => (
+            <View
+              key={item.event_id}
+              style={[styles.auditItem, { borderTopColor: colors.border }]}
+            >
+              <View style={styles.auditItemCopy}>
+                <Text style={[styles.configLabel, { color: colors.text }]}>
+                  {item.headline}
+                </Text>
+                <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                  Hidden {formatTimestamp(item.hidden_at)}
+                  {item.hidden_by_email ? " · " + item.hidden_by_email : ""}
+                </Text>
+                {!!item.reason && (
+                  <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                    {item.reason}
+                  </Text>
+                )}
+              </View>
+              <Pressable
+                disabled={busyEventId === item.event_id}
+                onPress={() =>
+                  void applyVisibility(item.event_id, true, item.headline)
+                }
+                style={[
+                  styles.resolveButton,
+                  { borderColor: colors.border },
+                  busyEventId === item.event_id && styles.disabled,
+                ]}
+              >
+                <Text style={[styles.resolveText, { color: colors.text }]}>
+                  {busyEventId === item.event_id ? "Restoring…" : "Restore to Top"}
+                </Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 
 function ConfigToggle({
   label,
@@ -5055,6 +5274,16 @@ export default function BetaDashboardScreen() {
               </View>
 
                 </>
+              )}
+
+              {dashboardTab === "operations" && (
+                <View style={styles.section}>
+                  <SectionTitle
+                    title="Top feed moderation"
+                    detail="Non-destructive admin controls for removing bad canonical events from Top. This does not delete the event or affect National, Local, search, history, or direct story URLs."
+                  />
+                  <TopFeedModerationConsole />
+                </View>
               )}
 
               {dashboardTab === "support" && (
