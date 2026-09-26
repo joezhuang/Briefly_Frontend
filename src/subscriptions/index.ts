@@ -209,21 +209,61 @@ export async function getBrieflySupportPrices(
     ? offerings.all[requestedOffering]
     : offerings.current;
 
+  const availableOfferingIds = Object.keys(offerings.all || {});
+  console.info(
+    "[Briefly RevenueCat Support] offerings " +
+      `platform=${Platform.OS} requested=${requestedOffering ?? "current"} ` +
+      `current=${offerings.current?.identifier ?? "none"} ` +
+      `available=${availableOfferingIds.join(",") || "none"}`,
+  );
+
   const result: BrieflySupportPrices = {
     tip_small: null,
     tip_medium: null,
     tip_large: null,
     pass_1m: null,
   };
-  if (!offering) return result;
+
+  if (!offering) {
+    console.warn(
+      "[Briefly RevenueCat Support] requested offering unavailable " +
+        `requested=${requestedOffering ?? "current"}`,
+    );
+    return result;
+  }
+
+  console.info(
+    "[Briefly RevenueCat Support] selected offering " +
+      `id=${offering.identifier} packages=${
+        offering.availablePackages.map((item) => item.identifier).join(",") || "none"
+      }`,
+  );
 
   for (const product of Object.keys(result) as BrieflySupportProduct[]) {
     const identifier = supportPackageIdentifier(product);
     const selected = offering.availablePackages.find(
       (item) => item.identifier === identifier,
     );
-    result[product] = selected?.product?.priceString ?? null;
+    const storeProductId = selected?.product?.identifier ?? null;
+    const price = selected?.product?.priceString ?? null;
+
+    console.info(
+      "[Briefly RevenueCat Support] package lookup " +
+        `product=${product} expected_package=${identifier} ` +
+        `found=${selected ? "yes" : "no"} store_product=${storeProductId ?? "none"} ` +
+        `price=${price ?? "none"}`,
+    );
+
+    result[product] = price;
   }
+
+  console.info(
+    "[Briefly RevenueCat Support] price result " +
+      Object.entries(result)
+        .map(([product, price]) => `${product}=${price ?? "none"}`)
+        .join(" "),
+  );
+
   return result;
 }
 
@@ -257,6 +297,14 @@ export async function beginBrieflySupportPurchase(
   }
 
   const identifier = supportPackageIdentifier(product);
+  console.info(
+    "[Briefly RevenueCat Support] purchase lookup " +
+      `platform=${Platform.OS} requested=${requestedOffering ?? "current"} ` +
+      `selected_offering=${offering.identifier} requested_product=${product} ` +
+      `expected_package=${identifier} available_packages=${
+        offering.availablePackages.map((item) => item.identifier).join(",") || "none"
+      }`,
+  );
   const selected = offering.availablePackages.find(
     (item) => item.identifier === identifier,
   );
@@ -265,6 +313,13 @@ export async function beginBrieflySupportPurchase(
       `RevenueCat package ${identifier} is not available in the support offering.`,
     );
   }
+
+  console.info(
+    "[Briefly RevenueCat Support] purchase package ready " +
+      `product=${product} package=${selected.identifier} ` +
+      `store_product=${selected.product?.identifier ?? "none"} ` +
+      `price=${selected.product?.priceString ?? "none"}`,
+  );
 
   try {
     trackProductEvent("support_checkout_start", {
