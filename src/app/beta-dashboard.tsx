@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -76,9 +76,17 @@ const SOCIAL_BETA_TABS = [
   { id: "lenses", label: "Lenses" },
   { id: "deeply", label: "Podcast" },
 ] as const;
+const SETTINGS_TABS = [
+  { id: "runtime", label: "Runtime" },
+  { id: "promotions", label: "Promotions" },
+  { id: "telemetry", label: "Telemetry" },
+  { id: "history", label: "History" },
+  { id: "audit", label: "Audit" },
+] as const;
 
 type DashboardTab = (typeof DASHBOARD_TABS)[number]["id"];
 type SocialBetaTab = (typeof SOCIAL_BETA_TABS)[number]["id"];
+type SettingsTab = (typeof SETTINGS_TABS)[number]["id"];
 
 const ROLLOUT_FEATURES = [
   { id: "community", label: "Community" },
@@ -1485,6 +1493,52 @@ function TopFeedModerationConsole() {
 }
 
 
+function ConfigGroup({
+  title,
+  detail,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  detail: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  const { colors } = useBrieflyTheme();
+
+  return (
+    <View style={[styles.configGroup, { borderBottomColor: colors.border }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        onPress={onToggle}
+        style={({ pressed }) => [
+          styles.configGroupHeader,
+          {
+            backgroundColor: colors.surface,
+            opacity: pressed ? 0.68 : 1,
+          },
+        ]}
+      >
+        <View style={styles.configGroupCopy}>
+          <Text style={[styles.configGroupTitle, { color: colors.text }]}>
+            {title}
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            {detail}
+          </Text>
+        </View>
+        <Text style={[styles.configGroupChevron, { color: colors.textMuted }]}>
+          {open ? "−" : "+"}
+        </Text>
+      </Pressable>
+      {open ? <View style={styles.configGroupBody}>{children}</View> : null}
+    </View>
+  );
+}
+
 function ConfigToggle({
   label,
   detail,
@@ -2060,6 +2114,14 @@ function RuntimeConfigEditor({
   const { colors } = useBrieflyTheme();
   const { width } = useWindowDimensions();
   const stackWideFields = width < 640;
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    access: true,
+  });
+  const toggleGroup = (key: string) =>
+    setOpenGroups((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
 
   if (loading && !config) {
     return <ScreenState loading message="Loading runtime configuration…" />;
@@ -2080,6 +2142,12 @@ function RuntimeConfigEditor({
         { borderColor: colors.border, backgroundColor: colors.surface },
       ]}
     >
+      <ConfigGroup
+        title="Access & review"
+        detail="Reviewer sign-in and account details used during app review."
+        open={openGroups.access === true}
+        onToggle={() => toggleGroup("access")}
+      >
       <ConfigToggle
         label="Email/password login"
         detail="Enable the reviewer email/password sign-in flow."
@@ -2129,6 +2197,14 @@ function RuntimeConfigEditor({
         />
       </View>
 
+      </ConfigGroup>
+
+      <ConfigGroup
+        title="Advertising"
+        detail="Master ad controls, placements, spacing, and provider configuration."
+        open={openGroups.ads === true}
+        onToggle={() => toggleGroup("ads")}
+      >
       <ConfigToggle
         label="Ads enabled"
         detail="Master advertising switch."
@@ -2233,6 +2309,14 @@ function RuntimeConfigEditor({
         />
       </View>
 
+      </ConfigGroup>
+
+      <ConfigGroup
+        title="Video"
+        detail="Source video playback and floating-player behavior."
+        open={openGroups.video === true}
+        onToggle={() => toggleGroup("video")}
+      >
       <ConfigToggle
         label="Homepage video"
         detail="Allow source video playback on the homepage."
@@ -2252,10 +2336,14 @@ function RuntimeConfigEditor({
         onValueChange={(value) => onChange("floating_video_enabled", value)}
       />
 
-      <SectionTitle
+      </ConfigGroup>
+
+      <ConfigGroup
         title="Remote operations"
-        detail="Operational controls that can change without shipping a new app binary."
-      />
+        detail="Maintenance and announcements that can change without shipping a new app binary."
+        open={openGroups.operations === true}
+        onToggle={() => toggleGroup("operations")}
+      >
       <ConfigToggle
         label="Maintenance mode"
         detail="Show a maintenance screen instead of the main news experience."
@@ -2297,10 +2385,14 @@ function RuntimeConfigEditor({
         />
       </View>
 
-      <SectionTitle
+      </ConfigGroup>
+
+      <ConfigGroup
         title="Story features"
-        detail="Turn shipped Briefly features on or off remotely."
-      />
+        detail="Turn shipped Briefly reading and participation features on or off remotely."
+        open={openGroups.features === true}
+        onToggle={() => toggleGroup("features")}
+      >
       <ConfigToggle label="Community" detail="Show community perspectives and contributions." value={config.community_enabled} onValueChange={(value) => onChange("community_enabled", value)} />
       <ConfigToggle label="Evidence" detail="Show event evidence and uncertainty." value={config.evidence_enabled} onValueChange={(value) => onChange("evidence_enabled", value)} />
       <ConfigToggle label="Timeline" detail="Show event timelines in Story tools." value={config.timeline_enabled} onValueChange={(value) => onChange("timeline_enabled", value)} />
@@ -2310,10 +2402,14 @@ function RuntimeConfigEditor({
       <ConfigToggle label="Following" detail="Allow users to follow living events." value={config.following_enabled} onValueChange={(value) => onChange("following_enabled", value)} />
       <ConfigToggle label="Search" detail="Allow users to search the canonical event universe." value={config.search_enabled} onValueChange={(value) => onChange("search_enabled", value)} />
 
-      <SectionTitle
+      </ConfigGroup>
+
+      <ConfigGroup
         title="Support monetization"
-        detail="Remote controls for one-time contributions and the fixed-duration Supporter Pass. These are rollout controls, not reviewer-specific behavior."
-      />
+        detail="One-time contributions, Supporter Pass, platform availability, and support copy."
+        open={openGroups.support === true}
+        onToggle={() => toggleGroup("support")}
+      >
       <ConfigToggle
         label="Support Briefly"
         detail="Master switch for all support purchase entry points."
@@ -2380,23 +2476,27 @@ function RuntimeConfigEditor({
       <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
         <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
           <Text style={[styles.configLabel, { color: colors.text }]}>RevenueCat support offering</Text>
-          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Offering identifier containing the three tip packages and the one-month Supporter Pass.</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Exact saved RevenueCat offering identifier containing the three tip packages and the one-month Supporter Pass. Leave blank only to use RevenueCat’s current offering.</Text>
         </View>
         <TextInput
           value={config.native_support_offering_id ?? ""}
           onChangeText={(value) => onChange("native_support_offering_id", value.trim() || null)}
           autoCapitalize="none"
           autoCorrect={false}
-          placeholder="briefly_support"
+          placeholder="Enter offering identifier"
           placeholderTextColor={colors.textMuted}
           style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
         />
       </View>
 
-      <SectionTitle
+      </ConfigGroup>
+
+      <ConfigGroup
         title="Controlled rollout"
-        detail="Gradually expose one backend-enforced feature to stable cohorts. The ordinary feature switch above remains the hard-off control."
-      />
+        detail="Gradually expose one backend-enforced feature to stable cohorts while keeping the master feature switch as the hard-off control."
+        open={openGroups.rollout === true}
+        onToggle={() => toggleGroup("rollout")}
+      >
       <ConfigToggle
         label="Percentage rollout"
         detail="When enabled, updated clients are deterministically included or excluded using the selected feature, cohort key, platform, and stable account/install identity."
@@ -2562,10 +2662,14 @@ function RuntimeConfigEditor({
         </Text>
       </View>
 
-      <SectionTitle
+      </ConfigGroup>
+
+      <ConfigGroup
         title="Home feeds"
-        detail="Control which top-level news feeds are available."
-      />
+        detail="Control Top, National, Local, and the default feed selection."
+        open={openGroups.feeds === true}
+        onToggle={() => toggleGroup("feeds")}
+      >
       <ConfigToggle label="Top feed" detail="Show the Top feed." value={config.top_feed_enabled} onValueChange={(value) => onChange("top_feed_enabled", value)} />
       <ConfigToggle label="National feed" detail="Show the National feed." value={config.national_feed_enabled} onValueChange={(value) => onChange("national_feed_enabled", value)} />
       <ConfigToggle label="Local feed" detail="Show the Local feed." value={config.local_feed_enabled} onValueChange={(value) => onChange("local_feed_enabled", value)} />
@@ -2584,6 +2688,8 @@ function RuntimeConfigEditor({
           style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
         />
       </View>
+
+      </ConfigGroup>
 
       <View style={styles.configActions}>
         <Pressable
@@ -3190,6 +3296,8 @@ export default function BetaDashboardScreen() {
     useState<DashboardTab>("overview");
   const [socialBetaTab, setSocialBetaTab] =
     useState<SocialBetaTab>("overview");
+  const [settingsTab, setSettingsTab] =
+    useState<SettingsTab>("runtime");
   const socialBeta = snapshot?.product.social_beta ?? EMPTY_SOCIAL_BETA;
   const communityEngagement =
     socialBeta.community_engagement ?? EMPTY_COMMUNITY_ENGAGEMENT;
@@ -5298,89 +5406,135 @@ export default function BetaDashboardScreen() {
 
               {dashboardTab === "settings" && (
                 <>
-                  <View style={styles.section}>
-                    <SectionTitle
-                      title="Runtime configuration"
-                      detail="Admin-only product controls backed by briefly_app_config."
-                    />
-                    <RuntimeConfigEditor
-                      config={appConfig}
-                      loading={configLoading}
-                      saving={configSaving}
-                      error={configError}
-                      saved={configSaved}
-                      onChange={changeAppConfig}
-                      onSave={() => void saveAppConfig()}
-                      effectiveRuntimeConfig={effectiveRuntimeConfig}
-                    />
+                  <View style={styles.settingsTabs}>
+                    {SETTINGS_TABS.map((tab) => {
+                      const active = settingsTab === tab.id;
+                      return (
+                        <Pressable
+                          key={tab.id}
+                          accessibilityRole="tab"
+                          accessibilityState={{ selected: active }}
+                          onPress={() => setSettingsTab(tab.id)}
+                          style={[
+                            styles.settingsTab,
+                            {
+                              borderColor: active ? colors.text : colors.border,
+                              backgroundColor: active
+                                ? colors.text
+                                : colors.surface,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.settingsTabText,
+                              {
+                                color: active
+                                  ? colors.background
+                                  : colors.textMuted,
+                              },
+                            ]}
+                          >
+                            {tab.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
                   </View>
 
-                  <View style={styles.section}>
-                    <SectionTitle
-                      title="Runtime configuration history"
-                      detail="Review who changed runtime controls and restore the state from before any recorded change."
-                    />
-                    <RuntimeConfigHistoryPanel
-                      page={runtimeConfigHistory}
-                      loading={runtimeConfigHistoryLoading}
-                      error={runtimeConfigHistoryError}
-                      busyId={busyRollbackId}
-                      onRefresh={() => void refreshAdminHistory()}
-                      onRollback={confirmRuntimeRollback}
-                    />
-                  </View>
+                  {settingsTab === "runtime" && (
+                    <View style={styles.section}>
+                      <SectionTitle
+                        title="Runtime configuration"
+                        detail="Admin-only product controls backed by briefly_app_config. Expand only the group you need."
+                      />
+                      <RuntimeConfigEditor
+                        config={appConfig}
+                        loading={configLoading}
+                        saving={configSaving}
+                        error={configError}
+                        saved={configSaved}
+                        onChange={changeAppConfig}
+                        onSave={() => void saveAppConfig()}
+                        effectiveRuntimeConfig={effectiveRuntimeConfig}
+                      />
+                    </View>
+                  )}
 
-                  <View style={styles.section}>
-                    <SectionTitle
-                      title="Promotions"
-                      detail="One place to control campaign messaging, native App Store / Google Play offers through RevenueCat, and web Stripe discount codes."
-                    />
-                    <PromotionsEditor
-                      config={appConfig}
-                      loading={configLoading}
-                      saving={configSaving}
-                      error={configError}
-                      saved={configSaved}
-                      stripeItems={stripePromotions}
-                      stripeLoading={stripePromotionsLoading}
-                      stripeError={stripePromotionsError}
-                      stripeCreating={stripePromotionCreating}
-                      busyStripeId={busyStripePromotionId}
-                      onChange={changeAppConfig}
-                      onSave={() => void saveAppConfig()}
-                      onCreateStripe={(input) => void createStripePromotion(input)}
-                      onDeactivateStripe={(item) => void deactivateStripePromotion(item)}
-                    />
-                  </View>
+                  {settingsTab === "promotions" && (
+                    <View style={styles.section}>
+                      <SectionTitle
+                        title="Promotions"
+                        detail="Campaign messaging, native RevenueCat offers, and web Stripe discount codes."
+                      />
+                      <PromotionsEditor
+                        config={appConfig}
+                        loading={configLoading}
+                        saving={configSaving}
+                        error={configError}
+                        saved={configSaved}
+                        stripeItems={stripePromotions}
+                        stripeLoading={stripePromotionsLoading}
+                        stripeError={stripePromotionsError}
+                        stripeCreating={stripePromotionCreating}
+                        busyStripeId={busyStripePromotionId}
+                        onChange={changeAppConfig}
+                        onSave={() => void saveAppConfig()}
+                        onCreateStripe={(input) => void createStripePromotion(input)}
+                        onDeactivateStripe={(item) => void deactivateStripePromotion(item)}
+                      />
+                    </View>
+                  )}
 
-                  <View style={styles.section}>
-                    <SectionTitle
-                      title="Telemetry & health thresholds"
-                      detail="Private admin-only controls for test-account filtering and warning/critical operational health thresholds."
-                    />
-                    <TelemetryConfigEditor
-                      config={telemetryConfig}
-                      loading={telemetryConfigLoading}
-                      saving={telemetryConfigSaving}
-                      error={telemetryConfigError}
-                      saved={telemetryConfigSaved}
-                      onChange={changeTelemetryConfig}
-                      onSave={() => void saveTelemetryConfig()}
-                    />
-                  </View>
+                  {settingsTab === "telemetry" && (
+                    <View style={styles.section}>
+                      <SectionTitle
+                        title="Telemetry & health thresholds"
+                        detail="Test-account filtering and warning/critical operational health thresholds."
+                      />
+                      <TelemetryConfigEditor
+                        config={telemetryConfig}
+                        loading={telemetryConfigLoading}
+                        saving={telemetryConfigSaving}
+                        error={telemetryConfigError}
+                        saved={telemetryConfigSaved}
+                        onChange={changeTelemetryConfig}
+                        onSave={() => void saveTelemetryConfig()}
+                      />
+                    </View>
+                  )}
 
-                  <View style={styles.section}>
-                    <SectionTitle
-                      title="Admin audit log"
-                      detail="Append-only accountability trail for state-changing Beta Dashboard actions."
-                    />
-                    <AdminAuditLogPanel
-                      page={adminAuditLog}
-                      loading={adminAuditLogLoading}
-                      error={adminAuditLogError}
-                      onRefresh={() => void refreshAdminHistory()}
-                    />
-                  </View>
+                  {settingsTab === "history" && (
+                    <View style={styles.section}>
+                      <SectionTitle
+                        title="Runtime configuration history"
+                        detail="Review who changed runtime controls and restore the state from before a recorded change."
+                      />
+                      <RuntimeConfigHistoryPanel
+                        page={runtimeConfigHistory}
+                        loading={runtimeConfigHistoryLoading}
+                        error={runtimeConfigHistoryError}
+                        busyId={busyRollbackId}
+                        onRefresh={() => void refreshAdminHistory()}
+                        onRollback={confirmRuntimeRollback}
+                      />
+                    </View>
+                  )}
+
+                  {settingsTab === "audit" && (
+                    <View style={styles.section}>
+                      <SectionTitle
+                        title="Admin audit log"
+                        detail="Append-only accountability trail for state-changing Beta Dashboard actions."
+                      />
+                      <AdminAuditLogPanel
+                        page={adminAuditLog}
+                        loading={adminAuditLogLoading}
+                        error={adminAuditLogError}
+                        onRefresh={() => void refreshAdminHistory()}
+                      />
+                    </View>
+                  )}
                 </>
               )}
 
@@ -5503,6 +5657,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   analyticsTabText: { fontSize: 12, fontWeight: "800" },
+  settingsTabs: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 18,
+  },
+  settingsTab: {
+    minHeight: 38,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  settingsTabText: { fontSize: 12, fontWeight: "800" },
   tabPanel: { marginBottom: 0 },
   trendPanel: {
     borderWidth: StyleSheet.hairlineWidth,
@@ -5612,6 +5781,37 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 18,
     overflow: "hidden",
+  },
+  configGroup: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  configGroupHeader: {
+    minHeight: 72,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+  },
+  configGroupCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  configGroupTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "900",
+  },
+  configGroupChevron: {
+    width: 28,
+    textAlign: "center",
+    fontSize: 22,
+    lineHeight: 24,
+    fontWeight: "500",
+  },
+  configGroupBody: {
+    width: "100%",
   },
   auditToolbar: {
     minHeight: 78,
