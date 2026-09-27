@@ -83,10 +83,18 @@ const SETTINGS_TABS = [
   { id: "history", label: "History" },
   { id: "audit", label: "Audit" },
 ] as const;
+const OPERATIONS_TABS = [
+  { id: "health", label: "Health" },
+  { id: "releases", label: "Releases" },
+  { id: "ai", label: "AI & cost" },
+  { id: "activity", label: "Activity" },
+  { id: "moderation", label: "Moderation" },
+] as const;
 
 type DashboardTab = (typeof DASHBOARD_TABS)[number]["id"];
 type SocialBetaTab = (typeof SOCIAL_BETA_TABS)[number]["id"];
 type SettingsTab = (typeof SETTINGS_TABS)[number]["id"];
+type OperationsTab = (typeof OPERATIONS_TABS)[number]["id"];
 
 const ROLLOUT_FEATURES = [
   { id: "community", label: "Community" },
@@ -3298,6 +3306,8 @@ export default function BetaDashboardScreen() {
     useState<SocialBetaTab>("overview");
   const [settingsTab, setSettingsTab] =
     useState<SettingsTab>("runtime");
+  const [operationsTab, setOperationsTab] =
+    useState<OperationsTab>("health");
   const socialBeta = snapshot?.product.social_beta ?? EMPTY_SOCIAL_BETA;
   const communityEngagement =
     socialBeta.community_engagement ?? EMPTY_COMMUNITY_ENGAGEMENT;
@@ -4646,752 +4656,803 @@ export default function BetaDashboardScreen() {
 
               {dashboardTab === "operations" && (
                 <>
-              <View style={styles.section}>
-                <SectionTitle
-                  title="Version & release visibility"
-                  detail="Shows the dashboard runtime, deployed backend revision, observed client releases, and error distribution for the selected window."
-                />
-
-                <View style={styles.metricsGrid}>
-                  <MetricCard
-                    label="Dashboard runtime"
-                    value={
-                      brieflyRuntimeRelease.telemetryVersion ||
-                      brieflyRuntimeRelease.appVersion ||
-                      "unknown"
-                    }
-                    detail={
-                      brieflyRuntimeRelease.platform +
-                      (brieflyRuntimeRelease.nativeBuildVersion
-                        ? " · native build " +
-                          brieflyRuntimeRelease.nativeBuildVersion
-                        : "") +
-                      (brieflyRuntimeRelease.releaseChannel
-                        ? " · " + brieflyRuntimeRelease.releaseChannel
-                        : "")
-                    }
-                  />
-                  <MetricCard
-                    label="Frontend revision"
-                    value={
-                      brieflyRuntimeRelease.sourceRevision
-                        ? brieflyRuntimeRelease.sourceRevision.slice(0, 12)
-                        : "not embedded"
-                    }
-                    detail={
-                      brieflyRuntimeRelease.runtimeVersion ||
-                      "No explicit runtime version"
-                    }
-                  />
-                  <MetricCard
-                    label="Backend release"
-                    value={
-                      releaseVisibility?.backend.release_id ||
-                      releaseVisibility?.backend.git_short_sha ||
-                      "unavailable"
-                    }
-                    detail={
-                      releaseVisibility
-                        ? [
-                            releaseVisibility.backend.git_branch,
-                            releaseVisibility.backend.environment,
-                            releaseVisibility.backend.dirty === true
-                              ? "dirty working tree"
-                              : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ") || "revision metadata available"
-                        : "Deploy #7 backend to populate"
-                    }
-                  />
-                  <MetricCard
-                    label="Backend started"
-                    value={
-                      releaseVisibility
-                        ? formatTimestamp(
-                            releaseVisibility.backend.process_started_at,
-                          )
-                        : "—"
-                    }
-                    detail={
-                      releaseVisibility?.backend.deployed_at
-                        ? "deployed " +
-                          formatTimestamp(
-                            releaseVisibility.backend.deployed_at,
-                          )
-                        : releaseVisibility
-                          ? "deployment timestamp not configured"
-                          : "release metadata unavailable"
-                    }
-                  />
-                </View>
-
-                {!releaseVisibility ? (
-                  <Text
-                    style={[
-                      styles.empty,
-                      { color: colors.textMuted, marginTop: 14 },
-                    ]}
-                  >
-                    Release visibility will populate when the #7 backend is deployed.
-                  </Text>
-                ) : (
-                  <View style={[styles.twoColumn, { marginTop: 14 }]}>
-                    <View
-                      style={[
-                        styles.panel,
-                        {
-                          borderColor: colors.border,
-                          backgroundColor: colors.surface,
-                        },
-                      ]}
-                    >
-                      <SectionTitle
-                        title="Observed client releases"
-                        detail={
-                          String(days) +
-                          "-day analytics sessions grouped by platform and embedded app/build version."
-                        }
-                      />
-                      <View style={styles.activityList}>
-                        {releaseVisibility.client_versions.length === 0 ? (
-                          <Text
-                            style={[styles.empty, { color: colors.textMuted }]}
-                          >
-                            No client release telemetry in this window.
-                          </Text>
-                        ) : (
-                          releaseVisibility.client_versions.map((item) => (
-                            <ActivityBar
-                              key={item.platform + "-" + item.app_version}
-                              label={
-                                item.platform.toUpperCase() +
-                                " · " +
-                                item.app_version
-                              }
-                              value={item.sessions}
-                              max={maxClientVersionSessions}
-                              detail={
-                                number(item.authenticated_users) +
-                                " users · last " +
-                                formatTimestamp(item.last_seen)
-                              }
-                            />
-                          ))
-                        )}
-                      </View>
-                    </View>
-
-                    <View
-                      style={[
-                        styles.panel,
-                        {
-                          borderColor: colors.border,
-                          backgroundColor: colors.surface,
-                        },
-                      ]}
-                    >
-                      <SectionTitle
-                        title="Errors by release"
-                        detail="Client errors use app/build version. New server errors are stamped with the backend release identifier."
-                      />
-                      <View style={styles.activityList}>
-                        {releaseVisibility.error_versions.length === 0 ? (
-                          <Text
-                            style={[styles.empty, { color: colors.textMuted }]}
-                          >
-                            No release-attributed errors in this window.
-                          </Text>
-                        ) : (
-                          releaseVisibility.error_versions.map((item) => (
-                            <ActivityBar
-                              key={
-                                item.source +
-                                "-" +
-                                item.platform +
-                                "-" +
-                                item.app_version
-                              }
-                              label={
-                                item.source.toUpperCase() +
-                                " · " +
-                                item.platform.toUpperCase() +
-                                " · " +
-                                item.app_version
-                              }
-                              value={item.errors}
-                              max={maxReleaseErrors}
-                              detail={
-                                number(item.unresolved_errors) +
-                                " unresolved · " +
-                                number(item.fatal_errors) +
-                                " fatal"
-                              }
-                            />
-                          ))
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.section}>
-                <SectionTitle
-                  title="AI usage & cost"
-                  detail={
-                    "Model-call metering for the selected " +
-                    String(days) +
-                    "-day window. Provider-reported usage/cost is preferred; configured estimates are used when available. Local Ollama has zero provider cost."
-                  }
-                />
-
-                {!aiUsage?.available ? (
-                  <Text
-                    style={[
-                      styles.empty,
-                      { color: colors.textMuted, marginTop: 14 },
-                    ]}
-                  >
-                    AI usage metering is unavailable until the Phase 30 migration
-                    is applied.
-                  </Text>
-                ) : (
-                  <>
-                    <View style={styles.metricsGrid}>
-                      <MetricCard
-                        label="Model calls"
-                        value={number(aiUsage.summary.calls)}
-                        detail={
-                          number(aiUsage.summary.successful_calls) +
-                          " successful · " +
-                          number(aiUsage.summary.failed_calls) +
-                          " failed"
-                        }
-                      />
-                      <MetricCard
-                        label="Cloud provider cost"
-                        value={usd(aiUsage.summary.cost_usd)}
-                        detail={
-                          number(aiUsage.summary.priced_calls) +
-                          " priced cloud call(s) · " +
-                          number(aiUsage.summary.unpriced_cloud_calls) +
-                          " unpriced cloud call(s)"
-                        }
-                      />
-                      <MetricCard
-                        label="Input tokens"
-                        value={number(aiUsage.summary.input_tokens)}
-                        detail={
-                          number(aiUsage.summary.estimated_token_calls) +
-                          " call(s) used char-based token estimates"
-                        }
-                      />
-                      <MetricCard
-                        label="Output tokens"
-                        value={number(aiUsage.summary.output_tokens)}
-                        detail={number(aiUsage.summary.total_tokens) + " total tokens"}
-                      />
-                      <MetricCard
-                        label="Local model calls"
-                        value={number(aiUsage.summary.local_calls)}
-                        detail="Ollama · zero provider cost"
-                      />
-                      <MetricCard
-                        label="Average model latency"
-                        value={
-                          number(Math.round(aiUsage.summary.avg_latency_ms)) +
-                          " ms"
-                        }
-                        detail={number(aiUsage.summary.cloud_calls) + " cloud call(s)"}
-                      />
-                    </View>
-
-                    {aiUsage.summary.unpriced_cloud_calls > 0 ? (
-                      <View
+                <View style={styles.operationsTabs}>
+                  {OPERATIONS_TABS.map((tab) => {
+                    const active = operationsTab === tab.id;
+                    return (
+                      <Pressable
+                        key={tab.id}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: active }}
+                        onPress={() => setOperationsTab(tab.id)}
                         style={[
-                          styles.supportConsistency,
+                          styles.operationsTab,
                           {
-                            borderColor: colors.border,
-                            backgroundColor: colors.surface,
-                            marginTop: 14,
-                            marginBottom: 14,
+                            borderColor: active ? colors.text : colors.border,
+                            backgroundColor: active
+                              ? colors.text
+                              : colors.surface,
                           },
                         ]}
                       >
                         <Text
                           style={[
-                            styles.supportWarning,
-                            { color: colors.textMuted },
+                            styles.operationsTabText,
+                            {
+                              color: active
+                                ? colors.background
+                                : colors.textMuted,
+                            },
                           ]}
                         >
-                          Some cloud calls have no provider-reported cost and no
-                          configured model price. Their token usage is still counted,
-                          but the displayed USD total is incomplete.
+                          {tab.label}
                         </Text>
-                      </View>
-                    ) : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
 
-                    <View style={[styles.twoColumn, { marginTop: 14 }]}>
-                      <View
-                        style={[
-                          styles.panel,
-                          {
-                            borderColor: colors.border,
-                            backgroundColor: colors.surface,
-                          },
-                        ]}
-                      >
-                        <SectionTitle
-                          title="AI operations"
-                          detail="Canonical generation, repair, localization and podcast model work."
-                        />
-                        <View style={styles.activityList}>
-                          {aiUsage.operations.length === 0 ? (
-                            <Text
-                              style={[styles.empty, { color: colors.textMuted }]}
-                            >
-                              No metered model calls in this window.
-                            </Text>
-                          ) : (
-                            aiUsage.operations.map((item) => (
-                              <ActivityBar
-                                key={item.product + "-" + item.operation}
-                                label={
-                                  item.product.toUpperCase() +
-                                  " · " +
-                                  item.operation.replace(/_/g, " ")
-                                }
-                                value={item.calls}
-                                max={maxAiOperationCalls}
-                                detail={
-                                  number(item.total_tokens) +
-                                  " tokens · " +
-                                  usd(item.cost_usd) +
-                                  (item.failed_calls
-                                    ? " · " +
-                                      number(item.failed_calls) +
-                                      " failed"
-                                    : "")
-                                }
-                              />
-                            ))
-                          )}
-                        </View>
-                      </View>
-
-                      <View
-                        style={[
-                          styles.panel,
-                          {
-                            borderColor: colors.border,
-                            backgroundColor: colors.surface,
-                          },
-                        ]}
-                      >
-                        <SectionTitle
-                          title="Models & providers"
-                          detail="Model-level call, token and provider-cost distribution."
-                        />
-                        <View style={styles.activityList}>
-                          {aiUsage.models.length === 0 ? (
-                            <Text
-                              style={[styles.empty, { color: colors.textMuted }]}
-                            >
-                              No model/provider usage in this window.
-                            </Text>
-                          ) : (
-                            aiUsage.models.map((item) => (
-                              <ActivityBar
-                                key={
-                                  item.product +
-                                  "-" +
-                                  item.provider +
-                                  "-" +
-                                  item.model +
-                                  "-" +
-                                  item.tier
-                                }
-                                label={
-                                  item.provider.toUpperCase() +
-                                  " · " +
-                                  item.model
-                                }
-                                value={item.calls}
-                                max={maxAiModelCalls}
-                                detail={
-                                  item.product +
-                                  " · " +
-                                  item.tier +
-                                  " · " +
-                                  number(item.total_tokens) +
-                                  " tokens · " +
-                                  usd(item.cost_usd)
-                                }
-                              />
-                            ))
-                          )}
-                        </View>
-                      </View>
-                    </View>
-
-                    <Text
-                      style={[
-                        styles.metaText,
-                        { color: colors.textMuted, marginTop: 12 },
-                      ]}
-                    >
-                      Metering stores counts, tokens, latency, model identifiers and
-                      cost metadata only — never prompts or generated article text.
-                      TTS, web research/search APIs and storage costs are not included.
-                    </Text>
-                  </>
-                )}
-              </View>
-
-              <View style={styles.section}>
-                <SectionTitle
+                  {operationsTab === "health" && (
+                    <>
+                  <View style={styles.section}>
+                  <SectionTitle
                   title="Telemetry health & alerts"
                   detail="Read-only first-party telemetry health. Warning/critical thresholds are configurable in Settings and do not change product behavior."
-                />
-                <View style={styles.windowRow}>
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={telemetryHealthLoading}
-                    onPress={() => void refreshTelemetryHealth()}
-                    style={({ pressed }) => [
-                      styles.refreshButton,
-                      {
-                        borderColor: colors.border,
-                        opacity: telemetryHealthLoading
-                          ? 0.5
-                          : pressed
-                            ? 0.65
-                            : 1,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.windowText, { color: colors.text }]}>
-                      {telemetryHealthLoading ? "Checking…" : "Refresh telemetry"}
-                    </Text>
-                  </Pressable>
-                </View>
-
-                {telemetryHealthLoading && !telemetryHealth ? (
-                  <ActivityIndicator
-                    color={colors.accent}
-                    style={{ alignSelf: "flex-start", marginTop: 14 }}
                   />
-                ) : telemetryHealthError || !telemetryHealth ? (
-                  <Text
-                    style={[
-                      styles.empty,
-                      { color: colors.textMuted, marginTop: 14 },
-                    ]}
+                  <View style={styles.windowRow}>
+                  <Pressable
+                  accessibilityRole="button"
+                  disabled={telemetryHealthLoading}
+                  onPress={() => void refreshTelemetryHealth()}
+                  style={({ pressed }) => [
+                  styles.refreshButton,
+                  {
+                  borderColor: colors.border,
+                  opacity: telemetryHealthLoading
+                  ? 0.5
+                  : pressed
+                  ? 0.65
+                  : 1,
+                  },
+                  ]}
                   >
-                    Telemetry health is unavailable.
+                  <Text style={[styles.windowText, { color: colors.text }]}>
+                  {telemetryHealthLoading ? "Checking…" : "Refresh telemetry"}
                   </Text>
-                ) : (
+                  </Pressable>
+                  </View>
+                  
+                  {telemetryHealthLoading && !telemetryHealth ? (
+                  <ActivityIndicator
+                  color={colors.accent}
+                  style={{ alignSelf: "flex-start", marginTop: 14 }}
+                  />
+                  ) : telemetryHealthError || !telemetryHealth ? (
+                  <Text
+                  style={[
+                  styles.empty,
+                  { color: colors.textMuted, marginTop: 14 },
+                  ]}
+                  >
+                  Telemetry health is unavailable.
+                  </Text>
+                  ) : (
                   <>
-                    <View style={[styles.metricsGrid, { marginTop: 14 }]}>
-                      <MetricCard
-                        label="Health status"
-                        value={telemetryHealth.status.toUpperCase()}
-                        detail={
-                          telemetryHealth.alerts_enabled
-                            ? number(telemetryHealth.alerts.length) +
-                              " active alert(s)"
-                            : "threshold alerts disabled"
-                        }
-                      />
-                      <MetricCard
-                        label="Analytics · 24h"
-                        value={number(telemetryHealth.analytics.events_24h)}
-                        detail={
-                          number(telemetryHealth.analytics.sessions_24h) +
-                          " sessions"
-                        }
-                      />
-                      <MetricCard
-                        label="Sessions with client errors"
-                        value={
-                          telemetryHealth.errors.error_session_rate == null
-                            ? "—"
-                            : percentage(
-                                telemetryHealth.errors.error_session_rate,
-                              )
-                        }
-                        detail={
-                          telemetryHealth.errors.error_session_rate == null
-                            ? telemetryHealth.errors.error_session_rate_reason ===
-                              "test_account_filters_differ"
-                              ? "rate paused because analytics/error test-account filters differ"
-                              : "needs at least " +
-                                number(
-                                  telemetryHealth.thresholds
-                                    .error_rate_min_sessions,
-                                ) +
-                                " sessions"
-                            : number(
-                                telemetryHealth.errors.error_sessions_24h,
-                              ) + " affected session(s)"
-                        }
-                      />
-                      <MetricCard
-                        label="Server errors · 24h"
-                        value={number(
-                          telemetryHealth.errors.server_errors_24h,
-                        )}
-                        detail={
-                          "warning " +
-                          number(
-                            telemetryHealth.thresholds
-                              .warning_server_errors_24h,
-                          ) +
-                          " · critical " +
-                          number(
-                            telemetryHealth.thresholds
-                              .critical_server_errors_24h,
-                          )
-                        }
-                      />
-                      <MetricCard
-                        label="Unresolved errors"
-                        value={number(telemetryHealth.errors.unresolved_errors)}
-                        detail={
-                          "warning " +
-                          number(
-                            telemetryHealth.thresholds
-                              .warning_unresolved_errors,
-                          ) +
-                          " · critical " +
-                          number(
-                            telemetryHealth.thresholds
-                              .critical_unresolved_errors,
-                          )
-                        }
-                      />
-                      <MetricCard
-                        label="Unresolved fatal"
-                        value={number(
-                          telemetryHealth.errors.unresolved_fatal_errors,
-                        )}
-                        detail="any unresolved fatal error is critical"
-                      />
-                    </View>
-
-                    <View
-                      style={[
-                        styles.supportConsistency,
-                        {
-                          borderColor: colors.border,
-                          backgroundColor: colors.surface,
-                          marginTop: 14,
-                          marginBottom: 14,
-                        },
-                      ]}
-                    >
-                      {!telemetryHealth.alerts_enabled ? (
-                        <Text style={[styles.empty, { color: colors.textMuted }]}>
-                          Health alerts are disabled. Raw telemetry metrics are
-                          still available above.
-                        </Text>
-                      ) : telemetryHealth.alerts.length === 0 ? (
-                        <Text style={[styles.empty, { color: colors.textMuted }]}>
-                          No configured health threshold is currently breached.
-                        </Text>
-                      ) : (
-                        telemetryHealth.alerts.map((alert) => (
-                          <Text
-                            key={alert.code}
-                            style={[
-                              styles.supportIssue,
-                              {
-                                color:
-                                  alert.severity === "critical"
-                                    ? colors.error
-                                    : colors.text,
-                              },
-                            ]}
-                          >
-                            {alert.severity.toUpperCase()} · {alert.message}
-                          </Text>
-                        ))
-                      )}
-                    </View>
-
-                    <Text style={[styles.metaText, { color: colors.textMuted }]}>
-                      Error-session thresholds:{" "}
-                      {percentage(
-                        telemetryHealth.thresholds
-                          .warning_error_session_rate,
-                      )}{" "}
-                      warning ·{" "}
-                      {percentage(
-                        telemetryHealth.thresholds
-                          .critical_error_session_rate,
-                      )}{" "}
-                      critical · minimum{" "}
-                      {number(
-                        telemetryHealth.thresholds.error_rate_min_sessions,
-                      )}{" "}
-                      sessions
-                    </Text>
-                    <Text style={[styles.metaText, { color: colors.textMuted }]}>
-                      Analytics last received:{" "}
-                      {formatTimestamp(telemetryHealth.analytics.last_received_at)}
-                      {" · "}Errors last received:{" "}
-                      {formatTimestamp(telemetryHealth.errors.last_received_at)}
-                    </Text>
-                  </>
-                )}
-              </View>
-
-              <View style={styles.twoColumn}>
-                <View
-                  style={[
-                    styles.panel,
-                    { borderColor: colors.border, backgroundColor: colors.surface },
-                  ]}
-                >
-                  <SectionTitle title="Event activity" />
-                  <View style={styles.activityList}>
-                    {snapshot.product.event_counts.map((item) => (
-                      <ActivityBar
-                        key={item.event_name}
-                        label={item.event_name}
-                        value={item.count}
-                        max={maxEventCount}
-                        detail={number(item.sessions) + " sessions"}
-                      />
-                    ))}
-                  </View>
-                </View>
-
-                <View
-                  style={[
-                    styles.panel,
-                    { borderColor: colors.border, backgroundColor: colors.surface },
-                  ]}
-                >
-                  <SectionTitle title="Platforms" />
-                  <View style={styles.activityList}>
-                    {snapshot.product.platforms.map((item) => (
-                      <ActivityBar
-                        key={item.platform}
-                        label={item.platform}
-                        value={item.events}
-                        max={maxPlatformEvents}
-                        detail={number(item.sessions) + " sessions"}
-                      />
-                    ))}
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.section}>
-                <SectionTitle
-                  title="Community moderation"
-                  detail="Reported event contributions. Account identities stay private; only moderation-relevant content is shown."
-                />
-                <View style={styles.windowRow}>
-                  <Text style={[styles.metaText, { color: colors.textMuted }]}>
-                    {number(communityModeration?.count)} reported contributions
-                  </Text>
-                  <Pressable
-                    disabled={communityModerationLoading}
-                    onPress={() => void refreshCommunityModeration()}
-                    style={({ pressed }) => [
-                      styles.refreshButton,
-                      {
-                        borderColor: colors.border,
-                        opacity: communityModerationLoading
-                          ? 0.5
-                          : pressed
-                            ? 0.65
-                            : 1,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.windowText, { color: colors.text }]}>
-                      {communityModerationLoading ? "Refreshing…" : "Refresh"}
-                    </Text>
-                  </Pressable>
-                </View>
-
-                {communityModerationLoading && !communityModeration ? (
-                  <ActivityIndicator
-                    color={colors.accent}
-                    style={{ alignSelf: "flex-start", marginTop: 14 }}
+                  <View style={[styles.metricsGrid, { marginTop: 14 }]}>
+                  <MetricCard
+                  label="Health status"
+                  value={telemetryHealth.status.toUpperCase()}
+                  detail={
+                  telemetryHealth.alerts_enabled
+                  ? number(telemetryHealth.alerts.length) +
+                  " active alert(s)"
+                  : "threshold alerts disabled"
+                  }
                   />
-                ) : communityModerationError && !communityModeration ? (
-                  <Text
-                    style={[
-                      styles.empty,
-                      { color: colors.textMuted, marginTop: 14 },
-                    ]}
-                  >
-                    Community moderation queue is unavailable.
-                  </Text>
-                ) : communityModeration?.items.length ? (
-                  <View style={[styles.errorList, { marginTop: 14 }]}>
-                    {communityModeration.items.map((item) => (
-                      <CommunityModerationCard
-                        key={item.contribution_id}
-                        item={item}
-                        busy={busyContributionId === item.contribution_id}
-                        onToggle={(contribution) =>
-                          void toggleCommunityVisibility(contribution)
-                        }
-                      />
-                    ))}
+                  <MetricCard
+                  label="Analytics · 24h"
+                  value={number(telemetryHealth.analytics.events_24h)}
+                  detail={
+                  number(telemetryHealth.analytics.sessions_24h) +
+                  " sessions"
+                  }
+                  />
+                  <MetricCard
+                  label="Sessions with client errors"
+                  value={
+                  telemetryHealth.errors.error_session_rate == null
+                  ? "—"
+                  : percentage(
+                  telemetryHealth.errors.error_session_rate,
+                  )
+                  }
+                  detail={
+                  telemetryHealth.errors.error_session_rate == null
+                  ? telemetryHealth.errors.error_session_rate_reason ===
+                  "test_account_filters_differ"
+                  ? "rate paused because analytics/error test-account filters differ"
+                  : "needs at least " +
+                  number(
+                  telemetryHealth.thresholds
+                  .error_rate_min_sessions,
+                  ) +
+                  " sessions"
+                  : number(
+                  telemetryHealth.errors.error_sessions_24h,
+                  ) + " affected session(s)"
+                  }
+                  />
+                  <MetricCard
+                  label="Server errors · 24h"
+                  value={number(
+                  telemetryHealth.errors.server_errors_24h,
+                  )}
+                  detail={
+                  "warning " +
+                  number(
+                  telemetryHealth.thresholds
+                  .warning_server_errors_24h,
+                  ) +
+                  " · critical " +
+                  number(
+                  telemetryHealth.thresholds
+                  .critical_server_errors_24h,
+                  )
+                  }
+                  />
+                  <MetricCard
+                  label="Unresolved errors"
+                  value={number(telemetryHealth.errors.unresolved_errors)}
+                  detail={
+                  "warning " +
+                  number(
+                  telemetryHealth.thresholds
+                  .warning_unresolved_errors,
+                  ) +
+                  " · critical " +
+                  number(
+                  telemetryHealth.thresholds
+                  .critical_unresolved_errors,
+                  )
+                  }
+                  />
+                  <MetricCard
+                  label="Unresolved fatal"
+                  value={number(
+                  telemetryHealth.errors.unresolved_fatal_errors,
+                  )}
+                  detail="any unresolved fatal error is critical"
+                  />
                   </View>
-                ) : (
-                  <Text
-                    style={[
-                      styles.empty,
-                      { color: colors.textMuted, marginTop: 14 },
-                    ]}
+                  
+                  <View
+                  style={[
+                  styles.supportConsistency,
+                  {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  marginTop: 14,
+                  marginBottom: 14,
+                  },
+                  ]}
                   >
-                    No reported contributions.
+                  {!telemetryHealth.alerts_enabled ? (
+                  <Text style={[styles.empty, { color: colors.textMuted }]}>
+                  Health alerts are disabled. Raw telemetry metrics are
+                  still available above.
                   </Text>
-                )}
-              </View>
-
-              <View style={styles.section}>
-                <SectionTitle
+                  ) : telemetryHealth.alerts.length === 0 ? (
+                  <Text style={[styles.empty, { color: colors.textMuted }]}>
+                  No configured health threshold is currently breached.
+                  </Text>
+                  ) : (
+                  telemetryHealth.alerts.map((alert) => (
+                  <Text
+                  key={alert.code}
+                  style={[
+                  styles.supportIssue,
+                  {
+                  color:
+                  alert.severity === "critical"
+                  ? colors.error
+                  : colors.text,
+                  },
+                  ]}
+                  >
+                  {alert.severity.toUpperCase()} · {alert.message}
+                  </Text>
+                  ))
+                  )}
+                  </View>
+                  
+                  <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  Error-session thresholds:{" "}
+                  {percentage(
+                  telemetryHealth.thresholds
+                  .warning_error_session_rate,
+                  )}{" "}
+                  warning ·{" "}
+                  {percentage(
+                  telemetryHealth.thresholds
+                  .critical_error_session_rate,
+                  )}{" "}
+                  critical · minimum{" "}
+                  {number(
+                  telemetryHealth.thresholds.error_rate_min_sessions,
+                  )}{" "}
+                  sessions
+                  </Text>
+                  <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  Analytics last received:{" "}
+                  {formatTimestamp(telemetryHealth.analytics.last_received_at)}
+                  {" · "}Errors last received:{" "}
+                  {formatTimestamp(telemetryHealth.errors.last_received_at)}
+                  </Text>
+                  </>
+                  )}
+                  </View>
+                  <View style={styles.section}>
+                  <SectionTitle
                   title="Error groups"
                   detail="Grouped by sanitized fingerprint. Unresolved groups are shown first."
-                />
-                {snapshot.errors.groups.length === 0 ? (
+                  />
+                  {snapshot.errors.groups.length === 0 ? (
                   <Text style={[styles.empty, { color: colors.textMuted }]}>
-                    No errors recorded in this window.
+                  No errors recorded in this window.
                   </Text>
-                ) : (
+                  ) : (
                   <View style={styles.errorList}>
-                    {snapshot.errors.groups.map((item) => (
-                      <ErrorGroupCard
-                        key={item.fingerprint}
-                        item={item}
-                        busy={busyFingerprint === item.fingerprint}
-                        onToggle={(group) => void toggleError(group)}
-                      />
-                    ))}
+                  {snapshot.errors.groups.map((item) => (
+                  <ErrorGroupCard
+                  key={item.fingerprint}
+                  item={item}
+                  busy={busyFingerprint === item.fingerprint}
+                  onToggle={(group) => void toggleError(group)}
+                  />
+                  ))}
                   </View>
-                )}
-              </View>
+                  )}
+                  </View>
+                    </>
+                  )}
 
-                </>
-              )}
-
-              {dashboardTab === "operations" && (
-                <View style={styles.section}>
+                  {operationsTab === "releases" && (
+                    <>
+                  <View style={styles.section}>
                   <SectionTitle
-                    title="Top feed moderation"
-                    detail="Non-destructive admin controls for removing bad canonical events from Top. This does not delete the event or affect National, Local, search, history, or direct story URLs."
+                  title="Version & release visibility"
+                  detail="Shows the dashboard runtime, deployed backend revision, observed client releases, and error distribution for the selected window."
+                  />
+                  
+                  <View style={styles.metricsGrid}>
+                  <MetricCard
+                  label="Dashboard runtime"
+                  value={
+                  brieflyRuntimeRelease.telemetryVersion ||
+                  brieflyRuntimeRelease.appVersion ||
+                  "unknown"
+                  }
+                  detail={
+                  brieflyRuntimeRelease.platform +
+                  (brieflyRuntimeRelease.nativeBuildVersion
+                  ? " · native build " +
+                  brieflyRuntimeRelease.nativeBuildVersion
+                  : "") +
+                  (brieflyRuntimeRelease.releaseChannel
+                  ? " · " + brieflyRuntimeRelease.releaseChannel
+                  : "")
+                  }
+                  />
+                  <MetricCard
+                  label="Frontend revision"
+                  value={
+                  brieflyRuntimeRelease.sourceRevision
+                  ? brieflyRuntimeRelease.sourceRevision.slice(0, 12)
+                  : "not embedded"
+                  }
+                  detail={
+                  brieflyRuntimeRelease.runtimeVersion ||
+                  "No explicit runtime version"
+                  }
+                  />
+                  <MetricCard
+                  label="Backend release"
+                  value={
+                  releaseVisibility?.backend.release_id ||
+                  releaseVisibility?.backend.git_short_sha ||
+                  "unavailable"
+                  }
+                  detail={
+                  releaseVisibility
+                  ? [
+                  releaseVisibility.backend.git_branch,
+                  releaseVisibility.backend.environment,
+                  releaseVisibility.backend.dirty === true
+                  ? "dirty working tree"
+                  : null,
+                  ]
+                  .filter(Boolean)
+                  .join(" · ") || "revision metadata available"
+                  : "Deploy #7 backend to populate"
+                  }
+                  />
+                  <MetricCard
+                  label="Backend started"
+                  value={
+                  releaseVisibility
+                  ? formatTimestamp(
+                  releaseVisibility.backend.process_started_at,
+                  )
+                  : "—"
+                  }
+                  detail={
+                  releaseVisibility?.backend.deployed_at
+                  ? "deployed " +
+                  formatTimestamp(
+                  releaseVisibility.backend.deployed_at,
+                  )
+                  : releaseVisibility
+                  ? "deployment timestamp not configured"
+                  : "release metadata unavailable"
+                  }
+                  />
+                  </View>
+                  
+                  {!releaseVisibility ? (
+                  <Text
+                  style={[
+                  styles.empty,
+                  { color: colors.textMuted, marginTop: 14 },
+                  ]}
+                  >
+                  Release visibility will populate when the #7 backend is deployed.
+                  </Text>
+                  ) : (
+                  <View style={[styles.twoColumn, { marginTop: 14 }]}>
+                  <View
+                  style={[
+                  styles.panel,
+                  {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  },
+                  ]}
+                  >
+                  <SectionTitle
+                  title="Observed client releases"
+                  detail={
+                  String(days) +
+                  "-day analytics sessions grouped by platform and embedded app/build version."
+                  }
+                  />
+                  <View style={styles.activityList}>
+                  {releaseVisibility.client_versions.length === 0 ? (
+                  <Text
+                  style={[styles.empty, { color: colors.textMuted }]}
+                  >
+                  No client release telemetry in this window.
+                  </Text>
+                  ) : (
+                  releaseVisibility.client_versions.map((item) => (
+                  <ActivityBar
+                  key={item.platform + "-" + item.app_version}
+                  label={
+                  item.platform.toUpperCase() +
+                  " · " +
+                  item.app_version
+                  }
+                  value={item.sessions}
+                  max={maxClientVersionSessions}
+                  detail={
+                  number(item.authenticated_users) +
+                  " users · last " +
+                  formatTimestamp(item.last_seen)
+                  }
+                  />
+                  ))
+                  )}
+                  </View>
+                  </View>
+                  
+                  <View
+                  style={[
+                  styles.panel,
+                  {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  },
+                  ]}
+                  >
+                  <SectionTitle
+                  title="Errors by release"
+                  detail="Client errors use app/build version. New server errors are stamped with the backend release identifier."
+                  />
+                  <View style={styles.activityList}>
+                  {releaseVisibility.error_versions.length === 0 ? (
+                  <Text
+                  style={[styles.empty, { color: colors.textMuted }]}
+                  >
+                  No release-attributed errors in this window.
+                  </Text>
+                  ) : (
+                  releaseVisibility.error_versions.map((item) => (
+                  <ActivityBar
+                  key={
+                  item.source +
+                  "-" +
+                  item.platform +
+                  "-" +
+                  item.app_version
+                  }
+                  label={
+                  item.source.toUpperCase() +
+                  " · " +
+                  item.platform.toUpperCase() +
+                  " · " +
+                  item.app_version
+                  }
+                  value={item.errors}
+                  max={maxReleaseErrors}
+                  detail={
+                  number(item.unresolved_errors) +
+                  " unresolved · " +
+                  number(item.fatal_errors) +
+                  " fatal"
+                  }
+                  />
+                  ))
+                  )}
+                  </View>
+                  </View>
+                  </View>
+                  )}
+                  </View>
+                    </>
+                  )}
+
+                  {operationsTab === "ai" && (
+                    <>
+                  <View style={styles.section}>
+                  <SectionTitle
+                  title="AI usage & cost"
+                  detail={
+                  "Model-call metering for the selected " +
+                  String(days) +
+                  "-day window. Provider-reported usage/cost is preferred; configured estimates are used when available. Local Ollama has zero provider cost."
+                  }
+                  />
+                  
+                  {!aiUsage?.available ? (
+                  <Text
+                  style={[
+                  styles.empty,
+                  { color: colors.textMuted, marginTop: 14 },
+                  ]}
+                  >
+                  AI usage metering is unavailable until the Phase 30 migration
+                  is applied.
+                  </Text>
+                  ) : (
+                  <>
+                  <View style={styles.metricsGrid}>
+                  <MetricCard
+                  label="Model calls"
+                  value={number(aiUsage.summary.calls)}
+                  detail={
+                  number(aiUsage.summary.successful_calls) +
+                  " successful · " +
+                  number(aiUsage.summary.failed_calls) +
+                  " failed"
+                  }
+                  />
+                  <MetricCard
+                  label="Cloud provider cost"
+                  value={usd(aiUsage.summary.cost_usd)}
+                  detail={
+                  number(aiUsage.summary.priced_calls) +
+                  " priced cloud call(s) · " +
+                  number(aiUsage.summary.unpriced_cloud_calls) +
+                  " unpriced cloud call(s)"
+                  }
+                  />
+                  <MetricCard
+                  label="Input tokens"
+                  value={number(aiUsage.summary.input_tokens)}
+                  detail={
+                  number(aiUsage.summary.estimated_token_calls) +
+                  " call(s) used char-based token estimates"
+                  }
+                  />
+                  <MetricCard
+                  label="Output tokens"
+                  value={number(aiUsage.summary.output_tokens)}
+                  detail={number(aiUsage.summary.total_tokens) + " total tokens"}
+                  />
+                  <MetricCard
+                  label="Local model calls"
+                  value={number(aiUsage.summary.local_calls)}
+                  detail="Ollama · zero provider cost"
+                  />
+                  <MetricCard
+                  label="Average model latency"
+                  value={
+                  number(Math.round(aiUsage.summary.avg_latency_ms)) +
+                  " ms"
+                  }
+                  detail={number(aiUsage.summary.cloud_calls) + " cloud call(s)"}
+                  />
+                  </View>
+                  
+                  {aiUsage.summary.unpriced_cloud_calls > 0 ? (
+                  <View
+                  style={[
+                  styles.supportConsistency,
+                  {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  marginTop: 14,
+                  marginBottom: 14,
+                  },
+                  ]}
+                  >
+                  <Text
+                  style={[
+                  styles.supportWarning,
+                  { color: colors.textMuted },
+                  ]}
+                  >
+                  Some cloud calls have no provider-reported cost and no
+                  configured model price. Their token usage is still counted,
+                  but the displayed USD total is incomplete.
+                  </Text>
+                  </View>
+                  ) : null}
+                  
+                  <View style={[styles.twoColumn, { marginTop: 14 }]}>
+                  <View
+                  style={[
+                  styles.panel,
+                  {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  },
+                  ]}
+                  >
+                  <SectionTitle
+                  title="AI operations"
+                  detail="Canonical generation, repair, localization and podcast model work."
+                  />
+                  <View style={styles.activityList}>
+                  {aiUsage.operations.length === 0 ? (
+                  <Text
+                  style={[styles.empty, { color: colors.textMuted }]}
+                  >
+                  No metered model calls in this window.
+                  </Text>
+                  ) : (
+                  aiUsage.operations.map((item) => (
+                  <ActivityBar
+                  key={item.product + "-" + item.operation}
+                  label={
+                  item.product.toUpperCase() +
+                  " · " +
+                  item.operation.replace(/_/g, " ")
+                  }
+                  value={item.calls}
+                  max={maxAiOperationCalls}
+                  detail={
+                  number(item.total_tokens) +
+                  " tokens · " +
+                  usd(item.cost_usd) +
+                  (item.failed_calls
+                  ? " · " +
+                  number(item.failed_calls) +
+                  " failed"
+                  : "")
+                  }
+                  />
+                  ))
+                  )}
+                  </View>
+                  </View>
+                  
+                  <View
+                  style={[
+                  styles.panel,
+                  {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  },
+                  ]}
+                  >
+                  <SectionTitle
+                  title="Models & providers"
+                  detail="Model-level call, token and provider-cost distribution."
+                  />
+                  <View style={styles.activityList}>
+                  {aiUsage.models.length === 0 ? (
+                  <Text
+                  style={[styles.empty, { color: colors.textMuted }]}
+                  >
+                  No model/provider usage in this window.
+                  </Text>
+                  ) : (
+                  aiUsage.models.map((item) => (
+                  <ActivityBar
+                  key={
+                  item.product +
+                  "-" +
+                  item.provider +
+                  "-" +
+                  item.model +
+                  "-" +
+                  item.tier
+                  }
+                  label={
+                  item.provider.toUpperCase() +
+                  " · " +
+                  item.model
+                  }
+                  value={item.calls}
+                  max={maxAiModelCalls}
+                  detail={
+                  item.product +
+                  " · " +
+                  item.tier +
+                  " · " +
+                  number(item.total_tokens) +
+                  " tokens · " +
+                  usd(item.cost_usd)
+                  }
+                  />
+                  ))
+                  )}
+                  </View>
+                  </View>
+                  </View>
+                  
+                  <Text
+                  style={[
+                  styles.metaText,
+                  { color: colors.textMuted, marginTop: 12 },
+                  ]}
+                  >
+                  Metering stores counts, tokens, latency, model identifiers and
+                  cost metadata only — never prompts or generated article text.
+                  TTS, web research/search APIs and storage costs are not included.
+                  </Text>
+                  </>
+                  )}
+                  </View>
+                    </>
+                  )}
+
+                  {operationsTab === "activity" && (
+                    <>
+                  <View style={styles.twoColumn}>
+                  <View
+                  style={[
+                  styles.panel,
+                  { borderColor: colors.border, backgroundColor: colors.surface },
+                  ]}
+                  >
+                  <SectionTitle title="Event activity" />
+                  <View style={styles.activityList}>
+                  {snapshot.product.event_counts.map((item) => (
+                  <ActivityBar
+                  key={item.event_name}
+                  label={item.event_name}
+                  value={item.count}
+                  max={maxEventCount}
+                  detail={number(item.sessions) + " sessions"}
+                  />
+                  ))}
+                  </View>
+                  </View>
+                  
+                  <View
+                  style={[
+                  styles.panel,
+                  { borderColor: colors.border, backgroundColor: colors.surface },
+                  ]}
+                  >
+                  <SectionTitle title="Platforms" />
+                  <View style={styles.activityList}>
+                  {snapshot.product.platforms.map((item) => (
+                  <ActivityBar
+                  key={item.platform}
+                  label={item.platform}
+                  value={item.events}
+                  max={maxPlatformEvents}
+                  detail={number(item.sessions) + " sessions"}
+                  />
+                  ))}
+                  </View>
+                  </View>
+                  </View>
+                    </>
+                  )}
+
+                  {operationsTab === "moderation" && (
+                    <>
+                  <View style={styles.section}>
+                  <SectionTitle
+                  title="Community moderation"
+                  detail="Reported event contributions. Account identities stay private; only moderation-relevant content is shown."
+                  />
+                  <View style={styles.windowRow}>
+                  <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                  {number(communityModeration?.count)} reported contributions
+                  </Text>
+                  <Pressable
+                  disabled={communityModerationLoading}
+                  onPress={() => void refreshCommunityModeration()}
+                  style={({ pressed }) => [
+                  styles.refreshButton,
+                  {
+                  borderColor: colors.border,
+                  opacity: communityModerationLoading
+                  ? 0.5
+                  : pressed
+                  ? 0.65
+                  : 1,
+                  },
+                  ]}
+                  >
+                  <Text style={[styles.windowText, { color: colors.text }]}>
+                  {communityModerationLoading ? "Refreshing…" : "Refresh"}
+                  </Text>
+                  </Pressable>
+                  </View>
+                  
+                  {communityModerationLoading && !communityModeration ? (
+                  <ActivityIndicator
+                  color={colors.accent}
+                  style={{ alignSelf: "flex-start", marginTop: 14 }}
+                  />
+                  ) : communityModerationError && !communityModeration ? (
+                  <Text
+                  style={[
+                  styles.empty,
+                  { color: colors.textMuted, marginTop: 14 },
+                  ]}
+                  >
+                  Community moderation queue is unavailable.
+                  </Text>
+                  ) : communityModeration?.items.length ? (
+                  <View style={[styles.errorList, { marginTop: 14 }]}>
+                  {communityModeration.items.map((item) => (
+                  <CommunityModerationCard
+                  key={item.contribution_id}
+                  item={item}
+                  busy={busyContributionId === item.contribution_id}
+                  onToggle={(contribution) =>
+                  void toggleCommunityVisibility(contribution)
+                  }
+                  />
+                  ))}
+                  </View>
+                  ) : (
+                  <Text
+                  style={[
+                  styles.empty,
+                  { color: colors.textMuted, marginTop: 14 },
+                  ]}
+                  >
+                  No reported contributions.
+                  </Text>
+                  )}
+                  </View>
+                  <View style={styles.section}>
+                  <SectionTitle
+                  title="Top feed moderation"
+                  detail="Non-destructive admin controls for removing bad canonical events from Top. This does not delete the event or affect National, Local, search, history, or direct story URLs."
                   />
                   <TopFeedModerationConsole />
-                </View>
+                  </View>
+                    </>
+                  )}
+                </>
               )}
 
               {dashboardTab === "support" && (
@@ -5672,6 +5733,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   settingsTabText: { fontSize: 12, fontWeight: "800" },
+  operationsTabs: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 18,
+  },
+  operationsTab: {
+    minHeight: 38,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  operationsTabText: { fontSize: 12, fontWeight: "800" },
   tabPanel: { marginBottom: 0 },
   trendPanel: {
     borderWidth: StyleSheet.hairlineWidth,
