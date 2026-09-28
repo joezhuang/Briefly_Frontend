@@ -38,7 +38,14 @@ function absoluteUrl(value, origin) {
   }
 }
 
-function storyDestination(article) {
+function normalizedUiLanguage(value) {
+  const candidate = String(value || "").trim();
+  return ["en", "es", "ja", "zh-CN", "zh-TW"].includes(candidate)
+    ? candidate
+    : null;
+}
+
+function storyDestination(article, uiLanguage) {
   const slug = String(article.slug || "").trim();
   const eventId = String(article.event_id || "").trim();
   if (!slug || !eventId) return "/";
@@ -47,6 +54,7 @@ function storyDestination(article) {
     eventId,
     source: "share",
   });
+  if (uiLanguage) params.set("ui", uiLanguage);
 
   const headline = String(article.headline || "").trim();
   const imageUrl = String(
@@ -108,6 +116,7 @@ function unavailableHtml(homeUrl) {
 module.exports = async function handler(request, response) {
   const key = String(first(request.query.eventId) || "").trim();
   const legacyVersion = String(first(request.query.legacyVersion) || "") === "1";
+  const uiLanguage = normalizedUiLanguage(first(request.query.ui));
   const protocol = String(
     first(request.headers["x-forwarded-proto"]) || "https",
   ).split(",")[0].trim();
@@ -123,13 +132,16 @@ module.exports = async function handler(request, response) {
 
   try {
     const article = await loadArticle(key, legacyVersion);
-    const destinationPath = storyDestination(article);
+    const destinationPath = storyDestination(article, uiLanguage);
     const destinationUrl = new URL(destinationPath, origin).toString();
 
     const eventId = String(article.event_id || key).trim();
-    const shareUrl = legacyVersion
-      ? `${origin}/share/${encodeURIComponent(key)}`
-      : `${origin}/s/${encodeURIComponent(eventId)}`;
+    const sharePath = legacyVersion
+      ? `/share/${encodeURIComponent(key)}`
+      : `/s/${encodeURIComponent(eventId)}`;
+    const shareUrlObject = new URL(sharePath, origin);
+    if (uiLanguage) shareUrlObject.searchParams.set("ui", uiLanguage);
+    const shareUrl = shareUrlObject.toString();
 
     const title = truncate(article.headline || "Briefly", 120);
     const description = truncate(

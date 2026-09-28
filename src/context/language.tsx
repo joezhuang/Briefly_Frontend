@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   createContext,
   PropsWithChildren,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -445,30 +446,47 @@ type Copy = (typeof copy)["en"];
 type LanguageContextValue = {
   language: BrieflyLanguage;
   setLanguage: (language: BrieflyLanguage) => void;
+  setTransientLanguage: (language: BrieflyLanguage | null) => void;
   t: Copy;
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: PropsWithChildren) {
-  const [language, setLanguageState] = useState<BrieflyLanguage>("en");
+  const [savedLanguage, setSavedLanguage] = useState<BrieflyLanguage>("en");
+  const [transientLanguage, setTransientLanguageState] =
+    useState<BrieflyLanguage | null>(null);
+  const language = transientLanguage ?? savedLanguage;
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
       if (LANGUAGES.some((item) => item.code === stored)) {
-        setLanguageState(stored as BrieflyLanguage);
+        setSavedLanguage(stored as BrieflyLanguage);
       }
     });
   }, []);
 
-  const setLanguage = (next: BrieflyLanguage) => {
-    setLanguageState(next);
+  const setLanguage = useCallback((next: BrieflyLanguage) => {
+    setTransientLanguageState(null);
+    setSavedLanguage(next);
     void AsyncStorage.setItem(STORAGE_KEY, next);
-  };
+  }, []);
+
+  const setTransientLanguage = useCallback(
+    (next: BrieflyLanguage | null) => {
+      setTransientLanguageState(next);
+    },
+    [],
+  );
 
   const value = useMemo(
-    () => ({ language, setLanguage, t: copy[language] as Copy }),
-    [language],
+    () => ({
+      language,
+      setLanguage,
+      setTransientLanguage,
+      t: copy[language] as Copy,
+    }),
+    [language, setLanguage, setTransientLanguage],
   );
 
   return (

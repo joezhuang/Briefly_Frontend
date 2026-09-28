@@ -122,6 +122,7 @@ export default function StoryDetailScreen() {
     community,
     autoplayVideo,
     videoTime,
+    ui,
   } = useLocalSearchParams<{
     slug?: string | string[];
     eventId?: string | string[];
@@ -132,6 +133,7 @@ export default function StoryDetailScreen() {
     community?: string | string[];
     autoplayVideo?: string | string[];
     videoTime?: string | string[];
+    ui?: string | string[];
   }>();
 
   const resolvedSlug = useMemo(
@@ -171,9 +173,27 @@ export default function StoryDetailScreen() {
     const parsed = Number(raw);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }, [videoTime]);
+  const resolvedUi = useMemo(
+    () => (Array.isArray(ui) ? ui[0] : ui),
+    [ui],
+  );
 
-  const { language, t } = useBrieflyLanguage();
+  const { language, t, setTransientLanguage } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+
+  useEffect(() => {
+    const supported =
+      resolvedUi === "en" ||
+      resolvedUi === "es" ||
+      resolvedUi === "ja" ||
+      resolvedUi === "zh-CN" ||
+      resolvedUi === "zh-TW"
+        ? resolvedUi
+        : null;
+    if (!supported) return;
+    setTransientLanguage(supported);
+    return () => setTransientLanguage(null);
+  }, [resolvedUi, setTransientLanguage]);
   const { ready: authReady, user, account } = useBrieflyAuth();
   const { config: appConfig } = useBrieflyAppConfig();
   const { watchAnalysis, watchPodcast } = useAnalysisReadiness();
