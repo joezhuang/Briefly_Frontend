@@ -220,7 +220,6 @@ const checks = [
     file: "src/components/article-view.tsx",
     needles: [
       "buildPublicStoryShareUrl(article,shareHref,language)",
-      "readingLanguageFromHref(_href)",
       "onContentSizeChange",
       "communityFocusActiveRef",
       "onScrollBeginDrag",
@@ -278,7 +277,8 @@ const checks = [
       '/s/',
       'encodeURIComponent(eventId)',
       'url.searchParams.set("content", contentLanguage)',
-      'url.searchParams.set("read", readingLanguage)',
+      'readingLanguageFromHref(_href)',
+      'url.searchParams.set("read", effectiveReadingLanguage)',
     ],
   },
   {
