@@ -126,10 +126,6 @@ const proCopy = {
         body: "When newer source evidence exists, use the event timeline to explicitly ask Briefly to generate a fresh canonical version. Normal story reading never triggers this paid update automatically.",
       },
       {
-        title: "Follow saved stories forward",
-        body: "Use the event timeline to move from the version you saved to newer Briefly developments, then generate a fresh version when you decide it is worth updating.",
-      },
-      {
         title: "Pro access across Briefly",
         body: "Your Briefly Pro status unlocks Pro features on supported platforms and lets you manage or restore your subscription from your account.",
       },
@@ -150,10 +146,6 @@ const proCopy = {
       {
         title: "Genera la versión más reciente",
         body: "Cuando haya evidencia más reciente, usa la cronología del evento para pedir explícitamente a Briefly una nueva versión canónica. Leer una historia normalmente nunca activa esta actualización de pago automáticamente.",
-      },
-      {
-        title: "Sigue la evolución de tus historias guardadas",
-        body: "Usa la cronología para pasar de la versión guardada a novedades posteriores de Briefly y genera una nueva versión solo cuando decidas que merece la pena.",
       },
       {
         title: "Acceso Pro en Briefly",
@@ -178,10 +170,6 @@ const proCopy = {
         body: "より新しい情報源がある場合、イベントのタイムラインから明示的に最新の正規版生成を依頼できます。通常の記事閲覧だけでは有料更新は自動実行されません。",
       },
       {
-        title: "保存したニュースの続報を追跡",
-        body: "タイムラインで保存時点からその後の動きを確認し、更新する価値があると判断したときだけ新しい版を生成できます。",
-      },
-      {
         title: "Briefly全体でProアクセス",
         body: "Briefly Proの状態により、対応プラットフォームのPro機能を利用でき、アカウントから購読の管理や復元もできます。",
       },
@@ -204,10 +192,6 @@ const proCopy = {
         body: "当出现更新的来源证据时，可从事件时间线明确请求 Briefly 生成新的权威版本。普通点击和阅读新闻不会自动触发这项付费更新。",
       },
       {
-        title: "继续追踪已保存的新闻",
-        body: "通过事件时间线查看保存之后的新进展，并仅在你认为值得更新时主动生成新的 Briefly 版本。",
-      },
-      {
         title: "Briefly 全平台 Pro 权益",
         body: "你的 Briefly Pro 状态可解锁受支持平台上的 Pro 功能，并可从账户管理或恢复订阅。",
       },
@@ -228,10 +212,6 @@ const proCopy = {
       {
         title: "主動產生最新報導版本",
         body: "當出現更新的來源證據時，可從事件時間線明確要求 Briefly 產生新的權威版本。一般點擊和閱讀新聞不會自動觸發這項付費更新。",
-      },
-      {
-        title: "繼續追蹤已儲存的新聞",
-        body: "透過事件時間線查看儲存之後的新進展，並只在你認為值得更新時主動產生新的 Briefly 版本。",
       },
       {
         title: "Briefly 全平台 Pro 權益",
