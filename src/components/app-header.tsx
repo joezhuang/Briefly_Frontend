@@ -2,6 +2,7 @@ import { Link, router, usePathname } from "expo-router";
 import { useState } from "react";
 import {
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -38,6 +39,7 @@ const settingsCopy = {
     pro: "Briefly Pro",
     managePro: "Manage Briefly Pro",
     getPro: "Get Briefly Pro",
+    supportBriefly: "Support Briefly",
     support: "Support",
     contactSupport: "Contact & Support",
     legal: "Legal",
@@ -57,6 +59,7 @@ const settingsCopy = {
     pro: "Briefly Pro",
     managePro: "Gestionar Briefly Pro",
     getPro: "Obtener Briefly Pro",
+    supportBriefly: "Apoyar a Briefly",
     support: "Ayuda",
     contactSupport: "Contacto y soporte",
     legal: "Legal",
@@ -76,6 +79,7 @@ const settingsCopy = {
     pro: "Briefly Pro",
     managePro: "Briefly Proを管理",
     getPro: "Briefly Proを利用",
+    supportBriefly: "Brieflyを支援",
     support: "サポート",
     contactSupport: "お問い合わせ・サポート",
     legal: "法的情報",
@@ -95,6 +99,7 @@ const settingsCopy = {
     pro: "Briefly Pro",
     managePro: "管理 Briefly Pro",
     getPro: "开通 Briefly Pro",
+    supportBriefly: "支持 Briefly",
     support: "支持",
     contactSupport: "联系与支持",
     legal: "法律信息",
@@ -114,6 +119,7 @@ const settingsCopy = {
     pro: "Briefly Pro",
     managePro: "管理 Briefly Pro",
     getPro: "升級 Briefly Pro",
+    supportBriefly: "支持 Briefly",
     support: "支援",
     contactSupport: "聯絡與支援",
     legal: "法律資訊",
@@ -130,6 +136,7 @@ type SettingsRoute =
   | "/account"
   | "/upgrade"
   | "/support"
+  | "/support-briefly"
   | "/beta-dashboard"
   | "/legal/terms"
   | "/legal/privacy";
@@ -146,6 +153,13 @@ export function AppHeader() {
 
   const labels = settingsCopy[language] ?? settingsCopy.en;
   const isPro = account?.translation_entitled === true;
+  const supportAvailable =
+    appConfig?.support_enabled === true &&
+    (Platform.OS === "web"
+      ? appConfig.support_web_enabled
+      : Platform.OS === "ios"
+        ? appConfig.support_ios_enabled
+        : appConfig.support_android_enabled);
   const compactNav = width < 1200;
   const phoneNav = width < 600;
   const visibleNav = nav.filter(
@@ -462,6 +476,20 @@ export function AppHeader() {
                   </View>
                   <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
                 </Pressable>
+                {supportAvailable && (
+                  <Pressable
+                    onPress={() => closeAndNavigate("/support-briefly")}
+                    style={[
+                      styles.actionRow,
+                      { borderColor: colors.border, backgroundColor: colors.surfaceMuted },
+                    ]}
+                  >
+                    <Text style={[styles.actionTitle, { color: colors.text }]}>
+                      {labels.supportBriefly}
+                    </Text>
+                    <Text style={[styles.actionArrow, { color: colors.accent }]}>→</Text>
+                  </Pressable>
+                )}
               </View>
 
               {account?.is_admin === true && (

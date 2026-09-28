@@ -313,16 +313,24 @@ export default function AccountScreen() {
           <Pressable onPress={() => router.back()}>
             <Text style={[styles.back, { color: colors.accent }]}>← Back</Text>
           </Pressable>
-          <Text style={[styles.title, { color: colors.text }]}>Account</Text>
-          <Text style={[styles.subtitle, { color: colors.textMuted }]}>Manage your Briefly account and purchases.</Text>
-        </View>
-
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.textMuted }]}>SIGNED IN AS</Text>
-          <Text style={[styles.value, { color: colors.text }]}>{user?.email ?? "Not signed in"}</Text>
-          {subscriptionIsPro ? (
-            <Text style={[styles.pro, { color: colors.accent }]}>Briefly Pro active</Text>
-          ) : null}
+          <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+            Manage your Briefly profile, Pro access, support, and account controls.
+          </Text>
+          <View style={[styles.identityRow, { borderBottomColor: colors.border }]}>
+            <View style={styles.identityCopy}>
+              <Text style={[styles.label, { color: colors.textMuted }]}>SIGNED IN AS</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{user?.email ?? "Not signed in"}</Text>
+            </View>
+            <Text
+              style={[
+                styles.accountStatus,
+                { color: subscriptionIsPro ? colors.accent : colors.textMuted },
+              ]}
+            >
+              {subscriptionIsPro ? "PRO" : "FREE"}
+            </Text>
+          </View>
         </View>
 
         {subscriptionIsPro ? (
@@ -453,6 +461,9 @@ const styles = StyleSheet.create({
   back: { fontSize: 14, fontWeight: "800" },
   title: { fontSize: 34, fontWeight: "900" },
   subtitle: { fontSize: 16, lineHeight: 23 },
+  identityRow: { minHeight: 64, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 },
+  identityCopy: { flex: 1, gap: 4 },
+  accountStatus: { fontSize: 11, fontWeight: "900", letterSpacing: 0.9 },
   card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 18, padding: 18, gap: 10 },
   label: { fontSize: 11, fontWeight: "900", letterSpacing: 0.8 },
   value: { fontSize: 16, fontWeight: "700" },

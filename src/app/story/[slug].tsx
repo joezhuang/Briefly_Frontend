@@ -837,7 +837,7 @@ export default function StoryDetailScreen() {
           reloadKey
         }
         focusCommunity={resolvedCommunity === "1"}
-        autoStartVideo={resolvedAutoplayVideo}
+        autoStartVideo={isPro && resolvedAutoplayVideo}
         initialVideoTime={resolvedVideoTime}
         shareHref={currentStoryHref}
         podcast={podcastEnabled ? podcast : null}
@@ -851,7 +851,8 @@ export default function StoryDetailScreen() {
         timelineEnabled={timelineEnabled}
         coverageEnabled={coverageEnabled}
         followingEnabled={followingEnabled}
-        floatingVideoEnabled={floatingVideoEnabled}
+        videoPro={isPro}
+        floatingVideoEnabled={isPro && floatingVideoEnabled}
         briefRepair={
           (displayedArticle.content_language ?? displayedArticle.language) === "en"
             ? briefRepair

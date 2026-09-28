@@ -826,6 +826,7 @@ export default function HomeScreen() {
   const remainingBatches = chunkArticles(remaining);
   const userIsPro = account?.translation_entitled === true;
   const homepageVideoEnabled = appConfig?.homepage_video_enabled !== false;
+  const homepageVideoLocked = homepageVideoEnabled && !userIsPro;
   const floatingVideoEnabled = appConfig?.floating_video_enabled !== false;
   const showHomeAds =
     Platform.OS !== "web" &&
@@ -838,6 +839,7 @@ export default function HomeScreen() {
   const videoPropsFor = (article: CanonicalArticle) => {
     const active = videoSession?.eventId === article.event_id;
     return {
+      videoLocked: homepageVideoLocked,
       videoDetached: active && videoFloating,
       videoResumeTime: active ? videoResumeTime : 0,
       onVideoStart: handleHomeVideoStart,

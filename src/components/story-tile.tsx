@@ -20,6 +20,7 @@ import {
 import { trackProductEvent } from "@/analytics/product-analytics";
 import { BrieflyMediaFallback } from "@/components/briefly-brand";
 import { StoryVideo } from "@/components/story-video";
+import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { usePodcastPlayer } from "@/context/podcast-player";
@@ -46,6 +47,7 @@ type Props = {
   size?: TileSize;
   href?: string;
   videoEnabled?: boolean;
+  videoLocked?: boolean;
   analyticsSource?: string;
   analyticsScope?: string;
   fitViewport?: boolean;
@@ -140,6 +142,7 @@ export function StoryTile({
   size = "standard",
   href,
   videoEnabled = true,
+  videoLocked = false,
   analyticsSource,
   analyticsScope,
   fitViewport = false,
@@ -151,6 +154,7 @@ export function StoryTile({
 }: Props) {
   const { height: viewportHeight } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
+  const { user } = useBrieflyAuth();
   const { config: appConfig } = useBrieflyAppConfig();
   const { currentTrack, status: podcastStatus, play: playPodcast, addToQueue: addPodcastToQueue } = usePodcastPlayer();
   const communityEnabled = appConfig?.community_enabled !== false;
@@ -204,7 +208,8 @@ export function StoryTile({
         ? styles.secondaryHeadline
         : styles.standardHeadline;
   const sourceCount = article.source_count ?? article.sources_used?.length ?? 0;
-  const videoUrl = videoEnabled ? article.video_url ?? null : null;
+  const videoAvailable = videoEnabled && !!article.video_url;
+  const videoUrl = videoAvailable && !videoLocked ? article.video_url ?? null : null;
   const podcastUrl = podcastEnabled ? article.podcast_audio_url ?? null : null;
   const imageUrl = article.video_thumbnail_url || article.image_url || null;
   const storyHref =
@@ -242,6 +247,15 @@ export function StoryTile({
     const separator = storyHref.includes("?") ? "&" : "?";
     const time = Math.max(0, lastVideoTimeRef.current);
     return `${storyHref}${separator}autoplayVideo=1&videoTime=${time.toFixed(2)}`;
+  };
+
+  const openVideoUpgrade = () => {
+    const upgradeHref = `/upgrade?returnTo=${encodeURIComponent(storyHref)}`;
+    router.push(
+      (user
+        ? upgradeHref
+        : `/sign-in?returnTo=${encodeURIComponent(upgradeHref)}`) as never,
+    );
   };
 
   const reportVideoStart = () => {
@@ -519,12 +533,16 @@ export function StoryTile({
                 />
               </Pressable>
             )}
-            {!!videoUrl && (
+            {videoAvailable && (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={copy.play}
+                accessibilityLabel={`${copy.play}${videoLocked ? " · Briefly Pro" : ""}`}
                 onPress={(event) => {
                   event.stopPropagation();
+                  if (videoLocked) {
+                    openVideoUpgrade();
+                    return;
+                  }
                   reportVideoStart();
                 }}
                 style={({ pressed }) => [
@@ -533,6 +551,7 @@ export function StoryTile({
                 ]}
               >
                 <Text style={styles.actionIcon}>▶</Text>
+                {videoLocked ? <Text style={styles.videoProBadge}>PRO</Text> : null}
               </Pressable>
             )}
 
@@ -657,6 +676,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.55)",
     backgroundColor: "rgba(0,0,0,0.3)",
+    position: "relative",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -670,6 +690,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 22,
     fontWeight: "800",
+    textAlign: "center",
+  },
+  videoProBadge: {
+    position: "absolute",
+    top: -7,
+    right: -9,
+    minWidth: 28,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 999,
+    overflow: "hidden",
+    backgroundColor: "rgba(0,0,0,0.82)",
+    color: "#FFFFFF",
+    fontSize: 8,
+    lineHeight: 11,
+    fontWeight: "900",
+    letterSpacing: 0.6,
     textAlign: "center",
   },
   videoStoryLink: {

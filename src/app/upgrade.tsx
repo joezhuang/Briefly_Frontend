@@ -118,6 +118,10 @@ const proCopy = {
         body: "Turn a Briefly story into a Deeply two-host analysis, grounded in the authoritative English article and delivered in your selected language.",
       },
       {
+        title: "Source video playback",
+        body: "Watch available source video directly on homepage cards and story pages, with resumable floating playback when enabled.",
+      },
+      {
         title: "Generate the latest story version",
         body: "When newer source evidence exists, use the event timeline to explicitly ask Briefly to generate a fresh canonical version. Normal story reading never triggers this paid update automatically.",
       },
@@ -138,6 +142,10 @@ const proCopy = {
       {
         title: "Análisis en pódcast con dos presentadores",
         body: "Convierte una historia de Briefly en un análisis de Deeply con dos presentadores, basado en el artículo original en inglés y generado en el idioma que hayas elegido.",
+      },
+      {
+        title: "Reproducción de vídeo",
+        body: "Reproduce los vídeos disponibles directamente en la portada y en las historias, con reproducción flotante reanudable cuando esté activada.",
       },
       {
         title: "Genera la versión más reciente",
@@ -162,6 +170,10 @@ const proCopy = {
         body: "Brieflyの記事を、権威ある英語版を事実の基盤としたDeeplyの2人ホスト分析に変換し、選択した言語で聴けます。",
       },
       {
+        title: "ニュース動画の再生",
+        body: "利用可能な動画をホーム画面や記事ページで直接再生し、対応時は位置を引き継いだフローティング再生も利用できます。",
+      },
+      {
         title: "最新の記事版を生成",
         body: "より新しい情報源がある場合、イベントのタイムラインから明示的に最新の正規版生成を依頼できます。通常の記事閲覧だけでは有料更新は自動実行されません。",
       },
@@ -184,6 +196,10 @@ const proCopy = {
         body: "把 Briefly 新闻转成 Deeply 双主持人深度分析，以权威英文文章作为事实来源，并用你选择的语言生成。",
       },
       {
+        title: "新闻视频播放",
+        body: "直接在首页卡片和报道页面播放可用的视频，并在启用时支持可续播的悬浮播放。",
+      },
+      {
         title: "主动生成最新报道版本",
         body: "当出现更新的来源证据时，可从事件时间线明确请求 Briefly 生成新的权威版本。普通点击和阅读新闻不会自动触发这项付费更新。",
       },
@@ -204,6 +220,10 @@ const proCopy = {
       {
         title: "雙主持人 Podcast 分析",
         body: "把 Briefly 新聞轉成 Deeply 雙主持人深度分析，以權威英文文章作為事實來源，並用你選擇的語言產生。",
+      },
+      {
+        title: "新聞影片播放",
+        body: "直接在首頁卡片與報導頁面播放可用影片，並在啟用時支援可續播的浮動播放。",
       },
       {
         title: "主動產生最新報導版本",
