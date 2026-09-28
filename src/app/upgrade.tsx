@@ -113,6 +113,10 @@ const proCopy = {
   en: {
     subtitle: "Go beyond reading. Listen to deeper analysis and update important stories when you choose.",
     included: "Included with Briefly Pro",
+    oneTimeTitle: "Prefer a one-time payment?",
+    oneTimeBody:
+      "Support Briefly directly, or get one month of Pro with a Supporter Pass that does not auto-renew.",
+    oneTimeAction: "Support Briefly",
     features: [
       {
         feature: "podcast" as const,
@@ -138,6 +142,10 @@ const proCopy = {
   es: {
     subtitle: "Ve más allá de leer: escucha análisis más profundos y actualiza las historias importantes cuando tú lo decidas.",
     included: "Incluido con Briefly Pro",
+    oneTimeTitle: "¿Prefieres un pago único?",
+    oneTimeBody:
+      "Apoya a Briefly directamente o consigue un mes de Pro con un Pase de Colaborador que no se renueva automáticamente.",
+    oneTimeAction: "Apoyar a Briefly",
     features: [
       {
         feature: "podcast" as const,
@@ -163,6 +171,10 @@ const proCopy = {
   ja: {
     subtitle: "読むだけで終わらず、より深い音声分析を聴き、必要なときだけ重要なニュースを更新できます。",
     included: "Briefly Pro に含まれる機能",
+    oneTimeTitle: "一度だけ支払いたいですか？",
+    oneTimeBody:
+      "Brieflyを直接支援するか、自動更新のないサポーターパスで1か月のProを利用できます。",
+    oneTimeAction: "Brieflyを応援",
     features: [
       {
         feature: "podcast" as const,
@@ -188,6 +200,10 @@ const proCopy = {
   "zh-CN": {
     subtitle: "不只是阅读。收听更深入的分析，并在你需要时主动更新重要事件。",
     included: "Briefly Pro 包含",
+    oneTimeTitle: "更喜欢一次性付款？",
+    oneTimeBody:
+      "你可以直接支持 Briefly，或购买不会自动续费的支持者通行证，获得一个月 Pro。",
+    oneTimeAction: "支持 Briefly",
     features: [
       {
         feature: "podcast" as const,
@@ -213,6 +229,10 @@ const proCopy = {
   "zh-TW": {
     subtitle: "不只是閱讀。收聽更深入的分析，並在你需要時主動更新重要事件。",
     included: "Briefly Pro 包含",
+    oneTimeTitle: "偏好一次性付款？",
+    oneTimeBody:
+      "你可以直接支持 Briefly，或購買不會自動續費的支持者通行證，獲得一個月 Pro。",
+    oneTimeAction: "支持 Briefly",
     features: [
       {
         feature: "podcast" as const,
@@ -797,18 +817,17 @@ export default function UpgradeScreen() {
               ]}
             >
               <Text style={[styles.supportTitle, { color: colors.text }]}>
-                Prefer a one-time payment?
+                {currentProCopy.oneTimeTitle}
               </Text>
               <Text style={[styles.supportBody, { color: colors.textMuted }]}>
-                Support Briefly directly, or get one month of Pro with a
-                Supporter Pass that does not auto-renew.
+                {currentProCopy.oneTimeBody}
               </Text>
               <Pressable
                 onPress={() => router.push("/support-briefly")}
                 style={[styles.supportButton, { borderColor: colors.border }]}
               >
                 <Text style={[styles.supportButtonText, { color: colors.text }]}>
-                  Support Briefly
+                  {currentProCopy.oneTimeAction}
                 </Text>
               </Pressable>
             </View>

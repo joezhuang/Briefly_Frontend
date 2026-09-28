@@ -437,6 +437,19 @@ const checks = [
     ],
   },
   {
+    name: "Upgrade one-time support section follows UI language",
+    file: "src/app/upgrade.tsx",
+    needles: [
+      "currentProCopy.oneTimeTitle",
+      "currentProCopy.oneTimeBody",
+      "currentProCopy.oneTimeAction",
+      'oneTimeTitle: "¿Prefieres un pago único?"',
+      'oneTimeTitle: "一度だけ支払いたいですか？"',
+      'oneTimeTitle: "更喜欢一次性付款？"',
+      'oneTimeTitle: "偏好一次性付款？"',
+    ],
+  },
+  {
     name: "Subscription clients emit provider checkout events",
     file: "src/subscriptions/index.ts",
     needles: [
