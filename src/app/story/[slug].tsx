@@ -119,7 +119,6 @@ function getGoogleTranslateStoryUrl(currentStoryHref: string): string | null {
     const url = new URL(sourceUrl);
     url.searchParams.set("ui", "en");
     url.searchParams.set("content", "en");
-    url.searchParams.delete("read");
     return url.toString();
   } catch {
     return sourceUrl;
@@ -954,8 +953,9 @@ export default function StoryDetailScreen() {
           showGoogleTranslate && translateSourceUrl ? (
             <WebTranslateButton
               sourceUrl={translateSourceUrl}
-              shareArticle={displayedArticle}
-              shareHref={currentStoryHref}
+              contentLanguage={
+                displayedArticle.content_language ?? displayedArticle.language
+              }
               initialReadingLanguage={resolvedReadLanguage}
             />
           ) : undefined

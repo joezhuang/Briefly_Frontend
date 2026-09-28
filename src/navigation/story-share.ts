@@ -1,5 +1,18 @@
 import type { CanonicalArticle } from "@/models/article";
 
+function readingLanguageFromHref(href?: string) {
+  if (!href) return null;
+  try {
+    const url = new URL(href, "https://briefly.local");
+    const candidate = String(url.searchParams.get("read") || "").trim();
+    return /^[A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?$/.test(candidate)
+      ? candidate
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function buildPublicStoryShareUrl(
   article: CanonicalArticle,
   _href?: string,
@@ -23,8 +36,14 @@ export function buildPublicStoryShareUrl(
   if (["en", "es", "ja", "zh-CN", "zh-TW"].includes(contentLanguage)) {
     url.searchParams.set("content", contentLanguage);
   }
-  if (readingLanguage) {
-    url.searchParams.set("read", readingLanguage);
+  const effectiveReadingLanguage =
+    (/^[A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?$/.test(
+      String(readingLanguage || "").trim(),
+    )
+      ? String(readingLanguage).trim()
+      : null) ?? readingLanguageFromHref(_href);
+  if (effectiveReadingLanguage) {
+    url.searchParams.set("read", effectiveReadingLanguage);
   }
   return url.toString();
 }

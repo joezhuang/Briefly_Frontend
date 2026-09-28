@@ -164,10 +164,9 @@ const checks = [
       '"Reading language"',
       '"Same as interface"',
       "AsyncStorage.setItem(READING_LANGUAGE_STORAGE_KEY",
-      "googleTranslateUrl(sourceUrl, readingLanguage)",
       "initialReadingLanguage",
-      "labels.shareIn(selected.label)",
-      '"story_reading_language"',
+      'translatedSource.searchParams.set("read", readingLanguage)',
+      "googleTranslateUrl(translatedSource.toString(), readingLanguage)",
     ],
   },
   {
@@ -177,7 +176,6 @@ const checks = [
       "getGoogleTranslateStoryUrl",
       'url.searchParams.set("ui", "en")',
       'url.searchParams.set("content", "en")',
-      'url.searchParams.delete("read")',
       "translationEnabled && !!translateSourceUrl",
     ],
   },
@@ -222,6 +220,7 @@ const checks = [
     file: "src/components/article-view.tsx",
     needles: [
       "buildPublicStoryShareUrl(article,shareHref,language)",
+      "readingLanguageFromHref(_href)",
       "onContentSizeChange",
       "communityFocusActiveRef",
       "onScrollBeginDrag",
