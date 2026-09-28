@@ -1483,6 +1483,8 @@ export type StripePromotion = {
   created: number;
 };
 
+export type FeatureAccessMode = "disabled" | "all_users" | "pro_only";
+
 export type BrieflyAppConfig = {
   email_password_login_enabled: boolean;
   reviewer_email: string | null;
@@ -1495,6 +1497,7 @@ export type BrieflyAppConfig = {
   homepage_video_enabled: boolean;
   story_video_enabled: boolean;
   floating_video_enabled: boolean;
+  source_video_access_mode: FeatureAccessMode;
   maintenance_mode: boolean;
   maintenance_message: string | null;
   announcement_enabled: boolean;
@@ -1504,6 +1507,8 @@ export type BrieflyAppConfig = {
   timeline_enabled: boolean;
   coverage_enabled: boolean;
   podcast_enabled: boolean;
+  podcast_access_mode: FeatureAccessMode;
+  story_refresh_access_mode: FeatureAccessMode;
   translation_enabled: boolean;
   following_enabled: boolean;
   search_enabled: boolean;
@@ -1554,6 +1559,9 @@ function normalizeBrieflyAppConfig(
 ): BrieflyAppConfig {
   return {
     ...value,
+    source_video_access_mode: value.source_video_access_mode ?? "pro_only",
+    podcast_access_mode: value.podcast_access_mode ?? "pro_only",
+    story_refresh_access_mode: value.story_refresh_access_mode ?? "pro_only",
     support_enabled: value.support_enabled ?? false,
     support_tip_enabled: value.support_tip_enabled ?? false,
     supporter_pass_enabled: value.supporter_pass_enabled ?? false,

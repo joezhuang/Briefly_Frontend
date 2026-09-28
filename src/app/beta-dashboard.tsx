@@ -1861,6 +1861,66 @@ function ConfigToggle({
   );
 }
 
+function ConfigAccessMode({
+  label,
+  detail,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  detail: string;
+  value: BrieflyAppConfig["source_video_access_mode"];
+  onValueChange: (value: BrieflyAppConfig["source_video_access_mode"]) => void;
+}) {
+  const { colors } = useBrieflyTheme();
+  const options = [
+    { value: "disabled", label: "Disabled" },
+    { value: "all_users", label: "Free · sign-in" },
+    { value: "pro_only", label: "Pro only" },
+  ] as const;
+
+  return (
+    <View style={[styles.configFieldRow, { borderBottomColor: colors.border }]}>
+      <View style={styles.configCopy}>
+        <Text style={[styles.configLabel, { color: colors.text }]}>{label}</Text>
+        <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+          {detail}
+        </Text>
+      </View>
+      <View style={styles.accessModeOptions}>
+        {options.map((option) => {
+          const active = value === option.value;
+          return (
+            <Pressable
+              key={option.value}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              onPress={() => onValueChange(option.value)}
+              style={({ pressed }) => [
+                styles.accessModeOption,
+                {
+                  borderColor: active ? colors.accent : colors.border,
+                  backgroundColor: active ? colors.surfaceMuted : colors.background,
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.accessModeOptionText,
+                  { color: active ? colors.accent : colors.textMuted },
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 function TelemetryThresholdField({
   label,
   detail,
@@ -2625,6 +2685,12 @@ function RuntimeConfigEditor({
         value={config.floating_video_enabled}
         onValueChange={(value) => onChange("floating_video_enabled", value)}
       />
+      <ConfigAccessMode
+        label="Source video access"
+        detail="Choose whether source video is off, free after sign-in, or reserved for Briefly Pro."
+        value={config.source_video_access_mode}
+        onValueChange={(value) => onChange("source_video_access_mode", value)}
+      />
 
       </ConfigGroup>
 
@@ -2688,6 +2754,18 @@ function RuntimeConfigEditor({
       <ConfigToggle label="Timeline" detail="Show event timelines in Story tools." value={config.timeline_enabled} onValueChange={(value) => onChange("timeline_enabled", value)} />
       <ConfigToggle label="Coverage" detail="Show publisher coverage inside Explore this event." value={config.coverage_enabled} onValueChange={(value) => onChange("coverage_enabled", value)} />
       <ConfigToggle label="Podcast" detail="Show Deeply podcast analysis controls." value={config.podcast_enabled} onValueChange={(value) => onChange("podcast_enabled", value)} />
+      <ConfigAccessMode
+        label="Podcast analysis access"
+        detail="Choose whether podcast analysis is off, free after sign-in, or reserved for Briefly Pro."
+        value={config.podcast_access_mode}
+        onValueChange={(value) => onChange("podcast_access_mode", value)}
+      />
+      <ConfigAccessMode
+        label="Latest story generation access"
+        detail="Choose who can explicitly generate a fresh canonical story version when newer evidence exists."
+        value={config.story_refresh_access_mode}
+        onValueChange={(value) => onChange("story_refresh_access_mode", value)}
+      />
       <ConfigToggle label="Translation" detail="Show Briefly translation controls and notices." value={config.translation_enabled} onValueChange={(value) => onChange("translation_enabled", value)} />
       <ConfigToggle label="Following" detail="Allow users to follow living events." value={config.following_enabled} onValueChange={(value) => onChange("following_enabled", value)} />
       <ConfigToggle label="Search" detail="Allow users to search the canonical event universe." value={config.search_enabled} onValueChange={(value) => onChange("search_enabled", value)} />
@@ -6296,6 +6374,24 @@ const styles = StyleSheet.create({
   configInputFullWidth: {
     width: "100%",
     minWidth: 0,
+  },
+  accessModeOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: 6,
+  },
+  accessModeOption: {
+    minHeight: 36,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  accessModeOptionText: {
+    fontSize: 11,
+    fontWeight: "800",
   },
   configInputSmall: {
     width: 90,
