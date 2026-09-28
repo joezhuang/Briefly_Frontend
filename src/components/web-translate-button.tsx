@@ -144,6 +144,13 @@ function isReadingLanguage(value: string | null): value is ReadingLanguage {
   return READING_LANGUAGES.some((item) => item.code === value);
 }
 
+function normalizedReadingLanguage(
+  value: string | null | undefined,
+): ReadingLanguage | null {
+  const candidate = value ?? null;
+  return isReadingLanguage(candidate) ? candidate : null;
+}
+
 function googleTranslateUrl(sourceUrl: string, targetLanguage: string) {
   return (
     "https://translate.google.com/translate" +
@@ -194,9 +201,7 @@ export function WebTranslateButton({
     useState<ReadingLanguage | null>(null);
   const [sharedReadingLanguage, setSharedReadingLanguage] =
     useState<ReadingLanguage | null>(
-      isReadingLanguage(initialReadingLanguage ?? null)
-        ? initialReadingLanguage
-        : null,
+      normalizedReadingLanguage(initialReadingLanguage),
     );
   const [pickerOpen, setPickerOpen] = useState(false);
   const [showLocalHint, setShowLocalHint] = useState(false);
@@ -216,14 +221,17 @@ export function WebTranslateButton({
 
   useEffect(() => {
     setSharedReadingLanguage(
-      isReadingLanguage(initialReadingLanguage ?? null)
-        ? initialReadingLanguage
-        : null,
+      normalizedReadingLanguage(initialReadingLanguage),
     );
   }, [initialReadingLanguage]);
 
   const readingLanguage: ReadingLanguage = sharedReadingLanguage ??
     (isReadingLanguage(savedReadingLanguage) ? savedReadingLanguage : language);
+  const contentLanguage = String(
+    shareArticle.content_language ?? shareArticle.language ?? "en",
+  ).trim();
+  const needsGoogleTranslation =
+    readingLanguage !== "en" && readingLanguage !== contentLanguage;
 
   const selected = useMemo(
     () =>
@@ -326,7 +334,7 @@ export function WebTranslateButton({
         </Text>
       ) : null}
 
-      {readingLanguage !== "en" ? (
+      {needsGoogleTranslation ? (
         <View style={styles.buttonRow}>
           <Pressable
             accessibilityRole={privateUrl ? "button" : "link"}
