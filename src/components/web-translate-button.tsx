@@ -1,8 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,8 +12,12 @@ import {
   View,
 } from "react-native";
 
+import { trackProductEvent } from "@/analytics/product-analytics";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
+import type { CanonicalArticle } from "@/models/article";
+import { shareBrieflyStory } from "@/navigation/platform-share";
+import { buildPublicStoryShareUrl } from "@/navigation/story-share";
 
 const READING_LANGUAGE_STORAGE_KEY = "briefly.reading-language.v1";
 
@@ -74,6 +80,9 @@ const copy = {
     choose: "Choose reading language",
     close: "Close",
     readWithGoogle: (name: string) => `Read in ${name} with Google`,
+    shareIn: (name: string) => `Share in ${name}`,
+    sharedHint: (name: string) =>
+      `This story was shared for reading in ${name}. Your saved preference is unchanged.`,
     englishHint: "Choose another reading language to use Google Translate.",
     localHint: "For local development, use your browser's Translate page option.",
   },
@@ -84,6 +93,9 @@ const copy = {
     choose: "Elegir idioma de lectura",
     close: "Cerrar",
     readWithGoogle: (name: string) => `Leer en ${name} con Google`,
+    shareIn: (name: string) => `Compartir en ${name}`,
+    sharedHint: (name: string) =>
+      `Esta historia se compartió para leerla en ${name}. Tu preferencia guardada no cambia.`,
     englishHint: "Elige otro idioma de lectura para usar Google Translate.",
     localHint: "En desarrollo local, usa la opción Traducir página de tu navegador.",
   },
@@ -94,6 +106,9 @@ const copy = {
     choose: "読む言語を選択",
     close: "閉じる",
     readWithGoogle: (name: string) => `Googleで${name}で読む`,
+    shareIn: (name: string) => `${name}で共有`,
+    sharedHint: (name: string) =>
+      `このストーリーは${name}で読むために共有されました。保存済みの設定は変更されません。`,
     englishHint: "Google翻訳を使うには別の読む言語を選択してください。",
     localHint: "ローカル開発では、ブラウザの「ページを翻訳」機能を使用してください。",
   },
@@ -104,6 +119,9 @@ const copy = {
     choose: "选择阅读语言",
     close: "关闭",
     readWithGoogle: (name: string) => `使用 Google 阅读${name}`,
+    shareIn: (name: string) => `以${name}分享`,
+    sharedHint: (name: string) =>
+      `此报道以${name}阅读方式分享。不会更改你已保存的阅读语言。`,
     englishHint: "选择其他阅读语言即可使用 Google 翻译。",
     localHint: "本地开发环境请使用浏览器自带的“翻译此页面”功能。",
   },
@@ -114,6 +132,9 @@ const copy = {
     choose: "選擇閱讀語言",
     close: "關閉",
     readWithGoogle: (name: string) => `使用 Google 閱讀${name}`,
+    shareIn: (name: string) => `以${name}分享`,
+    sharedHint: (name: string) =>
+      `此報導以${name}閱讀方式分享。不會更改你已儲存的閱讀語言。`,
     englishHint: "選擇其他閱讀語言即可使用 Google 翻譯。",
     localHint: "本機開發環境請使用瀏覽器內建的「翻譯此頁面」功能。",
   },
@@ -155,12 +176,28 @@ function isPrivateWebUrl(sourceUrl: string) {
   }
 }
 
-export function WebTranslateButton({ sourceUrl }: { sourceUrl: string }) {
-  const { language } = useBrieflyLanguage();
+export function WebTranslateButton({
+  sourceUrl,
+  shareArticle,
+  shareHref,
+  initialReadingLanguage,
+}: {
+  sourceUrl: string;
+  shareArticle: CanonicalArticle;
+  shareHref?: string;
+  initialReadingLanguage?: string | null;
+}) {
+  const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const labels = copy[language] ?? copy.en;
   const [savedReadingLanguage, setSavedReadingLanguage] =
     useState<ReadingLanguage | null>(null);
+  const [sharedReadingLanguage, setSharedReadingLanguage] =
+    useState<ReadingLanguage | null>(
+      isReadingLanguage(initialReadingLanguage ?? null)
+        ? initialReadingLanguage
+        : null,
+    );
   const [pickerOpen, setPickerOpen] = useState(false);
   const [showLocalHint, setShowLocalHint] = useState(false);
   const privateUrl = isPrivateWebUrl(sourceUrl);
@@ -177,9 +214,16 @@ export function WebTranslateButton({ sourceUrl }: { sourceUrl: string }) {
     };
   }, []);
 
-  const readingLanguage: ReadingLanguage = isReadingLanguage(savedReadingLanguage)
-    ? savedReadingLanguage
-    : language;
+  useEffect(() => {
+    setSharedReadingLanguage(
+      isReadingLanguage(initialReadingLanguage ?? null)
+        ? initialReadingLanguage
+        : null,
+    );
+  }, [initialReadingLanguage]);
+
+  const readingLanguage: ReadingLanguage = sharedReadingLanguage ??
+    (isReadingLanguage(savedReadingLanguage) ? savedReadingLanguage : language);
 
   const selected = useMemo(
     () =>
@@ -189,6 +233,7 @@ export function WebTranslateButton({ sourceUrl }: { sourceUrl: string }) {
   );
 
   const selectLanguage = (next: ReadingLanguage | null) => {
+    setSharedReadingLanguage(null);
     setSavedReadingLanguage(next);
     setPickerOpen(false);
     setShowLocalHint(false);
@@ -207,6 +252,42 @@ export function WebTranslateButton({ sourceUrl }: { sourceUrl: string }) {
 
     setShowLocalHint(false);
     void Linking.openURL(googleTranslateUrl(sourceUrl, readingLanguage));
+  };
+
+  const handleShare = async () => {
+    const url = buildPublicStoryShareUrl(
+      shareArticle,
+      shareHref,
+      language,
+      readingLanguage,
+      "en",
+    );
+    if (!url) {
+      Alert.alert("Briefly", t.shareConfigMissing);
+      return;
+    }
+
+    const result = await shareBrieflyStory({
+      headline: shareArticle.headline,
+      url,
+    });
+    if (result === "copied") {
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.alert(t.shareLinkCopied);
+      } else {
+        Alert.alert("Briefly", t.shareLinkCopied);
+      }
+    }
+    if (result !== "dismissed") {
+      trackProductEvent("story_share", {
+        eventId: shareArticle.event_id,
+        articleVersionId: shareArticle.article_version_id,
+        properties: {
+          source: "story_reading_language",
+          reading_language: readingLanguage,
+        },
+      });
+    }
   };
 
   return (
@@ -239,26 +320,50 @@ export function WebTranslateButton({ sourceUrl }: { sourceUrl: string }) {
       <Text style={[styles.hint, { color: colors.textMuted }]}>
         {labels.hint}
       </Text>
+      {sharedReadingLanguage ? (
+        <Text style={[styles.sharedHint, { color: colors.accent }]}>
+          {labels.sharedHint(selected.label)}
+        </Text>
+      ) : null}
 
       {readingLanguage !== "en" ? (
-        <Pressable
-          accessibilityRole={privateUrl ? "button" : "link"}
-          accessibilityLabel={labels.readWithGoogle(selected.label)}
-          onPress={handlePress}
-          style={({ pressed }) => [
-            styles.button,
-            {
-              borderColor: colors.border,
-              backgroundColor: colors.surface,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Text style={[styles.label, { color: colors.text }]}>
-            {labels.readWithGoogle(selected.label)}
-            {privateUrl ? "" : " ↗"}
-          </Text>
-        </Pressable>
+        <View style={styles.buttonRow}>
+          <Pressable
+            accessibilityRole={privateUrl ? "button" : "link"}
+            accessibilityLabel={labels.readWithGoogle(selected.label)}
+            onPress={handlePress}
+            style={({ pressed }) => [
+              styles.button,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.label, { color: colors.text }]}>
+              {labels.readWithGoogle(selected.label)}
+              {privateUrl ? "" : " ↗"}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={labels.shareIn(selected.label)}
+            onPress={() => void handleShare()}
+            style={({ pressed }) => [
+              styles.button,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.label, { color: colors.text }]}>
+              {labels.shareIn(selected.label)}
+            </Text>
+          </Pressable>
+        </View>
       ) : (
         <Text style={[styles.englishHint, { color: colors.textMuted }]}>
           {labels.englishHint}
@@ -363,6 +468,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
   },
+  buttonRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
   button: {
     minHeight: 40,
     paddingHorizontal: 15,
@@ -380,6 +490,11 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: 12,
     lineHeight: 17,
+  },
+  sharedHint: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "700",
   },
   englishHint: {
     fontSize: 12,

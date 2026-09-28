@@ -119,6 +119,7 @@ function getGoogleTranslateStoryUrl(currentStoryHref: string): string | null {
     const url = new URL(sourceUrl);
     url.searchParams.set("ui", "en");
     url.searchParams.set("content", "en");
+    url.searchParams.delete("read");
     return url.toString();
   } catch {
     return sourceUrl;
@@ -138,6 +139,7 @@ export default function StoryDetailScreen() {
     videoTime,
     ui,
     content,
+    read,
   } = useLocalSearchParams<{
     slug?: string | string[];
     eventId?: string | string[];
@@ -150,6 +152,7 @@ export default function StoryDetailScreen() {
     videoTime?: string | string[];
     ui?: string | string[];
     content?: string | string[];
+    read?: string | string[];
   }>();
 
   const resolvedSlug = useMemo(
@@ -203,6 +206,13 @@ export default function StoryDetailScreen() {
       ? value
       : null;
   }, [content]);
+  const resolvedReadLanguage = useMemo(() => {
+    const value = Array.isArray(read) ? read[0] : read;
+    return typeof value === "string" &&
+      /^[A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?$/.test(value)
+      ? value
+      : null;
+  }, [read]);
 
   const { language, t, setTransientLanguage } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
@@ -264,6 +274,7 @@ export default function StoryDetailScreen() {
     if (resolvedContentLanguage) {
       params.set("content", resolvedContentLanguage);
     }
+    if (resolvedReadLanguage) params.set("read", resolvedReadLanguage);
     const query = params.toString();
     return `/story/${encodeURIComponent(resolvedSlug)}${query ? `?${query}` : ""}`;
   }, [
@@ -275,6 +286,7 @@ export default function StoryDetailScreen() {
     resolvedSlug,
     resolvedUi,
     resolvedContentLanguage,
+    resolvedReadLanguage,
   ]);
   const translateSourceUrl = getGoogleTranslateStoryUrl(currentStoryHref);
   const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${resolvedScope ?? ""}:${articleRequestLanguage}:${language}:${reloadKey}`;
@@ -940,7 +952,12 @@ export default function StoryDetailScreen() {
         onBriefRepair={() => void handleBriefRepair()}
         translationAction={
           showGoogleTranslate && translateSourceUrl ? (
-            <WebTranslateButton sourceUrl={translateSourceUrl} />
+            <WebTranslateButton
+              sourceUrl={translateSourceUrl}
+              shareArticle={displayedArticle}
+              shareHref={currentStoryHref}
+              initialReadingLanguage={resolvedReadLanguage}
+            />
           ) : undefined
         }
         community={

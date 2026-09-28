@@ -4,6 +4,8 @@ export function buildPublicStoryShareUrl(
   article: CanonicalArticle,
   _href?: string,
   uiLanguage?: string,
+  readingLanguage?: string,
+  contentLanguageOverride?: string,
 ) {
   const webBase = process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, "");
   const eventId = String(article.event_id || "").trim();
@@ -13,10 +15,16 @@ export function buildPublicStoryShareUrl(
   if (uiLanguage) url.searchParams.set("ui", uiLanguage);
 
   const contentLanguage = String(
-    article.content_language ?? article.language ?? "",
+    contentLanguageOverride ??
+      article.content_language ??
+      article.language ??
+      "",
   ).trim();
   if (["en", "es", "ja", "zh-CN", "zh-TW"].includes(contentLanguage)) {
     url.searchParams.set("content", contentLanguage);
+  }
+  if (readingLanguage) {
+    url.searchParams.set("read", readingLanguage);
   }
   return url.toString();
 }

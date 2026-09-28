@@ -49,7 +49,19 @@ function normalizedContentLanguage(value) {
   return normalizedUiLanguage(value);
 }
 
-function storyDestination(article, uiLanguage, contentLanguage) {
+function normalizedReadingLanguage(value) {
+  const candidate = String(value || "").trim();
+  return /^[A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?$/.test(candidate)
+    ? candidate
+    : null;
+}
+
+function storyDestination(
+  article,
+  uiLanguage,
+  contentLanguage,
+  readingLanguage,
+) {
   const slug = String(article.slug || "").trim();
   const eventId = String(article.event_id || "").trim();
   if (!slug || !eventId) return "/";
@@ -60,6 +72,7 @@ function storyDestination(article, uiLanguage, contentLanguage) {
   });
   if (uiLanguage) params.set("ui", uiLanguage);
   if (contentLanguage) params.set("content", contentLanguage);
+  if (readingLanguage) params.set("read", readingLanguage);
 
   const headline = String(article.headline || "").trim();
   const imageUrl = String(
@@ -123,6 +136,7 @@ module.exports = async function handler(request, response) {
   const legacyVersion = String(first(request.query.legacyVersion) || "") === "1";
   const uiLanguage = normalizedUiLanguage(first(request.query.ui));
   const contentLanguage = normalizedContentLanguage(first(request.query.content));
+  const readingLanguage = normalizedReadingLanguage(first(request.query.read));
   const protocol = String(
     first(request.headers["x-forwarded-proto"]) || "https",
   ).split(",")[0].trim();
@@ -142,6 +156,7 @@ module.exports = async function handler(request, response) {
       article,
       uiLanguage,
       contentLanguage,
+      readingLanguage,
     );
     const destinationUrl = new URL(destinationPath, origin).toString();
 
@@ -153,6 +168,9 @@ module.exports = async function handler(request, response) {
     if (uiLanguage) shareUrlObject.searchParams.set("ui", uiLanguage);
     if (contentLanguage) {
       shareUrlObject.searchParams.set("content", contentLanguage);
+    }
+    if (readingLanguage) {
+      shareUrlObject.searchParams.set("read", readingLanguage);
     }
     const shareUrl = shareUrlObject.toString();
 
