@@ -27,6 +27,7 @@ import { usePodcastPlayer } from "@/context/podcast-player";
 import type { CanonicalArticle } from "@/models/article";
 import { shareBrieflyStory } from "@/navigation/platform-share";
 import { buildPublicStoryShareUrl } from "@/navigation/story-share";
+import { resolveFeatureAccess } from "@/subscriptions/feature-access";
 
 type TileSize = "hero" | "secondary" | "standard";
 
@@ -47,7 +48,6 @@ type Props = {
   size?: TileSize;
   href?: string;
   videoEnabled?: boolean;
-  videoLocked?: boolean;
   analyticsSource?: string;
   analyticsScope?: string;
   fitViewport?: boolean;
@@ -142,7 +142,6 @@ export function StoryTile({
   size = "standard",
   href,
   videoEnabled = true,
-  videoLocked = false,
   analyticsSource,
   analyticsScope,
   fitViewport = false,
@@ -154,12 +153,21 @@ export function StoryTile({
 }: Props) {
   const { height: viewportHeight } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
-  const { user } = useBrieflyAuth();
+  const { user, account } = useBrieflyAuth();
   const { config: appConfig } = useBrieflyAppConfig();
   const { currentTrack, status: podcastStatus, play: playPodcast, addToQueue: addPodcastToQueue } = usePodcastPlayer();
   const communityEnabled = appConfig?.community_enabled !== false;
   const translationEnabled = appConfig?.translation_enabled !== false;
   const podcastEnabled = appConfig?.podcast_enabled !== false;
+  const isPro = account?.translation_entitled === true;
+  const videoAccess = resolveFeatureAccess(appConfig, "video", {
+    signedIn: !!user,
+    isPro,
+  });
+  const podcastAccess = resolveFeatureAccess(appConfig, "podcast", {
+    signedIn: !!user,
+    isPro,
+  });
   const [translation, setTranslation] = useState<CardTranslation | null>(null);
   const [showTranslation, setShowTranslation] = useState(false);
   const [translating, setTranslating] = useState(false);
@@ -208,9 +216,16 @@ export function StoryTile({
         ? styles.secondaryHeadline
         : styles.standardHeadline;
   const sourceCount = article.source_count ?? article.sources_used?.length ?? 0;
-  const videoAvailable = videoEnabled && !!article.video_url;
-  const videoUrl = videoAvailable && !videoLocked ? article.video_url ?? null : null;
-  const podcastUrl = podcastEnabled ? article.podcast_audio_url ?? null : null;
+  const videoAvailable =
+    videoEnabled &&
+    videoAccess.mode !== "disabled" &&
+    !!article.video_url;
+  const videoLocked = videoAvailable && !videoAccess.allowed;
+  const videoUrl = videoAvailable && videoAccess.allowed ? article.video_url ?? null : null;
+  const podcastUrl =
+    podcastEnabled && podcastAccess.mode !== "disabled"
+      ? article.podcast_audio_url ?? null
+      : null;
   const imageUrl = article.video_thumbnail_url || article.image_url || null;
   const storyHref =
     href ??
@@ -249,7 +264,13 @@ export function StoryTile({
     return `${storyHref}${separator}autoplayVideo=1&videoTime=${time.toFixed(2)}`;
   };
 
-  const openVideoUpgrade = () => {
+  const openVideoAccess = () => {
+    if (videoAccess.gate === "sign_in") {
+      router.push(
+        `/sign-in?returnTo=${encodeURIComponent(storyHref)}` as never,
+      );
+      return;
+    }
     const upgradeHref = `/upgrade?returnTo=${encodeURIComponent(storyHref)}`;
     router.push(
       (user
@@ -285,6 +306,22 @@ export function StoryTile({
   const handlePodcast = () => {
     if (!podcastUrl) return;
 
+    if (!podcastAccess.allowed) {
+      if (podcastAccess.gate === "sign_in") {
+        router.push(
+          `/sign-in?returnTo=${encodeURIComponent(storyHref)}` as never,
+        );
+      } else {
+        const upgradeHref = `/upgrade?returnTo=${encodeURIComponent(storyHref)}`;
+        router.push(
+          (user
+            ? upgradeHref
+            : `/sign-in?returnTo=${encodeURIComponent(upgradeHref)}`) as never,
+        );
+      }
+      return;
+    }
+
     const track = {
       id: podcastUrl,
       title: displayedHeadline,
@@ -312,7 +349,7 @@ export function StoryTile({
   };
 
   const handleShare = async () => {
-    const url = buildPublicStoryShareUrl(article, storyHref);
+    const url = buildPublicStoryShareUrl(article, storyHref, language);
     if (!url) {
       Alert.alert("Briefly", "Sharing is not configured.");
       return;
@@ -536,11 +573,11 @@ export function StoryTile({
             {videoAvailable && (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`${copy.play}${videoLocked ? " · Briefly Pro" : ""}`}
+                accessibilityLabel={`${copy.play}${videoAccess.badge ? ` · ${videoAccess.badge}` : ""}`}
                 onPress={(event) => {
                   event.stopPropagation();
                   if (videoLocked) {
-                    openVideoUpgrade();
+                    openVideoAccess();
                     return;
                   }
                   reportVideoStart();
@@ -551,7 +588,13 @@ export function StoryTile({
                 ]}
               >
                 <Text style={styles.actionIcon}>▶</Text>
-                {videoLocked ? <Text style={styles.videoProBadge}>PRO</Text> : null}
+                {videoAccess.badge ? (
+                  <Text style={styles.videoProBadge}>
+                    {videoAccess.badge === "FREE · SIGN IN"
+                      ? "FREE"
+                      : videoAccess.badge}
+                  </Text>
+                ) : null}
               </Pressable>
             )}
 
@@ -573,6 +616,13 @@ export function StoryTile({
                   size={20}
                   tintColor="#FFFFFF"
                 />
+                {podcastAccess.badge ? (
+                  <Text style={styles.videoProBadge}>
+                    {podcastAccess.badge === "FREE · SIGN IN"
+                      ? "FREE"
+                      : podcastAccess.badge}
+                  </Text>
+                ) : null}
               </Pressable>
             )}
 
