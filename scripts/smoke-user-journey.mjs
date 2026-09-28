@@ -281,6 +281,9 @@ const checks = [
     needles: [
       '/s/',
       'encodeURIComponent(eventId)',
+      'uiLanguageFromHref(_href)',
+      'const effectiveUiLanguage = uiFromHref ?? fallbackUiLanguage',
+      'url.searchParams.set("ui", effectiveUiLanguage)',
       'url.searchParams.set("content", contentLanguage)',
       'readingLanguageFromHref(_href)',
       'url.searchParams.set("read", effectiveReadingLanguage)',

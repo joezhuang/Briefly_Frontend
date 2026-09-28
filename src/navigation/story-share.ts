@@ -1,5 +1,22 @@
 import type { CanonicalArticle } from "@/models/article";
 
+const BRIEFLY_UI_LANGUAGES = ["en", "es", "ja", "zh-CN", "zh-TW"] as const;
+
+function uiLanguageFromHref(href?: string) {
+  if (!href) return null;
+  try {
+    const url = new URL(href, "https://briefly.local");
+    const candidate = String(url.searchParams.get("ui") || "").trim();
+    return BRIEFLY_UI_LANGUAGES.includes(
+      candidate as (typeof BRIEFLY_UI_LANGUAGES)[number],
+    )
+      ? candidate
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function readingLanguageFromHref(href?: string) {
   if (!href) return null;
   try {
@@ -25,7 +42,16 @@ export function buildPublicStoryShareUrl(
   if (!webBase || !eventId) return null;
 
   const url = new URL(`${webBase}/s/${encodeURIComponent(eventId)}`);
-  if (uiLanguage) url.searchParams.set("ui", uiLanguage);
+  const uiFromHref = uiLanguageFromHref(_href);
+  const fallbackUiLanguage = BRIEFLY_UI_LANGUAGES.includes(
+    String(uiLanguage || "") as (typeof BRIEFLY_UI_LANGUAGES)[number],
+  )
+    ? String(uiLanguage)
+    : null;
+  const effectiveUiLanguage = uiFromHref ?? fallbackUiLanguage;
+  if (effectiveUiLanguage) {
+    url.searchParams.set("ui", effectiveUiLanguage);
+  }
 
   const contentLanguage = String(
     contentLanguageOverride ??
