@@ -945,6 +945,77 @@ export function setBetaDashboardTopFeedVisibility(
   );
 }
 
+export type BetaDashboardEventQualityEvent = {
+  event_id: string;
+  headline: string;
+  article_count: number;
+  last_updated_at: string | null;
+};
+
+export type BetaDashboardEventQualityCandidate = {
+  event_a: BetaDashboardEventQualityEvent;
+  event_b: BetaDashboardEventQualityEvent;
+  similarity: number;
+  anchor_overlap: number;
+  anchor_ratio: number;
+  shared_source_families: string[];
+  reason: string;
+};
+
+export type BetaDashboardEventMerge = {
+  source_event_id: string;
+  survivor_event_id: string;
+  status: "active" | "reverted";
+  reason: string | null;
+  merged_by_user_id: string | null;
+  merged_by_email: string | null;
+  merged_at: string | null;
+  reverted_by_user_id?: string | null;
+  reverted_by_email?: string | null;
+  reverted_at: string | null;
+  updated_at: string | null;
+  source_headline?: string;
+  survivor_headline?: string;
+};
+
+export type BetaDashboardEventQualityPage = {
+  candidates: BetaDashboardEventQualityCandidate[];
+  candidate_count: number;
+  merges: BetaDashboardEventMerge[];
+  merge_count: number;
+};
+
+export function getBetaDashboardEventQuality() {
+  return getJson<BetaDashboardEventQualityPage>(
+    "/api/beta-dashboard/event-quality",
+  );
+}
+
+export function mergeBetaDashboardEvents(
+  sourceEventId: string,
+  survivorEventId: string,
+  reason?: string | null,
+) {
+  return postJson<BetaDashboardEventMerge>(
+    "/api/beta-dashboard/event-quality/merge",
+    {
+      source_event_id: sourceEventId,
+      survivor_event_id: survivorEventId,
+      reason: reason ?? null,
+      confirm: true,
+    },
+  );
+}
+
+export function undoBetaDashboardEventMerge(sourceEventId: string) {
+  return postJson<BetaDashboardEventMerge>(
+    "/api/beta-dashboard/event-quality/merges/" +
+      encodeURIComponent(sourceEventId) +
+      "/undo",
+    { confirm: true },
+  );
+}
+
 export function setBetaDashboardErrorResolution(
   fingerprint: string,
   resolved: boolean,

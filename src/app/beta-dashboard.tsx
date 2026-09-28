@@ -21,6 +21,7 @@ import {
   getBetaDashboard,
   getBetaDashboardAdminAuditLog,
   getBetaDashboardBillingHealth,
+  getBetaDashboardEventQuality,
   getBetaDashboardAppConfig,
   getBetaDashboardAppConfigHistory,
   getBetaDashboardCustomerSupport,
@@ -32,8 +33,10 @@ import {
   getHomepageArticleFeed,
   setBetaDashboardErrorResolution,
   setBetaDashboardTopFeedVisibility,
+  mergeBetaDashboardEvents,
   reconcileBetaDashboardBilling,
   rollbackBetaDashboardAppConfig,
+  undoBetaDashboardEventMerge,
   setCommunityContributionVisibility,
   updateBetaDashboardAppConfig,
   updateBetaDashboardTelemetryConfig,
@@ -42,6 +45,8 @@ import {
   type BetaDashboardBillingOperationalHealth,
   type BetaDashboardCustomerSupport,
   type BetaDashboardErrorGroup,
+  type BetaDashboardEventQualityCandidate,
+  type BetaDashboardEventQualityPage,
   type BetaDashboardSnapshot,
   type BetaDashboardTelemetryConfig,
   type BetaDashboardTelemetryHealth,
@@ -1286,6 +1291,283 @@ function CustomerSupportConsole() {
     </View>
   );
 }
+
+function EventQualityConsole() {
+  const { colors } = useBrieflyTheme();
+  const [page, setPage] = useState<BetaDashboardEventQualityPage | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      setPage(await getBetaDashboardEventQuality());
+      setError(false);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const confirmAction = async (
+    title: string,
+    message: string,
+    actionLabel: string,
+    destructive = false,
+  ) => {
+    if (
+      Platform.OS === "web" &&
+      typeof window !== "undefined" &&
+      typeof window.confirm === "function"
+    ) {
+      return window.confirm(message);
+    }
+
+    return new Promise<boolean>((resolve) => {
+      Alert.alert(
+        title,
+        message,
+        [
+          { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+          {
+            text: actionLabel,
+            style: destructive ? "destructive" : "default",
+            onPress: () => resolve(true),
+          },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) },
+      );
+    });
+  };
+
+  const mergeCandidate = async (
+    candidate: BetaDashboardEventQualityCandidate,
+    survivor: "a" | "b",
+  ) => {
+    if (busyKey) return;
+    const survivorEvent = survivor === "a" ? candidate.event_a : candidate.event_b;
+    const sourceEvent = survivor === "a" ? candidate.event_b : candidate.event_a;
+    const accepted = await confirmAction(
+      "Merge duplicate events?",
+      "Keep “" +
+        survivorEvent.headline +
+        "” as the canonical event and merge “" +
+        sourceEvent.headline +
+        "” into it? The old event ID and historical data are preserved as a reversible alias.",
+      "Merge events",
+      true,
+    );
+    if (!accepted) return;
+
+    const key = sourceEvent.event_id + "->" + survivorEvent.event_id;
+    setBusyKey(key);
+    try {
+      await mergeBetaDashboardEvents(
+        sourceEvent.event_id,
+        survivorEvent.event_id,
+        "Admin confirmed duplicate/evolving canonical event",
+      );
+      await refresh();
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const undoMerge = async (sourceEventId: string, sourceHeadline: string) => {
+    if (busyKey) return;
+    const accepted = await confirmAction(
+      "Undo event merge?",
+      "Restore “" +
+        sourceHeadline +
+        "” as an independent canonical event? No historical rows were deleted by the merge.",
+      "Undo merge",
+    );
+    if (!accepted) return;
+
+    setBusyKey(sourceEventId);
+    try {
+      await undoBetaDashboardEventMerge(sourceEventId);
+      await refresh();
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const activeMerges = (page?.merges ?? []).filter(
+    (item) => item.status === "active",
+  );
+
+  return (
+    <View
+      style={[
+        styles.configPanel,
+        { borderColor: colors.border, backgroundColor: colors.surface },
+      ]}
+    >
+      <View style={[styles.auditToolbar, { borderBottomColor: colors.border }]}>
+        <View style={styles.auditToolbarCopy}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Possible duplicate events
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Briefly only suggests pairs. An admin must choose which durable event
+            survives; no historical event is deleted.
+          </Text>
+        </View>
+        <Pressable
+          disabled={loading}
+          onPress={() => void refresh()}
+          style={[styles.resolveButton, { borderColor: colors.border }]}
+        >
+          <Text style={[styles.resolveText, { color: colors.text }]}>
+            {loading ? "Refreshing…" : "Refresh"}
+          </Text>
+        </Pressable>
+      </View>
+
+      {error && !page ? (
+        <Text style={[styles.promoEmpty, { color: colors.textMuted }]}>
+          Event quality is unavailable. Verify the Phase 33 backend migration.
+        </Text>
+      ) : loading && !page ? (
+        <View style={styles.auditLoading}>
+          <ActivityIndicator size="small" color={colors.textMuted} />
+          <Text style={[styles.configStatus, { color: colors.textMuted }]}>
+            Checking recent event continuity…
+          </Text>
+        </View>
+      ) : !page?.candidates.length ? (
+        <Text style={[styles.promoEmpty, { color: colors.textMuted }]}>
+          No recent event pairs currently need admin review.
+        </Text>
+      ) : (
+        <View style={styles.auditList}>
+          {page.candidates.map((candidate) => {
+            const key =
+              candidate.event_a.event_id + ":" + candidate.event_b.event_id;
+            const busy = busyKey !== null;
+            return (
+              <View
+                key={key}
+                style={[styles.auditItem, { borderTopColor: colors.border }]}
+              >
+                <View style={styles.auditItemCopy}>
+                  <Text style={[styles.configLabel, { color: colors.text }]}>
+                    A · {candidate.event_a.headline}
+                  </Text>
+                  <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                    {candidate.event_a.event_id} · {candidate.event_a.article_count} article(s)
+                  </Text>
+                  <Text style={[styles.configLabel, { color: colors.text, marginTop: 8 }]}>
+                    B · {candidate.event_b.headline}
+                  </Text>
+                  <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                    {candidate.event_b.event_id} · {candidate.event_b.article_count} article(s)
+                  </Text>
+                  <Text style={[styles.configDetail, { color: colors.textMuted, marginTop: 8 }]}>
+                    Semantic {candidate.similarity.toFixed(2)} ·{" "}
+                    {candidate.anchor_overlap} shared headline anchors ·{" "}
+                    {(candidate.anchor_ratio * 100).toFixed(0)}% anchor overlap
+                    {candidate.shared_source_families.length
+                      ? " · shared publisher " +
+                        candidate.shared_source_families.join(", ")
+                      : ""}
+                  </Text>
+                  <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                    {candidate.reason}
+                  </Text>
+                  <View style={[styles.windowRow, { marginTop: 10 }]}>
+                    <Pressable
+                      disabled={busy}
+                      onPress={() => void mergeCandidate(candidate, "a")}
+                      style={[styles.resolveButton, { borderColor: colors.border }]}
+                    >
+                      <Text style={[styles.resolveText, { color: colors.text }]}>
+                        Keep A · merge B
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={busy}
+                      onPress={() => void mergeCandidate(candidate, "b")}
+                      style={[styles.resolveButton, { borderColor: colors.border }]}
+                    >
+                      <Text style={[styles.resolveText, { color: colors.text }]}>
+                        Keep B · merge A
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      <View style={[styles.auditToolbar, { borderTopColor: colors.border }]}>
+        <View style={styles.auditToolbarCopy}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Active event merges
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            {activeMerges.length} reversible alias(es). Old event IDs remain intact.
+          </Text>
+        </View>
+      </View>
+
+      {!activeMerges.length ? (
+        <Text style={[styles.promoEmpty, { color: colors.textMuted }]}>
+          No active event merges.
+        </Text>
+      ) : (
+        <View style={styles.auditList}>
+          {activeMerges.map((item) => (
+            <View
+              key={item.source_event_id}
+              style={[styles.auditItem, { borderTopColor: colors.border }]}
+            >
+              <View style={styles.auditItemCopy}>
+                <Text style={[styles.configLabel, { color: colors.text }]}>
+                  {item.source_headline || item.source_event_id}
+                </Text>
+                <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                  merged into → {item.survivor_headline || item.survivor_event_id}
+                </Text>
+                <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                  {item.source_event_id} → {item.survivor_event_id}
+                </Text>
+                <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                  {formatTimestamp(item.merged_at)}
+                  {item.merged_by_email ? " · " + item.merged_by_email : ""}
+                </Text>
+              </View>
+              <Pressable
+                disabled={busyKey === item.source_event_id}
+                onPress={() =>
+                  void undoMerge(
+                    item.source_event_id,
+                    item.source_headline || item.source_event_id,
+                  )
+                }
+                style={[styles.resolveButton, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.resolveText, { color: colors.text }]}>
+                  {busyKey === item.source_event_id ? "Undoing…" : "Undo merge"}
+                </Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 
 function TopFeedModerationConsole() {
   const { colors } = useBrieflyTheme();
@@ -5442,6 +5724,13 @@ export default function BetaDashboardScreen() {
                   No reported contributions.
                   </Text>
                   )}
+                  </View>
+                  <View style={styles.section}>
+                  <SectionTitle
+                  title="Event quality"
+                  detail="Review likely duplicate/evolving durable events and create reversible aliases. Briefly suggests; admins decide."
+                  />
+                  <EventQualityConsole />
                   </View>
                   <View style={styles.section}>
                   <SectionTitle
