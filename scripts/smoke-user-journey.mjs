@@ -468,6 +468,22 @@ const checks = [
     ],
   },
   {
+    name: "Account page is localized and distinct from Settings",
+    file: "src/app/account.tsx",
+    needles: [
+      "useBrieflyLanguage",
+      "accountCopy",
+      'title: "Account"',
+      'title: "Cuenta"',
+      'title: "アカウント"',
+      'title: "账户"',
+      'title: "帳戶"',
+      "{text.title}",
+      "lifecycleLabel(subscriptionStatus, text)",
+      "formatLifecycleDate(subscriptionStatus.renews_at, language)",
+    ],
+  },
+  {
     name: "Social Beta exposes Community engagement analytics",
     file: "src/app/beta-dashboard.tsx",
     needles: [
