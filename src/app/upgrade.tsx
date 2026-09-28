@@ -263,6 +263,25 @@ export default function UpgradeScreen() {
   const currentProCopy = proCopy[language] ?? proCopy.en;
   const proFeatures = currentProCopy.features.filter((feature) => {
     if (!("feature" in feature)) return true;
+    if (
+      feature.feature === "video" &&
+      appConfig?.homepage_video_enabled === false &&
+      appConfig?.story_video_enabled === false
+    ) {
+      return false;
+    }
+    if (
+      feature.feature === "podcast" &&
+      appConfig?.podcast_enabled === false
+    ) {
+      return false;
+    }
+    if (
+      feature.feature === "story_refresh" &&
+      appConfig?.timeline_enabled === false
+    ) {
+      return false;
+    }
     return featureAccessMode(appConfig, feature.feature) === "pro_only";
   });
   const returnPath = safeReturnTo(returnTo);
