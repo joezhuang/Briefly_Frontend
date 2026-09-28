@@ -197,20 +197,22 @@ const accountCopy = {
   },
 } as const;
 
+type AccountText = { [K in keyof typeof accountCopy.en]: string };
+
 function localizedSupportTitle(configured: string | null | undefined, localizedDefault: string) {
   const value = String(configured || "").trim();
   return !value || value === DEFAULT_SUPPORT_TITLE ? localizedDefault : value;
 }
 
 
-function providerLabel(platform: ProPlatform, text: (typeof accountCopy)["en"]) {
+function providerLabel(platform: ProPlatform, text: AccountText) {
   if (platform === "stripe") return text.providerWeb;
   if (platform === "app_store") return "App Store";
   if (platform === "play_store") return "Google Play";
   return text.providerUnknown;
 }
 
-function lifecycleLabel(status: BrieflySubscriptionStatus | null, text: (typeof accountCopy)["en"]) {
+function lifecycleLabel(status: BrieflySubscriptionStatus | null, text: AccountText) {
   switch (status?.lifecycle_state) {
     case "trialing": return text.trialing;
     case "active": return text.active;
