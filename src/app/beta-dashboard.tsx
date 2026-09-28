@@ -1312,7 +1312,10 @@ function EventQualityConsole() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    const timer = setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refresh]);
 
   const confirmAction = async (
@@ -1596,7 +1599,10 @@ function TopFeedModerationConsole() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    const timer = setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refresh]);
 
   const applyVisibility = async (

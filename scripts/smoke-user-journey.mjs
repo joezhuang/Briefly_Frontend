@@ -118,7 +118,7 @@ const checks = [
     needles: [
       "/story/${article.slug}?",
       "router.push(storyHref as never)",
-      "buildPublicStoryShareUrl(article, storyHref)",
+      "buildPublicStoryShareUrl(article, storyHref, language)",
       "const articleReady = article.article_version_id != null",
       "{articleReady && (",
       "BrieflyMediaFallback",
@@ -192,7 +192,7 @@ const checks = [
     name: "Story sharing uses rich-card short URLs and Community focus survives async layout",
     file: "src/components/article-view.tsx",
     needles: [
-      "buildPublicStoryShareUrl(article,shareHref)",
+      "buildPublicStoryShareUrl(article,shareHref,language)",
       "onContentSizeChange",
       "communityFocusActiveRef",
       "onScrollBeginDrag",
