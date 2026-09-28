@@ -44,6 +44,15 @@ const checks = [
     ],
   },
   {
+    name: "Email/password reviewer login is mobile-only",
+    file: "src/app/sign-in.tsx",
+    needles: [
+      'Platform.OS !== "web"',
+      "showEmailPasswordLogin",
+      "{showEmailPasswordLogin && (",
+    ],
+  },
+  {
     name: "Maintenance mode gates the news experience but preserves recovery routes",
     file: "src/app/_layout.tsx",
     needles: [

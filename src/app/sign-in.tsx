@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -45,6 +46,8 @@ export default function SignInScreen() {
   const [returnPathLoaded, setReturnPathLoaded] = useState(returnTo !== undefined);
   const returnPath = safeReturnTo(returnTo ?? storedReturnTo);
   const emailCopy = emailLoginCopy[language] ?? emailLoginCopy.en;
+  const showEmailPasswordLogin =
+    emailLoginEnabled && Platform.OS !== "web";
 
   useEffect(() => {
     void readAuthReturnPath().then((value) => {
@@ -111,7 +114,7 @@ export default function SignInScreen() {
           {t.signInSubtitle}
         </Text>
 
-        {emailLoginEnabled && (
+        {showEmailPasswordLogin && (
           <>
             <TextInput
               value={email}
