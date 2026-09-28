@@ -89,11 +89,11 @@ export default function SupportScreen() {
           title: "1-month Supporter Pass",
           body: "One payment for one month of Briefly Pro. It does not auto-renew.",
         },
-      ].filter(Boolean) as Array<{
+      ].filter(Boolean) as {
         id: BrieflySupportProduct;
         title: string;
         body: string;
-      }>,
+      }[],
     [passEnabled, tipsEnabled],
   );
 
