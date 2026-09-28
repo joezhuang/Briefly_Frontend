@@ -186,10 +186,8 @@ export function WebTranslateButton({
   const labels = copy[language] ?? copy.en;
   const [savedReadingLanguage, setSavedReadingLanguage] =
     useState<ReadingLanguage | null>(null);
-  const [sharedReadingLanguage, setSharedReadingLanguage] =
-    useState<ReadingLanguage | null>(
-      normalizedReadingLanguage(initialReadingLanguage),
-    );
+  const [readingLanguageOverride, setReadingLanguageOverride] =
+    useState<ReadingLanguage | null | undefined>(undefined);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [showLocalHint, setShowLocalHint] = useState(false);
   const privateUrl = isPrivateWebUrl(sourceUrl);
@@ -206,14 +204,15 @@ export function WebTranslateButton({
     };
   }, []);
 
-  useEffect(() => {
-    setSharedReadingLanguage(
-      normalizedReadingLanguage(initialReadingLanguage),
-    );
-  }, [initialReadingLanguage]);
-
-  const readingLanguage: ReadingLanguage = sharedReadingLanguage ??
-    (isReadingLanguage(savedReadingLanguage) ? savedReadingLanguage : language);
+  const sharedReadingLanguage =
+    readingLanguageOverride === undefined
+      ? normalizedReadingLanguage(initialReadingLanguage)
+      : null;
+  const readingLanguage: ReadingLanguage =
+    readingLanguageOverride !== undefined
+      ? readingLanguageOverride ?? language
+      : sharedReadingLanguage ??
+        (isReadingLanguage(savedReadingLanguage) ? savedReadingLanguage : language);
   const displayedContentLanguage = String(contentLanguage ?? "en").trim();
   const needsGoogleTranslation =
     readingLanguage !== "en" && readingLanguage !== displayedContentLanguage;
@@ -226,7 +225,7 @@ export function WebTranslateButton({
   );
 
   const selectLanguage = (next: ReadingLanguage | null) => {
-    setSharedReadingLanguage(null);
+    setReadingLanguageOverride(next);
     setSavedReadingLanguage(next);
     setPickerOpen(false);
     setShowLocalHint(false);
