@@ -38,6 +38,7 @@ import { useBrieflyLanguage } from "@/context/language";
 import { useReadingHistory } from "@/context/reading-history";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
+import { resolveFeatureAccess } from "@/subscriptions/feature-access";
 
 const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
@@ -227,13 +228,27 @@ export default function StoryDetailScreen() {
   const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${resolvedScope ?? ""}:${language}:${reloadKey}`;
   const loading = loadingKey !== requestKey && !error && !article;
   const isPro = account?.translation_entitled === true;
-  const storyVideoEnabled = appConfig?.story_video_enabled !== false;
+  const videoAccess = resolveFeatureAccess(appConfig, "video", {
+    signedIn: !!user,
+    isPro,
+  });
+  const podcastAccess = resolveFeatureAccess(appConfig, "podcast", {
+    signedIn: !!user,
+    isPro,
+  });
+  const storyRefreshAccess = resolveFeatureAccess(appConfig, "story_refresh", {
+    signedIn: !!user,
+    isPro,
+  });
+  const storyVideoEnabled =
+    appConfig?.story_video_enabled !== false && videoAccess.mode !== "disabled";
   const floatingVideoEnabled = appConfig?.floating_video_enabled !== false;
   const communityEnabled = appConfig?.community_enabled !== false;
   const evidenceEnabled = appConfig?.evidence_enabled !== false;
   const timelineEnabled = appConfig?.timeline_enabled !== false;
   const coverageEnabled = appConfig?.coverage_enabled !== false;
-  const podcastEnabled = appConfig?.podcast_enabled !== false;
+  const podcastEnabled =
+    appConfig?.podcast_enabled !== false && podcastAccess.mode !== "disabled";
   const translationEnabled = appConfig?.translation_enabled !== false;
   const followingEnabled = appConfig?.following_enabled !== false;
   const showStoryAd =
@@ -603,14 +618,21 @@ export default function StoryDetailScreen() {
       );
       return;
     }
-    if (!isPro) {
+    if (!podcastAccess.allowed) {
+      const action = podcastAccess.gate === "sign_in" ? "sign_in" : "upgrade";
       trackProductEvent("podcast_action", {
         ...analyticsBase,
-        properties: { action: "upgrade", language, surface: "story" },
+        properties: { action, language, surface: "story" },
       });
-      router.push(
-        `/upgrade?returnTo=${encodeURIComponent(currentStoryHref)}` as never,
-      );
+      if (podcastAccess.gate === "sign_in") {
+        router.push(
+          `/sign-in?returnTo=${encodeURIComponent(currentStoryHref)}` as never,
+        );
+      } else {
+        router.push(
+          `/upgrade?returnTo=${encodeURIComponent(currentStoryHref)}` as never,
+        );
+      }
       return;
     }
     if (!podcastSourceVersionId || !podcastRequestKey || podcastBusy) return;
@@ -809,7 +831,7 @@ export default function StoryDetailScreen() {
                   reloadKey
                 }
                 canonicalStale={displayedArticle.canonical_stale === true}
-                pro={isPro}
+                access={storyRefreshAccess}
                 returnTo={currentStoryHref}
                 onRefreshStarted={() => {
                   const baseVersionId =
@@ -840,12 +862,12 @@ export default function StoryDetailScreen() {
           reloadKey
         }
         focusCommunity={resolvedCommunity === "1"}
-        autoStartVideo={isPro && resolvedAutoplayVideo}
+        autoStartVideo={videoAccess.allowed && resolvedAutoplayVideo}
         initialVideoTime={resolvedVideoTime}
         shareHref={currentStoryHref}
         podcast={podcastEnabled ? podcast : null}
         podcastBusy={podcastEnabled && podcastBusy}
-        podcastPro={isPro}
+        podcastAccess={podcastAccess}
         podcastSignedIn={!!user}
         onPodcastAction={podcastEnabled ? () => void handlePodcastAction() : undefined}
         podcastEnabled={podcastEnabled}
@@ -854,8 +876,8 @@ export default function StoryDetailScreen() {
         timelineEnabled={timelineEnabled}
         coverageEnabled={coverageEnabled}
         followingEnabled={followingEnabled}
-        videoPro={isPro}
-        floatingVideoEnabled={isPro && floatingVideoEnabled}
+        videoAccess={videoAccess}
+        floatingVideoEnabled={videoAccess.allowed && floatingVideoEnabled}
         briefRepair={
           (displayedArticle.content_language ?? displayedArticle.language) === "en"
             ? briefRepair

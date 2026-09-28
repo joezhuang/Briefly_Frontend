@@ -14,12 +14,20 @@ import { requestStaleStoryRefresh } from "@/api/briefly";
 import { getEventTimeline } from "@/api/event-evolution";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
+import type { FeatureAccessState } from "@/subscriptions/feature-access";
 
 
 export type EventTimelineItem = {
   id: string;
   time: string | null;
   title: string;
+};
+
+const allowedFeatureAccess: FeatureAccessState = {
+  mode: "all_users",
+  gate: "allowed",
+  allowed: true,
+  badge: null,
 };
 
 type TimelineResponse = {
@@ -251,7 +259,7 @@ export function EventTimeline({
   liveContext = false,
   liveStoryHref,
   canonicalStale = false,
-  pro = false,
+  access = allowedFeatureAccess,
   returnTo = "/",
   onRefreshStarted,
 }: {
@@ -260,11 +268,11 @@ export function EventTimeline({
   liveContext?: boolean;
   liveStoryHref?: string;
   canonicalStale?: boolean;
-  pro?: boolean;
+  access?: FeatureAccessState;
   returnTo?: string;
   onRefreshStarted?: () => void;
 }) {
-  const { language } = useBrieflyLanguage();
+  const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const labels = copy[language] ?? copy.en;
   const [backgroundItems, setBackgroundItems] = useState<EventTimelineItem[]>([]);
@@ -328,7 +336,15 @@ export function EventTimeline({
 
   const refreshStory = async () => {
     if (!canonicalStale || refreshing) return;
-    if (!pro) {
+    if (access.gate === "disabled") return;
+    if (access.gate === "sign_in") {
+      setOpen(false);
+      router.push(
+        `/sign-in?returnTo=${encodeURIComponent(returnTo)}` as never,
+      );
+      return;
+    }
+    if (access.gate === "pro") {
       setOpen(false);
       router.push(
         `/upgrade?returnTo=${encodeURIComponent(returnTo)}` as never,
@@ -505,7 +521,7 @@ export function EventTimeline({
               )}
             </ScrollView>
 
-            {canonicalStale && (
+            {canonicalStale && access.gate !== "disabled" && (
               <Pressable
                 disabled={refreshing}
                 onPress={() => void refreshStory()}
@@ -521,10 +537,17 @@ export function EventTimeline({
                 <Text style={[styles.refreshButtonText, { color: colors.background }]}> 
                   {refreshing
                     ? labels.refreshing
-                    : pro
-                      ? labels.refresh
-                      : labels.upgrade}
+                    : access.gate === "sign_in"
+                      ? t.signIn
+                      : access.gate === "pro"
+                        ? labels.upgrade
+                        : labels.refresh}
                 </Text>
+                {!refreshing && access.badge && (
+                  <Text style={[styles.refreshAccessBadge, { color: colors.background }]}>
+                    {access.badge}
+                  </Text>
+                )}
               </Pressable>
             )}
 
@@ -647,6 +670,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   refreshButtonText: { fontSize: 13, fontWeight: "900" },
+  refreshAccessBadge: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
   closeButton: {
     alignSelf: "flex-end",
     marginTop: 14,
