@@ -178,7 +178,8 @@ const checks = [
     file: "src/app/story/[slug].tsx",
     needles: [
       "getGoogleTranslateStoryUrl",
-      'url.searchParams.set("ui", "en")',
+      "supportedUiLanguage",
+      'url.searchParams.set("ui", supportedUiLanguage)',
       'url.searchParams.set("content", "en")',
       "translationEnabled && !!translateSourceUrl",
     ],
