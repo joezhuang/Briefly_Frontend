@@ -14,7 +14,10 @@ import { requestStaleStoryRefresh } from "@/api/briefly";
 import { getEventTimeline } from "@/api/event-evolution";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
-import type { FeatureAccessState } from "@/subscriptions/feature-access";
+import {
+  featureAccessBadgeLabel,
+  type FeatureAccessState,
+} from "@/subscriptions/feature-access";
 
 
 export type EventTimelineItem = {
@@ -273,6 +276,7 @@ export function EventTimeline({
   onRefreshStarted?: () => void;
 }) {
   const { language, t } = useBrieflyLanguage();
+  const accessBadge = featureAccessBadgeLabel(access.badge, language);
   const { colors } = useBrieflyTheme();
   const labels = copy[language] ?? copy.en;
   const [backgroundItems, setBackgroundItems] = useState<EventTimelineItem[]>([]);
@@ -543,9 +547,9 @@ export function EventTimeline({
                         ? labels.upgrade
                         : labels.refresh}
                 </Text>
-                {!refreshing && access.badge && (
+                {!refreshing && accessBadge && (
                   <Text style={[styles.refreshAccessBadge, { color: colors.background }]}>
-                    {access.badge}
+                    {accessBadge}
                   </Text>
                 )}
               </Pressable>

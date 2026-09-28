@@ -13,6 +13,29 @@ export type FeatureAccessState = {
   badge: "PRO" | "FREE" | "FREE · SIGN IN" | null;
 };
 
+const featureBadgeCopy = {
+  en: { free: "FREE", signIn: "SIGN IN" },
+  es: { free: "GRATIS", signIn: "INICIAR SESIÓN" },
+  ja: { free: "無料", signIn: "ログイン" },
+  "zh-CN": { free: "免费", signIn: "登录" },
+  "zh-TW": { free: "免費", signIn: "登入" },
+} as const;
+
+export function featureAccessBadgeLabel(
+  badge: FeatureAccessState["badge"],
+  language: string,
+  { compact = false }: { compact?: boolean } = {},
+) {
+  if (!badge) return null;
+  if (badge === "PRO") return "PRO";
+
+  const labels =
+    featureBadgeCopy[language as keyof typeof featureBadgeCopy] ??
+    featureBadgeCopy.en;
+  if (badge === "FREE" || compact) return labels.free;
+  return `${labels.free} · ${labels.signIn}`;
+}
+
 export function featureAccessMode(
   config: BrieflyAppConfig | null | undefined,
   feature: RuntimePaidFeature,

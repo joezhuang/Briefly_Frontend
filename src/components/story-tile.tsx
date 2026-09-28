@@ -27,7 +27,10 @@ import { usePodcastPlayer } from "@/context/podcast-player";
 import type { CanonicalArticle } from "@/models/article";
 import { shareBrieflyStory } from "@/navigation/platform-share";
 import { buildPublicStoryShareUrl } from "@/navigation/story-share";
-import { resolveFeatureAccess } from "@/subscriptions/feature-access";
+import {
+  featureAccessBadgeLabel,
+  resolveFeatureAccess,
+} from "@/subscriptions/feature-access";
 
 type TileSize = "hero" | "secondary" | "standard";
 
@@ -168,6 +171,17 @@ export function StoryTile({
     signedIn: !!user,
     isPro,
   });
+  const videoAccessBadge = featureAccessBadgeLabel(videoAccess.badge, language);
+  const videoAccessBadgeCompact = featureAccessBadgeLabel(
+    videoAccess.badge,
+    language,
+    { compact: true },
+  );
+  const podcastAccessBadgeCompact = featureAccessBadgeLabel(
+    podcastAccess.badge,
+    language,
+    { compact: true },
+  );
   const [translation, setTranslation] = useState<CardTranslation | null>(null);
   const [showTranslation, setShowTranslation] = useState(false);
   const [translating, setTranslating] = useState(false);
@@ -573,7 +587,7 @@ export function StoryTile({
             {videoAvailable && (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`${copy.play}${videoAccess.badge ? ` · ${videoAccess.badge}` : ""}`}
+                accessibilityLabel={`${copy.play}${videoAccessBadge ? ` · ${videoAccessBadge}` : ""}`}
                 onPress={(event) => {
                   event.stopPropagation();
                   if (videoLocked) {
@@ -588,11 +602,9 @@ export function StoryTile({
                 ]}
               >
                 <Text style={styles.actionIcon}>▶</Text>
-                {videoAccess.badge ? (
+                {videoAccessBadgeCompact ? (
                   <Text style={styles.videoProBadge}>
-                    {videoAccess.badge === "FREE · SIGN IN"
-                      ? "FREE"
-                      : videoAccess.badge}
+                    {videoAccessBadgeCompact}
                   </Text>
                 ) : null}
               </Pressable>
@@ -616,11 +628,9 @@ export function StoryTile({
                   size={20}
                   tintColor="#FFFFFF"
                 />
-                {podcastAccess.badge ? (
+                {podcastAccessBadgeCompact ? (
                   <Text style={styles.videoProBadge}>
-                    {podcastAccess.badge === "FREE · SIGN IN"
-                      ? "FREE"
-                      : podcastAccess.badge}
+                    {podcastAccessBadgeCompact}
                   </Text>
                 ) : null}
               </Pressable>

@@ -73,6 +73,18 @@ const checks = [
     ],
   },
   {
+    name: "Runtime feature badges follow the Briefly UI language",
+    file: "src/subscriptions/feature-access.ts",
+    needles: [
+      "featureAccessBadgeLabel",
+      'es: { free: "GRATIS", signIn: "INICIAR SESIÓN" }',
+      'ja: { free: "無料", signIn: "ログイン" }',
+      '"zh-CN": { free: "免费", signIn: "登录" }',
+      '"zh-TW": { free: "免費", signIn: "登入" }',
+      'if (badge === "PRO") return "PRO"',
+    ],
+  },
+  {
     name: "Search and Following screens consume runtime feature controls",
     file: "src/app/search.tsx",
     needles: [
@@ -161,6 +173,9 @@ const checks = [
     file: "src/components/story-tile.tsx",
     needles: [
       "article.podcast_audio_url",
+      "featureAccessBadgeLabel",
+      "videoAccessBadgeCompact",
+      "podcastAccessBadgeCompact",
       "usePodcastPlayer",
       "podcastStatus.playing === true",
       "addPodcastToQueue(track)",
@@ -207,6 +222,15 @@ const checks = [
       "resolvedReadLanguage",
       "initialReadingLanguage={resolvedReadLanguage}",
       'language: articleRequestLanguage',
+    ],
+  },
+  {
+    name: "Timeline refresh access badge is localized",
+    file: "src/components/event-timeline.tsx",
+    needles: [
+      "featureAccessBadgeLabel",
+      "const accessBadge = featureAccessBadgeLabel(access.badge, language)",
+      "{accessBadge}",
     ],
   },
   {
@@ -326,7 +350,12 @@ const checks = [
   {
     name: "Podcast status, generation and inline playback are wired",
     file: "src/components/article-view.tsx",
-    needles: ["PodcastInlinePlayer"],
+    needles: [
+      "PodcastInlinePlayer",
+      "featureAccessBadgeLabel",
+      "videoAccessBadge",
+      "podcastAccessBadge",
+    ],
   },
   {
     name: "Podcast API contract matches the canonical article-version route",
