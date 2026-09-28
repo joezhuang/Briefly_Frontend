@@ -123,6 +123,7 @@ export default function StoryDetailScreen() {
     autoplayVideo,
     videoTime,
     ui,
+    content,
   } = useLocalSearchParams<{
     slug?: string | string[];
     eventId?: string | string[];
@@ -134,6 +135,7 @@ export default function StoryDetailScreen() {
     autoplayVideo?: string | string[];
     videoTime?: string | string[];
     ui?: string | string[];
+    content?: string | string[];
   }>();
 
   const resolvedSlug = useMemo(
@@ -177,6 +179,16 @@ export default function StoryDetailScreen() {
     () => (Array.isArray(ui) ? ui[0] : ui),
     [ui],
   );
+  const resolvedContentLanguage = useMemo(() => {
+    const value = Array.isArray(content) ? content[0] : content;
+    return value === "en" ||
+      value === "es" ||
+      value === "ja" ||
+      value === "zh-CN" ||
+      value === "zh-TW"
+      ? value
+      : null;
+  }, [content]);
 
   const { language, t, setTransientLanguage } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
@@ -223,7 +235,7 @@ export default function StoryDetailScreen() {
   const storyOpenTrackedKey = useRef("");
 
   const isWeb = Platform.OS === "web";
-  const articleRequestLanguage = language;
+  const articleRequestLanguage = resolvedContentLanguage ?? language;
   const currentStoryHref = useMemo(() => {
     if (!resolvedSlug) return "/";
     const params = new URLSearchParams();
@@ -234,6 +246,10 @@ export default function StoryDetailScreen() {
     }
     if (resolvedSource) params.set("source", resolvedSource);
     if (resolvedScope) params.set("scope", resolvedScope);
+    if (resolvedUi) params.set("ui", resolvedUi);
+    if (resolvedContentLanguage) {
+      params.set("content", resolvedContentLanguage);
+    }
     const query = params.toString();
     return `/story/${encodeURIComponent(resolvedSlug)}${query ? `?${query}` : ""}`;
   }, [
@@ -243,9 +259,11 @@ export default function StoryDetailScreen() {
     resolvedScope,
     resolvedSource,
     resolvedSlug,
+    resolvedUi,
+    resolvedContentLanguage,
   ]);
   const translateSourceUrl = getStoryUrl(currentStoryHref);
-  const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${resolvedScope ?? ""}:${language}:${reloadKey}`;
+  const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${resolvedScope ?? ""}:${articleRequestLanguage}:${language}:${reloadKey}`;
   const loading = loadingKey !== requestKey && !error && !article;
   const isPro = account?.translation_entitled === true;
   const videoAccess = resolveFeatureAccess(appConfig, "video", {
@@ -370,18 +388,18 @@ export default function StoryDetailScreen() {
 
           setAuthoritativeArticle(canonical);
 
-          if (language !== "en") {
-            if (isWeb) {
+          if (articleRequestLanguage !== "en") {
+            if (isWeb && !resolvedContentLanguage) {
               try {
                 const localized = await getCanonicalArticleByEventId(
                   resolvedEventId,
                   {
                     includeDraft: PREVIEW_DRAFTS,
-                    language,
+                    language: articleRequestLanguage,
                   },
                 );
                 result =
-                  localized.content_language === language
+                  localized.content_language === articleRequestLanguage
                     ? {
                         ...preferredImage(
                           localized,
@@ -401,7 +419,7 @@ export default function StoryDetailScreen() {
                 resolvedEventId,
                 {
                   includeDraft: PREVIEW_DRAFTS,
-                  language,
+                  language: articleRequestLanguage,
                 },
               );
               result = {
@@ -471,6 +489,7 @@ export default function StoryDetailScreen() {
     resolvedImageUrl,
     resolvedPreviewHeadline,
     resolvedScope,
+    resolvedContentLanguage,
     language,
     articleRequestLanguage,
     isWeb,

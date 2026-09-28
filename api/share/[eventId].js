@@ -45,7 +45,11 @@ function normalizedUiLanguage(value) {
     : null;
 }
 
-function storyDestination(article, uiLanguage) {
+function normalizedContentLanguage(value) {
+  return normalizedUiLanguage(value);
+}
+
+function storyDestination(article, uiLanguage, contentLanguage) {
   const slug = String(article.slug || "").trim();
   const eventId = String(article.event_id || "").trim();
   if (!slug || !eventId) return "/";
@@ -55,6 +59,7 @@ function storyDestination(article, uiLanguage) {
     source: "share",
   });
   if (uiLanguage) params.set("ui", uiLanguage);
+  if (contentLanguage) params.set("content", contentLanguage);
 
   const headline = String(article.headline || "").trim();
   const imageUrl = String(
@@ -117,6 +122,7 @@ module.exports = async function handler(request, response) {
   const key = String(first(request.query.eventId) || "").trim();
   const legacyVersion = String(first(request.query.legacyVersion) || "") === "1";
   const uiLanguage = normalizedUiLanguage(first(request.query.ui));
+  const contentLanguage = normalizedContentLanguage(first(request.query.content));
   const protocol = String(
     first(request.headers["x-forwarded-proto"]) || "https",
   ).split(",")[0].trim();
@@ -132,7 +138,11 @@ module.exports = async function handler(request, response) {
 
   try {
     const article = await loadArticle(key, legacyVersion);
-    const destinationPath = storyDestination(article, uiLanguage);
+    const destinationPath = storyDestination(
+      article,
+      uiLanguage,
+      contentLanguage,
+    );
     const destinationUrl = new URL(destinationPath, origin).toString();
 
     const eventId = String(article.event_id || key).trim();
@@ -141,6 +151,9 @@ module.exports = async function handler(request, response) {
       : `/s/${encodeURIComponent(eventId)}`;
     const shareUrlObject = new URL(sharePath, origin);
     if (uiLanguage) shareUrlObject.searchParams.set("ui", uiLanguage);
+    if (contentLanguage) {
+      shareUrlObject.searchParams.set("content", contentLanguage);
+    }
     const shareUrl = shareUrlObject.toString();
 
     const title = truncate(article.headline || "Briefly", 120);

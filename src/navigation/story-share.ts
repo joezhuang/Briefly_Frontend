@@ -11,5 +11,12 @@ export function buildPublicStoryShareUrl(
 
   const url = new URL(`${webBase}/s/${encodeURIComponent(eventId)}`);
   if (uiLanguage) url.searchParams.set("ui", uiLanguage);
+
+  const contentLanguage = String(
+    article.content_language ?? article.language ?? "",
+  ).trim();
+  if (["en", "es", "ja", "zh-CN", "zh-TW"].includes(contentLanguage)) {
+    url.searchParams.set("content", contentLanguage);
+  }
   return url.toString();
 }

@@ -166,6 +166,8 @@ const checks = [
       "requestPodcastAnalysis",
       'focusCommunity={resolvedCommunity === "1"}',
       "shareHref={currentStoryHref}",
+      "resolvedContentLanguage",
+      'language: articleRequestLanguage',
     ],
   },
   {
@@ -210,6 +212,8 @@ const checks = [
       'window.location.replace',
       'legacyVersion',
       'source: "share"',
+      'contentLanguage',
+      'params.set("content", contentLanguage)',
       '/api/og/',
     ],
   },
@@ -245,6 +249,7 @@ const checks = [
     needles: [
       '/s/',
       'encodeURIComponent(eventId)',
+      'url.searchParams.set("content", contentLanguage)',
     ],
   },
   {
