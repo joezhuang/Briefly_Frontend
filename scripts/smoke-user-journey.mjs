@@ -157,6 +157,27 @@ const checks = [
     ],
   },
   {
+    name: "Story reading language is independent and persisted for Google Translate",
+    file: "src/components/web-translate-button.tsx",
+    needles: [
+      '"briefly.reading-language.v1"',
+      '"Reading language"',
+      '"Same as interface"',
+      "AsyncStorage.setItem(READING_LANGUAGE_STORAGE_KEY",
+      "googleTranslateUrl(sourceUrl, readingLanguage)",
+    ],
+  },
+  {
+    name: "Google Translate always starts from canonical English Briefly content",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      "getGoogleTranslateStoryUrl",
+      'url.searchParams.set("ui", "en")',
+      'url.searchParams.set("content", "en")',
+      "translationEnabled && !!translateSourceUrl",
+    ],
+  },
+  {
     name: "Story screen composes article, Community, and podcast actions",
     file: "src/app/story/[slug].tsx",
     needles: [

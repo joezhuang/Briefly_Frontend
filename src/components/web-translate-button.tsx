@@ -1,31 +1,127 @@
-import { useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Linking,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 
+const READING_LANGUAGE_STORAGE_KEY = "briefly.reading-language.v1";
+
+const READING_LANGUAGES = [
+  { code: "ar", label: "Arabic" },
+  { code: "bn", label: "Bengali" },
+  { code: "bg", label: "Bulgarian" },
+  { code: "zh-CN", label: "Chinese (Simplified)" },
+  { code: "zh-TW", label: "Chinese (Traditional)" },
+  { code: "hr", label: "Croatian" },
+  { code: "cs", label: "Czech" },
+  { code: "da", label: "Danish" },
+  { code: "nl", label: "Dutch" },
+  { code: "en", label: "English" },
+  { code: "fi", label: "Finnish" },
+  { code: "fr", label: "French" },
+  { code: "de", label: "German" },
+  { code: "el", label: "Greek" },
+  { code: "gu", label: "Gujarati" },
+  { code: "he", label: "Hebrew" },
+  { code: "hi", label: "Hindi" },
+  { code: "hu", label: "Hungarian" },
+  { code: "id", label: "Indonesian" },
+  { code: "it", label: "Italian" },
+  { code: "ja", label: "Japanese" },
+  { code: "kn", label: "Kannada" },
+  { code: "ko", label: "Korean" },
+  { code: "ms", label: "Malay" },
+  { code: "ml", label: "Malayalam" },
+  { code: "mr", label: "Marathi" },
+  { code: "no", label: "Norwegian" },
+  { code: "fa", label: "Persian" },
+  { code: "pl", label: "Polish" },
+  { code: "pt", label: "Portuguese" },
+  { code: "pa", label: "Punjabi" },
+  { code: "ro", label: "Romanian" },
+  { code: "ru", label: "Russian" },
+  { code: "sr", label: "Serbian" },
+  { code: "sk", label: "Slovak" },
+  { code: "sl", label: "Slovenian" },
+  { code: "es", label: "Spanish" },
+  { code: "sw", label: "Swahili" },
+  { code: "sv", label: "Swedish" },
+  { code: "ta", label: "Tamil" },
+  { code: "te", label: "Telugu" },
+  { code: "th", label: "Thai" },
+  { code: "tr", label: "Turkish" },
+  { code: "uk", label: "Ukrainian" },
+  { code: "ur", label: "Urdu" },
+  { code: "vi", label: "Vietnamese" },
+] as const;
+
+type ReadingLanguage = (typeof READING_LANGUAGES)[number]["code"];
+
 const copy = {
   en: {
-    label: "Translate with Google",
+    title: "Reading language",
+    sameAsUi: "Same as interface",
+    hint: "Saved on this device. It does not change the Briefly interface.",
+    choose: "Choose reading language",
+    close: "Close",
+    readWithGoogle: (name: string) => `Read in ${name} with Google`,
+    englishHint: "Choose another reading language to use Google Translate.",
     localHint: "For local development, use your browser's Translate page option.",
   },
   es: {
-    label: "Traducir con Google",
+    title: "Idioma de lectura",
+    sameAsUi: "Igual que la interfaz",
+    hint: "Se guarda en este dispositivo y no cambia la interfaz de Briefly.",
+    choose: "Elegir idioma de lectura",
+    close: "Cerrar",
+    readWithGoogle: (name: string) => `Leer en ${name} con Google`,
+    englishHint: "Elige otro idioma de lectura para usar Google Translate.",
     localHint: "En desarrollo local, usa la opción Traducir página de tu navegador.",
   },
   ja: {
-    label: "Googleで翻訳",
+    title: "読む言語",
+    sameAsUi: "インターフェースと同じ",
+    hint: "この端末に保存されます。Brieflyの表示言語は変わりません。",
+    choose: "読む言語を選択",
+    close: "閉じる",
+    readWithGoogle: (name: string) => `Googleで${name}で読む`,
+    englishHint: "Google翻訳を使うには別の読む言語を選択してください。",
     localHint: "ローカル開発では、ブラウザの「ページを翻訳」機能を使用してください。",
   },
   "zh-CN": {
-    label: "使用 Google 翻译",
+    title: "阅读语言",
+    sameAsUi: "跟随界面语言",
+    hint: "保存在此设备上，不会更改 Briefly 的界面语言。",
+    choose: "选择阅读语言",
+    close: "关闭",
+    readWithGoogle: (name: string) => `使用 Google 阅读${name}`,
+    englishHint: "选择其他阅读语言即可使用 Google 翻译。",
     localHint: "本地开发环境请使用浏览器自带的“翻译此页面”功能。",
   },
   "zh-TW": {
-    label: "使用 Google 翻譯",
+    title: "閱讀語言",
+    sameAsUi: "跟隨介面語言",
+    hint: "儲存在此裝置上，不會更改 Briefly 的介面語言。",
+    choose: "選擇閱讀語言",
+    close: "關閉",
+    readWithGoogle: (name: string) => `使用 Google 閱讀${name}`,
+    englishHint: "選擇其他閱讀語言即可使用 Google 翻譯。",
     localHint: "本機開發環境請使用瀏覽器內建的「翻譯此頁面」功能。",
   },
 } as const;
+
+function isReadingLanguage(value: string | null): value is ReadingLanguage {
+  return READING_LANGUAGES.some((item) => item.code === value);
+}
 
 function googleTranslateUrl(sourceUrl: string, targetLanguage: string) {
   return (
@@ -63,8 +159,45 @@ export function WebTranslateButton({ sourceUrl }: { sourceUrl: string }) {
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const labels = copy[language] ?? copy.en;
+  const [savedReadingLanguage, setSavedReadingLanguage] =
+    useState<ReadingLanguage | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [showLocalHint, setShowLocalHint] = useState(false);
   const privateUrl = isPrivateWebUrl(sourceUrl);
+
+  useEffect(() => {
+    let active = true;
+    void AsyncStorage.getItem(READING_LANGUAGE_STORAGE_KEY).then((stored) => {
+      if (active && isReadingLanguage(stored)) {
+        setSavedReadingLanguage(stored);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const readingLanguage: ReadingLanguage = isReadingLanguage(savedReadingLanguage)
+    ? savedReadingLanguage
+    : language;
+
+  const selected = useMemo(
+    () =>
+      READING_LANGUAGES.find((item) => item.code === readingLanguage) ??
+      READING_LANGUAGES.find((item) => item.code === "en")!,
+    [readingLanguage],
+  );
+
+  const selectLanguage = (next: ReadingLanguage | null) => {
+    setSavedReadingLanguage(next);
+    setPickerOpen(false);
+    setShowLocalHint(false);
+    if (next) {
+      void AsyncStorage.setItem(READING_LANGUAGE_STORAGE_KEY, next);
+    } else {
+      void AsyncStorage.removeItem(READING_LANGUAGE_STORAGE_KEY);
+    }
+  };
 
   const handlePress = () => {
     if (privateUrl) {
@@ -73,61 +206,233 @@ export function WebTranslateButton({ sourceUrl }: { sourceUrl: string }) {
     }
 
     setShowLocalHint(false);
-    void Linking.openURL(googleTranslateUrl(sourceUrl, language));
+    void Linking.openURL(googleTranslateUrl(sourceUrl, readingLanguage));
   };
 
   return (
-    <View style={[styles.wrap, { backgroundColor: colors.surface }]}>
+    <View
+      style={[
+        styles.wrap,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
+    >
+      <Text style={[styles.title, { color: colors.text }]}>
+        {labels.title}
+      </Text>
       <Pressable
-        accessibilityRole={privateUrl ? "button" : "link"}
-        accessibilityLabel={labels.label}
-        onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={labels.choose}
+        onPress={() => setPickerOpen(true)}
         style={({ pressed }) => [
-          styles.button,
+          styles.selector,
           {
             borderColor: colors.border,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.surfaceMuted,
             opacity: pressed ? 0.7 : 1,
           },
         ]}
       >
-        <Text style={[styles.label, { color: colors.text }]}>
-          {labels.label}{privateUrl ? "" : " ↗"}
+        <Text style={[styles.selectorText, { color: colors.text }]}>
+          {selected.label} ▾
         </Text>
       </Pressable>
+      <Text style={[styles.hint, { color: colors.textMuted }]}>
+        {labels.hint}
+      </Text>
+
+      {readingLanguage !== "en" ? (
+        <Pressable
+          accessibilityRole={privateUrl ? "button" : "link"}
+          accessibilityLabel={labels.readWithGoogle(selected.label)}
+          onPress={handlePress}
+          style={({ pressed }) => [
+            styles.button,
+            {
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Text style={[styles.label, { color: colors.text }]}>
+            {labels.readWithGoogle(selected.label)}
+            {privateUrl ? "" : " ↗"}
+          </Text>
+        </Pressable>
+      ) : (
+        <Text style={[styles.englishHint, { color: colors.textMuted }]}>
+          {labels.englishHint}
+        </Text>
+      )}
+
       {showLocalHint && (
         <Text style={[styles.hint, { color: colors.textMuted }]}>
           {labels.localHint}
         </Text>
       )}
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={pickerOpen}
+        onRequestClose={() => setPickerOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View
+            style={[
+              styles.modalCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {labels.choose}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setPickerOpen(false)}
+              >
+                <Text style={[styles.close, { color: colors.accent }]}>
+                  {labels.close}
+                </Text>
+              </Pressable>
+            </View>
+            <ScrollView style={styles.languageList}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => selectLanguage(null)}
+                style={[
+                  styles.languageRow,
+                  { borderBottomColor: colors.border },
+                ]}
+              >
+                <Text style={[styles.languageName, { color: colors.text }]}>
+                  {labels.sameAsUi}
+                </Text>
+                {savedReadingLanguage === null ? (
+                  <Text style={[styles.check, { color: colors.accent }]}>✓</Text>
+                ) : null}
+              </Pressable>
+              {READING_LANGUAGES.map((item) => (
+                <Pressable
+                  key={item.code}
+                  accessibilityRole="button"
+                  onPress={() => selectLanguage(item.code)}
+                  style={[
+                    styles.languageRow,
+                    { borderBottomColor: colors.border },
+                  ]}
+                >
+                  <Text style={[styles.languageName, { color: colors.text }]}>
+                    {item.label}
+                  </Text>
+                  {savedReadingLanguage === item.code ? (
+                    <Text style={[styles.check, { color: colors.accent }]}>✓</Text>
+                  ) : null}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    alignItems: "center",
-    paddingTop: 12,
-    paddingBottom: 2,
-    paddingHorizontal: 16,
+    width: "100%",
+    maxWidth: 520,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
+    padding: 14,
+    gap: 8,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  selector: {
+    minHeight: 42,
+    paddingHorizontal: 13,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: "center",
+  },
+  selectorText: {
+    fontSize: 14,
+    fontWeight: "800",
   },
   button: {
-    minHeight: 36,
+    minHeight: 40,
     paddingHorizontal: 15,
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
     justifyContent: "center",
+    alignSelf: "flex-start",
+    marginTop: 2,
   },
   label: {
     fontSize: 13,
     fontWeight: "800",
   },
   hint: {
-    maxWidth: 520,
-    marginTop: 8,
-    textAlign: "center",
     fontSize: 12,
     lineHeight: 17,
+  },
+  englishHint: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 520,
+    maxHeight: "80%",
+    alignSelf: "center",
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 16,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+    paddingBottom: 10,
+  },
+  modalTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  close: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  languageList: {
+    maxHeight: 520,
+  },
+  languageRow: {
+    minHeight: 46,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  languageName: {
+    flex: 1,
+    fontSize: 15,
+  },
+  check: {
+    fontSize: 16,
+    fontWeight: "900",
   },
 });

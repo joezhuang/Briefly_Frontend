@@ -111,6 +111,20 @@ function getStoryUrl(currentStoryHref: string): string | null {
   return null;
 }
 
+function getGoogleTranslateStoryUrl(currentStoryHref: string): string | null {
+  const sourceUrl = getStoryUrl(currentStoryHref);
+  if (!sourceUrl) return null;
+
+  try {
+    const url = new URL(sourceUrl);
+    url.searchParams.set("ui", "en");
+    url.searchParams.set("content", "en");
+    return url.toString();
+  } catch {
+    return sourceUrl;
+  }
+}
+
 export default function StoryDetailScreen() {
   const {
     slug,
@@ -262,7 +276,7 @@ export default function StoryDetailScreen() {
     resolvedUi,
     resolvedContentLanguage,
   ]);
-  const translateSourceUrl = getStoryUrl(currentStoryHref);
+  const translateSourceUrl = getGoogleTranslateStoryUrl(currentStoryHref);
   const requestKey = `${resolvedSlug ?? ""}:${resolvedEventId ?? ""}:${resolvedScope ?? ""}:${articleRequestLanguage}:${language}:${reloadKey}`;
   const loading = loadingKey !== requestKey && !error && !article;
   const isPro = account?.translation_entitled === true;
@@ -815,7 +829,7 @@ export default function StoryDetailScreen() {
     storyVideoEnabled,
   );
   const showGoogleTranslate =
-    translationEnabled && language !== "en" && !!translateSourceUrl;
+    translationEnabled && !!translateSourceUrl;
   const storyToolsText = storyToolsCopy[language] ?? storyToolsCopy.en;
 
   return (
