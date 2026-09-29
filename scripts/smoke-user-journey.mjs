@@ -169,13 +169,12 @@ const checks = [
     ],
   },
   {
-    name: "Homepage ready podcasts queue without interrupting active playback",
+    name: "Homepage ready podcasts are free to play and queue without interrupting active playback",
     file: "src/components/story-tile.tsx",
     needles: [
       "article.podcast_audio_url",
-      "featureAccessBadgeLabel",
+      "const podcastUrl = podcastEnabled",
       "videoAccessBadgeCompact",
-      "podcastAccessBadgeCompact",
       "usePodcastPlayer",
       "podcastStatus.playing === true",
       "addPodcastToQueue(track)",
@@ -354,7 +353,16 @@ const checks = [
       "PodcastInlinePlayer",
       "featureAccessBadgeLabel",
       "videoAccessBadge",
-      "podcastAccessBadge",
+      "podcastGenerationBadge",
+    ],
+  },
+  {
+    name: "Ready podcast playback is public while generation remains access-controlled",
+    file: "src/components/article-view.tsx",
+    needles: [
+      "const podcastGenerationBadge=podcastReady?null:featureAccessBadgeLabel",
+      'podcastReady&&podcast?.audio_url?<PodcastInlinePlayer',
+      'podcastAccess.gate==="pro"',
     ],
   },
   {

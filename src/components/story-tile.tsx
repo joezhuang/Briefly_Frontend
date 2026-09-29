@@ -167,18 +167,9 @@ export function StoryTile({
     signedIn: !!user,
     isPro,
   });
-  const podcastAccess = resolveFeatureAccess(appConfig, "podcast", {
-    signedIn: !!user,
-    isPro,
-  });
   const videoAccessBadge = featureAccessBadgeLabel(videoAccess.badge, language);
   const videoAccessBadgeCompact = featureAccessBadgeLabel(
     videoAccess.badge,
-    language,
-    { compact: true },
-  );
-  const podcastAccessBadgeCompact = featureAccessBadgeLabel(
-    podcastAccess.badge,
     language,
     { compact: true },
   );
@@ -236,10 +227,9 @@ export function StoryTile({
     !!article.video_url;
   const videoLocked = videoAvailable && !videoAccess.allowed;
   const videoUrl = videoAvailable && videoAccess.allowed ? article.video_url ?? null : null;
-  const podcastUrl =
-    podcastEnabled && podcastAccess.mode !== "disabled"
-      ? article.podcast_audio_url ?? null
-      : null;
+  const podcastUrl = podcastEnabled
+    ? article.podcast_audio_url ?? null
+    : null;
   const imageUrl = article.video_thumbnail_url || article.image_url || null;
   const storyHref =
     href ??
@@ -319,22 +309,6 @@ export function StoryTile({
 
   const handlePodcast = () => {
     if (!podcastUrl) return;
-
-    if (!podcastAccess.allowed) {
-      if (podcastAccess.gate === "sign_in") {
-        router.push(
-          `/sign-in?returnTo=${encodeURIComponent(storyHref)}` as never,
-        );
-      } else {
-        const upgradeHref = `/upgrade?returnTo=${encodeURIComponent(storyHref)}`;
-        router.push(
-          (user
-            ? upgradeHref
-            : `/sign-in?returnTo=${encodeURIComponent(upgradeHref)}`) as never,
-        );
-      }
-      return;
-    }
 
     const track = {
       id: podcastUrl,
@@ -628,11 +602,7 @@ export function StoryTile({
                   size={20}
                   tintColor="#FFFFFF"
                 />
-                {podcastAccessBadgeCompact ? (
-                  <Text style={styles.videoProBadge}>
-                    {podcastAccessBadgeCompact}
-                  </Text>
-                ) : null}
+
               </Pressable>
             )}
 
