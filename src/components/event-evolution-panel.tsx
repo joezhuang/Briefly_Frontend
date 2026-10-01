@@ -1,8 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { getEventTimeline, type EventTimelineSnapshot } from "@/api/event-evolution";
+import {
+  getEventTimeline,
+  resetEventTimelineOrder,
+  saveEventTimelineOrder,
+  type EventTimelineItem,
+  type EventTimelineSnapshot,
+} from "@/api/event-evolution";
 import {
   getEventIntelligence,
   type EventDevelopment,
@@ -27,6 +33,14 @@ const copy = {
     newLanguages: "new languages",
     headlineShift: "The event headline changed materially",
     meaningfulUpdate: "Meaningful event update",
+    adjustOrder: "Adjust order",
+    dragHint: "Drag the handle to reorder background and timeline items.",
+    saveOrder: "Save order",
+    resetOrder: "Reset automatic order",
+    cancelOrder: "Cancel",
+    savingOrder: "Saving…",
+    manualOrder: "Manual order",
+    orderError: "Could not save timeline order. Reload and try again.",
   },
   es: {
     title: "Evolución",
@@ -41,6 +55,14 @@ const copy = {
     newLanguages: "nuevos idiomas",
     headlineShift: "El titular del evento cambió de forma relevante",
     meaningfulUpdate: "Actualización relevante del evento",
+    adjustOrder: "Ajustar orden",
+    dragHint: "Arrastra el control para reordenar antecedentes y cronología.",
+    saveOrder: "Guardar orden",
+    resetOrder: "Restablecer orden automático",
+    cancelOrder: "Cancelar",
+    savingOrder: "Guardando…",
+    manualOrder: "Orden manual",
+    orderError: "No se pudo guardar el orden. Recarga e inténtalo de nuevo.",
   },
   ja: {
     title: "変化",
@@ -55,6 +77,14 @@ const copy = {
     newLanguages: "件の新しい言語",
     headlineShift: "出来事の見出しが大きく変化",
     meaningfulUpdate: "重要な更新",
+    adjustOrder: "順序を調整",
+    dragHint: "ハンドルをドラッグして背景とタイムラインを並べ替えます。",
+    saveOrder: "順序を保存",
+    resetOrder: "自動順序に戻す",
+    cancelOrder: "キャンセル",
+    savingOrder: "保存中…",
+    manualOrder: "手動順序",
+    orderError: "順序を保存できませんでした。再読み込みしてもう一度お試しください。",
   },
   "zh-CN": {
     title: "进展",
@@ -69,6 +99,22 @@ const copy = {
     newLanguages: "种新增语言",
     headlineShift: "事件标题发生明显变化",
     meaningfulUpdate: "重要事件更新",
+    adjustOrder: "調整順序",
+    dragHint: "拖曳把手重新排列背景與時間線項目。",
+    saveOrder: "儲存順序",
+    resetOrder: "恢復自動順序",
+    cancelOrder: "取消",
+    savingOrder: "正在儲存…",
+    manualOrder: "手動順序",
+    orderError: "無法儲存時間線順序。請重新載入後重試。",
+    adjustOrder: "调整顺序",
+    dragHint: "拖动手柄重新排列背景和时间线项目。",
+    saveOrder: "保存顺序",
+    resetOrder: "恢复自动顺序",
+    cancelOrder: "取消",
+    savingOrder: "正在保存…",
+    manualOrder: "手动顺序",
+    orderError: "无法保存时间线顺序。请重新加载后重试。",
   },
   "zh-TW": {
     title: "進展",
@@ -126,6 +172,104 @@ function developmentDetails(
   return details;
 }
 
+
+const ADMIN_TIMELINE_ROW_HEIGHT = 84;
+
+function moveTimelineItem(
+  items: EventTimelineItem[],
+  fromIndex: number,
+  toIndex: number,
+) {
+  const next = [...items];
+  const [moved] = next.splice(fromIndex, 1);
+  if (!moved) return items;
+  next.splice(toIndex, 0, moved);
+  return next;
+}
+
+function AdminTimelineDragRow({
+  item,
+  index,
+  count,
+  colors,
+  onMove,
+}: {
+  item: EventTimelineItem;
+  index: number;
+  count: number;
+  colors: ReturnType<typeof useBrieflyTheme>["colors"];
+  onMove: (fromIndex: number, toIndex: number) => void;
+}) {
+  const currentIndexRef = useRef(index);
+  const startIndexRef = useRef(index);
+  const [dragging, setDragging] = useState(false);
+  currentIndexRef.current = index;
+
+  const responder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          Math.abs(gesture.dy) > 4,
+        onPanResponderGrant: () => {
+          startIndexRef.current = currentIndexRef.current;
+          setDragging(true);
+        },
+        onPanResponderMove: (_event, gesture) => {
+          const target = Math.max(
+            0,
+            Math.min(
+              count - 1,
+              startIndexRef.current +
+                Math.round(gesture.dy / ADMIN_TIMELINE_ROW_HEIGHT),
+            ),
+          );
+          if (target === currentIndexRef.current) return;
+          onMove(currentIndexRef.current, target);
+          currentIndexRef.current = target;
+        },
+        onPanResponderRelease: () => setDragging(false),
+        onPanResponderTerminate: () => setDragging(false),
+      }),
+    [count, onMove],
+  );
+
+  return (
+    <View
+      style={[
+        styles.adminOrderRow,
+        {
+          borderColor: dragging ? colors.accent : colors.border,
+          backgroundColor: colors.surface,
+          opacity: dragging ? 0.72 : 1,
+        },
+      ]}
+    >
+      <View
+        accessibilityRole="adjustable"
+        accessibilityLabel="Drag to reorder timeline item"
+        {...responder.panHandlers}
+        style={[styles.dragHandle, { borderColor: colors.border }]}
+      >
+        <Text style={[styles.dragHandleText, { color: colors.accent }]}>☰</Text>
+      </View>
+      <View style={styles.adminOrderCopy}>
+        {!!item.time && (
+          <Text style={[styles.time, { color: colors.textMuted }]}>
+            {item.time}
+          </Text>
+        )}
+        <Text
+          numberOfLines={2}
+          style={[styles.timelineTitle, { color: colors.text }]}
+        >
+          {item.title}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 export function EventEvolutionPanel({
   eventId,
   refreshKey,
@@ -142,6 +286,10 @@ export function EventEvolutionPanel({
   const [intelligence, setIntelligence] = useState<EventIntelligence | null>(null);
   const [lastSeenAt, setLastSeenAt] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [orderEditing, setOrderEditing] = useState(false);
+  const [orderDraft, setOrderDraft] = useState<EventTimelineItem[]>([]);
+  const [orderSaving, setOrderSaving] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -200,13 +348,75 @@ export function EventEvolutionPanel({
     return meaningful.filter((item) => parseTime(item.observed_at) > lastSeenAt);
   }, [lastSeenAt, meaningful]);
 
-  const timelineItems = useMemo(() => {
-    const occurred = [
+  const orderedOccurredItems = useMemo(() => {
+    if ((timeline?.ordered_timeline ?? []).length > 0) {
+      return timeline?.ordered_timeline ?? [];
+    }
+    return [
       ...(timeline?.background ?? []),
       ...(timeline?.timeline ?? []),
     ];
-    return occurred.slice(-5);
   }, [timeline]);
+  const timelineItems = orderEditing
+    ? orderDraft
+    : orderedOccurredItems.slice(-5);
+  const canEditOrder =
+    adminTextSelectable &&
+    orderedOccurredItems.length > 1 &&
+    orderedOccurredItems.every((item) => !!item.order_key);
+
+  const beginOrderEdit = () => {
+    setOrderDraft([...orderedOccurredItems]);
+    setOrderError(null);
+    setOrderEditing(true);
+  };
+  const cancelOrderEdit = () => {
+    setOrderDraft([]);
+    setOrderError(null);
+    setOrderEditing(false);
+  };
+  const moveOrderItem = (fromIndex: number, toIndex: number) => {
+    setOrderDraft((current) =>
+      moveTimelineItem(current, fromIndex, toIndex),
+    );
+  };
+  const reloadTimeline = async () => {
+    const refreshed = await getEventTimeline(eventId);
+    setTimeline(refreshed);
+    return refreshed;
+  };
+  const saveOrder = async () => {
+    const keys = orderDraft
+      .map((item) => item.order_key)
+      .filter((key): key is string => !!key);
+    if (keys.length !== orderDraft.length) return;
+    setOrderSaving(true);
+    setOrderError(null);
+    try {
+      await saveEventTimelineOrder(eventId, keys);
+      await reloadTimeline();
+      setOrderEditing(false);
+      setOrderDraft([]);
+    } catch {
+      setOrderError(text.orderError);
+    } finally {
+      setOrderSaving(false);
+    }
+  };
+  const resetOrder = async () => {
+    setOrderSaving(true);
+    setOrderError(null);
+    try {
+      await resetEventTimelineOrder(eventId);
+      await reloadTimeline();
+      setOrderEditing(false);
+      setOrderDraft([]);
+    } catch {
+      setOrderError(text.orderError);
+    } finally {
+      setOrderSaving(false);
+    }
+  };
 
   if (!loaded || (!timelineItems.length && !meaningful.length)) return null;
 
@@ -254,28 +464,101 @@ export function EventEvolutionPanel({
                 </View>
               );
             })}
-          </View>
+          </View>}
         </View>
       )}
 
       {!!timelineItems.length && (
         <View style={[styles.timelineSection, { borderTopColor: colors.border }]}>
           <View style={styles.timelineHeader}>
-            <Text selectable={adminTextSelectable} style={[styles.sectionTitle, { color: colors.text }]}>
-              {text.timeline}
-            </Text>
-            {!!timelineUpdatedAt && (
-              <Text selectable={adminTextSelectable} style={[styles.updated, { color: colors.textMuted }]}>
-                {text.updated} {timelineUpdatedAt}
+            <View style={styles.timelineHeadingCopy}>
+              <Text selectable={adminTextSelectable} style={[styles.sectionTitle, { color: colors.text }]}>
+                {text.timeline}
               </Text>
+              {!!timelineUpdatedAt && (
+                <Text selectable={adminTextSelectable} style={[styles.updated, { color: colors.textMuted }]}>
+                  {text.updated} {timelineUpdatedAt}
+                  {timeline?.timeline_order_manual ? ` · ${text.manualOrder}` : ""}
+                </Text>
+              )}
+            </View>
+            {canEditOrder && !orderEditing && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={beginOrderEdit}
+                style={[styles.orderAction, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.orderActionText, { color: colors.accent }]}>
+                  {text.adjustOrder}
+                </Text>
+              </Pressable>
             )}
           </View>
 
-          <View style={styles.timelineList}>
+          {orderEditing && (
+            <View style={[styles.adminOrderPanel, { backgroundColor: colors.surfaceMuted }]}>
+              <Text style={[styles.adminOrderHint, { color: colors.textMuted }]}>
+                {text.dragHint}
+              </Text>
+              <View style={styles.adminOrderList}>
+                {orderDraft.map((item, index) => (
+                  <AdminTimelineDragRow
+                    key={item.order_key || item.id}
+                    item={item}
+                    index={index}
+                    count={orderDraft.length}
+                    colors={colors}
+                    onMove={moveOrderItem}
+                  />
+                ))}
+              </View>
+              {!!orderError && (
+                <Text style={[styles.adminOrderError, { color: colors.error }]}>
+                  {orderError}
+                </Text>
+              )}
+              <View style={styles.adminOrderActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={orderSaving}
+                  onPress={() => void saveOrder()}
+                  style={[styles.orderPrimaryAction, { backgroundColor: colors.accent }, orderSaving && styles.orderDisabled]}
+                >
+                  <Text style={[styles.orderPrimaryText, { color: colors.background }]}>
+                    {orderSaving ? text.savingOrder : text.saveOrder}
+                  </Text>
+                </Pressable>
+                {timeline?.timeline_order_manual && (
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={orderSaving}
+                    onPress={() => void resetOrder()}
+                    style={[styles.orderAction, { borderColor: colors.border }, orderSaving && styles.orderDisabled]}
+                  >
+                    <Text style={[styles.orderActionText, { color: colors.text }]}>
+                      {text.resetOrder}
+                    </Text>
+                  </Pressable>
+                )}
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={orderSaving}
+                  onPress={cancelOrderEdit}
+                  style={[styles.orderAction, { borderColor: colors.border }, orderSaving && styles.orderDisabled]}
+                >
+                  <Text style={[styles.orderActionText, { color: colors.textMuted }]}>
+                    {text.cancelOrder}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          {!orderEditing && <View style={styles.timelineList}>
             {timelineItems.map((item, index) => {
               const latest = index === timelineItems.length - 1;
               return (
-                <View key={item.id || `${item.time}-${index}`} style={styles.timelineRow}>
+                <View key={item.order_key || item.id || `${item.time}-${index}`} style={styles.timelineRow}>
                   <View style={styles.rail}>
                     <View
                       style={[
@@ -371,6 +654,58 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
+  timelineHeadingCopy: { flex: 1, minWidth: 0, gap: 3 },
+  orderAction: {
+    minHeight: 40,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  orderActionText: { fontSize: 12, fontWeight: "900" },
+  orderPrimaryAction: {
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  orderPrimaryText: { fontSize: 12, fontWeight: "900" },
+  orderDisabled: { opacity: 0.55 },
+  adminOrderPanel: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 14,
+    gap: 10,
+  },
+  adminOrderHint: { fontSize: 12, lineHeight: 18 },
+  adminOrderList: { gap: 8 },
+  adminOrderRow: {
+    minHeight: ADMIN_TIMELINE_ROW_HEIGHT,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  dragHandle: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dragHandleText: { fontSize: 22, fontWeight: "900" },
+  adminOrderCopy: { flex: 1, minWidth: 0, gap: 3 },
+  adminOrderActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  adminOrderError: { fontSize: 12, lineHeight: 18, fontWeight: "700" },
   timelineHeader: {
     gap: 4,
   },

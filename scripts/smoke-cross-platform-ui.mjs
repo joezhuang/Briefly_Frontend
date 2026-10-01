@@ -72,6 +72,31 @@ const checks = [
     ],
   },
   {
+    name: "Admin can drag, save, and reset Story Detail timeline order",
+    file: "src/components/event-evolution-panel.tsx",
+    needles: [
+      "PanResponder.create",
+      "ADMIN_TIMELINE_ROW_HEIGHT",
+      "timeline?.ordered_timeline",
+      "saveEventTimelineOrder(eventId, keys)",
+      "resetEventTimelineOrder(eventId)",
+      "AdminTimelineDragRow",
+      "text.adjustOrder",
+      "text.dragHint",
+    ],
+  },
+  {
+    name: "Timeline ordering API exposes additive manual override controls",
+    file: "src/api/event-evolution.ts",
+    needles: [
+      "ordered_timeline?: EventTimelineItem[]",
+      "timeline_order_manual?: boolean",
+      "saveEventTimelineOrder",
+      "resetEventTimelineOrder",
+      "/timeline/order",
+    ],
+  },
+  {
     name: "Admin can select major Story Detail evidence and timeline text",
     file: "src/components/event-evidence-panel.tsx",
     needles: [
