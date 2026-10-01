@@ -21,6 +21,15 @@ function requireAll(relativePath, needles) {
 
 const checks = [
   {
+    name: "iOS shares the story headline and URL together instead of URL-only",
+    file: "src/navigation/platform-share.ts",
+    needles: [
+      'message: `\\${headline}\\n\\${url}`',
+      'Platform.OS === "android" ? { title: headline } : {}',
+      'Platform.OS === "ios" ? { subject: headline } : undefined',
+    ],
+  },
+  {
     name: "Web sharing uses native Web Share with clipboard fallback",
     file: "src/navigation/platform-share.ts",
     needles: [

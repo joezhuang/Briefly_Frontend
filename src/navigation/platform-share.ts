@@ -41,10 +41,15 @@ export async function shareBrieflyStory({
     }
   }
 
+  // iOS treats a separate `url` as its own activity item, which can make
+  // the share sheet and receiving apps show only the link rather than the
+  // headline. Share one text item so both the title and link are retained.
   const result = await Share.share(
-    Platform.OS === "ios"
-      ? { message: headline, url }
-      : { message: `${headline}\n${url}` },
+    {
+      message: `${headline}\n${url}`,
+      ...(Platform.OS === "android" ? { title: headline } : {}),
+    },
+    Platform.OS === "ios" ? { subject: headline } : undefined,
   );
 
   return result.action === Share.dismissedAction ? "dismissed" : "shared";
