@@ -24,7 +24,7 @@ const checks = [
     name: "iOS shares the story headline and URL together instead of URL-only",
     file: "src/navigation/platform-share.ts",
     needles: [
-      'message: `\\${headline}\\n\\${url}`',
+      'message: `${headline}\\n${url}`',
       'Platform.OS === "android" ? { title: headline } : {}',
       'Platform.OS === "ios" ? { subject: headline } : undefined',
     ],
