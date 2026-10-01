@@ -96,6 +96,7 @@ function applyStoryVideoSwitch(
   return {
     ...article,
     video_url: null,
+    videos: [],
     image_url: safeImage,
   };
 }
@@ -444,6 +445,13 @@ export default function StoryDetailScreen() {
                           localized,
                           resolvedImageUrl ?? canonical.image_url ?? undefined,
                         ),
+                        video_url: localized.video_url ?? canonical.video_url,
+                        video_thumbnail_url:
+                          localized.video_thumbnail_url ?? canonical.video_thumbnail_url,
+                        videos:
+                          localized.videos?.length
+                            ? localized.videos
+                            : canonical.videos,
                         canonical_stale: canonical.canonical_stale,
                         latest_evidence_at: canonical.latest_evidence_at,
                         stale_refresh_entitled: canonical.stale_refresh_entitled,
@@ -469,6 +477,8 @@ export default function StoryDetailScreen() {
                 video_url: localized.video_url ?? canonical.video_url,
                 video_thumbnail_url:
                   localized.video_thumbnail_url ?? canonical.video_thumbnail_url,
+                videos:
+                  localized.videos?.length ? localized.videos : canonical.videos,
                 canonical_stale: canonical.canonical_stale,
                 latest_evidence_at: canonical.latest_evidence_at,
                 stale_refresh_entitled: canonical.stale_refresh_entitled,

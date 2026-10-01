@@ -17,6 +17,16 @@ export type ArticleCoverage = {
   published_at?: string | null;
 };
 
+export type ArticleVideo = {
+  evidence_id?: string;
+  url: string;
+  thumbnail_url?: string | null;
+  title?: string | null;
+  source?: string | null;
+  language?: string | null;
+  published_at?: string | null;
+};
+
 export type CanonicalArticle = {
   event_id: string;
   article_version_id: number | null;
@@ -54,6 +64,7 @@ export type CanonicalArticle = {
   image_url?: string | null;
   video_url?: string | null;
   video_thumbnail_url?: string | null;
+  videos?: ArticleVideo[];
   podcast_audio_url?: string | null;
   podcast_article_version_id?: number | null;
   podcast_language?: string | null;

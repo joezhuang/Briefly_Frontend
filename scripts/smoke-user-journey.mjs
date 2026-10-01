@@ -347,6 +347,18 @@ const checks = [
     needles: ["useSavedArticles", "toggleSaved"],
   },
   {
+    name: "Story detail exposes selectable event videos while homepage keeps its single-video card contract",
+    file: "src/components/article-view.tsx",
+    needles: [
+      "article.videos",
+      "selectedVideoUrl",
+      "storyVideoItems(article)",
+      "videoItems.length>1",
+      "selectStoryVideo(video.url)",
+      "key={videoUrl}",
+    ],
+  },
+  {
     name: "Podcast status, generation and inline playback are wired",
     file: "src/components/article-view.tsx",
     needles: [
