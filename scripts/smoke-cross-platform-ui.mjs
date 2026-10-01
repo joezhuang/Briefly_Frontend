@@ -57,6 +57,8 @@ const checks = [
       "toggleFromBlock",
       'window.getSelection?.()?.toString().trim()',
       "onPress={selectable&&canExpand?toggleFromBlock:undefined}",
+      "onLongPress={selectable&&canExpand?markLongPress:undefined}",
+      "Date.now()-longPressAtRef.current<800",
       "selectable?(",
       "briefBlockToggle",
       "briefExpansion.section===id",

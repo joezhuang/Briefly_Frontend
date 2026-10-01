@@ -116,22 +116,30 @@ function BriefSummarySection({
   onToggle:()=>void;
 }){
   const [measuredLines,setMeasuredLines]=useState(0);
+  const longPressAtRef=useRef(0);
   const canExpand=collapsedLines!==undefined&&(measuredLines===0||measuredLines>collapsedLines);
   const isCollapsed=collapsedLines!==undefined&&!expanded&&canExpand;
   const collapsedHeight=collapsedLines===undefined?undefined:collapsedLines*28;
   const toggleFromBlock=()=>{
     if(!canExpand)return;
-    if(selectable&&Platform.OS==="web"&&typeof window!=="undefined"){
-      const selection=window.getSelection?.()?.toString().trim();
-      if(selection)return;
+    if(selectable){
+      if(Date.now()-longPressAtRef.current<800)return;
+      if(Platform.OS==="web"&&typeof window!=="undefined"){
+        const selection=window.getSelection?.()?.toString().trim();
+        if(selection)return;
+      }
     }
     onToggle();
+  };
+  const markLongPress=()=>{
+    longPressAtRef.current=Date.now();
   };
 
   const content=<>
     <Text
       selectable={selectable}
       onPress={selectable&&canExpand?toggleFromBlock:undefined}
+      onLongPress={selectable&&canExpand?markLongPress:undefined}
       style={[styles.briefTitle,{color:colors.accent}]}
     >
       {title}
@@ -145,6 +153,7 @@ function BriefSummarySection({
       <Text
         selectable={selectable}
         onPress={selectable&&canExpand?toggleFromBlock:undefined}
+        onLongPress={selectable&&canExpand?markLongPress:undefined}
         style={[styles.briefText,{color:colors.text}]}
       >
         {text}
