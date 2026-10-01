@@ -35,6 +35,48 @@ const checks = [
     ],
   },
   {
+    name: "Home exposes Following with Search beside feed categories",
+    file: "src/components/feed-category-bar.tsx",
+    needles: [
+      '["top", "national", "local"]',
+      '"following"',
+      'config?.following_enabled !== false',
+      'config?.search_enabled !== false',
+      'router.push("/following"',
+      'router.push("/search"',
+      'feedScope=',
+      '{t.search}',
+    ],
+  },
+  {
+    name: "Homepage category row can receive national and local deep links",
+    file: "src/app/index.tsx",
+    needles: [
+      "FeedCategoryBar active={scope}",
+      "requestedFeedScope",
+      "lastAppliedRouteScopeRef",
+      "switchScope(preferred)",
+    ],
+  },
+  {
+    name: "Following and Search reuse the same category navigation",
+    file: "src/app/following.tsx",
+    needles: [
+      'FeedCategoryBar active="following"',
+      "getFollowedEvents()",
+      "getMeaningfulEventUpdates()",
+    ],
+  },
+  {
+    name: "Global header no longer duplicates Search navigation",
+    file: "src/components/app-header.tsx",
+    needles: [
+      '{ href: "/", key: "home" }',
+      '{ href: "/saved", key: "saved" }',
+      '{ href: "/history", key: "history" }',
+    ],
+  },
+  {
     name: "Google OAuth always requests explicit account selection",
     file: "src/context/auth.tsx",
     needles: [

@@ -19,6 +19,7 @@ import {
 } from "@/api/event-follow";
 import { trackProductEvent } from "@/analytics/product-analytics";
 import { AppHeader } from "@/components/app-header";
+import { FeedCategoryBar } from "@/components/feed-category-bar";
 import { ScreenState } from "@/components/screen-state";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyAppConfig } from "@/context/app-config";
@@ -188,6 +189,7 @@ export default function FollowingScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={[styles.page, width < 480 && styles.pageCompact]}>
           <AppHeader />
+          <FeedCategoryBar active="following" />
           <ScreenState title={text.unavailable} />
         </View>
       </SafeAreaView>
@@ -207,6 +209,9 @@ export default function FollowingScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={[styles.page, width < 480 && styles.pageCompact]}>
           <AppHeader />
+          <View style={styles.categoryNav}>
+            <FeedCategoryBar active="following" />
+          </View>
 
           <View style={styles.intro}>
             <Text style={[styles.title, { color: colors.text }]}>{text.title}</Text>
@@ -332,6 +337,7 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   pageCompact: { paddingHorizontal: layout.pagePaddingCompact },
+  categoryNav: { paddingTop: 14 },
   intro: { paddingVertical: 28, gap: 8 },
   title: { fontSize: 34, lineHeight: 40, fontWeight: "900" },
   subtitle: { maxWidth: 760, fontSize: 17, lineHeight: 25 },

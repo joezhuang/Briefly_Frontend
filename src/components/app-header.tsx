@@ -23,7 +23,6 @@ import {
 const nav = [
   { href: "/", key: "home" },
   { href: "/saved", key: "saved" },
-  { href: "/search", key: "search" },
   { href: "/history", key: "history" },
 ] as const;
 
@@ -162,9 +161,7 @@ export function AppHeader() {
         : appConfig.support_android_enabled);
   const compactNav = width < 1200;
   const phoneNav = width < 600;
-  const visibleNav = nav.filter(
-    (item) => item.href !== "/search" || appConfig?.search_enabled !== false,
-  );
+  const visibleNav = nav;
 
   const themeLabel = (value: BrieflyThemeMode) => {
     if (value === "light") return t.themeLight;

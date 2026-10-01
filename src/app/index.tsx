@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -22,6 +22,7 @@ import {
   type HomepageFeedScope,
 } from "@/api/briefly";
 import { AppHeader } from "@/components/app-header";
+import { FeedCategoryBar } from "@/components/feed-category-bar";
 import { FloatingStoryVideo } from "@/components/floating-story-video";
 // Metro resolves the platform-specific .native/.web implementation at runtime.
 // eslint-disable-next-line import/no-unresolved
@@ -184,6 +185,9 @@ function getRememberedHomeFeed(
 
 export default function HomeScreen() {
   const { width, height: viewportHeight } = useWindowDimensions();
+  const { feedScope: requestedFeedScope } = useLocalSearchParams<{
+    feedScope?: string;
+  }>();
   const { language, t } = useBrieflyLanguage();
   const { ready: authReady, account } = useBrieflyAuth();
   const { config: appConfig, refresh: refreshAppConfig } = useBrieflyAppConfig();
@@ -220,6 +224,7 @@ export default function HomeScreen() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const lastFetchedAt = useRef(initialHomeFeed.lastFetchedAt);
   const didApplyDefaultScopeRef = useRef(false);
+  const lastAppliedRouteScopeRef = useRef<string | null>(null);
   const activeRequest = useRef(0);
   const articlesRef = useRef<CanonicalArticle[]>(initialHomeFeed.articles);
   const listRef = useRef<FlatList<CanonicalArticle[]>>(null);
@@ -352,26 +357,38 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!appConfig) return;
     const available = enabledHomeScopes(appConfig);
-    const preferred = available.includes(appConfig.default_feed_scope)
-      ? appConfig.default_feed_scope
-      : available[0];
+    const routeScope =
+      typeof requestedFeedScope === "string" &&
+      available.includes(requestedFeedScope as HomepageFeedScope)
+        ? (requestedFeedScope as HomepageFeedScope)
+        : null;
+    const isNewRouteRequest =
+      routeScope !== null &&
+      routeScope !== lastAppliedRouteScopeRef.current;
+    if (isNewRouteRequest) {
+      lastAppliedRouteScopeRef.current = routeScope;
+    }
+    const preferred = routeScope ??
+      (available.includes(appConfig.default_feed_scope)
+        ? appConfig.default_feed_scope
+        : available[0]);
 
     if (!didApplyDefaultScopeRef.current) {
       didApplyDefaultScopeRef.current = true;
       if (scope === preferred) return;
-    } else if (available.includes(scope)) {
+    } else if (!isNewRouteRequest && available.includes(scope)) {
       return;
     }
 
     let active = true;
     Promise.resolve().then(() => {
-      if (!active) return;
+      if (!active || scope === preferred) return;
       switchScope(preferred);
     });
     return () => {
       active = false;
     };
-  }, [appConfig, scope, switchScope]);
+  }, [appConfig, requestedFeedScope, scope, switchScope]);
 
   const swipeResponder = useMemo(
     () =>
@@ -861,34 +878,7 @@ export default function HomeScreen() {
   };
 
   const scopeControls = (
-    <View style={[styles.scopeTabs, !mobileHeader && styles.scopeTabsWide]}>
-      {availableScopes.map((item) => {
-        const selected = scope === item;
-        return (
-          <Pressable
-            key={item}
-            onPress={() => switchScope(item)}
-            style={[
-              styles.scopeTab,
-              {
-                borderColor: selected ? colors.text : colors.border,
-                backgroundColor: selected ? colors.text : "transparent",
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.scopeText,
-                { color: selected ? colors.background : colors.textMuted },
-              ]}
-              numberOfLines={1}
-            >
-              {copy[item]}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+    <FeedCategoryBar active={scope} onFeedScopePress={switchScope} />
   );
 
   const listHeader = (
@@ -945,11 +935,10 @@ export default function HomeScreen() {
                 </Text>
               </Pressable>
             )}
-            {!mobileHeader && scopeControls}
           </View>
         </View>
 
-        {mobileHeader && scopeControls}
+        {scopeControls}
       </View>
 
       {scope !== "top" && locationReady && (
@@ -1340,19 +1329,6 @@ const styles = StyleSheet.create({
   refreshDisabled: { opacity: 0.5 },
   refreshPressed: { opacity: 0.7 },
   refreshText: { fontSize: 12, fontWeight: "700" },
-  scopeTabs: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  scopeTabsWide: {
-    flexWrap: "nowrap",
-    flexShrink: 0,
-    justifyContent: "flex-end",
-  },
-  scopeTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  scopeText: { fontSize: 14, fontWeight: "800" },
   heroGrid: { flexDirection: "row", gap: 8 },
   heroColumn: { flex: 2 },
   secondaryColumn: { flex: 1, gap: 8 },

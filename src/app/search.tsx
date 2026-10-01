@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { searchBrieflyArticles } from "@/api/search";
 import { AppHeader } from "@/components/app-header";
+import { FeedCategoryBar } from "@/components/feed-category-bar";
 import { ScreenState } from "@/components/screen-state";
 import { StoryTile } from "@/components/story-tile";
 import { useBrieflyAppConfig } from "@/context/app-config";
@@ -96,6 +97,7 @@ export default function SearchScreen() {
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={[styles.page, width < 480 && styles.pageCompact]}>
             <AppHeader />
+            <View style={styles.categoryNav}><FeedCategoryBar active="search" /></View>
             <ScreenState
               title={t.searchUnavailable}
               message="Search is currently disabled by Briefly."
@@ -111,6 +113,7 @@ export default function SearchScreen() {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={[styles.page, width < 480 && styles.pageCompact]}>
           <AppHeader />
+          <View style={styles.categoryNav}><FeedCategoryBar active="search" /></View>
 
           <View style={styles.header}>
             <Text style={[styles.subtitle, { color: colors.textMuted }]}>
@@ -177,6 +180,7 @@ const styles = StyleSheet.create({
   pageCompact: {
     paddingHorizontal: layout.pagePaddingCompact,
   },
+  categoryNav: { paddingTop: 14 },
   header: { paddingVertical: 28, gap: 14 },
   subtitle: { maxWidth: 760, fontSize: 18, lineHeight: 27 },
   inputWrap: { position: "relative" },
