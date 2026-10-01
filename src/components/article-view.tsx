@@ -128,32 +128,47 @@ function BriefSummarySection({
     onToggle();
   };
 
-  return <View style={styles.briefSection}>
-    <Pressable
-      accessibilityRole={canExpand?"button":undefined}
-      accessibilityState={canExpand?{expanded}:undefined}
-      disabled={!canExpand}
-      onPress={toggleFromBlock}
-      style={({pressed})=>[
-        styles.briefBlockToggle,
-        pressed&&canExpand&&styles.briefDisclosurePressed,
+  const content=<>
+    <Text
+      selectable={selectable}
+      onPress={selectable&&canExpand?toggleFromBlock:undefined}
+      style={[styles.briefTitle,{color:colors.accent}]}
+    >
+      {title}
+    </Text>
+    <View
+      style={[
+        styles.briefTextClip,
+        isCollapsed&&collapsedHeight!==undefined&&{maxHeight:collapsedHeight},
       ]}
     >
-      <Text selectable={selectable} style={[styles.briefTitle,{color:colors.accent}]}>{title}</Text>
-      <View
-        style={[
-          styles.briefTextClip,
-          isCollapsed&&collapsedHeight!==undefined&&{maxHeight:collapsedHeight},
+      <Text
+        selectable={selectable}
+        onPress={selectable&&canExpand?toggleFromBlock:undefined}
+        style={[styles.briefText,{color:colors.text}]}
+      >
+        {text}
+      </Text>
+    </View>
+  </>;
+
+  return <View style={styles.briefSection}>
+    {selectable?(
+      <View style={styles.briefBlockToggle}>{content}</View>
+    ):(
+      <Pressable
+        accessibilityRole={canExpand?"button":undefined}
+        accessibilityState={canExpand?{expanded}:undefined}
+        disabled={!canExpand}
+        onPress={toggleFromBlock}
+        style={({pressed})=>[
+          styles.briefBlockToggle,
+          pressed&&canExpand&&styles.briefDisclosurePressed,
         ]}
       >
-        <Text
-          selectable={selectable}
-          style={[styles.briefText,{color:colors.text}]}
-        >
-          {text}
-        </Text>
-      </View>
-    </Pressable>
+        {content}
+      </Pressable>
+    )}
     {canExpand&&<Pressable
       accessibilityRole="button"
       accessibilityState={{expanded}}

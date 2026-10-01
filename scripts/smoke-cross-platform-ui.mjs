@@ -56,6 +56,8 @@ const checks = [
       'width<900?{whatHappened:4,whyItMatters:3,whatNext:3}',
       "toggleFromBlock",
       'window.getSelection?.()?.toString().trim()',
+      "onPress={selectable&&canExpand?toggleFromBlock:undefined}",
+      "selectable?(",
       "briefBlockToggle",
       "briefExpansion.section===id",
       "section:current.articleKey===briefArticleKey&&current.section===id?null:id",
