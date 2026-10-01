@@ -467,7 +467,7 @@ export function EventEvolutionPanel({
                 </View>
               );
             })}
-          </View>}
+          </View>
         </View>
       )}
 
@@ -596,7 +596,7 @@ export function EventEvolutionPanel({
                 </View>
               );
             })}
-          </View>
+          </View>}
         </View>
       )}
     </View>
