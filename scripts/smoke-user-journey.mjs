@@ -356,6 +356,7 @@ const checks = [
       "videoItems.length>1",
       "selectStoryVideo(video.url)",
       "key={videoUrl}",
+      "includeVideos: true",
     ],
   },
   {

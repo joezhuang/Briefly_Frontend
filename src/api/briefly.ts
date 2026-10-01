@@ -189,16 +189,21 @@ export function deleteBrieflyJson<T>(path: string): Promise<T> {
   return deleteJson<T>(path);
 }
 
-function articleQuery(options?: { includeDraft?: boolean; language?: string }) {
+function articleQuery(options?: {
+  includeDraft?: boolean;
+  language?: string;
+  includeVideos?: boolean;
+}) {
   return new URLSearchParams({
     language: options?.language ?? "en",
     include_draft: String(options?.includeDraft ?? false),
+    include_videos: String(options?.includeVideos ?? false),
   }).toString();
 }
 
 export function getCanonicalArticleBySlug(
   slug: string,
-  options?: { includeDraft?: boolean; language?: string },
+  options?: { includeDraft?: boolean; language?: string; includeVideos?: boolean },
 ) {
   return getJson<CanonicalArticle>(
     `/api/articles/slug/${encodeURIComponent(slug)}?${articleQuery(options)}`,
@@ -207,7 +212,7 @@ export function getCanonicalArticleBySlug(
 
 export function getCanonicalArticleByEventId(
   eventId: string,
-  options?: { includeDraft?: boolean; language?: string },
+  options?: { includeDraft?: boolean; language?: string; includeVideos?: boolean },
 ) {
   return getJson<CanonicalArticle>(
     `/api/articles/event/${encodeURIComponent(eventId)}?${articleQuery(options)}`,
@@ -219,6 +224,7 @@ export function getLazyCanonicalArticleByEventId(
   options?: {
     includeDraft?: boolean;
     language?: string;
+    includeVideos?: boolean;
     prepare?: boolean;
     sourceScope?: HomepageFeedScope;
   },
@@ -226,6 +232,7 @@ export function getLazyCanonicalArticleByEventId(
   const params = new URLSearchParams({
     language: options?.language ?? "en",
     include_draft: String(options?.includeDraft ?? false),
+    include_videos: String(options?.includeVideos ?? false),
     prepare: String(options?.prepare ?? true),
   });
   if (options?.sourceScope) {
@@ -290,7 +297,7 @@ export function requestStaleStoryRefresh(
 
 export function getExperimentalArticleByEventId(
   eventId: string,
-  options?: { includeDraft?: boolean; language?: string },
+  options?: { includeDraft?: boolean; language?: string; includeVideos?: boolean },
 ) {
   return getJson<CanonicalArticle>(
     `/api/articles/event/${encodeURIComponent(eventId)}/experimental?${articleQuery(options)}`,

@@ -393,6 +393,7 @@ export default function StoryDetailScreen() {
             {
               includeDraft: PREVIEW_DRAFTS,
               language: articleRequestLanguage,
+              includeVideos: true,
               prepare: true,
               sourceScope:
                 resolvedScope === "top" ||
@@ -436,6 +437,7 @@ export default function StoryDetailScreen() {
                   {
                     includeDraft: PREVIEW_DRAFTS,
                     language: articleRequestLanguage,
+                    includeVideos: true,
                   },
                 );
                 result =
@@ -499,6 +501,7 @@ export default function StoryDetailScreen() {
           const canonicalBySlug = await getCanonicalArticleBySlug(resolvedSlug, {
             includeDraft: PREVIEW_DRAFTS,
             language: articleRequestLanguage,
+            includeVideos: true,
           });
           result = preferredImage(canonicalBySlug, resolvedImageUrl);
         }
