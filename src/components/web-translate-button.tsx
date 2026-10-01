@@ -393,6 +393,8 @@ const styles = StyleSheet.create({
   wrap: {
     width: "100%",
     maxWidth: 520,
+    minWidth: 0,
+    alignSelf: "stretch",
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 14,
     padding: 14,
@@ -403,6 +405,8 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   selector: {
+    width: "100%",
+    minWidth: 0,
     minHeight: 42,
     paddingHorizontal: 13,
     borderRadius: 10,
@@ -412,8 +416,12 @@ const styles = StyleSheet.create({
   selectorText: {
     fontSize: 14,
     fontWeight: "800",
+    flexShrink: 1,
+    flexWrap: "wrap",
   },
   button: {
+    maxWidth: "100%",
+    minWidth: 0,
     minHeight: 40,
     paddingHorizontal: 15,
     borderRadius: 999,
@@ -426,6 +434,8 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
   },
   hint: {
     fontSize: 12,
@@ -448,6 +458,7 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: "100%",
+    minWidth: 0,
     maxWidth: 520,
     maxHeight: "80%",
     alignSelf: "center",
@@ -464,6 +475,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     flex: 1,
+    minWidth: 0,
     fontSize: 18,
     fontWeight: "900",
   },
@@ -484,6 +496,7 @@ const styles = StyleSheet.create({
   },
   languageName: {
     flex: 1,
+    minWidth: 0,
     fontSize: 15,
   },
   check: {

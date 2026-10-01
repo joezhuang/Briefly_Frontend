@@ -228,6 +228,24 @@ const checks = [
     ],
   },
   {
+    name: "Reading language card and long translation labels fit narrow story screens",
+    file: "src/components/web-translate-button.tsx",
+    needles: [
+      'alignSelf: "stretch"',
+      'maxWidth: "100%"',
+      'minWidth: 0',
+      'flexShrink: 1',
+      'textAlign: "center"',
+    ],
+  },
+  {
+    name: "Story Detail constrains the reading-language wrapper to article width",
+    file: "src/components/article-view.tsx",
+    needles: [
+      'translationAction:{marginTop:22,width:"100%",maxWidth:520,minWidth:0,alignSelf:"flex-start"}',
+    ],
+  },
+  {
     name: "Follow control uses a mobile-sized touch target",
     file: "src/components/event-follow-button.tsx",
     needles: ["minHeight: 44"],
