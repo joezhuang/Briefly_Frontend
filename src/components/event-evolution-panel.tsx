@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
@@ -99,14 +99,6 @@ const copy = {
     newLanguages: "种新增语言",
     headlineShift: "事件标题发生明显变化",
     meaningfulUpdate: "重要事件更新",
-    adjustOrder: "調整順序",
-    dragHint: "拖曳把手重新排列背景與時間線項目。",
-    saveOrder: "儲存順序",
-    resetOrder: "恢復自動順序",
-    cancelOrder: "取消",
-    savingOrder: "正在儲存…",
-    manualOrder: "手動順序",
-    orderError: "無法儲存時間線順序。請重新載入後重試。",
     adjustOrder: "调整顺序",
     dragHint: "拖动手柄重新排列背景和时间线项目。",
     saveOrder: "保存顺序",
@@ -129,6 +121,14 @@ const copy = {
     newLanguages: "種新增語言",
     headlineShift: "事件標題發生明顯變化",
     meaningfulUpdate: "重要事件更新",
+    adjustOrder: "調整順序",
+    dragHint: "拖曳把手重新排列背景與時間線項目。",
+    saveOrder: "儲存順序",
+    resetOrder: "恢復自動順序",
+    cancelOrder: "取消",
+    savingOrder: "正在儲存…",
+    manualOrder: "手動順序",
+    orderError: "無法儲存時間線順序。請重新載入後重試。",
   },
 } as const;
 
@@ -375,11 +375,14 @@ export function EventEvolutionPanel({
     setOrderError(null);
     setOrderEditing(false);
   };
-  const moveOrderItem = (fromIndex: number, toIndex: number) => {
-    setOrderDraft((current) =>
-      moveTimelineItem(current, fromIndex, toIndex),
-    );
-  };
+  const moveOrderItem = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      setOrderDraft((current) =>
+        moveTimelineItem(current, fromIndex, toIndex),
+      );
+    },
+    [],
+  );
   const reloadTimeline = async () => {
     const refreshed = await getEventTimeline(eventId);
     setTimeline(refreshed);
