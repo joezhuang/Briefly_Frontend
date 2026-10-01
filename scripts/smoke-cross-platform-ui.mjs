@@ -48,6 +48,19 @@ const checks = [
     ],
   },
   {
+    name: "Story brief disclosure is consistent across small web and mobile layouts",
+    file: "src/components/article-view.tsx",
+    needles: [
+      "briefTextClip",
+      "collapsedLines*28",
+      "briefExpansion.section===id",
+      "section:current.articleKey===briefArticleKey&&current.section===id?null:id",
+      "selectable={selectable}",
+      "account?.is_admin===true",
+      "briefMoreButton",
+    ],
+  },
+  {
     name: "Feed story actions expose accessible navigation and mobile-sized targets",
     file: "src/components/story-tile.tsx",
     needles: [
