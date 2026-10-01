@@ -356,7 +356,23 @@ const checks = [
       "videoItems.length>1",
       "selectStoryVideo(video.url)",
       "key={videoUrl}",
+    ],
+  },
+  {
+    name: "Story route opts into additive video-list API enrichment",
+    file: "src/app/story/[slug].tsx",
+    needles: [
       "includeVideos: true",
+      "localized.videos?.length",
+      "canonical.videos",
+    ],
+  },
+  {
+    name: "Video-list API remains opt-in for legacy clients",
+    file: "src/api/briefly.ts",
+    needles: [
+      "includeVideos?: boolean",
+      'include_videos: String(options?.includeVideos ?? false)',
     ],
   },
   {
