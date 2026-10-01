@@ -72,6 +72,18 @@ const checks = [
     ],
   },
   {
+    name: "Top Story Detail timeline consumes saved manual order",
+    file: "src/components/event-timeline.tsx",
+    needles: [
+      "ordered_timeline?: EventTimelineItem[]",
+      "timeline_order_manual?: boolean",
+      "setOrderedItems(",
+      "setManualOrder(payload.timeline_order_manual === true)",
+      "manualOrder && orderedItems.length > 0",
+      "items={orderedItems}",
+    ],
+  },
+  {
     name: "Admin can drag, save, and reset Story Detail timeline order",
     file: "src/components/event-evolution-panel.tsx",
     needles: [

@@ -25,6 +25,7 @@ export type EventTimelineItem = {
   id: string;
   time: string | null;
   title: string;
+  order_key?: string;
 };
 
 const allowedFeatureAccess: FeatureAccessState = {
@@ -42,6 +43,8 @@ type TimelineResponse = {
   count: number;
   synthesis_version: number | null;
   timeline_updated_at?: string | null;
+  ordered_timeline?: EventTimelineItem[];
+  timeline_order_manual?: boolean;
 };
 
 const copy = {
@@ -287,6 +290,8 @@ export function EventTimeline({
   const labels = copy[language] ?? copy.en;
   const [backgroundItems, setBackgroundItems] = useState<EventTimelineItem[]>([]);
   const [items, setItems] = useState<EventTimelineItem[]>([]);
+  const [orderedItems, setOrderedItems] = useState<EventTimelineItem[]>([]);
+  const [manualOrder, setManualOrder] = useState(false);
   const [upcomingItems, setUpcomingItems] = useState<EventTimelineItem[]>([]);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -307,6 +312,12 @@ export function EventTimeline({
             Array.isArray(payload.background) ? payload.background : [],
           );
           setItems(Array.isArray(payload.timeline) ? payload.timeline : []);
+          setOrderedItems(
+            Array.isArray(payload.ordered_timeline)
+              ? payload.ordered_timeline
+              : [],
+          );
+          setManualOrder(payload.timeline_order_manual === true);
           setUpcomingItems(
             Array.isArray(payload.upcoming) ? payload.upcoming : [],
           );
@@ -323,6 +334,8 @@ export function EventTimeline({
         if (active) {
           setBackgroundItems([]);
           setItems([]);
+          setOrderedItems([]);
+          setManualOrder(false);
           setUpcomingItems([]);
           setUpdatedAt(null);
           setLoadError(message);
@@ -407,8 +420,11 @@ export function EventTimeline({
     );
   }
 
-  const totalItems =
-    backgroundItems.length + items.length + upcomingItems.length;
+  const occurredItems =
+    manualOrder && orderedItems.length > 0
+      ? orderedItems
+      : [...backgroundItems, ...items];
+  const totalItems = occurredItems.length + upcomingItems.length;
   if (totalItems < 1 && !canonicalStale) return null;
 
   const formattedUpdatedAt = formatUpdatedAt(updatedAt, language);
@@ -501,19 +517,10 @@ export function EventTimeline({
                 </View>
               )}
 
-              {backgroundItems.length > 0 && (
-                <TimelineSection
-                  title={labels.background}
-                  items={backgroundItems}
-                  colors={colors}
-                  selectable={adminTextSelectable}
-                />
-              )}
-
-              {items.length > 0 && (
+              {manualOrder && orderedItems.length > 0 ? (
                 <TimelineSection
                   title={labels.currentSection}
-                  items={items}
+                  items={orderedItems}
                   colors={colors}
                   latestLabel={liveContext ? labels.latestBriefly : labels.latest}
                   currentLinkLabel={labels.current}
@@ -521,6 +528,30 @@ export function EventTimeline({
                   onOpenLiveStory={openLiveStory}
                   selectable={adminTextSelectable}
                 />
+              ) : (
+                <>
+                  {backgroundItems.length > 0 && (
+                    <TimelineSection
+                      title={labels.background}
+                      items={backgroundItems}
+                      colors={colors}
+                      selectable={adminTextSelectable}
+                    />
+                  )}
+
+                  {items.length > 0 && (
+                    <TimelineSection
+                      title={labels.currentSection}
+                      items={items}
+                      colors={colors}
+                      latestLabel={liveContext ? labels.latestBriefly : labels.latest}
+                      currentLinkLabel={labels.current}
+                      liveStoryHref={liveStoryHref}
+                      onOpenLiveStory={openLiveStory}
+                      selectable={adminTextSelectable}
+                    />
+                  )}
+                </>
               )}
 
               {upcomingItems.length > 0 && (
