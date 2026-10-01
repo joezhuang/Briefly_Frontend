@@ -53,6 +53,10 @@ const checks = [
     needles: [
       "briefTextClip",
       "collapsedLines*28",
+      'width<900?{whatHappened:4,whyItMatters:3,whatNext:3}',
+      "toggleFromBlock",
+      'window.getSelection?.()?.toString().trim()',
+      "briefBlockToggle",
       "briefExpansion.section===id",
       "section:current.articleKey===briefArticleKey&&current.section===id?null:id",
       "selectable={selectable}",
