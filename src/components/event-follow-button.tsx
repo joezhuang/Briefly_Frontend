@@ -13,19 +13,21 @@ import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 
 const copy = {
-  en: { follow: "Follow event", following: "Following", updates: "Updates", error: "Could not update this event. Please try again." },
-  es: { follow: "Seguir evento", following: "Siguiendo", updates: "Actualizaciones", error: "No se pudo actualizar este evento. Inténtalo de nuevo." },
-  ja: { follow: "イベントをフォロー", following: "フォロー中", updates: "更新", error: "このイベントを更新できませんでした。もう一度お試しください。" },
-  "zh-CN": { follow: "关注事件", following: "已关注", updates: "更新", error: "无法更新此事件，请重试。" },
-  "zh-TW": { follow: "關注事件", following: "已關注", updates: "更新", error: "無法更新此事件，請再試一次。" },
+  en: { follow: "Follow event", actionFollow: "Follow", following: "Following", updates: "Updates", error: "Could not update this event. Please try again." },
+  es: { follow: "Seguir evento", actionFollow: "Seguir", following: "Siguiendo", updates: "Actualizaciones", error: "No se pudo actualizar este evento. Inténtalo de nuevo." },
+  ja: { follow: "イベントをフォロー", actionFollow: "フォロー", following: "フォロー中", updates: "更新", error: "このイベントを更新できませんでした。もう一度お試しください。" },
+  "zh-CN": { follow: "关注事件", actionFollow: "关注", following: "已关注", updates: "更新", error: "无法更新此事件，请重试。" },
+  "zh-TW": { follow: "關注事件", actionFollow: "關注", following: "已關注", updates: "更新", error: "無法更新此事件，請再試一次。" },
 } as const;
 
 export function EventFollowButton({
   eventId,
   returnTo,
+  variant = "event",
 }: {
   eventId: string;
   returnTo: string;
+  variant?: "event" | "storyAction";
 }) {
   const { ready, user } = useBrieflyAuth();
   const { language } = useBrieflyLanguage();
@@ -84,6 +86,7 @@ export function EventFollowButton({
   };
 
   const active = !!user && following === true;
+  const isStoryAction = variant === "storyAction";
 
   return (
     <View style={styles.row}>
@@ -94,9 +97,14 @@ export function EventFollowButton({
         onPress={() => void onPress()}
         style={({ pressed }) => [
           styles.button,
+          isStoryAction && styles.storyActionButton,
           {
-            borderColor: active ? colors.text : colors.border,
-            backgroundColor: active ? colors.text : colors.surface,
+            borderColor: isStoryAction
+              ? (active ? colors.text : colors.accent)
+              : (active ? colors.text : colors.border),
+            backgroundColor: isStoryAction
+              ? (active ? colors.text : colors.accent)
+              : (active ? colors.text : colors.surface),
             opacity: !ready || busy ? 0.6 : pressed ? 0.7 : 1,
           },
         ]}
@@ -104,20 +112,21 @@ export function EventFollowButton({
         {busy && (
           <ActivityIndicator
             size="small"
-            color={active ? colors.background : colors.text}
+            color={isStoryAction || active ? colors.background : colors.text}
           />
         )}
         <Text
           style={[
             styles.label,
-            { color: active ? colors.background : colors.text },
+            isStoryAction && styles.storyActionLabel,
+            { color: isStoryAction || active ? colors.background : colors.text },
           ]}
         >
-          {active ? text.following : text.follow}
+          {active ? text.following : isStoryAction ? text.actionFollow : text.follow}
         </Text>
       </Pressable>
 
-      {active && (
+      {active && !isStoryAction && (
         <Pressable
           accessibilityRole="link"
           onPress={() => router.push("/following" as never)}
@@ -148,6 +157,13 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: "800",
+  },
+  storyActionButton: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  storyActionLabel: {
+    fontSize: 14,
   },
   updates: {
     fontSize: 12,

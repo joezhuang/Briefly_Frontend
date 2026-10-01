@@ -365,6 +365,26 @@ const checks = [
     ],
   },
   {
+    name: "Story actions put the independent Follow toggle next to Save and Share",
+    file: "src/components/article-view.tsx",
+    needles: [
+      '<View style={styles.actions}>{!immutable&&followingEnabled&&!!article.event_id&&<EventFollowButton',
+      'variant="storyAction"',
+      'toggleSaved(article)',
+      'void share()',
+    ],
+  },
+  {
+    name: "Follow uses a compact prominent story action without duplicating Updates",
+    file: "src/components/event-follow-button.tsx",
+    needles: [
+      'variant?: "event" | "storyAction"',
+      'isStoryAction && styles.storyActionButton',
+      'active && !isStoryAction',
+      'text.actionFollow',
+    ],
+  },
+  {
     name: "Follow is authenticated, reversible, and linked from the story",
     file: "src/components/event-follow-button.tsx",
     needles: [
