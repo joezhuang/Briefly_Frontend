@@ -362,6 +362,7 @@ export function EventEvolutionPanel({
     : orderedOccurredItems.slice(-5);
   const canEditOrder =
     adminTextSelectable &&
+    timeline?.timeline_order_editable === true &&
     orderedOccurredItems.length > 1 &&
     orderedOccurredItems.every((item) => !!item.order_key);
 

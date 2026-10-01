@@ -22,6 +22,7 @@ export type EventTimelineSnapshot = {
   ordered_timeline?: EventTimelineItem[];
   timeline_order_manual?: boolean;
   timeline_order_updated_at?: string | null;
+  timeline_order_editable?: boolean;
 };
 
 export function getEventTimeline(
