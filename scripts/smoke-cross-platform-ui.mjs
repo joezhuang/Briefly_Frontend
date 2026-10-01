@@ -73,12 +73,21 @@ const checks = [
     ],
   },
   {
-    name: "Admin selection propagates through Story Detail coverage and evolution",
+    name: "Admin selection propagates through Story Detail coverage",
     file: "src/components/event-coverage-panel.tsx",
     needles: [
       "adminTextSelectable?: boolean",
       "selectable={adminTextSelectable}",
       "selectable={selectable}",
+    ],
+  },
+  {
+    name: "Admin selection propagates through Story Detail evolution",
+    file: "src/components/event-evolution-panel.tsx",
+    needles: [
+      "adminTextSelectable?: boolean",
+      "selectable={adminTextSelectable}",
+      "styles.timelineTitle",
     ],
   },
   {
