@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -128,7 +128,7 @@ export default function FollowingScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!authReady || !followingEnabled) return;
     if (!user) {
       router.replace("/sign-in?returnTo=%2Ffollowing" as never);
@@ -136,6 +136,8 @@ export default function FollowingScreen() {
     }
 
     let active = true;
+    setLoading(true);
+    setError(false);
 
     Promise.all([getFollowedEvents(), getMeaningfulEventUpdates()])
       .then(([followed, meaningful]) => {
@@ -159,7 +161,7 @@ export default function FollowingScreen() {
     return () => {
       active = false;
     };
-  }, [authReady, followingEnabled, user]);
+  }, [authReady, followingEnabled, user]));
 
   const openEvent = (
     eventId: string,

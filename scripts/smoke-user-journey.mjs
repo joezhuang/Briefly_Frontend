@@ -45,7 +45,7 @@ const checks = [
       'router.push("/following"',
       'router.push("/search"',
       'feedScope=',
-      '{t.search}',
+      'width < 480 ? "⌕" : t.search',
     ],
   },
   {
@@ -65,6 +65,7 @@ const checks = [
       'FeedCategoryBar active="following"',
       "getFollowedEvents()",
       "getMeaningfulEventUpdates()",
+      "useFocusEffect(useCallback(",
     ],
   },
   {

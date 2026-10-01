@@ -129,10 +129,11 @@ export function FeedCategoryBar({
             numberOfLines={1}
             style={[
               styles.tabText,
+              width < 480 && styles.searchIcon,
               { color: active === "search" ? colors.background : colors.textMuted },
             ]}
           >
-            {t.search}
+            {width < 480 ? "⌕" : t.search}
           </Text>
         </Pressable>
       )}
@@ -160,4 +161,5 @@ const styles = StyleSheet.create({
   },
   compactTab: { paddingHorizontal: 12 },
   tabText: { fontSize: 14, fontWeight: "800" },
+  searchIcon: { fontSize: 25, lineHeight: 28 },
 });
