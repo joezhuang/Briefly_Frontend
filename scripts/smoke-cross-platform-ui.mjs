@@ -77,6 +77,8 @@ const checks = [
     needles: [
       "PanResponder.create",
       "ADMIN_TIMELINE_ROW_HEIGHT",
+      "const itemKey = item.order_key || item.id",
+      "current.findIndex(",
       "timeline?.ordered_timeline",
       "saveEventTimelineOrder(eventId, keys)",
       "resetEventTimelineOrder(eventId)",

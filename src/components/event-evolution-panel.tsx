@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
@@ -198,12 +198,10 @@ function AdminTimelineDragRow({
   index: number;
   count: number;
   colors: ReturnType<typeof useBrieflyTheme>["colors"];
-  onMove: (fromIndex: number, toIndex: number) => void;
+  onMove: (itemKey: string, toIndex: number) => void;
 }) {
-  const currentIndexRef = useRef(index);
-  const startIndexRef = useRef(index);
   const [dragging, setDragging] = useState(false);
-  currentIndexRef.current = index;
+  const itemKey = item.order_key || item.id;
 
   const responder = useMemo(
     () =>
@@ -212,7 +210,6 @@ function AdminTimelineDragRow({
         onMoveShouldSetPanResponder: (_event, gesture) =>
           Math.abs(gesture.dy) > 4,
         onPanResponderGrant: () => {
-          startIndexRef.current = currentIndexRef.current;
           setDragging(true);
         },
         onPanResponderMove: (_event, gesture) => {
@@ -220,18 +217,16 @@ function AdminTimelineDragRow({
             0,
             Math.min(
               count - 1,
-              startIndexRef.current +
+              index +
                 Math.round(gesture.dy / ADMIN_TIMELINE_ROW_HEIGHT),
             ),
           );
-          if (target === currentIndexRef.current) return;
-          onMove(currentIndexRef.current, target);
-          currentIndexRef.current = target;
+          onMove(itemKey, target);
         },
         onPanResponderRelease: () => setDragging(false),
         onPanResponderTerminate: () => setDragging(false),
       }),
-    [count, onMove],
+    [count, index, itemKey, onMove],
   );
 
   return (
@@ -377,10 +372,18 @@ export function EventEvolutionPanel({
     setOrderEditing(false);
   };
   const moveOrderItem = useCallback(
-    (fromIndex: number, toIndex: number) => {
-      setOrderDraft((current) =>
-        moveTimelineItem(current, fromIndex, toIndex),
-      );
+    (itemKey: string, toIndex: number) => {
+      setOrderDraft((current) => {
+        const fromIndex = current.findIndex(
+          (item) => (item.order_key || item.id) === itemKey,
+        );
+        if (fromIndex < 0 || fromIndex === toIndex) return current;
+        const boundedTarget = Math.max(
+          0,
+          Math.min(current.length - 1, toIndex),
+        );
+        return moveTimelineItem(current, fromIndex, boundedTarget);
+      });
     },
     [],
   );
