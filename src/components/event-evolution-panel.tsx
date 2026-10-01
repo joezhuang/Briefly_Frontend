@@ -129,9 +129,11 @@ function developmentDetails(
 export function EventEvolutionPanel({
   eventId,
   refreshKey,
+  adminTextSelectable = false,
 }: {
   eventId: string;
   refreshKey?: string | number | null;
+  adminTextSelectable?: boolean;
 }) {
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
@@ -219,15 +221,15 @@ export function EventEvolutionPanel({
       ]}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>{text.title}</Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+        <Text selectable={adminTextSelectable} style={[styles.title, { color: colors.text }]}>{text.title}</Text>
+        <Text selectable={adminTextSelectable} style={[styles.subtitle, { color: colors.textMuted }]}>
           {text.subtitle}
         </Text>
       </View>
 
       {!!unseen.length && (
         <View style={[styles.changeCallout, { backgroundColor: colors.surfaceMuted }]}>
-          <Text style={[styles.changeCount, { color: colors.accent }]}>
+          <Text selectable={adminTextSelectable} style={[styles.changeCount, { color: colors.accent }]}>
             {text.sinceLastVisit}: {unseen.length} {text.changes}
           </Text>
           <View style={styles.changeList}>
@@ -236,16 +238,16 @@ export function EventEvolutionPanel({
               const observedAt = formatDate(development.observed_at, language);
               return (
                 <View key={development.development_id} style={styles.changeItem}>
-                  <Text style={[styles.changeTitle, { color: colors.text }]}>
+                  <Text selectable={adminTextSelectable} style={[styles.changeTitle, { color: colors.text }]}>
                     {development.representative_title || text.meaningfulUpdate}
                   </Text>
                   {!!details.length && (
-                    <Text style={[styles.changeMeta, { color: colors.textMuted }]}>
+                    <Text selectable={adminTextSelectable} style={[styles.changeMeta, { color: colors.textMuted }]}>
                       {details.join(" · ")}
                     </Text>
                   )}
                   {!!observedAt && (
-                    <Text style={[styles.changeTime, { color: colors.textMuted }]}>
+                    <Text selectable={adminTextSelectable} style={[styles.changeTime, { color: colors.textMuted }]}>
                       {observedAt}
                     </Text>
                   )}
@@ -259,11 +261,11 @@ export function EventEvolutionPanel({
       {!!timelineItems.length && (
         <View style={[styles.timelineSection, { borderTopColor: colors.border }]}>
           <View style={styles.timelineHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            <Text selectable={adminTextSelectable} style={[styles.sectionTitle, { color: colors.text }]}>
               {text.timeline}
             </Text>
             {!!timelineUpdatedAt && (
-              <Text style={[styles.updated, { color: colors.textMuted }]}>
+              <Text selectable={adminTextSelectable} style={[styles.updated, { color: colors.textMuted }]}>
                 {text.updated} {timelineUpdatedAt}
               </Text>
             )}
@@ -291,7 +293,7 @@ export function EventEvolutionPanel({
                   <View style={styles.timelineCopy}>
                     <View style={styles.timeRow}>
                       {!!item.time && (
-                        <Text style={[styles.time, { color: colors.textMuted }]}>
+                        <Text selectable={adminTextSelectable} style={[styles.time, { color: colors.textMuted }]}>
                           {item.time}
                         </Text>
                       )}
@@ -301,7 +303,7 @@ export function EventEvolutionPanel({
                         </Text>
                       )}
                     </View>
-                    <Text style={[styles.timelineTitle, { color: colors.text }]}>
+                    <Text selectable={adminTextSelectable} style={[styles.timelineTitle, { color: colors.text }]}>
                       {item.title}
                     </Text>
                   </View>

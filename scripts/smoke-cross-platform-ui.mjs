@@ -64,6 +64,33 @@ const checks = [
     ],
   },
   {
+    name: "Admin can select major Story Detail evidence and timeline text",
+    file: "src/components/event-evidence-panel.tsx",
+    needles: [
+      "const adminTextSelectable = account?.is_admin === true",
+      "selectable={adminTextSelectable}",
+      "adminTextSelectable={adminTextSelectable}",
+    ],
+  },
+  {
+    name: "Admin selection propagates through Story Detail coverage and evolution",
+    file: "src/components/event-coverage-panel.tsx",
+    needles: [
+      "adminTextSelectable?: boolean",
+      "selectable={adminTextSelectable}",
+      "selectable={selectable}",
+    ],
+  },
+  {
+    name: "Admin can select standalone story timeline content",
+    file: "src/components/event-timeline.tsx",
+    needles: [
+      "const adminTextSelectable = account?.is_admin === true",
+      "selectable={adminTextSelectable}",
+      "selectable={selectable}",
+    ],
+  },
+  {
     name: "Feed story actions expose accessible navigation and mobile-sized targets",
     file: "src/components/story-tile.tsx",
     needles: [

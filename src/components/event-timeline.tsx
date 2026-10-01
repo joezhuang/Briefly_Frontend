@@ -12,6 +12,7 @@ import {
 
 import { requestStaleStoryRefresh } from "@/api/briefly";
 import { getEventTimeline } from "@/api/event-evolution";
+import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import {
@@ -170,6 +171,7 @@ function TimelineSection({
   liveStoryHref,
   onOpenLiveStory,
   upcoming = false,
+  selectable = false,
 }: {
   title: string;
   items: EventTimelineItem[];
@@ -179,10 +181,11 @@ function TimelineSection({
   liveStoryHref?: string;
   onOpenLiveStory?: () => void;
   upcoming?: boolean;
+  selectable?: boolean;
 }) {
   return (
     <View style={styles.sectionBlock}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+      <Text selectable={selectable} style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
       {items.map((item, index) => {
         const latest = !upcoming && !!latestLabel && index === items.length - 1;
         const actionable = latest && !!liveStoryHref && !!onOpenLiveStory;
@@ -190,7 +193,7 @@ function TimelineSection({
           <>
             <View style={styles.timeRow}>
               {!!item.time && (
-                <Text style={[styles.time, { color: colors.textMuted }]}> 
+                <Text selectable={selectable} style={[styles.time, { color: colors.textMuted }]}> 
                   {item.time}
                 </Text>
               )}
@@ -201,6 +204,7 @@ function TimelineSection({
               )}
             </View>
             <Text
+              selectable={selectable}
               style={[
                 styles.itemTitle,
                 { color: upcoming ? colors.textMuted : colors.text },
@@ -276,8 +280,10 @@ export function EventTimeline({
   onRefreshStarted?: () => void;
 }) {
   const { language, t } = useBrieflyLanguage();
+  const { account } = useBrieflyAuth();
   const accessBadge = featureAccessBadgeLabel(access.badge, language);
   const { colors } = useBrieflyTheme();
+  const adminTextSelectable = account?.is_admin === true;
   const labels = copy[language] ?? copy.en;
   const [backgroundItems, setBackgroundItems] = useState<EventTimelineItem[]>([]);
   const [items, setItems] = useState<EventTimelineItem[]>([]);
@@ -390,10 +396,10 @@ export function EventTimeline({
             },
           ]}
         >
-          <Text style={[styles.errorTitle, { color: colors.text }]}> 
+          <Text selectable={adminTextSelectable} style={[styles.errorTitle, { color: colors.text }]}> 
             {labels.timelineUnavailable}
           </Text>
-          <Text style={[styles.errorHint, { color: colors.textMuted }]}> 
+          <Text selectable={adminTextSelectable} style={[styles.errorHint, { color: colors.textMuted }]}> 
             {labels.timelineUnavailableHint}
           </Text>
         </View>
@@ -456,11 +462,11 @@ export function EventTimeline({
           >
             <View style={styles.sheetHeader}>
               <View style={styles.sheetHeadingCopy}>
-                <Text style={[styles.sheetTitle, { color: colors.text }]}> 
+                <Text selectable={adminTextSelectable} style={[styles.sheetTitle, { color: colors.text }]}> 
                   {labels.title}
                 </Text>
                 {liveContext && (
-                  <Text style={[styles.sheetMeta, { color: colors.textMuted }]}> 
+                  <Text selectable={adminTextSelectable} style={[styles.sheetMeta, { color: colors.textMuted }]}> 
                     {labels.live}
                     {formattedUpdatedAt
                       ? ` · ${labels.updated} ${formattedUpdatedAt}`
@@ -484,11 +490,11 @@ export function EventTimeline({
                     },
                   ]}
                 >
-                  <Text style={[styles.emptyStateText, { color: colors.textMuted }]}> 
+                  <Text selectable={adminTextSelectable} style={[styles.emptyStateText, { color: colors.textMuted }]}> 
                     {labels.noTimeline}
                   </Text>
                   {canonicalStale && (
-                    <Text style={[styles.emptyStateHint, { color: colors.accent }]}> 
+                    <Text selectable={adminTextSelectable} style={[styles.emptyStateHint, { color: colors.accent }]}> 
                       {labels.newerCoverage}
                     </Text>
                   )}
@@ -500,6 +506,7 @@ export function EventTimeline({
                   title={labels.background}
                   items={backgroundItems}
                   colors={colors}
+                  selectable={adminTextSelectable}
                 />
               )}
 
@@ -512,6 +519,7 @@ export function EventTimeline({
                   currentLinkLabel={labels.current}
                   liveStoryHref={liveStoryHref}
                   onOpenLiveStory={openLiveStory}
+                  selectable={adminTextSelectable}
                 />
               )}
 
@@ -521,6 +529,7 @@ export function EventTimeline({
                   items={upcomingItems}
                   colors={colors}
                   upcoming
+                  selectable={adminTextSelectable}
                 />
               )}
             </ScrollView>

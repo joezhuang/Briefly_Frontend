@@ -11,6 +11,7 @@ import {
 } from "@/api/event-intelligence";
 import { EventCoveragePanel } from "@/components/event-coverage-panel";
 import { EventEvolutionPanel } from "@/components/event-evolution-panel";
+import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 
@@ -283,7 +284,9 @@ export function EventEvidencePanel({
   coverageEnabled?: boolean;
 }) {
   const { language } = useBrieflyLanguage();
+  const { account } = useBrieflyAuth();
   const { colors } = useBrieflyTheme();
+  const adminTextSelectable = account?.is_admin === true;
   const text = copy[language] ?? copy.en;
   const [intelligenceState, setIntelligenceState] = useState<{
     eventId: string;
@@ -484,27 +487,27 @@ export function EventEvidencePanel({
           ]}
         >
           <View style={styles.headerRow}>
-            <Text style={[styles.title, { color: colors.text }]}>{text.title}</Text>
+            <Text selectable={adminTextSelectable} style={[styles.title, { color: colors.text }]}>{text.title}</Text>
             {!!stateLabel && (
-              <Text style={[styles.state, { color: colors.accent }]}>{stateLabel}</Text>
+              <Text selectable={adminTextSelectable} style={[styles.state, { color: colors.accent }]}>{stateLabel}</Text>
             )}
           </View>
           {!!stats.length && (
-            <Text style={[styles.stats, { color: colors.textMuted }]}>
+            <Text selectable={adminTextSelectable} style={[styles.stats, { color: colors.textMuted }]}>
               {stats.join(" · ")}
             </Text>
           )}
 
           {!!corroborated.length && (
-            <EvidenceSection title={text.whatWeKnow} colors={colors}>
+            <EvidenceSection title={text.whatWeKnow} colors={colors} selectable={adminTextSelectable}>
               {corroborated.map((claim, index) => (
                 <View key={`${claim.text}-${index}`} style={styles.claimRow}>
                   <Text style={[styles.marker, { color: colors.accent }]}>✓</Text>
                   <View style={styles.claimCopy}>
-                    <Text style={[styles.claimText, { color: colors.text }]}>
+                    <Text selectable={adminTextSelectable} style={[styles.claimText, { color: colors.text }]}>
                       {claim.text}
                     </Text>
-                    <Text style={[styles.claimMeta, { color: colors.textMuted }]}>
+                    <Text selectable={adminTextSelectable} style={[styles.claimMeta, { color: colors.textMuted }]}>
                       {text.reportedBy} {claim.sources.join(" · ")}
                     </Text>
                   </View>
@@ -514,21 +517,21 @@ export function EventEvidencePanel({
           )}
 
           {!!contradictions.length && (
-            <EvidenceSection title={text.disputed} colors={colors}>
+            <EvidenceSection title={text.disputed} colors={colors} selectable={adminTextSelectable}>
               {contradictions.map((item) => (
                 <View key={item.contradiction_id} style={styles.conflictCard}>
                   <View style={styles.claimRow}>
                     <Text style={[styles.marker, { color: colors.error }]}>!</Text>
-                    <Text style={[styles.conflictReason, { color: colors.text }]}>
+                    <Text selectable={adminTextSelectable} style={[styles.conflictReason, { color: colors.text }]}>
                       {contradictionReason(item, text)}
                     </Text>
                   </View>
                   {(item.observations ?? []).slice(0, 2).map((observation) => (
                     <View key={observation.claim_id} style={styles.observation}>
-                      <Text style={[styles.observationSource, { color: colors.accent }]}>
+                      <Text selectable={adminTextSelectable} style={[styles.observationSource, { color: colors.accent }]}>
                         {observation.source}
                       </Text>
-                      <Text style={[styles.observationText, { color: colors.textMuted }]}>
+                      <Text selectable={adminTextSelectable} style={[styles.observationText, { color: colors.textMuted }]}>
                         {observation.text}
                       </Text>
                     </View>
@@ -539,11 +542,11 @@ export function EventEvidencePanel({
           )}
 
           {!!unknowns.length && (
-            <EvidenceSection title={text.unknown} colors={colors}>
+            <EvidenceSection title={text.unknown} colors={colors} selectable={adminTextSelectable}>
               {unknowns.map((item, index) => (
                 <View key={`${item}-${index}`} style={styles.claimRow}>
                   <Text style={[styles.marker, { color: colors.textMuted }]}>?</Text>
-                  <Text style={[styles.unknownText, { color: colors.textMuted }]}>
+                  <Text selectable={adminTextSelectable} style={[styles.unknownText, { color: colors.textMuted }]}>
                     {item}
                   </Text>
                 </View>
@@ -553,9 +556,9 @@ export function EventEvidencePanel({
         </View>
       )}
 
-      {timelineEnabled && activeLens === "timeline" && <EventEvolutionPanel eventId={eventId} refreshKey={refreshKey} />}
+      {timelineEnabled && activeLens === "timeline" && <EventEvolutionPanel eventId={eventId} refreshKey={refreshKey} adminTextSelectable={adminTextSelectable} />}
       {coverageEnabled && activeLens === "coverage" && intelligence && (
-        <EventCoveragePanel intelligence={intelligence} />
+        <EventCoveragePanel intelligence={intelligence} adminTextSelectable={adminTextSelectable} />
       )}
     </View>
   );
@@ -565,14 +568,16 @@ function EvidenceSection({
   title,
   colors,
   children,
+  selectable,
 }: {
   title: string;
   colors: ReturnType<typeof useBrieflyTheme>["colors"];
   children: ReactNode;
+  selectable: boolean;
 }) {
   return (
     <View style={[styles.section, { borderTopColor: colors.border }]}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+      <Text selectable={selectable} style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
       <View style={styles.sectionBody}>{children}</View>
     </View>
   );

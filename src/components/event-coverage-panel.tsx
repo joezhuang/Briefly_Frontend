@@ -134,7 +134,13 @@ function aggregate(
   return [...visible, { label: otherLabel, count: remaining }];
 }
 
-export function EventCoveragePanel({ intelligence }: { intelligence: EventIntelligence }) {
+export function EventCoveragePanel({
+  intelligence,
+  adminTextSelectable = false,
+}: {
+  intelligence: EventIntelligence;
+  adminTextSelectable?: boolean;
+}) {
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const text = copy[language] ?? copy.en;
@@ -191,20 +197,20 @@ export function EventCoveragePanel({ intelligence }: { intelligence: EventIntell
       ]}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>{text.title}</Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+        <Text selectable={adminTextSelectable} style={[styles.title, { color: colors.text }]}>{text.title}</Text>
+        <Text selectable={adminTextSelectable} style={[styles.subtitle, { color: colors.textMuted }]}>
           {text.subtitle}
         </Text>
-        <Text style={[styles.stats, { color: colors.accent }]}>
+        <Text selectable={adminTextSelectable} style={[styles.stats, { color: colors.accent }]}>
           {stats.join(" · ")}
         </Text>
       </View>
 
       {!!countries.length && (
-        <CoverageSection title={text.byCountry} items={countries} />
+        <CoverageSection title={text.byCountry} items={countries} selectable={adminTextSelectable} />
       )}
       {!!languages.length && (
-        <CoverageSection title={text.byLanguage} items={languages} />
+        <CoverageSection title={text.byLanguage} items={languages} selectable={adminTextSelectable} />
       )}
     </View>
   );
@@ -213,22 +219,24 @@ export function EventCoveragePanel({ intelligence }: { intelligence: EventIntell
 function CoverageSection({
   title,
   items,
+  selectable,
 }: {
   title: string;
   items: BreakdownItem[];
+  selectable: boolean;
 }) {
   const { colors } = useBrieflyTheme();
   const max = Math.max(1, ...items.map((item) => item.count));
 
   return (
     <View style={[styles.section, { borderTopColor: colors.border }]}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+      <Text selectable={selectable} style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
       <View style={styles.rows}>
         {items.map((item) => (
           <View key={item.label} style={styles.row}>
             <View style={styles.rowHeading}>
-              <Text style={[styles.rowLabel, { color: colors.text }]}>{item.label}</Text>
-              <Text style={[styles.rowCount, { color: colors.textMuted }]}>{item.count}</Text>
+              <Text selectable={selectable} style={[styles.rowLabel, { color: colors.text }]}>{item.label}</Text>
+              <Text selectable={selectable} style={[styles.rowCount, { color: colors.textMuted }]}>{item.count}</Text>
             </View>
             <View style={[styles.barTrack, { backgroundColor: colors.surfaceMuted }]}>
               <View
