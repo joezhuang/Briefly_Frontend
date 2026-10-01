@@ -92,6 +92,7 @@ const checks = [
       "const itemKey = item.order_key || item.id",
       "current.findIndex(",
       "timeline?.ordered_timeline",
+      ": orderedOccurredItems;",
       "saveEventTimelineOrder(eventId, keys)",
       "resetEventTimelineOrder(eventId)",
       "AdminTimelineDragRow",

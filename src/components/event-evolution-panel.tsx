@@ -354,7 +354,7 @@ export function EventEvolutionPanel({
   }, [timeline]);
   const timelineItems = orderEditing
     ? orderDraft
-    : orderedOccurredItems.slice(-5);
+    : orderedOccurredItems;
   const canEditOrder =
     adminTextSelectable &&
     timeline?.timeline_order_editable === true &&
