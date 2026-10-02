@@ -412,7 +412,14 @@ export default function StoryDetailScreen() {
 
           if (!active) return;
 
-          if (canonical.article_version_id == null) {
+          // Published shared translations can outlive the publication
+          // state of the English article that originally produced them.
+          const canLoadPublishedSharedTranslation =
+            isSharedStory && articleRequestLanguage !== "en";
+          if (
+            canonical.article_version_id == null &&
+            !canLoadPublishedSharedTranslation
+          ) {
             const preview = preferredPreviewHeadline(
               canonical,
               resolvedPreviewHeadline,
@@ -431,7 +438,9 @@ export default function StoryDetailScreen() {
             return;
           }
 
-          setAuthoritativeArticle(canonical);
+          setAuthoritativeArticle(
+            canonical.article_version_id == null ? null : canonical,
+          );
 
           if (articleRequestLanguage !== "en") {
             if (isWeb && !resolvedContentLanguage) {
@@ -489,7 +498,10 @@ export default function StoryDetailScreen() {
                 canonical_stale: canonical.canonical_stale,
                 latest_evidence_at: canonical.latest_evidence_at,
                 stale_refresh_entitled: canonical.stale_refresh_entitled,
-                generation_status: canonical.generation_status,
+                generation_status:
+                  canonical.article_version_id == null
+                    ? localized.generation_status
+                    : canonical.generation_status,
               };
             }
           } else {
