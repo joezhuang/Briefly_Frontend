@@ -57,6 +57,18 @@ const checks = [
     ],
   },
   {
+    name: "Video list uses per-video posters and does not repeat story imagery as thumbnails",
+    file: "src/components/article-view.tsx",
+    needles: [
+      "function youtubeVideoPoster(videoUrl:string):string|null",
+      "https://i.ytimg.com/vi/",
+      "function videoListPoster(video:ArticleVideo,videos:ArticleVideo[]):string|null",
+      "other.url!==video.url",
+      "videoListPoster(selectedVideo,videoItems)",
+      "const poster=videoListPoster(video,videoItems);",
+    ],
+  },
+  {
     name: "Story brief disclosure is consistent across small web and mobile layouts",
     file: "src/components/article-view.tsx",
     needles: [
