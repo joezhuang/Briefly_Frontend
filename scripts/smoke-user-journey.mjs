@@ -285,6 +285,21 @@ const checks = [
     ],
   },
   {
+    name: "Published shared translations remain readable without published English",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      "canLoadPublishedSharedTranslation",
+      "canonical.article_version_id == null &&",
+      "!canLoadPublishedSharedTranslation",
+      "getExperimentalArticleByEventId(",
+    ],
+  },
+  {
+    name: "Social preview never starts paid English generation",
+    file: "api/share/[eventId].js",
+    needles: ["?language=en&include_draft=false&prepare=false"],
+  },
+  {
     name: "Experimental translation API supports read-only cached lookups",
     file: "src/api/briefly.ts",
     needles: [
