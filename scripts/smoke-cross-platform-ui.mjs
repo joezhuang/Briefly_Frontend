@@ -65,6 +65,7 @@ const checks = [
       "function videoListPoster(video:ArticleVideo,videos:ArticleVideo[]):string|null",
       "other.url!==video.url",
       "videoListPoster(selectedVideo,videoItems)",
+      "!selectedVideo||selectedVideo===videoItems[0]",
       "const poster=videoListPoster(video,videoItems);",
     ],
   },
