@@ -41,6 +41,8 @@ export type CanonicalArticle = {
   authoritative_language?: string;
   authoritative_article_version_id?: number | null;
   localization_warning?: string | null;
+  translation_historical?: boolean;
+  translation_source_article_version_id?: number | null;
   generation_status?:
     | "not_generated"
     | "processing"
