@@ -7,6 +7,7 @@ import { getCanonicalArticleByVersionId } from "@/api/briefly";
 import { trackProductEvent } from "@/analytics/product-analytics";
 import { ArticleView } from "@/components/article-view";
 import { ScreenState } from "@/components/screen-state";
+import { SharedAppChoice } from "@/components/shared-app-choice";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
@@ -126,7 +127,9 @@ export default function SharedArticleScreen() {
   const latestHref = `/story/${encodeURIComponent(article.slug)}?eventId=${encodeURIComponent(article.event_id)}&source=share_latest`;
 
   return (
-    <ArticleView
+    <View style={{ flex: 1 }}>
+      <SharedAppChoice appPath={`/share/${id}`} uiLanguage={language} />
+      <ArticleView
       article={article}
       immutable
       footer={
@@ -148,7 +151,8 @@ export default function SharedArticleScreen() {
           </Pressable>
         </View>
       }
-    />
+      />
+    </View>
   );
 }
 

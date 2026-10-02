@@ -166,6 +166,7 @@ function AppStack() {
         <Stack.Screen name="upgrade" />
         <Stack.Screen name="auth/callback" />
         <Stack.Screen name="story/[slug]" />
+        <Stack.Screen name="s/[eventId]" />
         <Stack.Screen name="share/[versionId]" />
       </Stack>
       {appConfig?.podcast_enabled !== false && <GlobalPodcastPlayer />}

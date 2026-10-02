@@ -26,6 +26,8 @@ import { EventCommunityPanel } from "@/components/event-community-panel";
 import { EventTimeline } from "@/components/event-timeline";
 import { RelatedStoriesCarousel } from "@/components/related-stories-carousel";
 import { ScreenState } from "@/components/screen-state";
+// Metro uses the native or web implementation, preserving the existing homepage install banner.
+import { SharedAppChoice } from "@/components/shared-app-choice";
 import { StaleStoryNotice } from "@/components/stale-story-notice";
 // Metro resolves the platform-specific .native/.web implementation at runtime.
 // eslint-disable-next-line import/no-unresolved
@@ -848,6 +850,14 @@ export default function StoryDetailScreen() {
     );
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      {isSharedStory && !!resolvedEventId && (
+        <SharedAppChoice
+          appPath={`/s/${resolvedEventId}`}
+          uiLanguage={resolvedUi ?? language}
+          contentLanguage={resolvedContentLanguage}
+          readingLanguage={resolvedReadLanguage}
+        />
+      )}
         <EventPreviewView
           article={previewArticle}
           sourceScope={
@@ -893,6 +903,14 @@ export default function StoryDetailScreen() {
       edges={["top"]}
       style={{ flex: 1, backgroundColor: colors.surface }}
     >
+      {isSharedStory && !!resolvedEventId && (
+        <SharedAppChoice
+          appPath={`/s/${resolvedEventId}`}
+          uiLanguage={resolvedUi ?? language}
+          contentLanguage={resolvedContentLanguage}
+          readingLanguage={resolvedReadLanguage}
+        />
+      )}
       <View
         key={resolvedSlug ?? "story-tools"}
         style={[
