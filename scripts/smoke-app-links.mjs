@@ -145,7 +145,7 @@ check("Web readers choose app, store if configured, or continue reading", () => 
     "EXPO_PUBLIC_BRIEFLY_IOS_APP_URL",
     "EXPO_PUBLIC_BRIEFLY_ANDROID_APP_URL",
     "setDismissed(true)",
-    "Linking.openURL(appUrl)",
+    "window.location.assign(appUrl)",
     "Linking.openURL(storeUrl)",
     "onPress={openInAppOrStore}",
     "S.browser_fallback_url=",
