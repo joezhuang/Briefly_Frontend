@@ -15,12 +15,15 @@ also associated with the app. On a device without the app, the URL still
 resolves to the web reader.
 
 A compact **optional** chooser appears on web share pages on mobile devices.
-It provides Open in Briefly, Continue on web, and an app-store link. On
-Android Chrome, Open uses an Intent URL with a Play Store fallback for
-missing apps. On iOS and other browsers, Open attempts the installed-app
+It provides a single Open or get Briefly button and Continue on web.
+On Android Chrome, the button uses an Intent URL with a Play Store fallback
+for missing apps. On iOS and other browsers, Open attempts the installed-app
 scheme, then uses a visibility-aware fallback to the configured store URL.
 It never automatically redirects users who do not tap the Open action. The existing homepage web-app
-installation banner remains unchanged. The web article remains readable
+installation banner remains unchanged. A separate, default-off runtime flag
+\`mobile_app_promotion_enabled\` governs both the Home native-download banner
+and the shared-story app-or-install chooser; it does not disable installed-app
+Universal Links or the web app installation banner. The web article remains readable
 without touching any of the chooser actions.
 
 ## 1. Native IDs and association

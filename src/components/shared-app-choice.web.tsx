@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
@@ -58,45 +58,35 @@ const copy = {
   en: {
     title: "Read this story your way",
     body: "Keep reading on the web, or open it in the Briefly app. Installation is optional.",
-    open: "Open Briefly app",
-    installIos: "Get the iPhone app",
-    installAndroid: "Get the Android app",
+    open: "Open or get Briefly",
     continue: "Continue on web",
     unavailable: "The App Store link is not configured yet. You can continue reading on the web.",
   },
   es: {
     title: "Lee esta noticia como prefieras",
     body: "Sigue leyendo en la web o ábrela en la app Briefly. Instalarla es opcional.",
-    open: "Abrir la app Briefly",
-    installIos: "Obtener la app para iPhone",
-    installAndroid: "Obtener la app para Android",
+    open: "Abrir u obtener Briefly",
     continue: "Continuar en la web",
     unavailable: "El enlace de App Store aún no está configurado. Puedes seguir leyendo en la web.",
   },
   ja: {
     title: "お好きな方法でニュースを読む",
     body: "Webでそのまま読むか、Brieflyアプリで開けます。インストールは任意です。",
-    open: "Brieflyアプリで開く",
-    installIos: "iPhoneアプリを入手",
-    installAndroid: "Androidアプリを入手",
+    open: "Brieflyを開く・入手する",
     continue: "Webで続きを読む",
     unavailable: "App Store のリンクはまだ設定されていません。Web でそのまま読めます。",
   },
   "zh-CN": {
     title: "选择阅读方式",
     body: "可以继续在网页阅读，也可以用 Briefly 应用打开。无需强制安装。",
-    open: "在 Briefly 应用中打开",
-    installIos: "下载 iPhone 版",
-    installAndroid: "下载 Android 版",
+    open: "打开或获取 Briefly",
     continue: "继续网页版",
     unavailable: "尚未配置 App Store 链接，你可以继续在网页版阅读。",
   },
   "zh-TW": {
     title: "選擇閱讀方式",
     body: "可以繼續在網頁閱讀，也可以用 Briefly 應用程式開啟。不必強制安裝。",
-    open: "在 Briefly 應用程式中開啟",
-    installIos: "下載 iPhone 版",
-    installAndroid: "下載 Android 版",
+    open: "開啟或取得 Briefly",
     continue: "繼續網頁版",
     unavailable: "尚未設定 App Store 連結，你可以繼續在網頁版閱讀。",
   },
@@ -144,7 +134,6 @@ export function SharedAppChoice(props: SharedAppChoiceProps) {
   const text = copy[language] ?? copy.en;
   const appUrl = safeNativeHref(props);
   const storeUrl = platform === "ios" ? IOS_APP_URL : ANDROID_APP_URL;
-  const storeText = platform === "ios" ? text.installIos : text.installAndroid;
 
   // Cancel a pending fallback when this component unmounts or is dismissed.
   useEffect(() => () => pendingLaunchCleanup.current?.(), []);
@@ -233,15 +222,6 @@ export function SharedAppChoice(props: SharedAppChoiceProps) {
         >
           <Text style={[styles.primaryText, { color: colors.background }]}>{text.open}</Text>
         </Pressable>
-        {!!storeUrl && (
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => void Linking.openURL(storeUrl).catch(() => undefined)}
-            style={[styles.secondaryButton, { borderColor: colors.border }]}
-          >
-            <Text style={[styles.secondaryText, { color: colors.text }]}>{storeText}</Text>
-          </Pressable>
-        )}
         <Pressable
           accessibilityRole="button"
           onPress={() => setDismissed(true)}
@@ -271,13 +251,6 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
   primaryButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 18, justifyContent: "center" },
   primaryText: { fontSize: 12, fontWeight: "800" },
-  secondaryButton: {
-    minHeight: 36,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 13,
-    borderRadius: 18,
-    justifyContent: "center",
-  },
   secondaryText: { fontSize: 12, fontWeight: "700" },
   continueButton: { minHeight: 36, paddingHorizontal: 9, justifyContent: "center" },
 });

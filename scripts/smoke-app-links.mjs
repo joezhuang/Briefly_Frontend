@@ -146,7 +146,6 @@ check("Web readers choose app, store if configured, or continue reading", () => 
     "EXPO_PUBLIC_BRIEFLY_ANDROID_APP_URL",
     "setDismissed(true)",
     "window.location.assign(appUrl)",
-    "Linking.openURL(storeUrl)",
     "onPress={openInAppOrStore}",
     "S.browser_fallback_url=",
     "androidAppIntent(appUrl, storeUrl)",
@@ -162,6 +161,8 @@ check("Web readers choose app, store if configured, or continue reading", () => 
   assert.ok(read("src/app/index.tsx").includes("HomeInstallBanners"));
   // The native-app promotion gate is opt-in and independent of the PWA banner.
   assert.ok(source.includes("config?.mobile_app_promotion_enabled !== true"));
+  assert.ok(!source.includes("Linking.openURL(storeUrl)"), "A shared story has one app-or-install CTA");
+  assert.ok(source.includes('open: "Open or get Briefly"'));
   assert.ok(read("src/components/home-install-banners.web.tsx").includes(
     "if (config?.mobile_app_promotion_enabled !== true) return [];"
   ));
