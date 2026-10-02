@@ -6579,4 +6579,4 @@ const styles = StyleSheet.create({
   resolveText: { fontSize: 12, fontWeight: "800" },
   empty: { fontSize: 14, lineHeight: 21 },
   generated: { fontSize: 11, textAlign: "right" },
-});
+} as const);

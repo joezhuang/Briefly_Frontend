@@ -22,13 +22,16 @@ export type BrieflyPlanPrices = {
 
 export type BrieflySupportPrices = Record<BrieflySupportProduct, string | null>;
 
-function formatWebPrice(price: BrieflyWebPrice) {
+function formatWebPrice(
+  price: Pick<BrieflyWebPrice, "currency" | "unit_amount">,
+) {
   try {
     const formatter = new Intl.NumberFormat(undefined, {
       style: "currency",
       currency: price.currency,
     });
-    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits;
+    const fractionDigits =
+      formatter.resolvedOptions().maximumFractionDigits ?? 2;
     return formatter.format(price.unit_amount / 10 ** fractionDigits);
   } catch {
     return `${price.currency} ${price.unit_amount}`;

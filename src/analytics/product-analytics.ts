@@ -37,7 +37,10 @@ export type ProductAnalyticsEventName =
   | "subscription_purchase_complete"
   | "subscription_restore_start"
   | "subscription_restore_complete"
-  | "subscription_manage_open";
+  | "subscription_manage_open"
+  | "support_checkout_start"
+  | "support_checkout_cancel"
+  | "support_purchase_complete";
 
 type AnalyticsProperties = Record<
   string,
