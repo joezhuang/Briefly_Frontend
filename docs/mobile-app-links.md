@@ -15,8 +15,11 @@ also associated with the app. On a device without the app, the URL still
 resolves to the web reader.
 
 A compact **optional** chooser appears on web share pages on mobile devices.
-It provides Open in Briefly, Continue on web, and an app-store link if the
-existing public store URL is configured. The existing homepage web-app
+It provides Open in Briefly, Continue on web, and an app-store link. On
+Android Chrome, Open uses an Intent URL with a Play Store fallback for
+missing apps. On iOS and other browsers, Open attempts the installed-app
+scheme, then uses a visibility-aware fallback to the configured store URL.
+It never automatically redirects users who do not tap the Open action. The existing homepage web-app
 installation banner remains unchanged. The web article remains readable
 without touching any of the chooser actions.
 
@@ -74,16 +77,25 @@ by `HomeInstallBanners`:
   or available to enrolled closed-test users.
 
 Set these in the **Vercel build environment** and redeploy so the browser
-bundle has the URL. An unconfigured store URL **does not show a broken
+bundle has the URL. Android falls back to the official Play Store details URL constructed
+from the verified application package ID when no public link is configured.
+On iOS, **the exact App Store listing URL must be configured**: there is
+no safe way to infer a private/unpublished iOS App Store item ID. If it is
+missing, the chooser explains that the App Store link is not configured
+rather than silently failing or guessing an unrelated listing.
+An unconfigured iOS store URL **does not show a broken
 installation button**. Until store publication, sharing and reading still
 work; a closed test can only install through its eligible distribution link.
 Never fabricate an App Store item ID.
 
 On iOS Safari, tapping a Universal Link on the *same domain as the current
 page* may remain in Safari by design. The explicit Open in Briefly button
-uses the existing `briefly://` scheme for that voluntary action; there is
-no automatic scheme probing, timer, forced store redirect, or installation
-detection. Installing the app and resuming the exact story **after the
+uses the existing `briefly://` scheme on iOS and a guarded web-visibility
+timeout to offer the configured App Store link if the app did not appear
+to open. The browser cannot reliably detect installation, and this heuristic
+can vary among iOS browsers. Android Chrome uses its documented `intent://`
+URI with `S.browser_fallback_url` pointing to Google Play. The user must
+tap the Open button; there is no forced installation or install detection. Installing the app and resuming the exact story **after the
 installation** is a separate deferred deep-link feature and is not promised
 by this implementation.
 

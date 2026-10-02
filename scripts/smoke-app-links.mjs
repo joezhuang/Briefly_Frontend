@@ -147,6 +147,13 @@ check("Web readers choose app, store if configured, or continue reading", () => 
     "setDismissed(true)",
     "Linking.openURL(appUrl)",
     "Linking.openURL(storeUrl)",
+    "onPress={openInAppOrStore}",
+    "S.browser_fallback_url=",
+    "androidAppIntent(appUrl, storeUrl)",
+    "document.visibilityState",
+    "window.location.assign(storeUrl)",
+    "setStoreUnavailable(true)",
+    "ANDROID_DEFAULT_STORE_URL",
   ]) {
     assert.ok(source.includes(marker), `missing chooser action ${marker}`);
   }
