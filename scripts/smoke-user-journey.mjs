@@ -168,7 +168,7 @@ const checks = [
     needles: [
       "sourceScope:",
       'resolvedScope === "local"',
-      "prepare: true",
+      "prepare: !isSharedStory",
       'article.generation_status === "source_only"',
       "EventPreviewView",
     ],

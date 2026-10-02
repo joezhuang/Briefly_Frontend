@@ -6485,7 +6485,7 @@ const styles = StyleSheet.create({
   promotionGuideStep: {
     fontSize: 12,
     lineHeight: 18,
-    fontWeight: "650",
+    fontWeight: "600",
   },
   promotionGuideNote: {
     fontSize: 11,
@@ -6578,5 +6578,6 @@ const styles = StyleSheet.create({
   },
   resolveText: { fontSize: 12, fontWeight: "800" },
   empty: { fontSize: 14, lineHeight: 21 },
+  disabled: { opacity: 0.5 },
   generated: { fontSize: 11, textAlign: "right" },
 } as const);
