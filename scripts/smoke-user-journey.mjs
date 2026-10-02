@@ -275,6 +275,24 @@ const checks = [
     ],
   },
   {
+    name: "Shared story recipients read existing translations without initiating Ollama",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      'resolvedSource === "share"',
+      'resolvedSource?.startsWith("share_") === true',
+      "prepare: !isSharedStory",
+      "getExperimentalArticleByEventId(",
+    ],
+  },
+  {
+    name: "Experimental translation API supports read-only cached lookups",
+    file: "src/api/briefly.ts",
+    needles: [
+      'params.set("prepare", String(options?.prepare ?? true))',
+      "/experimental?",
+    ],
+  },
+  {
     name: "Timeline refresh access badge is localized",
     file: "src/components/event-timeline.tsx",
     needles: [
