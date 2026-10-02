@@ -270,6 +270,10 @@ export default function StoryDetailScreen() {
   const storyOpenTrackedKey = useRef("");
 
   const isWeb = Platform.OS === "web";
+  // Shared-link recipients should only read pre-existing translations. In
+  // particular, a Pro recipient must not start local inference by opening X.
+  const isSharedStory =
+    resolvedSource === "share" || resolvedSource?.startsWith("share_") === true;
   const articleRequestLanguage = resolvedContentLanguage ?? language;
   const currentStoryHref = useMemo(() => {
     if (!resolvedSlug) return "/";
@@ -469,6 +473,7 @@ export default function StoryDetailScreen() {
                 {
                   includeDraft: PREVIEW_DRAFTS,
                   language: articleRequestLanguage,
+                  prepare: !isSharedStory,
                 },
               );
               result = {
@@ -545,6 +550,7 @@ export default function StoryDetailScreen() {
     language,
     articleRequestLanguage,
     isWeb,
+    isSharedStory,
     reloadKey,
     requestKey,
     t.storyUnavailable,
