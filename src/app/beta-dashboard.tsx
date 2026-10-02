@@ -2472,6 +2472,7 @@ function RuntimeConfigEditor({
   const stackWideFields = width < 640;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     access: true,
+    mobileDownloads: true,
   });
   const toggleGroup = (key: string) =>
     setOpenGroups((current) => ({
@@ -2553,6 +2554,22 @@ function RuntimeConfigEditor({
         />
       </View>
 
+      </ConfigGroup>
+
+      <ConfigGroup
+        title="Native app download promotion"
+        detail="Control download prompts while Briefly is available through TestFlight or Google Play closed testing."
+        open={openGroups.mobileDownloads === true}
+        onToggle={() => toggleGroup("mobileDownloads")}
+      >
+        <ConfigToggle
+          label="Promote iOS and Android apps on web"
+          detail="Off hides the native-app download banner on Home and the app/store chooser on shared stories. It never hides Install web app or disables installed-app Universal Links."
+          value={config.mobile_app_promotion_enabled}
+          onValueChange={(value) =>
+            onChange("mobile_app_promotion_enabled", value)
+          }
+        />
       </ConfigGroup>
 
       <ConfigGroup

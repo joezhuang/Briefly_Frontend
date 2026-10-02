@@ -160,6 +160,17 @@ check("Web readers choose app, store if configured, or continue reading", () => 
   assert.ok(read("src/app/story/[slug].tsx").includes("SharedAppChoice"));
   assert.ok(read("src/app/share/[versionId].tsx").includes("SharedAppChoice"));
   assert.ok(read("src/app/index.tsx").includes("HomeInstallBanners"));
+  // The native-app promotion gate is opt-in and independent of the PWA banner.
+  assert.ok(source.includes("config?.mobile_app_promotion_enabled !== true"));
+  assert.ok(read("src/components/home-install-banners.web.tsx").includes(
+    "if (config?.mobile_app_promotion_enabled !== true) return [];"
+  ));
+  assert.ok(read("src/app/beta-dashboard.tsx").includes(
+    'onChange("mobile_app_promotion_enabled", value)'
+  ));
+  assert.ok(read("src/api/briefly.ts").includes(
+    "mobile_app_promotion_enabled: value.mobile_app_promotion_enabled ?? false"
+  ));
 });
 
 process.stdout.write(`\nBriefly mobile app-link contract: ${passed}/${passed} checks passed.\n`);

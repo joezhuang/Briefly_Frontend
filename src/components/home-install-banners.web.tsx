@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 
+import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 
@@ -136,6 +137,7 @@ function isStandalone() {
 }
 
 export function HomeInstallBanners() {
+  const { config } = useBrieflyAppConfig();
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const text = copy[language] ?? copy.en;
@@ -147,6 +149,7 @@ export function HomeInstallBanners() {
   const [mobileHidden, setMobileHidden] = useState(true);
 
   const mobileLinks = useMemo(() => {
+    if (config?.mobile_app_promotion_enabled !== true) return [];
     if (platform === "ios") {
       return IOS_APP_URL ? [{ label: text.ios, url: IOS_APP_URL }] : [];
     }
@@ -162,7 +165,7 @@ export function HomeInstallBanners() {
         ? [{ label: text.android, url: ANDROID_APP_URL }]
         : []),
     ];
-  }, [platform, text.android, text.ios]);
+  }, [config?.mobile_app_promotion_enabled, platform, text.android, text.ios]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 
@@ -133,6 +134,7 @@ function safeNativeHref({ appPath, uiLanguage, contentLanguage, readingLanguage 
 }
 
 export function SharedAppChoice(props: SharedAppChoiceProps) {
+  const { config } = useBrieflyAppConfig();
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const [dismissed, setDismissed] = useState(false);
@@ -207,7 +209,7 @@ export function SharedAppChoice(props: SharedAppChoiceProps) {
     }
   };
 
-  if (dismissed || platform === "desktop" || !appUrl) return null;
+  if (config?.mobile_app_promotion_enabled !== true || dismissed || platform === "desktop" || !appUrl) return null;
 
   return (
     <View
