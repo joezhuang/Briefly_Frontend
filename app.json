@@ -10,7 +10,10 @@
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "com.hybridgalaxy.briefly"
+      "bundleIdentifier": "com.hybridgalaxy.briefly",
+      "associatedDomains": [
+        "applinks:briefly-news-analysis.vercel.app"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -21,6 +24,18 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.hybridgalaxy.briefly",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "https", "host": "briefly-news-analysis.vercel.app", "pathPrefix": "/s/" },
+            { "scheme": "https", "host": "briefly-news-analysis.vercel.app", "pathPrefix": "/story/" },
+            { "scheme": "https", "host": "briefly-news-analysis.vercel.app", "pathPrefix": "/share/" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
