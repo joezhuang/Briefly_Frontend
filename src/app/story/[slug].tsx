@@ -398,7 +398,7 @@ export default function StoryDetailScreen() {
               includeDraft: PREVIEW_DRAFTS,
               language: articleRequestLanguage,
               includeVideos: true,
-              prepare: true,
+              prepare: !isSharedStory,
               sourceScope:
                 resolvedScope === "top" ||
                 resolvedScope === "national" ||

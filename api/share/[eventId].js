@@ -98,7 +98,7 @@ async function loadArticle(key, legacyVersion) {
     ? `/api/articles/version/${encodeURIComponent(key)}?include_draft=false`
     : `/api/lazy-articles/event/${encodeURIComponent(
         key,
-      )}?language=en&include_draft=false`;
+      )}?language=en&include_draft=false&prepare=false`;
 
   const response = await fetch(`${apiBase}${path}`, {
     headers: { Accept: "application/json" },
