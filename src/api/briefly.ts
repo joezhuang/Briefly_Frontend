@@ -297,10 +297,18 @@ export function requestStaleStoryRefresh(
 
 export function getExperimentalArticleByEventId(
   eventId: string,
-  options?: { includeDraft?: boolean; language?: string; includeVideos?: boolean },
+  options?: {
+    includeDraft?: boolean;
+    language?: string;
+    includeVideos?: boolean;
+    prepare?: boolean;
+  },
 ) {
+  const params = new URLSearchParams(articleQuery(options));
+  // Shared links may read a cached translation but must not trigger Ollama.
+  params.set("prepare", String(options?.prepare ?? true));
   return getJson<CanonicalArticle>(
-    `/api/articles/event/${encodeURIComponent(eventId)}/experimental?${articleQuery(options)}`,
+    `/api/articles/event/${encodeURIComponent(eventId)}/experimental?${params.toString()}`,
   );
 }
 
