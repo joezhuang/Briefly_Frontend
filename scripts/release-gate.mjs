@@ -66,6 +66,7 @@ function verifyNativeBrandConfig() {
 
 run("Frontend lint", ["run", "lint"]);
 run("Beta user-journey source gate", ["run", "smoke:journey"]);
+run("Universal and Android App Links", ["run", "smoke:app-links"]);
 run("Cross-platform UI source gate", ["run", "smoke:ui"]);
 run("Analytics and monitoring source gate", ["run", "smoke:telemetry"]);
 

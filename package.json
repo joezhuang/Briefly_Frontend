@@ -54,6 +54,7 @@
     "smoke:journey": "node scripts/smoke-user-journey.mjs",
     "smoke:ui": "node scripts/smoke-cross-platform-ui.mjs",
     "smoke:telemetry": "node scripts/smoke-telemetry.mjs",
+    "smoke:app-links": "node scripts/smoke-app-links.mjs",
     "release:gate": "node scripts/release-gate.mjs"
   },
   "private": true
