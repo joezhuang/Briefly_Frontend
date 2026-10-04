@@ -620,6 +620,29 @@ ensure(startupTranslation.includes('canUseDraftTranslation') &&
 ensure(storySource.includes('includeDraft: PREVIEW_DRAFTS || canUseDraftTranslation'),
        "Pro must read a draft canonical source to start translation");
 
+// Translation notifications are part of the shared generation notification tray,
+// not a screen-local spinner. They must survive leaving the Story screen.
+const notificationsSource = read("src/context/analysis-readiness.tsx");
+ensure(startupTranslation.includes('watchTranslation({') &&
+       statusAction.includes('watchTranslation({') &&
+       storySource.includes('const { watchAnalysis, watchTranslation, watchPodcast }') &&
+       storySource.includes('params.set("content", articleRequestLanguage)') &&
+       storySource.includes('params.set("read", articleRequestLanguage)'),
+       "Auto/manual queued translation jobs register a persistent notification with a translated deep link");
+ensure(notificationsSource.includes('if (item.kind === "translation") {') &&
+       notificationsSource.includes('getExperimentalTranslationStatus(') &&
+       notificationsSource.includes('job.translation_article_version_id != null') &&
+       notificationsSource.includes('job.source_article_version_id === item.baseVersionId') &&
+       notificationsSource.includes('job.language === item.targetLanguage'),
+       "Translation notifications complete only on a source-version/language matched ready job");
+ensure(notificationsSource.includes('kind === "refresh" || item.kind === "translation"') &&
+       notificationsSource.includes('candidate.kind !== "translation"') &&
+       notificationsSource.includes('withoutSuperseded'),
+       "Translation readiness is uniquely tracked and replaces obsolete initial watchers");
+ensure(notificationsSource.includes('prepare: false,') &&
+       !notificationsSource.includes('prepare: true'),
+       "Notification polling must never start paid canonical or translation generation");
+
 let passed = 0;
 for (const check of checks) {
   requireAll(check.file, check.needles);

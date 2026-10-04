@@ -285,7 +285,7 @@ export default function StoryDetailScreen() {
   }, [resolvedUi, setTransientLanguage]);
   const { ready: authReady, user, account } = useBrieflyAuth();
   const { config: appConfig } = useBrieflyAppConfig();
-  const { watchAnalysis, watchPodcast } = useAnalysisReadiness();
+  const { watchAnalysis, watchTranslation, watchPodcast } = useAnalysisReadiness();
   const { recordArticle } = useReadingHistory();
 
   const [article, setArticle] = useState<CanonicalArticle | null>(null);
@@ -356,6 +356,19 @@ export default function StoryDetailScreen() {
     pinnedTranslationVersion,
     pinnedEnglishVersion,
   ]);
+  // Notification links must reopen in the translated reading language even
+  // when the user's original link explicitly requested English content.
+  const translationNotificationHref = useMemo(() => {
+    const [pathname, query = ""] = currentStoryHref.split("?", 2);
+    const params = new URLSearchParams(query);
+    params.set("ui", resolvedUi ?? language);
+    params.set("content", articleRequestLanguage);
+    params.set("read", articleRequestLanguage);
+    params.delete("mode");
+    params.delete("translationVersion");
+    params.delete("englishVersion");
+    return `${pathname}?${params.toString()}`;
+  }, [articleRequestLanguage, currentStoryHref, language, resolvedUi]);
   const translateSourceUrl = getGoogleTranslateStoryUrl(
     currentStoryHref,
     language,
@@ -693,6 +706,8 @@ export default function StoryDetailScreen() {
   const latestTranslationReady =
     !!article && matchedBilingualOriginal(article, authoritativeArticle) !== null;
   const autoTranslationUserId = user?.id ?? null;
+  const translationNotificationHeadline =
+    authoritativeArticle?.headline || resolvedPreviewHeadline || "Briefly story";
 
   useEffect(() => {
     if (!translationEnabled || (!bilingualReaderFeatureEnabled && !isPro) ||
@@ -742,6 +757,14 @@ export default function StoryDetailScreen() {
         if (job.status === "queued" || job.status === "processing" ||
             job.status === "failed" || job.status === "interrupted" ||
             job.status === "unknown") {
+          if (job.status === "queued" || job.status === "processing") {
+            watchTranslation({
+              eventId: resolvedEventId, language: articleRequestLanguage,
+              headline: translationNotificationHeadline,
+              href: translationNotificationHref,
+              articleVersionId: latestEnglishVersionId,
+            });
+          }
           setBilingualGeneration({
             key: bilingualGenerationKey,
             status: job.status === "queued" || job.status === "processing"
@@ -788,10 +811,20 @@ export default function StoryDetailScreen() {
           } : localized);
           setBilingualGeneration(null);
         } else {
+          const jobAccepted = localized.translation_status === "pending" &&
+            localized.translation_entitled === true &&
+            localized.authoritative_article_version_id === latestEnglishVersionId;
+          if (jobAccepted) {
+            watchTranslation({
+              eventId: resolvedEventId, language: articleRequestLanguage,
+              headline: translationNotificationHeadline,
+              href: translationNotificationHref,
+              articleVersionId: latestEnglishVersionId,
+            });
+          }
           setBilingualGeneration({
             key: bilingualGenerationKey,
-            status: localized.translation_status === "pending" &&
-              localized.translation_entitled === true ? "pending" : "unknown",
+            status: jobAccepted ? "pending" : "unknown",
             attempts: 0,
           });
         }
@@ -813,7 +846,8 @@ export default function StoryDetailScreen() {
     latestTranslationReady, isSharedStory,
     pinnedTranslationVersion, articleRequestLanguage, resolvedContentLanguage,
     languageMode, preferencesReady, autoTranslateStories, autoTranslationUserId,
-    canUseDraftTranslation,
+    canUseDraftTranslation, watchTranslation,
+    translationNotificationHeadline, translationNotificationHref,
   ]);
 
   // Polling only retrieves durable status; it never starts a translation.
@@ -936,6 +970,14 @@ export default function StoryDetailScreen() {
             return;
           }
         }
+        if (job.status === "queued" || job.status === "processing") {
+          watchTranslation({
+            eventId: resolvedEventId, language: articleRequestLanguage,
+            headline: translationNotificationHeadline,
+            href: translationNotificationHref,
+            articleVersionId: authoritativeArticle.article_version_id,
+          });
+        }
         setBilingualGeneration(job.status === "not_requested" ? null : {
           key: bilingualGenerationKey,
           status: job.status === "queued" || job.status === "processing"
@@ -975,10 +1017,20 @@ export default function StoryDetailScreen() {
         setLanguageMode("bilingual");
         setBilingualGeneration(null);
       } else {
+        const jobAccepted = localized.translation_status === "pending" &&
+          localized.translation_entitled === true &&
+          localized.authoritative_article_version_id === authoritativeArticle.article_version_id;
+        if (jobAccepted) {
+          watchTranslation({
+            eventId: resolvedEventId, language: articleRequestLanguage,
+            headline: translationNotificationHeadline,
+            href: translationNotificationHref,
+            articleVersionId: authoritativeArticle.article_version_id,
+          });
+        }
         setBilingualGeneration({
           key: bilingualGenerationKey,
-          status: localized.translation_status === "pending" && localized.translation_entitled === true
-            ? "pending" : "unknown",
+          status: jobAccepted ? "pending" : "unknown",
           attempts: 0,
         });
       }

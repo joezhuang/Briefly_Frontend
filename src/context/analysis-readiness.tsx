@@ -14,6 +14,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
   getExperimentalArticleByEventId,
+  getExperimentalTranslationStatus,
   getLazyCanonicalArticleByEventId,
   getPodcastAnalysisStatus,
 } from "@/api/briefly";
@@ -200,8 +201,10 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
     if (item.type === "podcast") {
       return `podcast:${item.articleVersionId}:${item.language}`;
     }
-    if (item.kind === "refresh") {
-      return `article:refresh:${item.eventId}:${item.baseVersionId ?? "initial"}:${item.targetLanguage ?? "canonical"}`;
+    if (item.kind === "refresh" || item.kind === "translation") {
+      // Every immutable English version/language completion is separately
+      // notifiable; opening an older ready item must not suppress a newer one.
+      return `article:${item.kind}:${item.eventId}:${item.baseVersionId ?? "initial"}:${item.targetLanguage ?? "canonical"}`;
     }
     return `article:${item.eventId}:${item.targetLanguage ?? "canonical"}`;
   }, []);
@@ -331,23 +334,25 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       setState((current) => {
         if (current.ownerKey !== ownerKey) return current;
 
-        const alreadyTracksLocalization = Object.values(current.pending).some(
-          (candidate) =>
-            candidate.type === "article" &&
-            candidate.eventId === item.eventId &&
-            candidate.targetLanguage === item.language &&
-            candidate.kind !== "translation",
-        );
-        if (alreadyTracksLocalization) return current;
-
         const existing = current.pending[key];
         if (existing?.headline === next.headline && existing?.href === next.href) {
           return current;
         }
 
+        // An initial article watcher in the same language must not mask the
+        // later translation completion; replace it once the source exists.
+        const withoutSuperseded = Object.fromEntries(
+          Object.entries(current.pending).filter(([, candidate]) =>
+            !(candidate.type === "article" &&
+              candidate.kind !== "translation" &&
+              candidate.kind !== "refresh" &&
+              candidate.eventId === item.eventId &&
+              candidate.targetLanguage === item.language),
+          ),
+        );
         return {
           ...current,
-          pending: { ...current.pending, [key]: next },
+          pending: { ...withoutSuperseded, [key]: next },
         };
       });
     },
@@ -415,9 +420,37 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               return;
             }
 
+            if (item.kind === "translation") {
+              if (item.baseVersionId == null || !item.targetLanguage) {
+                terminalFailures.push(item);
+                return;
+              }
+              // Never call prepare=true from a notification watcher. Durable
+              // status is keyed by the exact English source and language, so
+              // a newer canonical cannot lose or complete an earlier watch.
+              const job = await getExperimentalTranslationStatus(
+                item.eventId,
+                item.baseVersionId,
+                item.targetLanguage,
+                account?.translation_entitled === true,
+              );
+              if (
+                job.status === "ready" &&
+                job.source_article_version_id === item.baseVersionId &&
+                job.language === item.targetLanguage &&
+                job.translation_article_version_id != null
+              ) {
+                completed.push(item);
+              } else if (job.status === "failed" || job.status === "interrupted") {
+                terminalFailures.push(item);
+              }
+              return;
+            }
+
             const article = await getLazyCanonicalArticleByEventId(item.eventId, {
               includeDraft: PREVIEW_DRAFTS,
               language: "en",
+              prepare: false,
             });
             const nextVersionId = article.article_version_id;
             const canonicalReady =
@@ -464,8 +497,9 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               item.targetLanguage
             ) {
               const localized = await getExperimentalArticleByEventId(item.eventId, {
-                includeDraft: PREVIEW_DRAFTS,
+                includeDraft: PREVIEW_DRAFTS || account?.translation_entitled === true,
                 language: item.targetLanguage,
+                prepare: false,
               });
               const localizedLanguage =
                 localized.content_language ?? localized.language;
