@@ -384,7 +384,7 @@ const checks = [
       'localized.translation_historical === true',
       'resolvedContentLanguage === "en"',
       'languageMode === "original"',
-      'authoritativeArticle.status !== "published"',
+      'latestEnglishPublished',
       'includeDraft: false, language: articleRequestLanguage, prepare: true',
       'prepare: false,',
       'job.status === "ready"',
@@ -545,39 +545,43 @@ const historicalFallback = storySection(
   "// Keep an approved historical translation",
   '          } else {\n            result = canonical;',
 );
-const autoTranslation = storySection(
-  "// A Pro story open may start a missing translation",
-  "// Durable read-only status allows a reader",
-);
-const statusLookup = storySection(
-  "// Durable read-only status allows a reader",
+const startupTranslation = storySection(
+  "// Reconcile translation on story open from one read-only status lookup.",
   "// Polling only retrieves durable status",
 );
 const generationAction = storySection(
   "  const showBilingualGeneration =",
   "  const bilingualGenerationText =",
 );
-for (const [name, section] of [
-  ["historical fallback", historicalFallback],
-  ["automatic generation", autoTranslation],
-  ["translation status", statusLookup],
-  ["translation action", generationAction],
-]) {
-  if (!section.includes("matchedBilingualOriginal(article, authoritativeArticle)") &&
-      name !== "historical fallback") {
-    throw new Error(`${name} must independently check the latest English version`);
-  }
-}
-if (!historicalFallback.includes('setLanguageMode("bilingual")') ||
-    historicalFallback.includes("result = canonical;")) {
-  throw new Error("Historical translation must remain readable as a pair, not be replaced with latest English");
-}
-if (autoTranslation.includes('(article.content_language ?? article.language) !== "en"') ||
-    statusLookup.includes('(article.content_language ?? article.language) !== "en"') ||
-    generationAction.includes('(article.content_language ?? article.language) === "en"') ||
-    generationAction.includes("matchedEnglishArticle === null")) {
-  throw new Error("An older translated pair must not suppress latest-version generation or status polling");
-}
+const ensure = (condition, message) => { if (!condition) throw new Error(message); };
+ensure(historicalFallback.includes('setLanguageMode("bilingual")') &&
+       !historicalFallback.includes("result = canonical;"),
+       "Historical translation must remain readable as a version-matched pair");
+ensure(startupTranslation.includes('latestTranslationReady') &&
+       startupTranslation.includes('matchedBilingualOriginal(article, authoritativeArticle)'),
+       "Startup must check the latest English pair, not the displayed historical pair");
+ensure(!startupTranslation.includes('}, [\n    preferencesReady, autoTranslateStories, user, isPro') &&
+       !startupTranslation.includes('    article,\n'),
+       "Startup effect must not be cancelled by unrelated displayed-article identity changes");
+ensure(startupTranslation.includes('job.status === "ready"') &&
+       startupTranslation.includes('job.status === "queued"') &&
+       startupTranslation.includes('job.status === "processing"') &&
+       startupTranslation.includes('job.status === "failed"'),
+       "Startup must reconcile existing job states without launching duplicates");
+ensure(startupTranslation.includes('job.status !== "not_requested"') &&
+       startupTranslation.includes('autoTranslationRequested.current.has(requestId)') &&
+       startupTranslation.includes('prepare: true'),
+       "Only a missing latest-version job may be auto-started once");
+ensure(startupTranslation.includes('!preferencesReady || !autoTranslateStories') &&
+       startupTranslation.includes('isSharedStory') &&
+       startupTranslation.includes('pinnedTranslationVersion') &&
+       startupTranslation.includes('resolvedContentLanguage === "en"'),
+       "Automatic generation must respect explicit opt-out and share/English restrictions");
+ensure(!startupTranslation.includes('(article.content_language ?? article.language) !== "en"') &&
+       !generationAction.includes('(article.content_language ?? article.language) === "en"') &&
+       generationAction.includes('matchedBilingualOriginal(article, authoritativeArticle) === null'),
+       "A previous translation must not suppress current-version generation or progress");
+
 
 let passed = 0;
 for (const check of checks) {

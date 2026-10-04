@@ -677,36 +677,89 @@ export default function StoryDetailScreen() {
     return () => { active = false; };
   }, [historicalEnglishKey, oldEnglishSourceId]);
 
-  // A Pro story open may start a missing translation, but only after a
-  // read-only status lookup proves no matching version/job exists.
-  // Generation targets the latest authoritative English version, regardless
-  // of whether an older translation pair is currently on screen.
-  // Shared links, pinned historical pairs and user-selected English are never
-  // automatic generation triggers.
+  // Reconcile translation on story open from one read-only status lookup.
+  // Displaying an earlier translation does not satisfy the latest English
+  // version. Shared/pinned links never request generation.
+  const displayedEventId = article?.event_id ?? null;
+  const latestEnglishVersionId = authoritativeArticle?.article_version_id ?? null;
+  const latestEnglishPublished = authoritativeArticle?.status === "published";
+  const latestEnglishEventId = authoritativeArticle?.event_id ?? null;
+  const currentCanonicalStale = article?.canonical_stale === true;
+  const latestTranslationReady =
+    !!article && matchedBilingualOriginal(article, authoritativeArticle) !== null;
+  const autoTranslationUserId = user?.id ?? null;
+
   useEffect(() => {
-    if (!preferencesReady || !autoTranslateStories || !user || !isPro ||
-        !translationEnabled || !resolvedEventId || !bilingualGenerationKey ||
-        !authoritativeArticle?.article_version_id || authoritativeArticle.status !== "published" ||
-        !article || article.event_id !== resolvedEventId ||
-        authoritativeArticle.event_id !== resolvedEventId ||
-        article.canonical_stale || isSharedStory || pinnedTranslationVersion ||
-        articleRequestLanguage === "en" || resolvedContentLanguage === "en" ||
-        languageMode === "original" ||
-        matchedBilingualOriginal(article, authoritativeArticle) !== null) return;
+    if (!translationEnabled || (!bilingualReaderFeatureEnabled && !isPro) ||
+        !resolvedEventId || !bilingualGenerationKey || !latestEnglishVersionId ||
+        displayedEventId !== resolvedEventId ||
+        latestEnglishEventId !== resolvedEventId || isSharedStory ||
+        pinnedTranslationVersion || latestTranslationReady) return;
 
-    const requestId = `${user.id}:${bilingualGenerationKey}`;
-    if (autoTranslationRequested.current.has(requestId)) return;
     let active = true;
-    const english = authoritativeArticle;
-
-    void getExperimentalTranslationStatus(
-      resolvedEventId, english.article_version_id!, articleRequestLanguage,
-    ).then(async (job) => {
-      if (!active || job.status !== "not_requested" ||
-          autoTranslationRequested.current.has(requestId)) return;
-      autoTranslationRequested.current.add(requestId);
-      setBilingualGeneration({ key: bilingualGenerationKey, status: "requesting", attempts: 0 });
+    // The source identity, not the mutable displayed article object, owns this
+    // lifecycle. An older pair or an unrelated article-state update must not
+    // cancel the startup status check before it can request translation.
+    const english = authoritativeArticle!;
+    const reconcile = async () => {
       try {
+        const job = await getExperimentalTranslationStatus(
+          resolvedEventId, latestEnglishVersionId, articleRequestLanguage,
+        );
+        if (!active) return;
+
+        if (job.status === "ready") {
+          const localized = await getExperimentalArticleByEventId(resolvedEventId, {
+            includeDraft: PREVIEW_DRAFTS, language: articleRequestLanguage, prepare: false,
+          });
+          if (!active) return;
+          if (matchedBilingualOriginal(localized, english)) {
+            setArticle((current) => current ? {
+              ...localized,
+              image_url: current.image_url,
+              video_url: current.video_url,
+              video_thumbnail_url: current.video_thumbnail_url,
+              videos: current.videos,
+              canonical_stale: current.canonical_stale,
+              latest_evidence_at: current.latest_evidence_at,
+              stale_refresh_entitled: current.stale_refresh_entitled,
+            } : localized);
+            setBilingualGeneration(null);
+          } else {
+            setBilingualGeneration({
+              key: bilingualGenerationKey, status: "unknown", attempts: 0,
+            });
+          }
+          return;
+        }
+
+        if (job.status === "queued" || job.status === "processing" ||
+            job.status === "failed" || job.status === "interrupted" ||
+            job.status === "unknown") {
+          setBilingualGeneration({
+            key: bilingualGenerationKey,
+            status: job.status === "queued" || job.status === "processing"
+              ? "pending" : job.status,
+            attempts: 0,
+          });
+          return;
+        }
+
+        // "not_requested" is the only status allowed to launch new work.
+        // Respect the user's explicit opt-out and avoid translating a draft,
+        // stale canonical, shared link or user-selected English mode.
+        if (job.status !== "not_requested" ||
+            !preferencesReady || !autoTranslateStories || !autoTranslationUserId ||
+            !isPro || !latestEnglishPublished || currentCanonicalStale ||
+            articleRequestLanguage === "en" || resolvedContentLanguage === "en" ||
+            languageMode === "original") return;
+
+        const requestId = `${autoTranslationUserId}:${bilingualGenerationKey}`;
+        if (autoTranslationRequested.current.has(requestId)) return;
+        autoTranslationRequested.current.add(requestId);
+        setBilingualGeneration({
+          key: bilingualGenerationKey, status: "requesting", attempts: 0,
+        });
         const localized = await getExperimentalArticleByEventId(resolvedEventId, {
           includeDraft: false, language: articleRequestLanguage, prepare: true,
         });
@@ -732,76 +785,23 @@ export default function StoryDetailScreen() {
           });
         }
       } catch {
-        // Uncertain network outcome: check status manually; never auto-retry.
+        // Network uncertainty is not evidence of model failure. Never fire a
+        // second inference request as a fallback to a failed status lookup.
         if (active) setBilingualGeneration({
           key: bilingualGenerationKey, status: "unknown", attempts: 0,
         });
       }
-    }).catch(() => {
-      // A failed read-only status check must not schedule inference.
-      if (active) setBilingualGeneration({
-        key: bilingualGenerationKey, status: "unknown", attempts: 0,
-      });
-    });
-    return () => { active = false; };
-  }, [
-    preferencesReady, autoTranslateStories, user, isPro, translationEnabled,
-    resolvedEventId, bilingualGenerationKey, authoritativeArticle, article,
-    isSharedStory, pinnedTranslationVersion, articleRequestLanguage,
-    resolvedContentLanguage, languageMode,
-  ]);
+    };
 
-  // Durable read-only status allows a reader to leave and return later.
-  // A status check never asks the backend to generate another translation.
-  useEffect(() => {
-    if (!translationEnabled || (!bilingualReaderFeatureEnabled && !isPro) ||
-        !bilingualGenerationKey || !resolvedEventId ||
-        !authoritativeArticle?.article_version_id ||
-        isSharedStory || pinnedTranslationVersion ||
-        !article || article.event_id !== resolvedEventId ||
-        matchedBilingualOriginal(article, authoritativeArticle) !== null) return;
-    let active = true;
-    void getExperimentalTranslationStatus(
-      resolvedEventId, authoritativeArticle.article_version_id, articleRequestLanguage,
-    ).then(async (job) => {
-      if (!active) return;
-      if (job.status === "ready") {
-        const localized = await getExperimentalArticleByEventId(resolvedEventId, {
-          includeDraft: PREVIEW_DRAFTS, language: articleRequestLanguage, prepare: false,
-        });
-        if (!active) return;
-        if (matchedBilingualOriginal(localized, authoritativeArticle)) {
-          setArticle((current) => current ? {
-            ...localized,
-            image_url: current.image_url,
-            video_url: current.video_url,
-            video_thumbnail_url: current.video_thumbnail_url,
-            videos: current.videos,
-            canonical_stale: current.canonical_stale,
-            latest_evidence_at: current.latest_evidence_at,
-            stale_refresh_entitled: current.stale_refresh_entitled,
-          } : localized);
-          // A normal story open defaults to Localized; preserve chosen modes.
-          setBilingualGeneration(null);
-        }
-      } else if (job.status !== "not_requested") {
-        setBilingualGeneration({
-          key: bilingualGenerationKey,
-          status: job.status === "queued" || job.status === "processing"
-            ? "pending" : job.status === "failed" || job.status === "interrupted"
-              ? job.status : "unknown",
-          attempts: 0,
-        });
-      }
-    }).catch(() => {
-      // A pre-migration backend may not expose job status. English remains readable.
-    });
+    void reconcile();
     return () => { active = false; };
   }, [
-    bilingualReaderFeatureEnabled, translationEnabled, isPro, bilingualGenerationKey,
-    resolvedEventId, authoritativeArticle,
-    articleRequestLanguage, isSharedStory, pinnedTranslationVersion,
-    article,
+    translationEnabled, bilingualReaderFeatureEnabled, isPro,
+    resolvedEventId, bilingualGenerationKey, latestEnglishVersionId,
+    latestEnglishPublished, latestEnglishEventId, displayedEventId,
+    currentCanonicalStale, latestTranslationReady, isSharedStory,
+    pinnedTranslationVersion, articleRequestLanguage, resolvedContentLanguage,
+    languageMode, preferencesReady, autoTranslateStories, autoTranslationUserId,
   ]);
 
   // Polling only retrieves durable status; it never starts a translation.
