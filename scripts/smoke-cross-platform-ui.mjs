@@ -384,7 +384,7 @@ const checks = [
       'localized.translation_historical === true',
       'resolvedContentLanguage === "en"',
       'languageMode === "original"',
-      'latestEnglishPublished',
+      '!isPro ||',
       'includeDraft: canUseDraftTranslation, language: articleRequestLanguage, prepare: true',
       'prepare: false,',
       'job.status === "ready"',
@@ -610,9 +610,13 @@ ensure(translationProgressUI.includes('<ActivityIndicator size="small"') &&
        translationProgressUI.includes('bilingualGenerationText.unavailable'),
        "Translation progress must show a spinner only while checking or pending");
 ensure(startupTranslation.includes('canUseDraftTranslation') &&
-       startupTranslation.includes('latestEnglishDraft') &&
-       startupTranslation.includes('includeDraft: canUseDraftTranslation'),
-       "Entitled Pro story open must support unpublished English sources");
+       startupTranslation.includes('includeDraft: canUseDraftTranslation') &&
+       startupTranslation.includes('!isPro ||') &&
+       !startupTranslation.includes('latestEnglishPublished') &&
+       !startupTranslation.includes('latestEnglishDraft') &&
+       !startupTranslation.includes('currentCanonicalStale') &&
+       !generationAction.includes('!article.canonical_stale &&'),
+       "Pro auto-translation must not be blocked by legacy publication status or newly arrived evidence");
 ensure(storySource.includes('includeDraft: PREVIEW_DRAFTS || canUseDraftTranslation'),
        "Pro must read a draft canonical source to start translation");
 

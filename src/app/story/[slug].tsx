@@ -689,10 +689,7 @@ export default function StoryDetailScreen() {
   // version. Shared/pinned links never request generation.
   const displayedEventId = article?.event_id ?? null;
   const latestEnglishVersionId = authoritativeArticle?.article_version_id ?? null;
-  const latestEnglishPublished = authoritativeArticle?.status === "published";
-  const latestEnglishDraft = authoritativeArticle?.status === "draft";
   const latestEnglishEventId = authoritativeArticle?.event_id ?? null;
-  const currentCanonicalStale = article?.canonical_stale === true;
   const latestTranslationReady =
     !!article && matchedBilingualOriginal(article, authoritativeArticle) !== null;
   const autoTranslationUserId = user?.id ?? null;
@@ -755,12 +752,13 @@ export default function StoryDetailScreen() {
         }
 
         // "not_requested" is the only status allowed to launch new work.
-        // Respect the user's explicit opt-out and avoid translating a draft,
-        // stale canonical, shared link or user-selected English mode.
+        // Legacy draft/published flags and canonical_stale are not eligibility
+        // gates: we already have an immutable, event-matched English source.
+        // A new English revision uses a distinct translation cache key. Respect
+        // the user's opt-out, Pro entitlement, and read-only shared links.
         if (job.status !== "not_requested" ||
             !preferencesReady || !autoTranslateStories || !autoTranslationUserId ||
-            !isPro || !(latestEnglishPublished || (canUseDraftTranslation && latestEnglishDraft)) ||
-            currentCanonicalStale ||
+            !isPro ||
             articleRequestLanguage === "en" || resolvedContentLanguage === "en" ||
             languageMode === "original") {
           setBilingualGeneration(null);
@@ -811,8 +809,8 @@ export default function StoryDetailScreen() {
   }, [
     translationEnabled, bilingualReaderFeatureEnabled, isPro,
     resolvedEventId, bilingualGenerationKey, latestEnglishVersionId,
-    latestEnglishPublished, latestEnglishDraft, latestEnglishEventId, displayedEventId,
-    currentCanonicalStale, latestTranslationReady, isSharedStory,
+    latestEnglishEventId, displayedEventId,
+    latestTranslationReady, isSharedStory,
     pinnedTranslationVersion, articleRequestLanguage, resolvedContentLanguage,
     languageMode, preferencesReady, autoTranslateStories, autoTranslationUserId,
     canUseDraftTranslation,
@@ -1307,7 +1305,6 @@ export default function StoryDetailScreen() {
     translationEnabled &&
     (bilingualReaderFeatureEnabled || isPro) &&
     !isSharedStory &&
-    !article.canonical_stale &&
     !!resolvedEventId &&
     !!bilingualGenerationKey &&
     articleRequestLanguage !== "en" &&
