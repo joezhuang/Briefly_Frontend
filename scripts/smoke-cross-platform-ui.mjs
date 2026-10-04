@@ -290,6 +290,33 @@ const checks = [
     ],
   },
   {
+    name: "Dashboard controls cost-aware initial lazy canonical generation",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      "Minimum full-text sources for initial canonical generation",
+      'onChange("canonical_min_sources", number)',
+    ],
+  },
+  {
+    name: "Source-only preview keeps video at top and gates playback",
+    file: "src/components/event-preview-view.tsx",
+    needles: [
+      "previewVideoList(article)",
+      "<StoryVideo",
+      "videoAccess.allowed",
+      "topVideoSection",
+    ],
+  },
+  {
+    name: "Historical translations use their own published English source",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      "getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: false })",
+      "matchedBilingualOriginal(article, historicalOriginal)",
+      "bilingualLatestEnglishVersionId",
+    ],
+  },
+  {
     name: "Bilingual generation is explicit, gated and read-only when polling",
     file: "src/app/story/[slug].tsx",
     needles: [
@@ -331,7 +358,7 @@ const checks = [
       "matchedBilingualOriginal(",
       "localized.translation_source_article_version_id",
       "localized.event_id !== english.event_id",
-      'localized.translation_historical',
+      "latestEnglishVersionId",
       "paragraph.type === englishParagraphs[index].type",
       "styles.pairStacked",
     ],

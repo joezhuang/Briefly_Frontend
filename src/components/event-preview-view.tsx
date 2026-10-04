@@ -1,19 +1,62 @@
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { useState } from "react";
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { trackProductEvent } from "@/analytics/product-analytics";
+import { StoryVideo } from "@/components/story-video";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
-import type { CanonicalArticle } from "@/models/article";
+import type { CanonicalArticle, ArticleVideo } from "@/models/article";
+import type { FeatureAccessState } from "@/subscriptions/feature-access";
 import { layout } from "@/theme/tokens";
+
+function previewVideoList(article: CanonicalArticle): ArticleVideo[] {
+  const list = [...(article.videos ?? [])];
+  if (article.video_url && !list.some((item) => item.url === article.video_url)) {
+    list.unshift({
+      url: article.video_url,
+      thumbnail_url: article.video_thumbnail_url,
+      title: article.headline,
+    });
+  }
+  const seen = new Set<string>();
+  return list.filter((item) => {
+    const url = String(item.url || "").trim();
+    if (!url || seen.has(url)) return false;
+    seen.add(url);
+    return true;
+  });
+}
+
+function previewVideoPoster(video: ArticleVideo, all: ArticleVideo[]): string | null {
+  const poster = String(video.thumbnail_url || "").trim();
+  const duplicated = poster && all.some((item) => item.url !== video.url && item.thumbnail_url === poster);
+  try {
+    const url = new URL(video.url);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const id = host === "youtu.be"
+      ? url.pathname.split("/").filter(Boolean)[0]
+      : ["youtube.com", "m.youtube.com", "music.youtube.com", "youtube-nocookie.com"].includes(host)
+        ? url.searchParams.get("v") ?? url.pathname.match(/^\/(?:shorts|embed|live)\/([^/?#]+)/)?.[1]
+        : null;
+    if (id && /^[A-Za-z0-9_-]{11}$/.test(id) && (!poster || duplicated)) {
+      return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+    }
+  } catch {
+    // Non-YouTube source: retain an individual, valid poster if available.
+  }
+  return poster && !duplicated && !/\.(mp4|webm|m3u8)(?:$|[?#])/i.test(poster) ? poster : null;
+}
 
 const previewCopy = {
   en: {
     preparing: "Briefly is preparing this analysis from the event evidence.",
     waiting: "You do not need to wait here. Keep browsing other stories and Briefly will notify you in the app when this analysis is ready to read.",
-    sourceOnly: "Local source coverage",
-    sourceOnlyBody: "This story is currently Local-only, so Briefly is not spending AI generation on it. Open any original report below. If the event also becomes a Top or National story, Briefly can generate the shared analysis.",
+    sourceOnly: "Source coverage",
+    proVideo: "PRO · Play video",
+    signInVideo: "Sign in to play video",
+    sourceOnlyBody: "Briefly has not generated an analysis for this event. Read the original reports below, or watch the available source videos above.",
     failed: "Briefly could not prepare an authoritative analysis from the available source material.",
     retry: "Retry",
     retrying: "Retrying…",
@@ -24,8 +67,10 @@ const previewCopy = {
   es: {
     preparing: "Briefly está preparando este análisis a partir de la evidencia del evento.",
     waiting: "No necesitas esperar aquí. Sigue explorando otras noticias y Briefly te avisará dentro de la app cuando el análisis esté listo para leer.",
-    sourceOnly: "Cobertura local de fuentes",
-    sourceOnlyBody: "Esta noticia por ahora es solo local, así que Briefly no gasta generación de IA en ella. Abre cualquiera de las fuentes originales de abajo. Si también pasa a Top o Nacional, Briefly podrá generar el análisis compartido.",
+    sourceOnly: "Cobertura de fuentes",
+    proVideo: "PRO · Reproducir vídeo",
+    signInVideo: "Inicia sesión para ver el vídeo",
+    sourceOnlyBody: "Briefly todavía no ha generado un análisis. Puedes leer los reportajes originales o ver los vídeos disponibles arriba.",
     failed: "Briefly no pudo preparar un análisis autorizado con las fuentes disponibles.",
     retry: "Reintentar",
     retrying: "Reintentando…",
@@ -36,8 +81,10 @@ const previewCopy = {
   ja: {
     preparing: "イベントの根拠情報からBriefly分析を準備しています。",
     waiting: "ここで待つ必要はありません。他のニュースを見ながらお待ちください。分析が読めるようになったらBriefly内でお知らせします。",
-    sourceOnly: "地域ニュースの元記事",
-    sourceOnlyBody: "現在このニュースはLocalのみのため、BrieflyはAI生成を行いません。下の元記事を開いて読めます。TopまたはNationalでも扱われるようになれば、共有分析を生成できます。",
+    sourceOnly: "元記事の報道",
+    proVideo: "PRO · 動画を再生",
+    signInVideo: "ログインして動画を視聴",
+    sourceOnlyBody: "この出来事の分析はまだ生成されていません。元記事を読んだり、上にある動画を視聴したりできます。",
     failed: "利用可能な情報から信頼できるBriefly分析を作成できませんでした。",
     retry: "再試行",
     retrying: "再試行中…",
@@ -48,8 +95,10 @@ const previewCopy = {
   "zh-CN": {
     preparing: "Briefly 正在根据事件证据准备这篇分析。",
     waiting: "你不需要停留在这里等待。可以继续浏览其他新闻，分析准备好后 Briefly 会在应用内通知你。",
-    sourceOnly: "本地新闻来源",
-    sourceOnlyBody: "这条新闻目前只属于 Local，因此 Briefly 不会为它消耗 AI 生成成本。你可以打开下方任一原始报道。如果它也进入 Top 或 National，Briefly 就可以生成共享分析。",
+    sourceOnly: "新闻来源",
+    proVideo: "PRO · 播放视频",
+    signInVideo: "登录后播放视频",
+    sourceOnlyBody: "此事件尚未生成 Briefly 分析。你可以阅读下方的原始报道，或观看上方的视频。",
     failed: "Briefly 无法根据现有来源生成可靠的权威分析。",
     retry: "重试",
     retrying: "正在重试…",
@@ -60,8 +109,10 @@ const previewCopy = {
   "zh-TW": {
     preparing: "Briefly 正在根據事件證據準備這篇分析。",
     waiting: "你不需要停留在這裡等待。可以繼續瀏覽其他新聞，分析準備好後 Briefly 會在應用內通知你。",
-    sourceOnly: "本地新聞來源",
-    sourceOnlyBody: "這則新聞目前只屬於 Local，因此 Briefly 不會為它消耗 AI 生成成本。你可以開啟下方任一原始報導。如果它也進入 Top 或 National，Briefly 就可以產生共享分析。",
+    sourceOnly: "新聞來源",
+    proVideo: "PRO · 播放影片",
+    signInVideo: "登入後播放影片",
+    sourceOnlyBody: "此事件尚未產生 Briefly 分析。你可以閱讀下方的原始報導，或觀看上方的影片。",
     failed: "Briefly 無法根據現有來源產生可靠的權威分析。",
     retry: "重試",
     retrying: "正在重試…",
@@ -75,10 +126,14 @@ export function EventPreviewView({
   article,
   onRetry,
   sourceScope,
+  videoAccess,
+  signedIn = false,
 }: {
   article: CanonicalArticle;
   onRetry?: () => void;
   sourceScope?: "top" | "national" | "local";
+  videoAccess: FeatureAccessState;
+  signedIn?: boolean;
 }) {
   const { width } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
@@ -89,6 +144,18 @@ export function EventPreviewView({
   const sourceOnly = article.generation_status === "source_only";
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
+  const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null);
+  const videoItems = previewVideoList(article);
+  const selectedVideo = videoItems.find((item) => item.url === selectedVideoUrl) ?? videoItems[0] ?? null;
+  const poster = selectedVideo ? previewVideoPoster(selectedVideo, videoItems) : null;
+  const openVideoUpgrade = () => {
+    const returnTo = `/story/${encodeURIComponent(article.slug)}?eventId=${encodeURIComponent(article.event_id)}`;
+    if (!signedIn || videoAccess.gate === "sign_in") {
+      router.push(`/sign-in?returnTo=${encodeURIComponent(returnTo)}` as never);
+    } else {
+      router.push(`/upgrade?returnTo=${encodeURIComponent(returnTo)}` as never);
+    }
+  };
 
   const openCoverage = async (
     url: string,
@@ -152,7 +219,55 @@ export function EventPreviewView({
       contentContainerStyle={styles.scrollContent}
     >
       <View style={[styles.page, width < 480 && styles.pageCompact]}>
-        {!!article.image_url && (
+        {!!selectedVideo && (
+          <View style={styles.topVideoSection}>
+            <View style={styles.topVideoPlayer}>
+              {videoAccess.allowed ? (
+                <StoryVideo
+                  key={selectedVideo.url}
+                  url={selectedVideo.url}
+                  posterUrl={poster}
+                  accessibilityLabel={selectedVideo.title || article.headline}
+                />
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Unlock video"
+                  onPress={openVideoUpgrade}
+                  style={styles.videoLocked}
+                >
+                  {!!poster && <Image source={{ uri: poster }} style={StyleSheet.absoluteFill} contentFit="cover" />}
+                  <Text style={styles.videoLockedLabel}>{signedIn ? copy.proVideo : copy.signInVideo}</Text>
+                </Pressable>
+              )}
+            </View>
+            {videoItems.length > 1 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.videoStrip}>
+                {videoItems.map((video, index) => {
+                  const thumbnail = previewVideoPoster(video, videoItems);
+                  return (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={video.title || `Video ${index + 1}`}
+                      key={video.url}
+                      onPress={() => {
+                        if (!videoAccess.allowed) { openVideoUpgrade(); return; }
+                        setSelectedVideoUrl(video.url);
+                      }}
+                      style={[styles.videoTile, { borderColor: selectedVideo.url === video.url ? colors.accent : colors.border }]}
+                    >
+                      {!!thumbnail && <Image source={{ uri: thumbnail }} style={styles.videoTilePoster} contentFit="cover" />}
+                      <Text numberOfLines={2} style={[styles.videoTileText, { color: colors.text }]}>
+                        {video.title || video.source || `Video ${index + 1}`}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        )}
+        {!selectedVideo && !!article.image_url && (
           <Image
             source={{ uri: article.image_url }}
             style={[styles.heroImage, { backgroundColor: colors.imageFallback }]}
@@ -248,6 +363,14 @@ const styles = StyleSheet.create({
   },
   pageCompact: { paddingHorizontal: 14, paddingTop: 18 },
   heroImage: { width: "100%", aspectRatio: 16 / 9, borderRadius: 18, marginBottom: 28 },
+  topVideoSection: { width: "100%", marginBottom: 24, gap: 12 },
+  topVideoPlayer: { width: "100%", aspectRatio: 16 / 9, borderRadius: 18, overflow: "hidden" },
+  videoLocked: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#252525" },
+  videoLockedLabel: { color: "#FFFFFF", backgroundColor: "rgba(0,0,0,0.78)", paddingHorizontal: 20, paddingVertical: 12, borderRadius: 999, fontSize: 14, fontWeight: "800", overflow: "hidden" },
+  videoStrip: { gap: 9, paddingBottom: 4 },
+  videoTile: { width: 145, borderWidth: 1, borderRadius: 9, padding: 6, gap: 6 },
+  videoTilePoster: { width: "100%", aspectRatio: 16 / 9, borderRadius: 6 },
+  videoTileText: { fontSize: 12, lineHeight: 17, fontWeight: "600" },
   brand: { fontSize: 13, fontWeight: "800", letterSpacing: 2.2, marginBottom: 16 },
   headline: { fontSize: 42, lineHeight: 49, fontWeight: "900", letterSpacing: -1.1 },
   headlineCompact: { fontSize: 34, lineHeight: 40, letterSpacing: -0.7 },

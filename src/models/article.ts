@@ -55,6 +55,8 @@ export type CanonicalArticle = {
     | "local_only"
     | "top_eligible"
     | "national_eligible"
+    | "insufficient_sources"
+    | "qualified_sources"
     | "existing_canonical";
   canonical_stale?: boolean;
   latest_evidence_at?: string | null;

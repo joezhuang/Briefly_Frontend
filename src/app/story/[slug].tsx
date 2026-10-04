@@ -8,6 +8,7 @@ import {
   getBriefRepairStatus,
   getCanonicalArticleByEventId,
   getCanonicalArticleBySlug,
+  getCanonicalArticleByVersionId,
   getExperimentalArticleByEventId,
   getLazyCanonicalArticleByEventId,
   getPodcastAnalysisStatus,
@@ -270,6 +271,7 @@ export default function StoryDetailScreen() {
     useState<CanonicalArticle | null>(null);
   const [languageMode, setLanguageMode] =
     useState<ArticleLanguageMode>("localized");
+  const [historicalOriginalState, setHistoricalOriginalState] = useState<{key: string; value: CanonicalArticle} | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -601,6 +603,37 @@ export default function StoryDetailScreen() {
     watchAnalysis,
   ]);
 
+
+  // A cached older translation can be paired only with its immutable, publicly
+  // published English source. This fetch never requests generation or drafts.
+  const oldEnglishSourceId =
+    bilingualReaderFeatureEnabled &&
+    article?.translation_historical === true &&
+    article.translation_source_article_version_id != null &&
+    article.translation_source_article_version_id !== authoritativeArticle?.article_version_id
+      ? article.translation_source_article_version_id
+      : null;
+  const historicalEnglishKey = oldEnglishSourceId && article?.event_id
+    ? `${article.event_id}:${oldEnglishSourceId}`
+    : null;
+  const historicalOriginal = historicalEnglishKey === historicalOriginalState?.key
+    ? historicalOriginalState.value
+    : null;
+
+  useEffect(() => {
+    if (!historicalEnglishKey || !oldEnglishSourceId) return;
+    let active = true;
+    void getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: false })
+      .then((value) => {
+        if (active && value.status === "published" && value.article_version_id === oldEnglishSourceId) {
+          setHistoricalOriginalState({key: historicalEnglishKey, value});
+        }
+      })
+      .catch(() => {
+        // Source may be unpublished or unavailable; never display a false pair.
+      });
+    return () => { active = false; };
+  }, [historicalEnglishKey, oldEnglishSourceId]);
 
   // Only an explicit click may start generation in the new bilingual reader.
   // Polling uses prepare=false, so it cannot schedule another model job.
@@ -1012,6 +1045,8 @@ export default function StoryDetailScreen() {
       )}
         <EventPreviewView
           article={previewArticle}
+          videoAccess={videoAccess}
+          signedIn={!!user}
           sourceScope={
             resolvedScope === "top" ||
             resolvedScope === "national" ||
@@ -1030,7 +1065,9 @@ export default function StoryDetailScreen() {
     );
   }
 
-  const matchedEnglishArticle = matchedBilingualOriginal(article, authoritativeArticle);
+  const matchedEnglishArticle =
+    matchedBilingualOriginal(article, authoritativeArticle) ??
+    matchedBilingualOriginal(article, historicalOriginal);
   const showBilingualGeneration =
     bilingualReaderFeatureEnabled &&
     !isSharedStory &&
@@ -1046,7 +1083,6 @@ export default function StoryDetailScreen() {
   const bilingualEnabled =
     appConfig?.bilingual_reader_enabled === true &&
     translationEnabled &&
-    !article.canonical_stale &&
     matchedEnglishArticle !== null;
   const canToggleOriginal =
     bilingualEnabled || (
@@ -1175,6 +1211,7 @@ export default function StoryDetailScreen() {
         podcastEnabled={podcastEnabled}
         translationEnabled={translationEnabled}
         bilingualOriginal={effectiveLanguageMode === "bilingual" && bilingualEnabled ? matchedEnglishArticle : null}
+        bilingualLatestEnglishVersionId={authoritativeArticle?.article_version_id ?? null}
         bilingualGenerationAction={showBilingualGeneration ? (
           <View style={[styles.bilingualPrompt, { borderColor: colors.border, backgroundColor: colors.surfaceMuted }]}>
             <Text style={[styles.bilingualPromptTitle, { color: colors.text }]}>

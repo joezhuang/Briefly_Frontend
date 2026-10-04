@@ -3067,6 +3067,25 @@ function RuntimeConfigEditor({
       <ConfigToggle label="Local feed" detail="Show the Local feed." value={config.local_feed_enabled} onValueChange={(value) => onChange("local_feed_enabled", value)} />
       <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
         <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Minimum full-text sources for initial canonical generation</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Default 3. Count distinct publishers with usable full text. Applies when a story is lazily opened or retried, not to existing-story refresh or Deeply breaking updates.</Text>
+        </View>
+        <TextInput
+          value={String(config.canonical_min_sources ?? 3)}
+          keyboardType="number-pad"
+          onChangeText={(value) => {
+            const number = Number(value.replace(/[^0-9]/g, ""));
+            if (Number.isInteger(number) && number >= 1 && number <= 20) {
+              onChange("canonical_min_sources", number);
+            }
+          }}
+          placeholder="3"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+        />
+      </View>
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
           <Text style={[styles.configLabel, { color: colors.text }]}>Default feed</Text>
           <Text style={[styles.configDetail, { color: colors.textMuted }]}>Use top, national, or local. If disabled, Briefly falls back to the first enabled feed.</Text>
         </View>

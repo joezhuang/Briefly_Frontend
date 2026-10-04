@@ -30,7 +30,7 @@ export function matchedBilingualOriginal(
   if (localized.event_id !== english.event_id) return null;
   if ((english.content_language ?? english.language) !== "en") return null;
   if ((localized.content_language ?? localized.language) === "en") return null;
-  if (localized.translation_historical || localized.translation_status === "pending") return null;
+  if (localized.translation_status === "pending") return null;
   // A number is required: matching merely on event ID would conflate revisions.
   const sourceVersionId = localized.translation_source_article_version_id ?? localized.authoritative_article_version_id;
   return sourceVersionId === english.article_version_id ? english : null;
@@ -68,10 +68,12 @@ export function BilingualBrief({
   translated,
   english,
   selectable,
+  latestEnglishVersionId = null,
 }: {
   translated: CanonicalArticle;
   english: CanonicalArticle;
   selectable: boolean;
+  latestEnglishVersionId?: number | null;
 }) {
   const { language, t } = useBrieflyLanguage();
   const { width } = useWindowDimensions();
@@ -81,6 +83,19 @@ export function BilingualBrief({
   return (
     <View style={[styles.brief, { backgroundColor: colors.surfaceMuted }]}>
       <Text style={[styles.header, { color: colors.text }]}>{label.bilingual}</Text>
+      {latestEnglishVersionId != null && latestEnglishVersionId !== english.article_version_id && (
+        <Text style={[styles.note, { color: colors.accent }]}>
+          {language === "ja"
+            ? `以前の版です：この翻訳と英語原文は同じ旧版（ID ${english.article_version_id}）に基づきます。最新版（ID ${latestEnglishVersionId}）の変更は含まれない場合があります。`
+            : language === "zh-CN"
+              ? `较早版本：译文与英文原文均对应旧版（ID ${english.article_version_id}），不一定包含当前版本（ID ${latestEnglishVersionId}）的更新。`
+              : language === "zh-TW"
+                ? `較早版本：譯文與英文原文均對應舊版（ID ${english.article_version_id}），不一定包含目前版本（ID ${latestEnglishVersionId}）的更新。`
+                : language === "es"
+                  ? `Versión anterior: la traducción y el original corresponden a la versión ${english.article_version_id}. La versión actual ${latestEnglishVersionId} puede incluir novedades.`
+                  : `Earlier version: both columns use English source version ${english.article_version_id}, not the latest version ${latestEnglishVersionId}. New developments may be missing.`}
+        </Text>
+      )
       <Text style={[styles.note, { color: colors.textMuted }]}>{label.warning}</Text>
       {sections.map(([field, localizedLabel, englishLabel]) => (
         <View key={field} style={styles.section}>
