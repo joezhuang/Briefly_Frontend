@@ -340,7 +340,7 @@ const checks = [
     name: "Story sharing uses rich-card short URLs and Community focus survives async layout",
     file: "src/components/article-view.tsx",
     needles: [
-      "buildPublicStoryShareUrl(article,shareHref,language)",
+      "buildPublicStoryShareUrl(article,shareHref,language,undefined,undefined,shareBilingualPair)",
       "onContentSizeChange",
       "communityFocusActiveRef",
       "onScrollBeginDrag",

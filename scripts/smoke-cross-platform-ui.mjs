@@ -497,7 +497,7 @@ const checks = [
     needles: [
       "matchedBilingualOriginal(",
       "localized.translation_source_article_version_id",
-      "localized.event_id !== english.event_id",
+      "localized.event_id !== englishEventId",
       "latestEnglishVersionId",
       "paragraph.type === englishParagraphs[index].type",
       "styles.mobileSwitcher",
