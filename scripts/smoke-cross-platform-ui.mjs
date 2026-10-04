@@ -563,6 +563,13 @@ ensure(startupTranslation.includes('latestTranslationReady') &&
 ensure(!startupTranslation.includes('}, [\n    preferencesReady, autoTranslateStories, user, isPro') &&
        !startupTranslation.includes('    article,\n'),
        "Startup effect must not be cancelled by unrelated displayed-article identity changes");
+ensure(startupTranslation.includes('translationMatchesEnglishVersion(localized, latestEnglishEventId, latestEnglishVersionId)') &&
+       !startupTranslation.includes('const english = authoritativeArticle!;'),
+       "Startup version checks must not capture mutable authoritative article objects");
+const pairHelper = read("src/components/bilingual-reading.tsx");
+ensure(pairHelper.includes('export function translationMatchesEnglishVersion(') &&
+       pairHelper.includes('return translationMatchesEnglishVersion('),
+       "The bilingual view and startup reconciliation must share one immutable pair predicate");
 ensure(startupTranslation.includes('job.status === "ready"') &&
        startupTranslation.includes('job.status === "queued"') &&
        startupTranslation.includes('job.status === "processing"') &&

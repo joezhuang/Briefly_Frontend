@@ -177,7 +177,7 @@ const checks = [
     name: "Local-only preview exposes original coverage without AI generation",
     file: "src/components/event-preview-view.tsx",
     needles: [
-      '"Local source coverage"',
+      'sourceOnly: "Source coverage"',
       '"local_source_only_story"',
       'article.generation_status === "source_only"',
       "copy.sourceOnlyBody",

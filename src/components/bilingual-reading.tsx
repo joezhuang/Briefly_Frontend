@@ -23,18 +23,32 @@ const sections = [
   ["what_next", "whatNext", "What next"],
 ] as const;
 
+// Compare immutable version identity without holding onto a mutable article
+// object. Story-open reconciliation may use this while its async status lookup
+// is in flight; the full English article is only required for display.
+export function translationMatchesEnglishVersion(
+  localized: CanonicalArticle,
+  englishEventId: string,
+  englishVersionId: number,
+): boolean {
+  if (localized.article_version_id == null) return false;
+  if (localized.event_id !== englishEventId) return false;
+  if ((localized.content_language ?? localized.language) === "en") return false;
+  if (localized.translation_status === "pending") return false;
+  // Matching merely on event ID would conflate distinct English revisions.
+  const sourceVersionId = localized.translation_source_article_version_id ?? localized.authoritative_article_version_id;
+  return sourceVersionId === englishVersionId;
+}
+
 export function matchedBilingualOriginal(
   localized: CanonicalArticle,
   english: CanonicalArticle | null,
 ): CanonicalArticle | null {
-  if (!english || localized.article_version_id == null || english.article_version_id == null) return null;
-  if (localized.event_id !== english.event_id) return null;
-  if ((english.content_language ?? english.language) !== "en") return null;
-  if ((localized.content_language ?? localized.language) === "en") return null;
-  if (localized.translation_status === "pending") return null;
-  // A number is required: matching merely on event ID would conflate revisions.
-  const sourceVersionId = localized.translation_source_article_version_id ?? localized.authoritative_article_version_id;
-  return sourceVersionId === english.article_version_id ? english : null;
+  if (!english || english.article_version_id == null ||
+      (english.content_language ?? english.language) !== "en") return null;
+  return translationMatchesEnglishVersion(
+    localized, english.event_id, english.article_version_id,
+  ) ? english : null;
 }
 
 function BilingualPair({

@@ -23,7 +23,10 @@ import {
   type ArticleLanguageMode,
 } from "@/components/article-language-toggle";
 import { ArticleView } from "@/components/article-view";
-import { matchedBilingualOriginal } from "@/components/bilingual-reading";
+import {
+  matchedBilingualOriginal,
+  translationMatchesEnglishVersion,
+} from "@/components/bilingual-reading";
 import { EventPreviewView } from "@/components/event-preview-view";
 import { EventCommunityPanel } from "@/components/event-community-panel";
 import { EventTimeline } from "@/components/event-timeline";
@@ -700,7 +703,6 @@ export default function StoryDetailScreen() {
     // The source identity, not the mutable displayed article object, owns this
     // lifecycle. An older pair or an unrelated article-state update must not
     // cancel the startup status check before it can request translation.
-    const english = authoritativeArticle!;
     const reconcile = async () => {
       try {
         const job = await getExperimentalTranslationStatus(
@@ -713,7 +715,7 @@ export default function StoryDetailScreen() {
             includeDraft: PREVIEW_DRAFTS, language: articleRequestLanguage, prepare: false,
           });
           if (!active) return;
-          if (matchedBilingualOriginal(localized, english)) {
+          if (translationMatchesEnglishVersion(localized, latestEnglishEventId, latestEnglishVersionId)) {
             setArticle((current) => current ? {
               ...localized,
               image_url: current.image_url,
@@ -764,7 +766,7 @@ export default function StoryDetailScreen() {
           includeDraft: false, language: articleRequestLanguage, prepare: true,
         });
         if (!active) return;
-        if (matchedBilingualOriginal(localized, english)) {
+        if (translationMatchesEnglishVersion(localized, latestEnglishEventId, latestEnglishVersionId)) {
           setArticle((current) => current ? {
             ...localized,
             image_url: current.image_url,
