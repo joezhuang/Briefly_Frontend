@@ -290,6 +290,33 @@ const checks = [
     ],
   },
   {
+    name: "Bilingual generation is explicit, gated and read-only when polling",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      'bilingualReaderFeatureEnabled',
+      'prepare: !isSharedStory && !bilingualReaderFeatureEnabled',
+      'bilingualGenerationAction={showBilingualGeneration',
+      'bilingualGenerationBusy',
+      'requestBilingualTranslation = async () =>',
+      'if (!user) {',
+      'if (!isPro) {',
+      'prepare: true,',
+      'prepare: false,',
+      'matchedBilingualOriginal(localized, authoritativeArticle)',
+      'setLanguageMode("bilingual")',
+      'BILINGUAL_MAX_POLLS',
+      'isSharedStory',
+    ],
+  },
+  {
+    name: "Existing story view accepts a gated bilingual generation action",
+    file: "src/components/article-view.tsx",
+    needles: [
+      'bilingualGenerationAction?:ReactNode',
+      'bilingualGenerationAction&&<View style={styles.translationAction}',
+    ],
+  },
+  {
     name: "Bilingual reader is opted-in through the existing runtime dashboard",
     file: "src/app/beta-dashboard.tsx",
     needles: [
