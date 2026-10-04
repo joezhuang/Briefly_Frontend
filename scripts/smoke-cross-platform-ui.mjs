@@ -530,6 +530,55 @@ const checks = [
   },
 ];
 
+// A historical cached translation is a display fallback, not proof that
+// translation of the latest authoritative English version is complete.
+const storySource = read("src/app/story/[slug].tsx");
+function storySection(start, end) {
+  const first = storySource.indexOf(start);
+  const last = first < 0 ? -1 : storySource.indexOf(end, first + start.length);
+  if (first < 0 || last < 0) {
+    throw new Error(`Story translation contract markers missing: ${start} → ${end}`);
+  }
+  return storySource.slice(first, last);
+}
+const historicalFallback = storySection(
+  "// Keep an approved historical translation",
+  '          } else {\n            result = canonical;',
+);
+const autoTranslation = storySection(
+  "// A Pro story open may start a missing translation",
+  "// Durable read-only status allows a reader",
+);
+const statusLookup = storySection(
+  "// Durable read-only status allows a reader",
+  "// Polling only retrieves durable status",
+);
+const generationAction = storySection(
+  "  const showBilingualGeneration =",
+  "  const bilingualGenerationText =",
+);
+for (const [name, section] of [
+  ["historical fallback", historicalFallback],
+  ["automatic generation", autoTranslation],
+  ["translation status", statusLookup],
+  ["translation action", generationAction],
+]) {
+  if (!section.includes("matchedBilingualOriginal(article, authoritativeArticle)") &&
+      name !== "historical fallback") {
+    throw new Error(`${name} must independently check the latest English version`);
+  }
+}
+if (!historicalFallback.includes('setLanguageMode("bilingual")') ||
+    historicalFallback.includes("result = canonical;")) {
+  throw new Error("Historical translation must remain readable as a pair, not be replaced with latest English");
+}
+if (autoTranslation.includes('(article.content_language ?? article.language) !== "en"') ||
+    statusLookup.includes('(article.content_language ?? article.language) !== "en"') ||
+    generationAction.includes('(article.content_language ?? article.language) === "en"') ||
+    generationAction.includes("matchedEnglishArticle === null")) {
+  throw new Error("An older translated pair must not suppress latest-version generation or status polling");
+}
+
 let passed = 0;
 for (const check of checks) {
   requireAll(check.file, check.needles);

@@ -573,12 +573,14 @@ export default function StoryDetailScreen() {
                     ? localized.generation_status
                     : canonical.generation_status,
               };
-              // An older translation belongs to its earlier English version.
-              // Never display it as if it translated the latest edition.
-              // Historical / pinned shared pairs remain independently readable.
+              // Keep an approved historical translation while a newer English
+              // version is being translated. The matching published English
+              // source is loaded separately for bilingual reading below.
+              // Shared/pinned readers keep their own existing reading mode.
               if (!isSharedStory && !pinnedTranslationVersion &&
-                  localized.translation_historical === true) {
-                result = canonical;
+                  localized.translation_historical === true &&
+                  bilingualReaderFeatureEnabled) {
+                setLanguageMode("bilingual");
               }
             }
           } else {
@@ -677,6 +679,8 @@ export default function StoryDetailScreen() {
 
   // A Pro story open may start a missing translation, but only after a
   // read-only status lookup proves no matching version/job exists.
+  // Generation targets the latest authoritative English version, regardless
+  // of whether an older translation pair is currently on screen.
   // Shared links, pinned historical pairs and user-selected English are never
   // automatic generation triggers.
   useEffect(() => {
@@ -688,7 +692,7 @@ export default function StoryDetailScreen() {
         article.canonical_stale || isSharedStory || pinnedTranslationVersion ||
         articleRequestLanguage === "en" || resolvedContentLanguage === "en" ||
         languageMode === "original" ||
-        (article.content_language ?? article.language) !== "en") return;
+        matchedBilingualOriginal(article, authoritativeArticle) !== null) return;
 
     const requestId = `${user.id}:${bilingualGenerationKey}`;
     if (autoTranslationRequested.current.has(requestId)) return;
@@ -755,7 +759,7 @@ export default function StoryDetailScreen() {
         !authoritativeArticle?.article_version_id ||
         isSharedStory || pinnedTranslationVersion ||
         !article || article.event_id !== resolvedEventId ||
-        (article.content_language ?? article.language) !== "en") return;
+        matchedBilingualOriginal(article, authoritativeArticle) !== null) return;
     let active = true;
     void getExperimentalTranslationStatus(
       resolvedEventId, authoritativeArticle.article_version_id, articleRequestLanguage,
@@ -1284,8 +1288,8 @@ export default function StoryDetailScreen() {
     !!resolvedEventId &&
     !!bilingualGenerationKey &&
     articleRequestLanguage !== "en" &&
-    (article.content_language ?? article.language) === "en" &&
-    matchedEnglishArticle === null;
+    // A historical pair is readable, but does not satisfy the latest version.
+    matchedBilingualOriginal(article, authoritativeArticle) === null;
   const bilingualGenerationText = bilingualGenerationCopy[language] ?? bilingualGenerationCopy.en;
   const bilingualGenerationBusy = activeBilingualGeneration?.status === "requesting" ||
     activeBilingualGeneration?.status === "pending";
