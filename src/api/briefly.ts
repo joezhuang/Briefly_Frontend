@@ -1525,6 +1525,7 @@ export type BrieflyAppConfig = {
   podcast_access_mode: FeatureAccessMode;
   story_refresh_access_mode: FeatureAccessMode;
   translation_enabled: boolean;
+  bilingual_reader_enabled: boolean;
   following_enabled: boolean;
   search_enabled: boolean;
   mobile_app_promotion_enabled: boolean;
@@ -1579,6 +1580,7 @@ function normalizeBrieflyAppConfig(
     podcast_access_mode: value.podcast_access_mode ?? "pro_only",
     story_refresh_access_mode: value.story_refresh_access_mode ?? "pro_only",
     mobile_app_promotion_enabled: value.mobile_app_promotion_enabled ?? false,
+    bilingual_reader_enabled: value.bilingual_reader_enabled === true,
     support_enabled: value.support_enabled ?? false,
     support_tip_enabled: value.support_tip_enabled ?? false,
     supporter_pass_enabled: value.supporter_pass_enabled ?? false,

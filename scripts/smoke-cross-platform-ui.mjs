@@ -290,6 +290,46 @@ const checks = [
     ],
   },
   {
+    name: "Bilingual reader is opted-in through the existing runtime dashboard",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      'label="Bilingual reader (experimental)"',
+      'onChange("bilingual_reader_enabled", value)',
+    ],
+  },
+  {
+    name: "Bilingual story only pairs the authenticated English source version",
+    file: "src/components/bilingual-reading.tsx",
+    needles: [
+      "matchedBilingualOriginal(",
+      "localized.translation_source_article_version_id",
+      "localized.event_id !== english.event_id",
+      'localized.translation_historical',
+      "paragraph.type === englishParagraphs[index].type",
+      "styles.pairStacked",
+    ],
+  },
+  {
+    name: "Story Detail gates bilingual mode and keeps old reader available",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      "appConfig?.bilingual_reader_enabled === true",
+      "matchedBilingualOriginal(article, authoritativeArticle)",
+      'languageMode === "bilingual" && !bilingualEnabled',
+      "includeBilingual={bilingualEnabled}",
+      'effectiveLanguageMode === "bilingual" && bilingualEnabled',
+    ],
+  },
+  {
+    name: "Story content has an opt-in bilingual rendering path",
+    file: "src/components/article-view.tsx",
+    needles: [
+      "bilingualOriginal?:CanonicalArticle|null",
+      "bilingualOriginal?<BilingualBrief",
+      "bilingualOriginal?<BilingualBody",
+    ],
+  },
+  {
     name: "Error/retry state has a mobile-sized retry target",
     file: "src/components/screen-state.tsx",
     needles: ["minHeight: 44", 'justifyContent: "center"'],

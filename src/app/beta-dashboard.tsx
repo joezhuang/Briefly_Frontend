@@ -2790,6 +2790,7 @@ function RuntimeConfigEditor({
         onValueChange={(value) => onChange("story_refresh_access_mode", value)}
       />
       <ConfigToggle label="Translation" detail="Show Briefly translation controls and notices." value={config.translation_enabled} onValueChange={(value) => onChange("translation_enabled", value)} />
+      <ConfigToggle label="Bilingual reader (experimental)" detail="Off by default. Show matched English and translated article versions together; does not generate new translations." value={config.bilingual_reader_enabled} onValueChange={(value) => onChange("bilingual_reader_enabled", value)} />
       <ConfigToggle label="Following" detail="Allow users to follow living events." value={config.following_enabled} onValueChange={(value) => onChange("following_enabled", value)} />
       <ConfigToggle label="Search" detail="Allow users to search the canonical event universe." value={config.search_enabled} onValueChange={(value) => onChange("search_enabled", value)} />
 
