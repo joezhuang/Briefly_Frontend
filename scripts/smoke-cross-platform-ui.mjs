@@ -352,6 +352,18 @@ const checks = [
     ],
   },
   {
+    name: "Non-English shared stories open cached Bilingual mode without generating",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      'isSharedStory && articleRequestLanguage !== "en" && bilingualReaderFeatureEnabled',
+      'matchedBilingualOriginal(article, authoritativeArticle)',
+      'matchedBilingualOriginal(article, historicalOriginal)',
+      'languageMode === "bilingual" && !bilingualEnabled',
+      'prepare: !isSharedStory && !bilingualReaderFeatureEnabled && !pinnedTranslationVersion',
+      'getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: false })',
+    ],
+  },
+  {
     name: "Pinned bilingual share URL carries immutable pair versions",
     file: "src/navigation/story-share.ts",
     needles: [

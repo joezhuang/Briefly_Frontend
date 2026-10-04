@@ -441,7 +441,16 @@ export default function StoryDetailScreen() {
         setLoadingKey("");
         setArticle(null);
         setAuthoritativeArticle(null);
-        setLanguageMode(requestedMode === "bilingual" ? "bilingual" : "localized");
+        // A non-English shared story should open its existing, version-matched
+        // Bilingual pair by default. A missing/publicly unavailable pair still
+        // falls back to Localized via bilingualEnabled; shares never generate.
+        // The "read" language alone is not proof of a cached translation.
+        setLanguageMode(
+          requestedMode === "bilingual" ||
+          (isSharedStory && articleRequestLanguage !== "en" && bilingualReaderFeatureEnabled)
+            ? "bilingual"
+            : "localized",
+        );
       }
 
       try {
