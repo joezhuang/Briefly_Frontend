@@ -338,6 +338,20 @@ const checks = [
     ],
   },
   {
+    name: "Compact bilingual summary heading and discoverable uninterrupted mobile body",
+    file: "src/components/bilingual-reading.tsx",
+    needles: [
+      "styles.sectionHeadingRow",
+      "heading={t[localizedLabel]}",
+      "label.bodyHint",
+      "label.bodyHintAdmin",
+      "accessibilityHint={showEnglish ? translatedHint : englishHint}",
+      "onPress={() => setShowEnglish((current) => !current)}",
+      "EN · ",
+      "selectable ? (",
+    ],
+  },
+  {
     name: "Pinned bilingual share URL carries immutable pair versions",
     file: "src/navigation/story-share.ts",
     needles: [
