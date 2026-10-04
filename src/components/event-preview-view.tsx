@@ -52,6 +52,7 @@ function previewVideoPoster(video: ArticleVideo, all: ArticleVideo[]): string | 
 const previewCopy = {
   en: {
     preparing: "Briefly is preparing this analysis from the event evidence.",
+    playVideo: "Play video",
     waiting: "You do not need to wait here. Keep browsing other stories and Briefly will notify you in the app when this analysis is ready to read.",
     sourceOnly: "Source coverage",
     proVideo: "PRO · Play video",
@@ -66,6 +67,7 @@ const previewCopy = {
   },
   es: {
     preparing: "Briefly está preparando este análisis a partir de la evidencia del evento.",
+    playVideo: "Reproducir vídeo",
     waiting: "No necesitas esperar aquí. Sigue explorando otras noticias y Briefly te avisará dentro de la app cuando el análisis esté listo para leer.",
     sourceOnly: "Cobertura de fuentes",
     proVideo: "PRO · Reproducir vídeo",
@@ -80,6 +82,7 @@ const previewCopy = {
   },
   ja: {
     preparing: "イベントの根拠情報からBriefly分析を準備しています。",
+    playVideo: "動画を再生",
     waiting: "ここで待つ必要はありません。他のニュースを見ながらお待ちください。分析が読めるようになったらBriefly内でお知らせします。",
     sourceOnly: "元記事の報道",
     proVideo: "PRO · 動画を再生",
@@ -94,6 +97,7 @@ const previewCopy = {
   },
   "zh-CN": {
     preparing: "Briefly 正在根据事件证据准备这篇分析。",
+    playVideo: "播放视频",
     waiting: "你不需要停留在这里等待。可以继续浏览其他新闻，分析准备好后 Briefly 会在应用内通知你。",
     sourceOnly: "新闻来源",
     proVideo: "PRO · 播放视频",
@@ -108,6 +112,7 @@ const previewCopy = {
   },
   "zh-TW": {
     preparing: "Briefly 正在根據事件證據準備這篇分析。",
+    playVideo: "播放影片",
     waiting: "你不需要停留在這裡等待。可以繼續瀏覽其他新聞，分析準備好後 Briefly 會在應用內通知你。",
     sourceOnly: "新聞來源",
     proVideo: "PRO · 播放影片",
@@ -228,6 +233,7 @@ export function EventPreviewView({
                   url={selectedVideo.url}
                   posterUrl={poster}
                   accessibilityLabel={selectedVideo.title || article.headline}
+                  playLabel={copy.playVideo}
                 />
               ) : (
                 <Pressable

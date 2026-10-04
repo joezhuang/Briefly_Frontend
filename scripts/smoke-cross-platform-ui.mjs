@@ -340,7 +340,18 @@ const checks = [
       "previewVideoList(article)",
       "<StoryVideo",
       "videoAccess.allowed",
+      "playLabel={copy.playVideo}",
       "topVideoSection",
+    ],
+  },
+  {
+    name: "Play button text is independent of the source video title",
+    file: "src/components/story-video.tsx",
+    needles: [
+      'playLabel = "Play video"',
+      'accessibilityLabel={accessibilityLabel}',
+      '<Text style={styles.playText}>{playLabel}</Text>',
+      'title={accessibilityLabel}',
     ],
   },
   {

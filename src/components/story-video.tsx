@@ -9,6 +9,7 @@ type Props = {
   url: string;
   posterUrl?: string | null;
   accessibilityLabel?: string;
+  playLabel?: string;
   compact?: boolean;
   autoStart?: boolean;
   initialTime?: number;
@@ -126,6 +127,7 @@ export function StoryVideo({
   url,
   posterUrl,
   accessibilityLabel = "Play video",
+  playLabel = "Play video",
   compact = false,
   autoStart = false,
   initialTime = 0,
@@ -193,7 +195,7 @@ export function StoryVideo({
             ]}
           >
             <Text style={compact ? styles.compactIcon : styles.playIcon}>▶</Text>
-            {!compact && <Text style={styles.playText}>{accessibilityLabel}</Text>}
+            {!compact && <Text style={styles.playText}>{playLabel}</Text>}
           </Pressable>
         </>
       )}
