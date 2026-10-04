@@ -49,7 +49,6 @@ import { resolveFeatureAccess } from "@/subscriptions/feature-access";
 const PREVIEW_DRAFTS =
   process.env.EXPO_PUBLIC_BRIEFLY_INCLUDE_DRAFTS === "true";
 const LAZY_ARTICLE_POLL_MS = 5000;
-const EXPERIMENTAL_POLL_MS = 5000;
 const PODCAST_POLL_MS = 5000;
 const BILINGUAL_POLL_MS = 5000;
 const BILINGUAL_MAX_POLLS = 24;
@@ -693,14 +692,15 @@ export default function StoryDetailScreen() {
 
     const requestId = `${user.id}:${bilingualGenerationKey}`;
     if (autoTranslationRequested.current.has(requestId)) return;
-    autoTranslationRequested.current.add(requestId);
     let active = true;
     const english = authoritativeArticle;
 
     void getExperimentalTranslationStatus(
       resolvedEventId, english.article_version_id!, articleRequestLanguage,
     ).then(async (job) => {
-      if (!active || job.status !== "not_requested") return;
+      if (!active || job.status !== "not_requested" ||
+          autoTranslationRequested.current.has(requestId)) return;
+      autoTranslationRequested.current.add(requestId);
       setBilingualGeneration({ key: bilingualGenerationKey, status: "requesting", attempts: 0 });
       try {
         const localized = await getExperimentalArticleByEventId(resolvedEventId, {
