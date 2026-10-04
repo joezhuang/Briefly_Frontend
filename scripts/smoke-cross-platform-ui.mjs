@@ -375,6 +375,23 @@ const checks = [
     ],
   },
   {
+    name: "Pro auto-translation reuses version-matched caches and keeps shared reads read-only",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      'useTranslationPreferences()',
+      'autoTranslationRequested.current.has(requestId)',
+      'job.status !== "not_requested"',
+      'localized.translation_historical === true',
+      'resolvedContentLanguage === "en"',
+      'languageMode === "original"',
+      'authoritativeArticle.status !== "published"',
+      'includeDraft: false, language: articleRequestLanguage, prepare: true',
+      'prepare: false,',
+      'job.status === "ready"',
+      'job.status === "queued" || job.status === "processing"',
+    ],
+  },
+  {
     name: "Mobile bilingual passages switch their own cached language inline",
     file: "src/components/bilingual-reading.tsx",
     needles: [
@@ -406,7 +423,7 @@ const checks = [
       'matchedBilingualOriginal(article, authoritativeArticle)',
       'matchedBilingualOriginal(article, historicalOriginal)',
       'languageMode === "bilingual" && !bilingualEnabled',
-      'prepare: !isSharedStory && !bilingualReaderFeatureEnabled && !pinnedTranslationVersion',
+      'prepare: false,',
       'getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: false })',
     ],
   },
@@ -443,7 +460,7 @@ const checks = [
     file: "src/app/story/[slug].tsx",
     needles: [
       'bilingualReaderFeatureEnabled',
-      'prepare: !isSharedStory && !bilingualReaderFeatureEnabled && !pinnedTranslationVersion',
+      'prepare: false,',
       'bilingualGenerationAction={showBilingualGeneration',
       'bilingualGenerationBusy',
       'requestBilingualTranslation = async () =>',

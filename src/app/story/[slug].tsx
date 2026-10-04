@@ -42,6 +42,7 @@ import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { useReadingHistory } from "@/context/reading-history";
 import { useBrieflyTheme } from "@/context/theme";
+import { useTranslationPreferences } from "@/context/translation-preferences";
 import type { CanonicalArticle } from "@/models/article";
 import { resolveFeatureAccess } from "@/subscriptions/feature-access";
 
@@ -78,11 +79,11 @@ type BilingualGenerationState = {
 };
 
 const bilingualGenerationCopy = {
-  en: { title: "Read in two languages", explanation: "A translation is not yet available for this English version. Generate it once with Briefly Pro, then read both languages together.", generate: "Generate translation", signIn: "Sign in to generate", upgrade: "Upgrade to generate", pending: "Preparing translation… English remains available.", failed: "Translation is not ready. Try again later.", retry: "Retry translation", check: "Check status", long: "This may take longer than two minutes. Check its status without generating again.", interrupted: "The translation was interrupted; you can explicitly retry." },
-  es: { title: "Leer en dos idiomas", explanation: "Aún no hay una traducción para esta versión inglesa. Genérala con Briefly Pro para leer ambas.", generate: "Generar traducción", signIn: "Inicia sesión para generar", upgrade: "Mejora para generar", pending: "Preparando traducción… Puedes seguir leyendo en inglés.", failed: "La traducción aún no está lista. Inténtalo más tarde.", retry: "Reintentar traducción", check: "Comprobar estado", long: "Puede tardar más de dos minutos. Consulta el estado sin iniciar otra generación.", interrupted: "La traducción se interrumpió. Puedes reintentarlo." },
-  ja: { title: "二言語で読む", explanation: "この英語記事の翻訳はまだありません。Briefly Proで生成すると、両方の言語で読めます。", generate: "翻訳を生成", signIn: "ログインして生成", upgrade: "Proで生成", pending: "翻訳を準備中… 英語記事は引き続き読めます。", failed: "翻訳の準備ができませんでした。後でもう一度お試しください。", retry: "翻訳を再試行", check: "状態を確認", long: "2分以上かかる場合があります。新たな生成を開始せずに状態を確認できます。", interrupted: "翻訳が中断されました。再試行できます。" },
-  "zh-CN": { title: "双语阅读", explanation: "此英文版本尚无译文。使用 Briefly Pro 生成后即可双语阅读。", generate: "生成译文", signIn: "登录后生成", upgrade: "升级 Pro 后生成", pending: "正在准备译文… 可以继续阅读英文。", failed: "译文尚未就绪，请稍后重试。", retry: "重试翻译", check: "查看状态", long: "可能需要两分钟以上。查看状态不会再次触发生成。", interrupted: "译文生成中断，可手动重试。" },
-  "zh-TW": { title: "雙語閱讀", explanation: "此英文版本尚無譯文。使用 Briefly Pro 產生後即可雙語閱讀。", generate: "產生譯文", signIn: "登入後產生", upgrade: "升級 Pro 後產生", pending: "正在準備譯文… 可以繼續閱讀英文。", failed: "譯文尚未就緒，請稍後再試。", retry: "重試翻譯", check: "查看狀態", long: "可能需要兩分鐘以上。查看狀態不會再次觸發產生。", interrupted: "譯文產生中斷，可手動重試。" },
+  en: { translationTitle: "Translate story", translationExplanation: "The current English version has no translation yet. Generate it with Briefly Pro.", title: "Read in two languages", explanation: "A translation is not yet available for this English version. Generate it once with Briefly Pro, then read both languages together.", generate: "Generate translation", signIn: "Sign in to generate", upgrade: "Upgrade to generate", pending: "Preparing translation… English remains available.", failed: "Translation is not ready. Try again later.", retry: "Retry translation", check: "Check status", long: "This may take longer than two minutes. Check its status without generating again.", interrupted: "The translation was interrupted; you can explicitly retry." },
+  es: { translationTitle: "Traducir noticia", translationExplanation: "La versión inglesa actual aún no tiene traducción. Genérala con Briefly Pro.", title: "Leer en dos idiomas", explanation: "Aún no hay una traducción para esta versión inglesa. Genérala con Briefly Pro para leer ambas.", generate: "Generar traducción", signIn: "Inicia sesión para generar", upgrade: "Mejora para generar", pending: "Preparando traducción… Puedes seguir leyendo en inglés.", failed: "La traducción aún no está lista. Inténtalo más tarde.", retry: "Reintentar traducción", check: "Comprobar estado", long: "Puede tardar más de dos minutos. Consulta el estado sin iniciar otra generación.", interrupted: "La traducción se interrumpió. Puedes reintentarlo." },
+  ja: { translationTitle: "記事を翻訳", translationExplanation: "最新の英語版の翻訳はまだありません。Briefly Proで生成できます。", title: "二言語で読む", explanation: "この英語記事の翻訳はまだありません。Briefly Proで生成すると、両方の言語で読めます。", generate: "翻訳を生成", signIn: "ログインして生成", upgrade: "Proで生成", pending: "翻訳を準備中… 英語記事は引き続き読めます。", failed: "翻訳の準備ができませんでした。後でもう一度お試しください。", retry: "翻訳を再試行", check: "状態を確認", long: "2分以上かかる場合があります。新たな生成を開始せずに状態を確認できます。", interrupted: "翻訳が中断されました。再試行できます。" },
+  "zh-CN": { translationTitle: "翻译报道", translationExplanation: "当前英文版本尚无译文。可使用 Briefly Pro 生成。", title: "双语阅读", explanation: "此英文版本尚无译文。使用 Briefly Pro 生成后即可双语阅读。", generate: "生成译文", signIn: "登录后生成", upgrade: "升级 Pro 后生成", pending: "正在准备译文… 可以继续阅读英文。", failed: "译文尚未就绪，请稍后重试。", retry: "重试翻译", check: "查看状态", long: "可能需要两分钟以上。查看状态不会再次触发生成。", interrupted: "译文生成中断，可手动重试。" },
+  "zh-TW": { translationTitle: "翻譯報導", translationExplanation: "目前英文版本尚無譯文。可使用 Briefly Pro 產生。", title: "雙語閱讀", explanation: "此英文版本尚無譯文。使用 Briefly Pro 產生後即可雙語閱讀。", generate: "產生譯文", signIn: "登入後產生", upgrade: "升級 Pro 後產生", pending: "正在準備譯文… 可以繼續閱讀英文。", failed: "譯文尚未就緒，請稍後再試。", retry: "重試翻譯", check: "查看狀態", long: "可能需要兩分鐘以上。查看狀態不會再次觸發產生。", interrupted: "譯文產生中斷，可手動重試。" },
 } as const;
 
 function preferredImage(
@@ -265,6 +266,7 @@ export default function StoryDetailScreen() {
 
   const { language, t, setTransientLanguage } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+  const { autoTranslateStories, preferencesReady } = useTranslationPreferences();
 
   useEffect(() => {
     const supported =
@@ -306,6 +308,8 @@ export default function StoryDetailScreen() {
   const [briefRepairBusyKey, setBriefRepairBusyKey] = useState("");
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(false);
   const [bilingualGeneration, setBilingualGeneration] = useState<BilingualGenerationState | null>(null);
+  // One automatic request at most per user / immutable English version / language.
+  const autoTranslationRequested = useRef(new Set<string>());
   const historyRecordedKey = useRef("");
   const storyOpenTrackedKey = useRef("");
 
@@ -547,7 +551,7 @@ export default function StoryDetailScreen() {
                 {
                   includeDraft: PREVIEW_DRAFTS,
                   language: articleRequestLanguage,
-                  prepare: !isSharedStory && !bilingualReaderFeatureEnabled && !pinnedTranslationVersion,
+                  prepare: false,
                   translationVersionId: pinnedTranslationVersion,
                   englishVersionId: pinnedEnglishVersion,
                 },
@@ -570,6 +574,13 @@ export default function StoryDetailScreen() {
                     ? localized.generation_status
                     : canonical.generation_status,
               };
+              // An older translation belongs to its earlier English version.
+              // Never display it as if it translated the latest edition.
+              // Historical / pinned shared pairs remain independently readable.
+              if (!isSharedStory && !pinnedTranslationVersion &&
+                  localized.translation_historical === true) {
+                result = canonical;
+              }
             }
           } else {
             result = canonical;
@@ -596,15 +607,6 @@ export default function StoryDetailScreen() {
         setLoadingKey(requestKey);
         setError(null);
 
-        if (
-          !isWeb &&
-          !bilingualReaderFeatureEnabled &&
-          language !== "en" &&
-          resolvedEventId &&
-          result.translation_status === "pending"
-        ) {
-          schedulePoll(EXPERIMENTAL_POLL_MS);
-        }
       } catch (err: unknown) {
         if (!active) return;
         if (!polling) setArticle(null);
@@ -674,13 +676,86 @@ export default function StoryDetailScreen() {
     return () => { active = false; };
   }, [historicalEnglishKey, oldEnglishSourceId]);
 
+  // A Pro story open may start a missing translation, but only after a
+  // read-only status lookup proves no matching version/job exists.
+  // Shared links, pinned historical pairs and user-selected English are never
+  // automatic generation triggers.
+  useEffect(() => {
+    if (!preferencesReady || !autoTranslateStories || !user || !isPro ||
+        !translationEnabled || !resolvedEventId || !bilingualGenerationKey ||
+        !authoritativeArticle?.article_version_id || authoritativeArticle.status !== "published" ||
+        !article || article.event_id !== resolvedEventId ||
+        authoritativeArticle.event_id !== resolvedEventId ||
+        article.canonical_stale || isSharedStory || pinnedTranslationVersion ||
+        articleRequestLanguage === "en" || resolvedContentLanguage === "en" ||
+        languageMode === "original" ||
+        (article.content_language ?? article.language) !== "en") return;
+
+    const requestId = `${user.id}:${bilingualGenerationKey}`;
+    if (autoTranslationRequested.current.has(requestId)) return;
+    autoTranslationRequested.current.add(requestId);
+    let active = true;
+    const english = authoritativeArticle;
+
+    void getExperimentalTranslationStatus(
+      resolvedEventId, english.article_version_id!, articleRequestLanguage,
+    ).then(async (job) => {
+      if (!active || job.status !== "not_requested") return;
+      setBilingualGeneration({ key: bilingualGenerationKey, status: "requesting", attempts: 0 });
+      try {
+        const localized = await getExperimentalArticleByEventId(resolvedEventId, {
+          includeDraft: false, language: articleRequestLanguage, prepare: true,
+        });
+        if (!active) return;
+        if (matchedBilingualOriginal(localized, english)) {
+          setArticle((current) => current ? {
+            ...localized,
+            image_url: current.image_url,
+            video_url: current.video_url,
+            video_thumbnail_url: current.video_thumbnail_url,
+            videos: current.videos,
+            canonical_stale: current.canonical_stale,
+            latest_evidence_at: current.latest_evidence_at,
+            stale_refresh_entitled: current.stale_refresh_entitled,
+          } : localized);
+          setBilingualGeneration(null);
+        } else {
+          setBilingualGeneration({
+            key: bilingualGenerationKey,
+            status: localized.translation_status === "pending" &&
+              localized.translation_entitled === true ? "pending" : "unknown",
+            attempts: 0,
+          });
+        }
+      } catch {
+        // Uncertain network outcome: check status manually; never auto-retry.
+        if (active) setBilingualGeneration({
+          key: bilingualGenerationKey, status: "unknown", attempts: 0,
+        });
+      }
+    }).catch(() => {
+      // A failed read-only status check must not schedule inference.
+      if (active) setBilingualGeneration({
+        key: bilingualGenerationKey, status: "unknown", attempts: 0,
+      });
+    });
+    return () => { active = false; };
+  }, [
+    preferencesReady, autoTranslateStories, user, isPro, translationEnabled,
+    resolvedEventId, bilingualGenerationKey, authoritativeArticle, article,
+    isSharedStory, pinnedTranslationVersion, articleRequestLanguage,
+    resolvedContentLanguage, languageMode,
+  ]);
+
   // Durable read-only status allows a reader to leave and return later.
   // A status check never asks the backend to generate another translation.
   useEffect(() => {
-    if (!bilingualReaderFeatureEnabled || !bilingualGenerationKey ||
-        !resolvedEventId || !authoritativeArticle?.article_version_id ||
+    if (!translationEnabled || (!bilingualReaderFeatureEnabled && !isPro) ||
+        !bilingualGenerationKey || !resolvedEventId ||
+        !authoritativeArticle?.article_version_id ||
         isSharedStory || pinnedTranslationVersion ||
-        !article || (article.content_language ?? article.language) !== "en") return;
+        !article || article.event_id !== resolvedEventId ||
+        (article.content_language ?? article.language) !== "en") return;
     let active = true;
     void getExperimentalTranslationStatus(
       resolvedEventId, authoritativeArticle.article_version_id, articleRequestLanguage,
@@ -702,8 +777,7 @@ export default function StoryDetailScreen() {
             latest_evidence_at: current.latest_evidence_at,
             stale_refresh_entitled: current.stale_refresh_entitled,
           } : localized);
-          setLanguageMode("bilingual");
-
+          // A normal story open defaults to Localized; preserve chosen modes.
           setBilingualGeneration(null);
         }
       } else if (job.status !== "not_requested") {
@@ -720,15 +794,15 @@ export default function StoryDetailScreen() {
     });
     return () => { active = false; };
   }, [
-    bilingualReaderFeatureEnabled, bilingualGenerationKey,
+    bilingualReaderFeatureEnabled, translationEnabled, isPro, bilingualGenerationKey,
     resolvedEventId, authoritativeArticle,
     articleRequestLanguage, isSharedStory, pinnedTranslationVersion,
     article,
   ]);
 
-  // Only a user click can start inference; polling and restoration use GET.
+  // Polling only retrieves durable status; it never starts a translation.
   useEffect(() => {
-    if (!bilingualReaderFeatureEnabled || !bilingualGenerationKey ||
+    if (!translationEnabled || !bilingualGenerationKey ||
         activeBilingualGeneration?.status !== "pending" ||
         !authoritativeArticle || !resolvedEventId || isSharedStory ||
         pinnedTranslationVersion) return;
@@ -766,8 +840,6 @@ export default function StoryDetailScreen() {
               stale_refresh_entitled: current.stale_refresh_entitled,
             } : localized);
             setBilingualGeneration(null);
-            setLanguageMode("bilingual");
-  
             return;
           }
         }
@@ -794,7 +866,7 @@ export default function StoryDetailScreen() {
     activeBilingualGeneration?.status,
     activeBilingualGeneration?.attempts,
     bilingualGenerationKey,
-    bilingualReaderFeatureEnabled,
+    translationEnabled,
     authoritativeArticle,
     resolvedEventId,
     articleRequestLanguage,
@@ -804,7 +876,7 @@ export default function StoryDetailScreen() {
 
   const requestBilingualTranslation = async () => {
     if (!bilingualGenerationKey || !resolvedEventId || !authoritativeArticle ||
-        !bilingualReaderFeatureEnabled || isSharedStory || pinnedTranslationVersion ||
+        !translationEnabled || isSharedStory || pinnedTranslationVersion ||
         activeBilingualGeneration?.status === "pending" ||
         activeBilingualGeneration?.status === "requesting") return;
 
@@ -844,7 +916,7 @@ export default function StoryDetailScreen() {
             return;
           }
         }
-        setBilingualGeneration({
+        setBilingualGeneration(job.status === "not_requested" ? null : {
           key: bilingualGenerationKey,
           status: job.status === "queued" || job.status === "processing"
             ? "pending" : job.status === "failed" || job.status === "interrupted"
@@ -1205,7 +1277,8 @@ export default function StoryDetailScreen() {
     matchedBilingualOriginal(article, authoritativeArticle) ??
     matchedBilingualOriginal(article, historicalOriginal);
   const showBilingualGeneration =
-    bilingualReaderFeatureEnabled &&
+    translationEnabled &&
+    (bilingualReaderFeatureEnabled || isPro) &&
     !isSharedStory &&
     !article.canonical_stale &&
     !!resolvedEventId &&
@@ -1400,12 +1473,13 @@ export default function StoryDetailScreen() {
         bilingualGenerationAction={showBilingualGeneration ? (
           <View style={[styles.bilingualPrompt, { borderColor: colors.border, backgroundColor: colors.surfaceMuted }]}>
             <Text style={[styles.bilingualPromptTitle, { color: colors.text }]}>
-              {bilingualGenerationText.title}
+              {bilingualReaderFeatureEnabled ? bilingualGenerationText.title : bilingualGenerationText.translationTitle}
             </Text>
             <Text style={[styles.bilingualPromptDescription, { color: colors.textMuted }]}>
-              {activeBilingualGeneration?.status === "pending"
+              {activeBilingualGeneration?.status === "pending" ||
+                activeBilingualGeneration?.status === "requesting"
                 ? bilingualGenerationText.pending
-                : bilingualGenerationText.explanation}
+                : bilingualReaderFeatureEnabled ? bilingualGenerationText.explanation : bilingualGenerationText.translationExplanation}
             </Text>
             {(activeBilingualGeneration?.status === "failed" ||
               activeBilingualGeneration?.status === "interrupted" ||
