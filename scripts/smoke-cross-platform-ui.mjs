@@ -358,7 +358,7 @@ const checks = [
     name: "Historical translations use their own published English source",
     file: "src/app/story/[slug].tsx",
     needles: [
-      "getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: false })",
+      "getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: canUseDraftTranslation })",
       "matchedBilingualOriginal(article, historicalOriginal)",
       "bilingualLatestEnglishVersionId",
     ],
@@ -371,7 +371,7 @@ const checks = [
       "bilingualVersionNotice={earlierVersion ? (",
       "shareBilingualPair={",
       "getExperimentalTranslationStatus(",
-      "getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: false })",
+      "getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: canUseDraftTranslation })",
     ],
   },
   {
@@ -385,7 +385,7 @@ const checks = [
       'resolvedContentLanguage === "en"',
       'languageMode === "original"',
       'latestEnglishPublished',
-      'includeDraft: false, language: articleRequestLanguage, prepare: true',
+      'includeDraft: canUseDraftTranslation, language: articleRequestLanguage, prepare: true',
       'prepare: false,',
       'job.status === "ready"',
       'job.status === "queued" || job.status === "processing"',
@@ -424,7 +424,7 @@ const checks = [
       'matchedBilingualOriginal(article, historicalOriginal)',
       'languageMode === "bilingual" && !bilingualEnabled',
       'prepare: false,',
-      'getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: false })',
+      'getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: canUseDraftTranslation })',
     ],
   },
   {
@@ -589,6 +589,32 @@ ensure(!startupTranslation.includes('(article.content_language ?? article.langua
        generationAction.includes('matchedBilingualOriginal(article, authoritativeArticle) === null'),
        "A previous translation must not suppress current-version generation or progress");
 
+
+const statusAction = storySection(
+  "  const requestBilingualTranslation = async () => {",
+  "  useEffect(() => {\n    if (!article || !article.event_id)",
+);
+const translationProgressUI = storySection(
+  "bilingualGenerationAction={showBilingualGeneration ? (",
+  "evidenceEnabled={evidenceEnabled}",
+);
+ensure(startupTranslation.includes('status: "checking"') &&
+       startupTranslation.includes('status: "unavailable"') &&
+       startupTranslation.includes('job.status !== "not_requested"'),
+       "Story open must check source status before translation and report unavailable errors");
+ensure(statusAction.includes('status: "checking"') &&
+       statusAction.includes('status: "unavailable"'),
+       "Manual status checks need distinct loading and unavailable states");
+ensure(translationProgressUI.includes('<ActivityIndicator size="small"') &&
+       translationProgressUI.includes('bilingualGenerationBusy &&') &&
+       translationProgressUI.includes('bilingualGenerationText.unavailable'),
+       "Translation progress must show a spinner only while checking or pending");
+ensure(startupTranslation.includes('canUseDraftTranslation') &&
+       startupTranslation.includes('latestEnglishDraft') &&
+       startupTranslation.includes('includeDraft: canUseDraftTranslation'),
+       "Entitled Pro story open must support unpublished English sources");
+ensure(storySource.includes('includeDraft: PREVIEW_DRAFTS || canUseDraftTranslation'),
+       "Pro must read a draft canonical source to start translation");
 
 let passed = 0;
 for (const check of checks) {

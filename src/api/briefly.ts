@@ -334,10 +334,12 @@ export function getExperimentalTranslationStatus(
   eventId: string,
   sourceArticleVersionId: number,
   language: string,
+  includeDraft = false,
 ) {
   const query = new URLSearchParams({
     source_article_version_id: String(sourceArticleVersionId),
     language,
+    include_draft: String(includeDraft),
   });
   return getJson<ExperimentalTranslationStatus>(
     `/api/articles/event/${encodeURIComponent(eventId)}/experimental/status?${query}`,
