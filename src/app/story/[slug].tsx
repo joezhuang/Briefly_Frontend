@@ -21,6 +21,7 @@ import {
   type ArticleLanguageMode,
 } from "@/components/article-language-toggle";
 import { ArticleView } from "@/components/article-view";
+import { matchedBilingualOriginal } from "@/components/bilingual-reading";
 import { EventPreviewView } from "@/components/event-preview-view";
 import { EventCommunityPanel } from "@/components/event-community-panel";
 import { EventTimeline } from "@/components/event-timeline";
@@ -878,16 +879,26 @@ export default function StoryDetailScreen() {
     );
   }
 
+  const matchedEnglishArticle = matchedBilingualOriginal(article, authoritativeArticle);
+  const bilingualEnabled =
+    appConfig?.bilingual_reader_enabled === true &&
+    translationEnabled &&
+    !article.canonical_stale &&
+    matchedEnglishArticle !== null;
   const canToggleOriginal =
+    bilingualEnabled || (
     translationEnabled &&
     !article.canonical_stale &&
     !isWeb &&
     language !== "en" &&
     article.experimental_localization === true &&
-    authoritativeArticle?.article_version_id != null;
+    authoritativeArticle?.article_version_id != null);
+  const effectiveLanguageMode = languageMode === "bilingual" && !bilingualEnabled
+    ? "localized"
+    : languageMode;
   const displayedArticle = applyStoryVideoSwitch(
     preferredImage(
-      canToggleOriginal && languageMode === "original" && authoritativeArticle
+      canToggleOriginal && effectiveLanguageMode === "original" && authoritativeArticle
         ? authoritativeArticle
         : article,
       resolvedImageUrl,
@@ -944,8 +955,9 @@ export default function StoryDetailScreen() {
           <View style={styles.storyToolsContent}>
             {canToggleOriginal && (
               <ArticleLanguageToggle
-                mode={languageMode}
+                mode={effectiveLanguageMode}
                 onChange={setLanguageMode}
+                includeBilingual={bilingualEnabled}
               />
             )}
             <StaleStoryNotice article={displayedArticle} />
@@ -999,6 +1011,7 @@ export default function StoryDetailScreen() {
         onPodcastAction={podcastEnabled ? () => void handlePodcastAction() : undefined}
         podcastEnabled={podcastEnabled}
         translationEnabled={translationEnabled}
+        bilingualOriginal={effectiveLanguageMode === "bilingual" && bilingualEnabled ? matchedEnglishArticle : null}
         evidenceEnabled={evidenceEnabled}
         timelineEnabled={timelineEnabled}
         coverageEnabled={coverageEnabled}
