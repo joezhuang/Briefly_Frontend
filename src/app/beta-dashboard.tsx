@@ -2474,6 +2474,12 @@ function RuntimeConfigEditor({
     access: true,
     mobileDownloads: true,
   });
+  // Preserve partial edits without publishing an invalid setting to the API.
+  const [canonicalMinSourcesDraft, setCanonicalMinSourcesDraft] = useState<string | null>(null);
+  const canonicalMinSourcesText =
+    canonicalMinSourcesDraft ?? String(config?.canonical_min_sources ?? 3);
+  const canonicalMinSourcesValid =
+    /^(?:[1-9]|1[0-9]|20)$/.test(canonicalMinSourcesText);
   const toggleGroup = (key: string) =>
     setOpenGroups((current) => ({
       ...current,
@@ -3070,19 +3076,40 @@ function RuntimeConfigEditor({
           <Text style={[styles.configLabel, { color: colors.text }]}>Minimum full-text sources for initial canonical generation</Text>
           <Text style={[styles.configDetail, { color: colors.textMuted }]}>Default 3. Count distinct publishers with usable full text. Applies when a story is lazily opened or retried, not to existing-story refresh or Deeply breaking updates.</Text>
         </View>
-        <TextInput
-          value={String(config.canonical_min_sources ?? 3)}
-          keyboardType="number-pad"
-          onChangeText={(value) => {
-            const number = Number(value.replace(/[^0-9]/g, ""));
-            if (Number.isInteger(number) && number >= 1 && number <= 20) {
-              onChange("canonical_min_sources", number);
-            }
-          }}
-          placeholder="3"
-          placeholderTextColor={colors.textMuted}
-          style={[styles.configInput, stackWideFields && styles.configInputFullWidth, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
-        />
+        <View style={stackWideFields ? styles.configInputFullWidth : undefined}>
+          <TextInput
+            value={canonicalMinSourcesText}
+            keyboardType="number-pad"
+            accessibilityLabel="Minimum full-text sources for initial canonical generation"
+            onChangeText={(text) => {
+              const next = text.replace(/[^0-9]/g, "");
+              setCanonicalMinSourcesDraft(next);
+              const number = Number(next);
+              if (next !== "" && Number.isInteger(number) && number >= 1 && number <= 20) {
+                onChange("canonical_min_sources", number);
+              }
+            }}
+            onBlur={() => {
+              if (canonicalMinSourcesValid) setCanonicalMinSourcesDraft(null);
+            }}
+            placeholder="3"
+            placeholderTextColor={colors.textMuted}
+            style={[
+              styles.configInput,
+              stackWideFields && styles.configInputFullWidth,
+              {
+                borderColor: canonicalMinSourcesValid ? colors.border : colors.accent,
+                backgroundColor: colors.background,
+                color: colors.text,
+              },
+            ]}
+          />
+          {!canonicalMinSourcesValid && (
+            <Text style={[styles.configDetail, { color: colors.accent }]}>
+              Enter a whole number from 1 to 20 before saving.
+            </Text>
+          )}
+        </View>
       </View>
       <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
         <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
@@ -3105,13 +3132,13 @@ function RuntimeConfigEditor({
       <View style={styles.configActions}>
         <Pressable
           accessibilityRole="button"
-          disabled={saving}
+          disabled={saving || !canonicalMinSourcesValid}
           onPress={onSave}
           style={({ pressed }) => [
             styles.configSaveButton,
             {
               backgroundColor: colors.text,
-              opacity: saving ? 0.5 : pressed ? 0.72 : 1,
+              opacity: saving || !canonicalMinSourcesValid ? 0.5 : pressed ? 0.72 : 1,
             },
           ]}
         >
