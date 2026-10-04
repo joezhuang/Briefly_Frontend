@@ -189,6 +189,7 @@ export function WebTranslateButton({
   const [readingLanguageOverride, setReadingLanguageOverride] =
     useState<ReadingLanguage | null | undefined>(undefined);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [showLocalHint, setShowLocalHint] = useState(false);
   const privateUrl = isPrivateWebUrl(sourceUrl);
 
@@ -261,34 +262,52 @@ export function WebTranslateButton({
         { backgroundColor: colors.surface, borderColor: colors.border },
       ]}
     >
-      <Text style={[styles.title, { color: colors.text }]}>
-        {labels.title}
-      </Text>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={labels.choose}
-        onPress={() => setPickerOpen(true)}
-        style={({ pressed }) => [
-          styles.selector,
-          {
-            borderColor: colors.border,
-            backgroundColor: colors.surfaceMuted,
-            opacity: pressed ? 0.7 : 1,
-          },
-        ]}
-      >
-        <Text style={[styles.selectorText, { color: colors.text }]}>
-          {selected.label} ▾
+      <View style={styles.headingRow}>
+        <Text numberOfLines={1} style={[styles.title, { color: colors.textMuted }]}>
+          {labels.title}
         </Text>
-      </Pressable>
-      <Text style={[styles.hint, { color: colors.textMuted }]}>
-        {labels.hint}
-      </Text>
-      {sharedReadingLanguage ? (
-        <Text style={[styles.sharedHint, { color: colors.accent }]}>
-          {labels.sharedHint(selected.label)}
-        </Text>
-      ) : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={labels.choose}
+          onPress={() => setPickerOpen(true)}
+          style={({ pressed }) => [
+            styles.selector,
+            {
+              borderColor: colors.border,
+              backgroundColor: colors.surfaceMuted,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Text numberOfLines={1} style={[styles.selectorText, { color: colors.text }]}>
+            {selected.label} ▾
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={labels.hint}
+          accessibilityState={{ expanded: infoOpen }}
+          onPress={() => setInfoOpen((open) => !open)}
+          style={[styles.infoButton, { borderColor: colors.border }]}
+        >
+          <Text style={[styles.infoIcon, { color: colors.textMuted }]}>ⓘ</Text>
+        </Pressable>
+      </View>
+      {infoOpen && (
+        <View style={styles.infoDetails}>
+          <Text style={[styles.hint, { color: colors.textMuted }]}>{labels.hint}</Text>
+          {sharedReadingLanguage ? (
+            <Text style={[styles.sharedHint, { color: colors.accent }]}>
+              {labels.sharedHint(selected.label)}
+            </Text>
+          ) : null}
+          {!needsGoogleTranslation && (
+            <Text style={[styles.englishHint, { color: colors.textMuted }]}>
+              {labels.englishHint}
+            </Text>
+          )}
+        </View>
+      )}
 
       {needsGoogleTranslation ? (
         <Pressable
@@ -309,11 +328,7 @@ export function WebTranslateButton({
             {privateUrl ? "" : " ↗"}
           </Text>
         </Pressable>
-      ) : (
-        <Text style={[styles.englishHint, { color: colors.textMuted }]}>
-          {labels.englishHint}
-        </Text>
-      )}
+      ) : null}
 
       {showLocalHint && (
         <Text style={[styles.hint, { color: colors.textMuted }]}>
@@ -396,29 +411,49 @@ const styles = StyleSheet.create({
     minWidth: 0,
     alignSelf: "stretch",
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
-    padding: 14,
-    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    gap: 5,
+  },
+  headingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    minWidth: 0,
   },
   title: {
-    fontSize: 14,
-    fontWeight: "900",
+    fontSize: 12,
+    fontWeight: "700",
+    flexShrink: 1,
   },
   selector: {
-    width: "100%",
+    flex: 1,
     minWidth: 0,
-    minHeight: 42,
-    paddingHorizontal: 13,
-    borderRadius: 10,
+    minHeight: 44,
+    paddingHorizontal: 10,
+    borderRadius: 9,
     borderWidth: StyleSheet.hairlineWidth,
     justifyContent: "center",
   },
   selectorText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     flexShrink: 1,
-    flexWrap: "wrap",
   },
+  infoButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  infoIcon: {
+    fontSize: 19,
+    fontWeight: "700",
+  },
+  infoDetails: { gap: 4, paddingHorizontal: 3, paddingVertical: 3 },
   button: {
     maxWidth: "100%",
     minWidth: 0,

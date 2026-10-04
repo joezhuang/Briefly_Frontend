@@ -116,14 +116,15 @@ export function BilingualBrief({
   const stacked = width < 800;
   return (
     <View style={[styles.brief, { backgroundColor: colors.surfaceMuted }]}>
-      <Text style={[styles.header, { color: colors.text }]}>
-        {label.bilingual}
-        {latestEnglishVersionId != null &&
-          english.article_version_id !== latestEnglishVersionId
-            ? ` · v${english.version_number ?? english.article_version_id}`
-            : ""}
-      </Text>
-      <Text style={[styles.note, { color: colors.textMuted }]}>{label.warning}</Text>
+      {!stacked && (
+        <Text style={[styles.header, { color: colors.text }]}>
+          {label.bilingual}
+          {latestEnglishVersionId != null &&
+            english.article_version_id !== latestEnglishVersionId
+              ? ` · v${english.version_number ?? english.article_version_id}`
+              : ""}
+        </Text>
+      )}
       {sections.map(([field, localizedLabel, englishLabel]) => (
         <View key={field} style={styles.section}>
           {!stacked && (
@@ -306,7 +307,7 @@ export function BilingualBody({
 }
 
 const styles = StyleSheet.create({
-  brief: { marginTop: 34, padding: 18, borderRadius: 18, gap: 22 },
+  brief: { marginTop: 16, padding: 18, borderRadius: 16, gap: 18 },
   header: { fontSize: 20, fontWeight: "800" },
   note: { fontSize: 13, lineHeight: 20 },
   section: { gap: 8 },

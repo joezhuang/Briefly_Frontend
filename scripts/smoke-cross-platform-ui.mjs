@@ -250,7 +250,7 @@ const checks = [
     ],
   },
   {
-    name: "Reading language card and long translation labels fit narrow story screens",
+    name: "Compact reading language row and long translation labels fit narrow screens",
     file: "src/components/web-translate-button.tsx",
     needles: [
       'alignSelf: "stretch"',
@@ -258,13 +258,44 @@ const checks = [
       'minWidth: 0',
       'flexShrink: 1',
       'textAlign: "center"',
+      "styles.headingRow",
+      "styles.infoButton",
+      "accessibilityState={{ expanded: infoOpen }}",
+      "minHeight: 44",
+      "{infoOpen && (",
+      "{needsGoogleTranslation ? (",
     ],
   },
   {
     name: "Story Detail constrains the reading-language wrapper to article width",
     file: "src/components/article-view.tsx",
     needles: [
-      'translationAction:{marginTop:22,width:"100%",maxWidth:520,minWidth:0,alignSelf:"flex-start"}',
+      'translationAction:{width:"100%",maxWidth:520,minWidth:0,alignSelf:"flex-start"}',
+    ],
+  },
+  {
+    name: "Story translation status is compact and read-only with expandable detail",
+    file: "src/components/article-view.tsx",
+    needles: [
+      "styles.readingControls",
+      "styles.localizationCompactRow",
+      "accessibilityState={{ expanded: localizationInfoOpen }}",
+      "localizationInfoOpen && (",
+      "localizationText.compactTitle",
+      "localizationText.translated",
+      "!localizationDisabled && (",
+      'briefCard:{marginTop:16,padding:18,borderRadius:16,gap:18}',
+      'actions:{flexDirection:"row",flexWrap:"wrap",gap:10,marginTop:14}',
+      "article.source_count??article.sources_used?.length??0",
+    ],
+  },
+  {
+    name: "Bilingual summary has a compact top gap and no repeated mobile heading",
+    file: "src/components/bilingual-reading.tsx",
+    needles: [
+      "brief: { marginTop: 16, padding: 18, borderRadius: 16, gap: 18 }",
+      "{!stacked && (",
+      "styles.sectionHeadingRow",
     ],
   },
   {
@@ -415,7 +446,8 @@ const checks = [
     file: "src/components/article-view.tsx",
     needles: [
       'bilingualGenerationAction?:ReactNode',
-      'bilingualGenerationAction&&<View style={styles.translationAction}',
+      'translationEnabled && !!bilingualGenerationAction && (',
+      'style={styles.generationAction}',
     ],
   },
   {
