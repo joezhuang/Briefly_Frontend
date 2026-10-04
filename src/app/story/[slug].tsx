@@ -619,6 +619,7 @@ export default function StoryDetailScreen() {
     resolvedScope,
     resolvedContentLanguage,
     pinnedTranslationVersion,
+    pinnedEnglishVersion,
     requestedMode,
     language,
     articleRequestLanguage,
@@ -711,9 +712,9 @@ export default function StoryDetailScreen() {
     return () => { active = false; };
   }, [
     bilingualReaderFeatureEnabled, bilingualGenerationKey,
-    resolvedEventId, authoritativeArticle?.article_version_id,
+    resolvedEventId, authoritativeArticle,
     articleRequestLanguage, isSharedStory, pinnedTranslationVersion,
-    article?.article_version_id, article?.content_language, article?.language,
+    article,
   ]);
 
   // Only a user click can start inference; polling and restoration use GET.
