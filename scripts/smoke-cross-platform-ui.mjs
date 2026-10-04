@@ -325,7 +325,7 @@ const checks = [
     file: "src/app/beta-dashboard.tsx",
     needles: [
       "Minimum full-text sources for initial canonical generation",
-      'canonicalMinSourcesDraft ?? String(config?.canonical_min_sources ?? 3)',
+      'canonicalMinSourcesDraft ?? String(config?.canonical_min_sources ?? 1)',
       'setCanonicalMinSourcesDraft(next)',
       'next !== "" && Number.isInteger(number) && number >= 1 && number <= 20',
       'onChange("canonical_min_sources", number)',

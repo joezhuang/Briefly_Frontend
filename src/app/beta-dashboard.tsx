@@ -2477,7 +2477,7 @@ function RuntimeConfigEditor({
   // Preserve partial edits without publishing an invalid setting to the API.
   const [canonicalMinSourcesDraft, setCanonicalMinSourcesDraft] = useState<string | null>(null);
   const canonicalMinSourcesText =
-    canonicalMinSourcesDraft ?? String(config?.canonical_min_sources ?? 3);
+    canonicalMinSourcesDraft ?? String(config?.canonical_min_sources ?? 1);
   const canonicalMinSourcesValid =
     /^(?:[1-9]|1[0-9]|20)$/.test(canonicalMinSourcesText);
   const toggleGroup = (key: string) =>
@@ -3074,7 +3074,7 @@ function RuntimeConfigEditor({
       <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
         <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
           <Text style={[styles.configLabel, { color: colors.text }]}>Minimum full-text sources for initial canonical generation</Text>
-          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Default 3. Count distinct publishers with usable full text. Applies when a story is lazily opened or retried, not to existing-story refresh or Deeply breaking updates.</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>Default 1. Count distinct original publishers whose full text is successfully extracted before generating a new article. Google News itself is not a publisher. Existing-story refresh and Deeply breaking updates have separate rules.</Text>
         </View>
         <View style={stackWideFields ? styles.configInputFullWidth : undefined}>
           <TextInput
@@ -3092,7 +3092,7 @@ function RuntimeConfigEditor({
             onBlur={() => {
               if (canonicalMinSourcesValid) setCanonicalMinSourcesDraft(null);
             }}
-            placeholder="3"
+            placeholder="1"
             placeholderTextColor={colors.textMuted}
             style={[
               styles.configInput,
