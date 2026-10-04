@@ -48,6 +48,8 @@ const PREVIEW_DRAFTS =
 const LAZY_ARTICLE_POLL_MS = 5000;
 const EXPERIMENTAL_POLL_MS = 5000;
 const PODCAST_POLL_MS = 5000;
+const BILINGUAL_POLL_MS = 5000;
+const BILINGUAL_MAX_POLLS = 24;
 
 const storyToolsCopy = {
   en: { title: "Story tools", collapse: "Collapse", expand: "Show" },
@@ -66,6 +68,20 @@ type BriefRepairState = {
   key: string;
   value: BriefRepairStatus | null;
 };
+
+type BilingualGenerationState = {
+  key: string;
+  status: "requesting" | "pending" | "failed";
+  attempts: number;
+};
+
+const bilingualGenerationCopy = {
+  en: { title: "Read in two languages", explanation: "A translation is not yet available for this English version. Generate it once with Briefly Pro, then read both languages together.", generate: "Generate translation", signIn: "Sign in to generate", upgrade: "Upgrade to generate", pending: "Preparing translation… English remains available.", failed: "Translation is not ready. Try again later.", retry: "Retry translation" },
+  es: { title: "Leer en dos idiomas", explanation: "Aún no hay una traducción para esta versión inglesa. Genérala con Briefly Pro para leer ambas.", generate: "Generar traducción", signIn: "Inicia sesión para generar", upgrade: "Mejora para generar", pending: "Preparando traducción… Puedes seguir leyendo en inglés.", failed: "La traducción aún no está lista. Inténtalo más tarde.", retry: "Reintentar traducción" },
+  ja: { title: "二言語で読む", explanation: "この英語記事の翻訳はまだありません。Briefly Proで生成すると、両方の言語で読めます。", generate: "翻訳を生成", signIn: "ログインして生成", upgrade: "Proで生成", pending: "翻訳を準備中… 英語記事は引き続き読めます。", failed: "翻訳の準備ができませんでした。後でもう一度お試しください。", retry: "翻訳を再試行" },
+  "zh-CN": { title: "双语阅读", explanation: "此英文版本尚无译文。使用 Briefly Pro 生成后即可双语阅读。", generate: "生成译文", signIn: "登录后生成", upgrade: "升级 Pro 后生成", pending: "正在准备译文… 可以继续阅读英文。", failed: "译文尚未就绪，请稍后重试。", retry: "重试翻译" },
+  "zh-TW": { title: "雙語閱讀", explanation: "此英文版本尚無譯文。使用 Briefly Pro 產生後即可雙語閱讀。", generate: "產生譯文", signIn: "登入後產生", upgrade: "升級 Pro 後產生", pending: "正在準備譯文… 可以繼續閱讀英文。", failed: "譯文尚未就緒，請稍後再試。", retry: "重試翻譯" },
+} as const;
 
 function preferredImage(
   article: CanonicalArticle,
@@ -269,6 +285,7 @@ export default function StoryDetailScreen() {
   });
   const [briefRepairBusyKey, setBriefRepairBusyKey] = useState("");
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(false);
+  const [bilingualGeneration, setBilingualGeneration] = useState<BilingualGenerationState | null>(null);
   const historyRecordedKey = useRef("");
   const storyOpenTrackedKey = useRef("");
 
@@ -335,7 +352,16 @@ export default function StoryDetailScreen() {
   const podcastEnabled =
     appConfig?.podcast_enabled !== false && podcastAccess.mode !== "disabled";
   const translationEnabled = appConfig?.translation_enabled !== false;
+  const bilingualReaderFeatureEnabled =
+    appConfig?.bilingual_reader_enabled === true && translationEnabled;
   const followingEnabled = appConfig?.following_enabled !== false;
+  const bilingualGenerationKey =
+    authoritativeArticle?.article_version_id != null && resolvedEventId && articleRequestLanguage !== "en"
+      ? `${resolvedEventId}:${authoritativeArticle.article_version_id}:${articleRequestLanguage}`
+      : null;
+  const activeBilingualGeneration = bilingualGeneration?.key === bilingualGenerationKey
+    ? bilingualGeneration
+    : null;
   const showStoryAd =
     !isWeb &&
     appConfig?.ads_enabled === true &&
@@ -446,7 +472,7 @@ export default function StoryDetailScreen() {
           );
 
           if (articleRequestLanguage !== "en") {
-            if (isWeb && !resolvedContentLanguage) {
+            if (isWeb && !resolvedContentLanguage && !bilingualReaderFeatureEnabled) {
               try {
                 const localized = await getCanonicalArticleByEventId(
                   resolvedEventId,
@@ -485,7 +511,7 @@ export default function StoryDetailScreen() {
                 {
                   includeDraft: PREVIEW_DRAFTS,
                   language: articleRequestLanguage,
-                  prepare: !isSharedStory,
+                  prepare: !isSharedStory && !bilingualReaderFeatureEnabled,
                 },
               );
               result = {
@@ -534,6 +560,7 @@ export default function StoryDetailScreen() {
 
         if (
           !isWeb &&
+          !bilingualReaderFeatureEnabled &&
           language !== "en" &&
           resolvedEventId &&
           result.translation_status === "pending"
@@ -566,12 +593,136 @@ export default function StoryDetailScreen() {
     articleRequestLanguage,
     isWeb,
     isSharedStory,
+    bilingualReaderFeatureEnabled,
     reloadKey,
     requestKey,
     t.storyUnavailable,
     currentStoryHref,
     watchAnalysis,
   ]);
+
+
+  // Only an explicit click may start generation in the new bilingual reader.
+  // Polling uses prepare=false, so it cannot schedule another model job.
+  useEffect(() => {
+    if (
+      !bilingualReaderFeatureEnabled ||
+      !bilingualGenerationKey ||
+      activeBilingualGeneration?.status !== "pending" ||
+      !authoritativeArticle ||
+      !resolvedEventId ||
+      isSharedStory
+    ) return;
+
+    let active = true;
+    const timer = setTimeout(async () => {
+      try {
+        const localized = await getExperimentalArticleByEventId(resolvedEventId, {
+          includeDraft: PREVIEW_DRAFTS,
+          language: articleRequestLanguage,
+          prepare: false,
+        });
+        if (!active) return;
+
+        if (matchedBilingualOriginal(localized, authoritativeArticle)) {
+          setArticle((current) => current
+            ? {
+                ...localized,
+                image_url: current.image_url,
+                video_url: current.video_url,
+                video_thumbnail_url: current.video_thumbnail_url,
+                videos: current.videos,
+                canonical_stale: current.canonical_stale,
+                latest_evidence_at: current.latest_evidence_at,
+                stale_refresh_entitled: current.stale_refresh_entitled,
+              }
+            : localized);
+          setBilingualGeneration(null);
+          setLanguageMode("bilingual");
+          setStoryToolsExpanded(true);
+          return;
+        }
+      } catch {
+        // A transient lookup failure never starts another generation.
+      }
+      if (active) {
+        setBilingualGeneration((current) =>
+          current?.key === bilingualGenerationKey && current.status === "pending"
+            ? {
+                ...current,
+                attempts: current.attempts + 1,
+                status: current.attempts + 1 >= BILINGUAL_MAX_POLLS ? "failed" : "pending",
+              }
+            : current,
+        );
+      }
+    }, BILINGUAL_POLL_MS);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [
+    activeBilingualGeneration?.status,
+    activeBilingualGeneration?.attempts,
+    bilingualGenerationKey,
+    bilingualReaderFeatureEnabled,
+    authoritativeArticle,
+    resolvedEventId,
+    articleRequestLanguage,
+    isSharedStory,
+  ]);
+
+  const requestBilingualTranslation = async () => {
+    if (!bilingualGenerationKey || !resolvedEventId || !authoritativeArticle ||
+        !bilingualReaderFeatureEnabled || isSharedStory || activeBilingualGeneration?.status === "pending" ||
+        activeBilingualGeneration?.status === "requesting") return;
+
+    if (!user) {
+      router.push(`/sign-in?returnTo=${encodeURIComponent(currentStoryHref)}` as never);
+      return;
+    }
+    if (!isPro) {
+      router.push(`/upgrade?returnTo=${encodeURIComponent(currentStoryHref)}` as never);
+      return;
+    }
+
+    setBilingualGeneration({ key: bilingualGenerationKey, status: "requesting", attempts: 0 });
+    try {
+      const localized = await getExperimentalArticleByEventId(resolvedEventId, {
+        includeDraft: PREVIEW_DRAFTS,
+        language: articleRequestLanguage,
+        prepare: true,
+      });
+      if (matchedBilingualOriginal(localized, authoritativeArticle)) {
+        setArticle((current) => current
+          ? {
+              ...localized,
+              image_url: current.image_url,
+              video_url: current.video_url,
+              video_thumbnail_url: current.video_thumbnail_url,
+              videos: current.videos,
+              canonical_stale: current.canonical_stale,
+              latest_evidence_at: current.latest_evidence_at,
+              stale_refresh_entitled: current.stale_refresh_entitled,
+            }
+          : localized);
+        setLanguageMode("bilingual");
+        setStoryToolsExpanded(true);
+        setBilingualGeneration(null);
+      } else {
+        setBilingualGeneration({
+          key: bilingualGenerationKey,
+          status: localized.translation_status === "pending" && localized.translation_entitled === true
+            ? "pending"
+            : "failed",
+          attempts: 0,
+        });
+      }
+    } catch {
+      setBilingualGeneration({ key: bilingualGenerationKey, status: "failed", attempts: 0 });
+    }
+  };
 
   useEffect(() => {
     if (!article || !article.event_id) return;
@@ -880,6 +1031,18 @@ export default function StoryDetailScreen() {
   }
 
   const matchedEnglishArticle = matchedBilingualOriginal(article, authoritativeArticle);
+  const showBilingualGeneration =
+    bilingualReaderFeatureEnabled &&
+    !isSharedStory &&
+    !article.canonical_stale &&
+    !!resolvedEventId &&
+    !!bilingualGenerationKey &&
+    articleRequestLanguage !== "en" &&
+    (article.content_language ?? article.language) === "en" &&
+    matchedEnglishArticle === null;
+  const bilingualGenerationText = bilingualGenerationCopy[language] ?? bilingualGenerationCopy.en;
+  const bilingualGenerationBusy = activeBilingualGeneration?.status === "requesting" ||
+    activeBilingualGeneration?.status === "pending";
   const bilingualEnabled =
     appConfig?.bilingual_reader_enabled === true &&
     translationEnabled &&
@@ -1012,6 +1175,45 @@ export default function StoryDetailScreen() {
         podcastEnabled={podcastEnabled}
         translationEnabled={translationEnabled}
         bilingualOriginal={effectiveLanguageMode === "bilingual" && bilingualEnabled ? matchedEnglishArticle : null}
+        bilingualGenerationAction={showBilingualGeneration ? (
+          <View style={[styles.bilingualPrompt, { borderColor: colors.border, backgroundColor: colors.surfaceMuted }]}>
+            <Text style={[styles.bilingualPromptTitle, { color: colors.text }]}>
+              {bilingualGenerationText.title}
+            </Text>
+            <Text style={[styles.bilingualPromptDescription, { color: colors.textMuted }]}>
+              {activeBilingualGeneration?.status === "pending"
+                ? bilingualGenerationText.pending
+                : bilingualGenerationText.explanation}
+            </Text>
+            {activeBilingualGeneration?.status === "failed" && (
+              <Text style={[styles.bilingualPromptDescription, { color: colors.accent }]}>
+                {bilingualGenerationText.failed}
+              </Text>
+            )}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: bilingualGenerationBusy }}
+              disabled={bilingualGenerationBusy}
+              onPress={() => void requestBilingualTranslation()}
+              style={[styles.bilingualPromptButton, {
+                backgroundColor: colors.text,
+                opacity: bilingualGenerationBusy ? 0.6 : 1,
+              }]}
+            >
+              <Text style={[styles.bilingualPromptButtonText, { color: colors.background }]}>
+                {bilingualGenerationBusy
+                  ? bilingualGenerationText.pending
+                  : !user
+                    ? bilingualGenerationText.signIn
+                    : !isPro
+                      ? bilingualGenerationText.upgrade
+                      : activeBilingualGeneration?.status === "failed"
+                        ? bilingualGenerationText.retry
+                        : bilingualGenerationText.generate}
+              </Text>
+            </Pressable>
+          </View>
+        ) : undefined}
         evidenceEnabled={evidenceEnabled}
         timelineEnabled={timelineEnabled}
         coverageEnabled={coverageEnabled}
@@ -1059,6 +1261,11 @@ const styles = StyleSheet.create({
   storyTools: {
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  bilingualPrompt: { borderWidth: StyleSheet.hairlineWidth, padding: 16, borderRadius: 16, gap: 10 },
+  bilingualPromptTitle: { fontSize: 17, fontWeight: "800" },
+  bilingualPromptDescription: { fontSize: 13, lineHeight: 20 },
+  bilingualPromptButton: { minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, alignSelf: "flex-start", justifyContent: "center" },
+  bilingualPromptButtonText: { fontSize: 13, fontWeight: "800" },
   storyToolsHandle: {
     minHeight: 44,
     paddingHorizontal: 16,
