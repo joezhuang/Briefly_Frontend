@@ -20,6 +20,7 @@ import {
 import { LanguageProvider } from "@/context/language";
 import { PodcastPlayerProvider } from "@/context/podcast-player";
 import { ReadingHistoryProvider } from "@/context/reading-history";
+import { TranslationPreferencesProvider } from "@/context/translation-preferences";
 import { SavedArticlesProvider } from "@/context/saved-articles";
 import { installGlobalErrorMonitoring } from "@/monitoring/error-monitoring";
 import {
@@ -188,11 +189,13 @@ export default function RootLayout() {
                 <ProductAnalyticsSession />
                 <PodcastPlayerProvider>
                   <AnalysisReadinessProvider>
+                    <TranslationPreferencesProvider>
                     <ReadingHistoryProvider>
                       <SavedArticlesProvider>
                         <AppStack />
                       </SavedArticlesProvider>
                     </ReadingHistoryProvider>
+                    </TranslationPreferencesProvider>
                   </AnalysisReadinessProvider>
                 </PodcastPlayerProvider>
               </BrieflyAppConfigProvider>

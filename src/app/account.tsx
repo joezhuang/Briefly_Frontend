@@ -30,6 +30,7 @@ import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
+import { useTranslationPreferences } from "@/context/translation-preferences";
 import {
   disconnectBrieflySubscriptionUser,
   manageBrieflyNativeSubscription,
@@ -47,6 +48,9 @@ const DEFAULT_SUPPORT_TITLE = "Support Briefly";
 const accountCopy = {
   en: {
     back: "Back", title: "Account",
+    autoTranslateTitle: "Auto-translate stories",
+    autoTranslateBody: "Automatically translate newly opened stories into your selected language with Briefly Pro. Cached translations are reused. Turn this off to generate manually on this device.",
+    autoTranslateOn: "On", autoTranslateOff: "Off",
     subtitle: "Manage your Briefly profile, Pro access, support, and account controls.",
     signedInAs: "SIGNED IN AS", notSignedIn: "Not signed in", free: "FREE",
     providerWeb: "Web", providerUnknown: "Unknown",
@@ -81,6 +85,9 @@ const accountCopy = {
   },
   es: {
     back: "Atrás", title: "Cuenta",
+    autoTranslateTitle: "Traducir noticias automáticamente",
+    autoTranslateBody: "Con Briefly Pro, traduce las noticias al abrirlas en el idioma elegido. Se reutilizan las traducciones guardadas. Desactívalo para traducir manualmente en este dispositivo.",
+    autoTranslateOn: "Activado", autoTranslateOff: "Desactivado",
     subtitle: "Gestiona tu perfil de Briefly, acceso Pro, apoyo y controles de cuenta.",
     signedInAs: "SESIÓN INICIADA COMO", notSignedIn: "Sin sesión iniciada", free: "GRATIS",
     providerWeb: "Web", providerUnknown: "Desconocido",
@@ -112,6 +119,9 @@ const accountCopy = {
   },
   ja: {
     back: "戻る", title: "アカウント",
+    autoTranslateTitle: "記事を自動翻訳",
+    autoTranslateBody: "Briefly Proでは、記事を開いたときに選択した言語へ自動翻訳します。既存の翻訳は再利用されます。この端末で手動翻訳するにはオフにしてください。",
+    autoTranslateOn: "オン", autoTranslateOff: "オフ",
     subtitle: "Brieflyのプロフィール、Proアクセス、支援、アカウント操作を管理します。",
     signedInAs: "ログイン中", notSignedIn: "未ログイン", free: "無料",
     providerWeb: "Web", providerUnknown: "不明",
@@ -143,6 +153,9 @@ const accountCopy = {
   },
   "zh-CN": {
     back: "返回", title: "账户",
+    autoTranslateTitle: "自动翻译报道",
+    autoTranslateBody: "Briefly Pro 用户打开报道时，自动翻译成所选语言，并重复使用已有译文。关闭后可在此设备上手动生成翻译。",
+    autoTranslateOn: "开启", autoTranslateOff: "关闭",
     subtitle: "管理你的 Briefly 资料、Pro 权益、支持和账户操作。",
     signedInAs: "当前登录账户", notSignedIn: "未登录", free: "免费",
     providerWeb: "网页", providerUnknown: "未知",
@@ -170,6 +183,9 @@ const accountCopy = {
   },
   "zh-TW": {
     back: "返回", title: "帳戶",
+    autoTranslateTitle: "自動翻譯報導",
+    autoTranslateBody: "Briefly Pro 使用者開啟報導時，會自動翻譯為所選語言，並重複使用既有譯文。關閉後可在此裝置手動產生翻譯。",
+    autoTranslateOn: "開啟", autoTranslateOff: "關閉",
     subtitle: "管理你的 Briefly 資料、Pro 權益、支持與帳戶操作。",
     signedInAs: "目前登入帳戶", notSignedIn: "未登入", free: "免費",
     providerWeb: "網頁", providerUnknown: "未知",
@@ -240,6 +256,7 @@ export default function AccountScreen() {
   const { config: appConfig } = useBrieflyAppConfig();
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+  const { autoTranslateStories, preferencesReady, setAutoTranslateStories } = useTranslationPreferences();
   const text = accountCopy[language] ?? accountCopy.en;
   const supportAvailable =
     appConfig?.support_enabled === true &&
@@ -542,6 +559,25 @@ export default function AccountScreen() {
             </Pressable>
           </View>
         )}
+
+        {subscriptionIsPro && appConfig?.translation_enabled !== false ? (
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{text.autoTranslateTitle}</Text>
+            <Text style={[styles.body, { color: colors.textMuted }]}>{text.autoTranslateBody}</Text>
+            <Pressable
+              accessibilityRole="switch"
+              accessibilityLabel={text.autoTranslateTitle}
+              accessibilityState={{ checked: autoTranslateStories, disabled: !preferencesReady }}
+              disabled={!preferencesReady}
+              onPress={() => setAutoTranslateStories(!autoTranslateStories)}
+              style={[styles.button, { borderColor: colors.border }, !preferencesReady && styles.disabled]}
+            >
+              <Text style={[styles.buttonText, { color: colors.text }]}>
+                {autoTranslateStories ? text.autoTranslateOn : text.autoTranslateOff}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         {supportAvailable ? (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
