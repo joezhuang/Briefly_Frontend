@@ -95,7 +95,7 @@ export function BilingualBrief({
                   ? `Versión anterior: la traducción y el original corresponden a la versión ${english.article_version_id}. La versión actual ${latestEnglishVersionId} puede incluir novedades.`
                   : `Earlier version: both columns use English source version ${english.article_version_id}, not the latest version ${latestEnglishVersionId}. New developments may be missing.`}
         </Text>
-      )
+      )}
       <Text style={[styles.note, { color: colors.textMuted }]}>{label.warning}</Text>
       {sections.map(([field, localizedLabel, englishLabel]) => (
         <View key={field} style={styles.section}>
