@@ -1,4 +1,5 @@
-import { useWindowDimensions, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { useWindowDimensions, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -9,11 +10,11 @@ import type { CanonicalArticle } from "@/models/article";
  * immutable article versions. Never requests/generates translations.
  */
 const copy = {
-  en: { bilingual: "Bilingual reading", original: "English original", translated: "Translation", warning: "AI translations may contain mistakes. English is the authoritative article.", mismatch: "The two versions have different paragraph structures; shown separately to avoid false alignment." },
-  es: { bilingual: "Lectura bilingüe", original: "Original en inglés", translated: "Traducción", warning: "La traducción por IA puede contener errores. El artículo en inglés es la versión de referencia.", mismatch: "Los párrafos difieren; se muestran por separado para evitar correspondencias incorrectas." },
-  ja: { bilingual: "二言語で読む", original: "英語原文", translated: "翻訳版", warning: "AI翻訳には誤りが含まれる場合があります。英語原文を正本としてください。", mismatch: "段落構成が異なるため、誤った対応付けを避けて別々に表示します。" },
-  "zh-CN": { bilingual: "双语阅读", original: "英文原文", translated: "译文", warning: "AI 翻译可能有误，请以英文原文为准。", mismatch: "两种语言的段落结构不同，将分别展示以避免错误对应。" },
-  "zh-TW": { bilingual: "雙語閱讀", original: "英文原文", translated: "譯文", warning: "AI 翻譯可能有誤，請以英文原文為準。", mismatch: "兩種語言的段落結構不同，將分別顯示以避免錯誤對應。" },
+  en: { mobileEnglish: "English", mobileTranslated: "Translation", bilingual: "Bilingual reading", original: "English original", translated: "Translation", warning: "AI translations may contain mistakes. English is the authoritative article.", mismatch: "The two versions have different paragraph structures; shown separately to avoid false alignment." },
+  es: { mobileEnglish: "Inglés", mobileTranslated: "Traducción", bilingual: "Lectura bilingüe", original: "Original en inglés", translated: "Traducción", warning: "La traducción por IA puede contener errores. El artículo en inglés es la versión de referencia.", mismatch: "Los párrafos difieren; se muestran por separado para evitar correspondencias incorrectas." },
+  ja: { mobileEnglish: "英語", mobileTranslated: "翻訳", bilingual: "二言語で読む", original: "英語原文", translated: "翻訳版", warning: "AI翻訳には誤りが含まれる場合があります。英語原文を正本としてください。", mismatch: "段落構成が異なるため、誤った対応付けを避けて別々に表示します。" },
+  "zh-CN": { mobileEnglish: "英文", mobileTranslated: "译文", bilingual: "双语阅读", original: "英文原文", translated: "译文", warning: "AI 翻译可能有误，请以英文原文为准。", mismatch: "两种语言的段落结构不同，将分别展示以避免错误对应。" },
+  "zh-TW": { mobileEnglish: "英文", mobileTranslated: "譯文", bilingual: "雙語閱讀", original: "英文原文", translated: "譯文", warning: "AI 翻譯可能有誤，請以英文原文為準。", mismatch: "兩種語言的段落結構不同，將分別顯示以避免錯誤對應。" },
 } as const;
 
 const sections = [
@@ -50,13 +51,43 @@ function BilingualPair({
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const label = copy[language] ?? copy.en;
+  const [mobileLanguage, setMobileLanguage] = useState<"translated" | "english">("translated");
+
+  // Independent paragraph/section toggle: no network request, and both versions
+  // remain loaded. Desktop retains the familiar side-by-side comparison.
+  if (stacked) {
+    return (
+      <View style={[styles.pair, styles.mobilePair, { borderColor: colors.border }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            mobileLanguage === "translated"
+              ? `${label.mobileEnglish} · ${label.original}`
+              : `${label.mobileTranslated} · ${label.translated}`
+          }
+          onPress={() => setMobileLanguage((current) =>
+            current === "translated" ? "english" : "translated",
+          )}
+          style={[styles.mobileSwitcher, { borderColor: colors.border, backgroundColor: colors.surface }]}
+        >
+          <Text style={[styles.mobileOptionText, { color: colors.accent }]}>
+            {mobileLanguage === "translated" ? label.mobileEnglish : label.mobileTranslated} ↔
+          </Text>
+        </Pressable>
+        <Text selectable={selectable} style={[styles.paragraph, { color: colors.text }]}>
+          {(mobileLanguage === "translated" ? localized : english) || "—"}
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.pair, stacked && styles.pairStacked, { borderColor: colors.border }]}>
+    <View style={[styles.pair, { borderColor: colors.border }]}>
       <View style={styles.column}>
         <Text style={[styles.columnLabel, { color: colors.accent }]}>{label.translated}</Text>
         <Text selectable={selectable} style={[styles.paragraph, { color: colors.text }]}>{localized || "—"}</Text>
       </View>
-      <View style={[styles.column, stacked && styles.stackedEnglish, stacked && { borderTopColor: colors.border }]}>
+      <View style={styles.column}>
         <Text style={[styles.columnLabel, { color: colors.textMuted }]}>{label.original}</Text>
         <Text selectable={selectable} style={[styles.paragraph, { color: colors.text }]}>{english || "—"}</Text>
       </View>
@@ -82,20 +113,13 @@ export function BilingualBrief({
   const stacked = width < 800;
   return (
     <View style={[styles.brief, { backgroundColor: colors.surfaceMuted }]}>
-      <Text style={[styles.header, { color: colors.text }]}>{label.bilingual}</Text>
-      {latestEnglishVersionId != null && latestEnglishVersionId !== english.article_version_id && (
-        <Text style={[styles.note, { color: colors.accent }]}>
-          {language === "ja"
-            ? `以前の版です：この翻訳と英語原文は同じ旧版（ID ${english.article_version_id}）に基づきます。最新版（ID ${latestEnglishVersionId}）の変更は含まれない場合があります。`
-            : language === "zh-CN"
-              ? `较早版本：译文与英文原文均对应旧版（ID ${english.article_version_id}），不一定包含当前版本（ID ${latestEnglishVersionId}）的更新。`
-              : language === "zh-TW"
-                ? `較早版本：譯文與英文原文均對應舊版（ID ${english.article_version_id}），不一定包含目前版本（ID ${latestEnglishVersionId}）的更新。`
-                : language === "es"
-                  ? `Versión anterior: la traducción y el original corresponden a la versión ${english.article_version_id}. La versión actual ${latestEnglishVersionId} puede incluir novedades.`
-                  : `Earlier version: both columns use English source version ${english.article_version_id}, not the latest version ${latestEnglishVersionId}. New developments may be missing.`}
-        </Text>
-      )}
+      <Text style={[styles.header, { color: colors.text }]}>
+        {label.bilingual}
+        {latestEnglishVersionId != null &&
+          english.article_version_id !== latestEnglishVersionId
+            ? ` · v${english.version_number ?? english.article_version_id}`
+            : ""}
+      </Text>
       <Text style={[styles.note, { color: colors.textMuted }]}>{label.warning}</Text>
       {sections.map(([field, localizedLabel, englishLabel]) => (
         <View key={field} style={styles.section}>
@@ -138,7 +162,15 @@ export function BilingualBody({
     return (
       <View style={styles.body}>
         <Text style={[styles.note, { color: colors.textMuted }]}>{label.mismatch}</Text>
-        <View style={[styles.pair, stacked && styles.pairStacked, { borderColor: colors.border }]}>
+        {stacked ? (
+          <BilingualPair
+            localized={localizedParagraphs.map((p) => p.text).join("\n\n")}
+            english={englishParagraphs.map((p) => p.text).join("\n\n")}
+            stacked
+            selectable={selectable}
+          />
+        ) : (
+        <View style={[styles.pair, { borderColor: colors.border }]}>
           {([
             { label: label.translated, paragraphs: localizedParagraphs },
             { label: label.original, paragraphs: englishParagraphs },
@@ -151,6 +183,7 @@ export function BilingualBody({
             </View>
           ))}
         </View>
+        )}
       </View>
     );
   }
@@ -177,6 +210,9 @@ const styles = StyleSheet.create({
   section: { gap: 8 },
   sectionTitle: { fontSize: 13, fontWeight: "800", letterSpacing: 0.5 },
   pair: { flexDirection: "row", gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: 16 },
+  mobilePair: { flexDirection: "column", gap: 12, paddingVertical: 8 },
+  mobileSwitcher: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 999, minHeight: 44, paddingHorizontal: 13, justifyContent: "center", alignSelf: "flex-end" },
+  mobileOptionText: { fontSize: 12, fontWeight: "800" },
   pairStacked: { flexDirection: "column", gap: 12 },
   column: { flex: 1, minWidth: 0, gap: 8 },
   stackedEnglish: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12 },

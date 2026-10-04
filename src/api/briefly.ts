@@ -302,13 +302,45 @@ export function getExperimentalArticleByEventId(
     language?: string;
     includeVideos?: boolean;
     prepare?: boolean;
+    translationVersionId?: number | null;
+    englishVersionId?: number | null;
   },
 ) {
   const params = new URLSearchParams(articleQuery(options));
   // Shared links may read a cached translation but must not trigger Ollama.
   params.set("prepare", String(options?.prepare ?? true));
+  if (options?.translationVersionId && Number.isSafeInteger(options.translationVersionId)) {
+    params.set("translation_version_id", String(options.translationVersionId));
+    if (options.englishVersionId && Number.isSafeInteger(options.englishVersionId)) {
+      params.set("english_version_id", String(options.englishVersionId));
+    }
+    params.set("prepare", "false");
+    params.set("include_draft", "false");
+  }
   return getJson<CanonicalArticle>(
     `/api/articles/event/${encodeURIComponent(eventId)}/experimental?${params.toString()}`,
+  );
+}
+
+export type ExperimentalTranslationStatus = {
+  status: "not_requested" | "queued" | "processing" | "ready" | "failed" | "interrupted" | "unknown";
+  source_article_version_id: number;
+  translation_article_version_id?: number | null;
+  language: string;
+  updated_at?: string | null;
+};
+
+export function getExperimentalTranslationStatus(
+  eventId: string,
+  sourceArticleVersionId: number,
+  language: string,
+) {
+  const query = new URLSearchParams({
+    source_article_version_id: String(sourceArticleVersionId),
+    language,
+  });
+  return getJson<ExperimentalTranslationStatus>(
+    `/api/articles/event/${encodeURIComponent(eventId)}/experimental/status?${query}`,
   );
 }
 

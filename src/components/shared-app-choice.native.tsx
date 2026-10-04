@@ -4,6 +4,8 @@ export function SharedAppChoice(_props: {
   uiLanguage?: string | null;
   contentLanguage?: string | null;
   readingLanguage?: string | null;
+  bilingualTranslationVersionId?: number | null;
+  bilingualEnglishVersionId?: number | null;
 }) {
   return null;
 }

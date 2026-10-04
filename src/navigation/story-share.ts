@@ -36,6 +36,7 @@ export function buildPublicStoryShareUrl(
   uiLanguage?: string,
   readingLanguage?: string,
   contentLanguageOverride?: string,
+  bilingualPair?: { translationVersionId: number; englishVersionId: number } | null,
 ) {
   const webBase = process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, "");
   const eventId = String(article.event_id || "").trim();
@@ -70,6 +71,17 @@ export function buildPublicStoryShareUrl(
       : null) ?? readingLanguageFromHref(_href);
   if (effectiveReadingLanguage) {
     url.searchParams.set("read", effectiveReadingLanguage);
+  }
+  if (
+    bilingualPair &&
+    Number.isSafeInteger(bilingualPair.translationVersionId) &&
+    bilingualPair.translationVersionId > 0 &&
+    Number.isSafeInteger(bilingualPair.englishVersionId) &&
+    bilingualPair.englishVersionId > 0
+  ) {
+    url.searchParams.set("mode", "bilingual");
+    url.searchParams.set("translationVersion", String(bilingualPair.translationVersionId));
+    url.searchParams.set("englishVersion", String(bilingualPair.englishVersionId));
   }
   return url.toString();
 }

@@ -10,6 +10,8 @@ type SharedAppChoiceProps = {
   uiLanguage?: string | null;
   contentLanguage?: string | null;
   readingLanguage?: string | null;
+  bilingualTranslationVersionId?: number | null;
+  bilingualEnglishVersionId?: number | null;
 };
 
 type MobilePlatform = "ios" | "android" | "desktop";
@@ -107,7 +109,7 @@ function mobilePlatform(): MobilePlatform {
   return "desktop";
 }
 
-function safeNativeHref({ appPath, uiLanguage, contentLanguage, readingLanguage }: SharedAppChoiceProps) {
+function safeNativeHref({ appPath, uiLanguage, contentLanguage, readingLanguage, bilingualTranslationVersionId, bilingualEnglishVersionId }: SharedAppChoiceProps) {
   // Only the known story and immutable-version routes may launch the app.
   if (!/^\/(?:s\/[0-9a-f-]{36}|share\/[0-9]+)$/i.test(appPath)) return null;
   const params = new URLSearchParams();
@@ -118,6 +120,16 @@ function safeNativeHref({ appPath, uiLanguage, contentLanguage, readingLanguage 
   }
   if (readingLanguage && /^[A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?$/.test(readingLanguage)) {
     params.set("read", readingLanguage);
+  }
+  if (
+    Number.isSafeInteger(bilingualTranslationVersionId) &&
+    Number.isSafeInteger(bilingualEnglishVersionId) &&
+    (bilingualTranslationVersionId ?? 0) > 0 &&
+    (bilingualEnglishVersionId ?? 0) > 0
+  ) {
+    params.set("mode", "bilingual");
+    params.set("translationVersion", String(bilingualTranslationVersionId));
+    params.set("englishVersion", String(bilingualEnglishVersionId));
   }
   const suffix = params.toString();
   return `briefly:///${appPath.slice(1)}${suffix ? `?${suffix}` : ""}`;

@@ -23,6 +23,9 @@ export default function SharedEventLinkScreen() {
     ui?: string | string[];
     content?: string | string[];
     read?: string | string[];
+    mode?: string | string[];
+    translationVersion?: string | string[];
+    englishVersion?: string | string[];
   }>();
   const { t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
@@ -41,9 +44,18 @@ export default function SharedEventLinkScreen() {
     if (ui && UI_LANGUAGES.has(ui)) search.set("ui", ui);
     if (content && UI_LANGUAGES.has(content)) search.set("content", content);
     if (read && READ_LANGUAGE.test(read)) search.set("read", read);
+    const translationVersion = Number(single(params.translationVersion));
+    const englishVersion = Number(single(params.englishVersion));
+    if (single(params.mode) === "bilingual" &&
+        Number.isSafeInteger(translationVersion) && translationVersion > 0 &&
+        Number.isSafeInteger(englishVersion) && englishVersion > 0) {
+      search.set("mode", "bilingual");
+      search.set("translationVersion", String(translationVersion));
+      search.set("englishVersion", String(englishVersion));
+    }
 
     return `/story/${encodeURIComponent(eventId)}?${search.toString()}`;
-  }, [params.eventId, params.ui, params.content, params.read]);
+  }, [params.eventId, params.ui, params.content, params.read, params.mode, params.translationVersion, params.englishVersion]);
 
   useEffect(() => {
     router.replace(destination as never);

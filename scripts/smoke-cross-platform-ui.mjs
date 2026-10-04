@@ -317,11 +317,60 @@ const checks = [
     ],
   },
   {
+    name: "Reading language selector appears outside collapsible Story tools",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      "readingModeAction={canToggleOriginal ? (",
+      "bilingualVersionNotice={earlierVersion ? (",
+      "shareBilingualPair={",
+      "getExperimentalTranslationStatus(",
+      "getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: false })",
+    ],
+  },
+  {
+    name: "Mobile bilingual passages switch their own cached language inline",
+    file: "src/components/bilingual-reading.tsx",
+    needles: [
+      'useState<"translated" | "english">("translated")',
+      "onPress={() => setMobileLanguage((current) =>",
+      "minHeight: 44",
+      "matchedBilingualOriginal(",
+    ],
+  },
+  {
+    name: "Pinned bilingual share URL carries immutable pair versions",
+    file: "src/navigation/story-share.ts",
+    needles: [
+      'url.searchParams.set("mode", "bilingual")',
+      'url.searchParams.set("translationVersion",',
+      'url.searchParams.set("englishVersion",',
+    ],
+  },
+  {
+    name: "Pinned shares are preserved through /s redirect",
+    file: "src/app/s/[eventId].tsx",
+    needles: [
+      'search.set("mode", "bilingual")',
+      'search.set("translationVersion",',
+      'search.set("englishVersion",',
+    ],
+  },
+  {
+    name: "Read-only translation status API and pinned version lookup are wired",
+    file: "src/api/briefly.ts",
+    needles: [
+      "getExperimentalTranslationStatus(",
+      'params.set("prepare", "false")',
+      'params.set("translation_version_id",',
+      'params.set("english_version_id",',
+    ],
+  },
+  {
     name: "Bilingual generation is explicit, gated and read-only when polling",
     file: "src/app/story/[slug].tsx",
     needles: [
       'bilingualReaderFeatureEnabled',
-      'prepare: !isSharedStory && !bilingualReaderFeatureEnabled',
+      'prepare: !isSharedStory && !bilingualReaderFeatureEnabled && !pinnedTranslationVersion',
       'bilingualGenerationAction={showBilingualGeneration',
       'bilingualGenerationBusy',
       'requestBilingualTranslation = async () =>',
@@ -360,7 +409,7 @@ const checks = [
       "localized.event_id !== english.event_id",
       "latestEnglishVersionId",
       "paragraph.type === englishParagraphs[index].type",
-      "styles.pairStacked",
+      "styles.mobileSwitcher",
     ],
   },
   {

@@ -61,6 +61,7 @@ function storyDestination(
   uiLanguage,
   contentLanguage,
   readingLanguage,
+  bilingualPair = null,
 ) {
   const slug = String(article.slug || "").trim();
   const eventId = String(article.event_id || "").trim();
@@ -73,6 +74,11 @@ function storyDestination(
   if (uiLanguage) params.set("ui", uiLanguage);
   if (contentLanguage) params.set("content", contentLanguage);
   if (readingLanguage) params.set("read", readingLanguage);
+  if (bilingualPair) {
+    params.set("mode", "bilingual");
+    params.set("translationVersion", String(bilingualPair.translationVersionId));
+    params.set("englishVersion", String(bilingualPair.englishVersionId));
+  }
 
   const headline = String(article.headline || "").trim();
   const imageUrl = String(
@@ -87,7 +93,7 @@ function storyDestination(
   return `/story/${encodeURIComponent(slug)}?${params.toString()}`;
 }
 
-async function loadArticle(key, legacyVersion) {
+async function loadArticle(key, legacyVersion, bilingualPair = null, contentLanguage = null) {
   const apiBase = String(
     process.env.BRIEFLY_PUBLIC_BASE_URL ||
       process.env.EXPO_PUBLIC_BRIEFLY_API_URL ||
@@ -96,9 +102,15 @@ async function loadArticle(key, legacyVersion) {
 
   const path = legacyVersion
     ? `/api/articles/version/${encodeURIComponent(key)}?include_draft=false`
-    : `/api/lazy-articles/event/${encodeURIComponent(
-        key,
-      )}?language=en&include_draft=false&prepare=false`;
+    : bilingualPair && contentLanguage && contentLanguage !== "en"
+      ? `/api/articles/event/${encodeURIComponent(key)}/experimental?${new URLSearchParams({
+          language: contentLanguage,
+          include_draft: "false",
+          prepare: "false",
+          translation_version_id: String(bilingualPair.translationVersionId),
+          english_version_id: String(bilingualPair.englishVersionId),
+        })}`
+      : `/api/lazy-articles/event/${encodeURIComponent(key)}?language=en&include_draft=false&prepare=false`;
 
   const response = await fetch(`${apiBase}${path}`, {
     headers: { Accept: "application/json" },
@@ -137,6 +149,17 @@ module.exports = async function handler(request, response) {
   const uiLanguage = normalizedUiLanguage(first(request.query.ui));
   const contentLanguage = normalizedContentLanguage(first(request.query.content));
   const readingLanguage = normalizedReadingLanguage(first(request.query.read));
+  const requestedTranslationVersion = Number(first(request.query.translationVersion));
+  const requestedEnglishVersion = Number(first(request.query.englishVersion));
+  const bilingualPair =
+    String(first(request.query.mode) || "") === "bilingual" &&
+    Number.isSafeInteger(requestedTranslationVersion) && requestedTranslationVersion > 0 &&
+    Number.isSafeInteger(requestedEnglishVersion) && requestedEnglishVersion > 0
+      ? {
+          translationVersionId: requestedTranslationVersion,
+          englishVersionId: requestedEnglishVersion,
+        }
+      : null;
   const protocol = String(
     first(request.headers["x-forwarded-proto"]) || "https",
   ).split(",")[0].trim();
@@ -151,12 +174,13 @@ module.exports = async function handler(request, response) {
   }
 
   try {
-    const article = await loadArticle(key, legacyVersion);
+    const article = await loadArticle(key, legacyVersion, bilingualPair, contentLanguage);
     const destinationPath = storyDestination(
       article,
       uiLanguage,
       contentLanguage,
       readingLanguage,
+      bilingualPair,
     );
     const destinationUrl = new URL(destinationPath, origin).toString();
 
@@ -171,6 +195,11 @@ module.exports = async function handler(request, response) {
     }
     if (readingLanguage) {
       shareUrlObject.searchParams.set("read", readingLanguage);
+    }
+    if (bilingualPair) {
+      shareUrlObject.searchParams.set("mode", "bilingual");
+      shareUrlObject.searchParams.set("translationVersion", String(bilingualPair.translationVersionId));
+      shareUrlObject.searchParams.set("englishVersion", String(bilingualPair.englishVersionId));
     }
     const shareUrl = shareUrlObject.toString();
 
