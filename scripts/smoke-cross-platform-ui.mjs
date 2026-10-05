@@ -89,7 +89,7 @@ const checks = [
       "account?.is_admin===true",
       "selectable={adminTextSelectable}",
       "<Text selectable={adminTextSelectable} style={[styles.headline",
-      "<Text selectable={adminTextSelectable} key={`${p.type}-${i}`}",
+      '<View key={`${p.type}-${i}`} style={styles.speechParagraph}>',
       "briefMoreButton",
     ],
   },
@@ -699,6 +699,7 @@ ensure(apiSource.includes('status: "succeeded" | "not_needed" | "translation_pen
 
 // On-device English speech must remain a free, version-scoped bilingual
 // reading action with no backend inference or competing podcast playback.
+const articleViewSource = read("src/components/article-view.tsx");
 const speechButtonSource = read("src/components/english-speech-button.tsx");
 const speechControllerSource = read("src/context/english-speech.tsx");
 const podcastPlayerSource = read("src/context/podcast-player.tsx");
@@ -718,7 +719,7 @@ ensure(speechControllerSource.includes('import * as Speech from "expo-speech"') 
        speechControllerSource.includes("void Speech.stop()") &&
        speechControllerSource.includes("pauseForSpeech()") &&
        speechControllerSource.includes('language: locale') &&
-       speechControllerSource.includes("rate: 0.9") &&
+       speechControllerSource.includes("rate: 1.0") &&
        speechControllerSource.includes('AppState.addEventListener("change"'),
        "Speech must use device TTS, speak one passage at a time and stop on app background");
 ensure(podcastPlayerSource.includes("pauseForSpeech: () => void") &&
@@ -737,6 +738,24 @@ ensure(bilingualSource.includes('passageId={`${english.article_version_id}:summa
        bilingualSource.includes('index === 1 && (') &&
        bilingualSource.includes('wholeBodyEnglish && ('),
        "English Listen appears for summary and body passages in aligned/unaligned web and mobile layouts");
+ensure(storySource.includes('englishSpeechSource={(displayedArticle.content_language ?? displayedArticle.language) === "en" ? displayedArticle : matchedEnglishArticle}') &&
+       storySource.includes('(displayedArticle.content_language ?? displayedArticle.language) === "en"') &&
+       articleViewSource.includes('englishSpeechSource=null') &&
+       articleViewSource.includes('englishSpeechSource?:CanonicalArticle|null') &&
+       articleViewSource.includes('return value?<View style={styles.briefSection}><BriefSummarySection') &&
+       articleViewSource.includes('spokenBodyAligned&&<EnglishSpeechButton') &&
+       articleViewSource.includes('English original · Listen') &&
+       articleViewSource.includes('speechEnglish&&!spokenBodyAligned&&isTranslatedBrief'),
+       "Mobile Listen controls must also be available in translated-only and English-only reading modes");
+ensure(speechControllerSource.includes("Speech.getAvailableVoicesAsync()") &&
+       speechControllerSource.includes("voiceRank(b) - voiceRank(a)") &&
+       speechControllerSource.includes("VOICE_STORAGE_KEY") &&
+       speechControllerSource.includes('voice: selectedVoice') &&
+       speechControllerSource.includes('Platform.OS === "web" ? 220 : 950') &&
+       speechButtonSource.includes("export function EnglishVoicePicker()") &&
+       speechButtonSource.includes("voices.map((voice)") &&
+       articleViewSource.includes("<EnglishVoicePicker />"),
+       "Web reader must prefer natural-sounding installed voices and let the user override the choice without cloud inference");
 
 let passed = 0;
 for (const check of checks) {
