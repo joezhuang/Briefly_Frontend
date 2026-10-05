@@ -767,7 +767,9 @@ ensure(bilingualSource.includes('selectable={selectable}') &&
        bilingualSource.includes('key={`${translated.article_version_id}:${english.article_version_id}:${index}:${wholeBodyEnglish}`}') &&
        bilingualSource.includes('onPress={() => setWholeBodyEnglish(false)}') &&
        bilingualSource.includes('englishAvailable && (') &&
-       !bilingualSource.includes('style={[styles.columnLabel, { color: colors.textMuted }]}>EN</Text>'),
+       bilingualSource.includes('{showEnglish ? translatedHint : "EN"} ↔') &&
+       !bilingualSource.includes('inlineEnglishMark') &&
+       !bilingualSource.includes('EN ·'),
        "Mobile bilingual English switch preserves paragraph taps and admin selection, avoids false alignment, and hides controls for empty English");
 ensure(bilingualSource.includes("const { stop } = useEnglishSpeech();") &&
        bilingualSource.includes("useEffect(() => () => { stop(); }, [stop]);") &&

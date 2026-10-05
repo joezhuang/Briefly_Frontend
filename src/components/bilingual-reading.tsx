@@ -405,7 +405,7 @@ export function BilingualBody({
           selectable={selectable}
           initiallyEnglish={selectable && wholeBodyEnglish}
         />
-      )}
+      ))}
     </View>
   );
 }
