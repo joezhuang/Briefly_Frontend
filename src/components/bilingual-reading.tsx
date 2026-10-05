@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useWindowDimensions, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, useWindowDimensions, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -10,11 +10,11 @@ import type { CanonicalArticle } from "@/models/article";
  * immutable article versions. Never requests/generates translations.
  */
 const copy = {
-  en: { mobileEnglish: "English", mobileTranslated: "Translation", bodyHint: "Tap a paragraph to compare the English original.", bodyHintAdmin: "Select text or switch the whole body.", bilingual: "Bilingual reading", original: "English original", translated: "Translation", warning: "AI translations may contain mistakes. English is the authoritative article.", mismatch: "The two versions have different paragraph structures; shown separately to avoid false alignment." },
-  es: { mobileEnglish: "Inglés", mobileTranslated: "Traducción", bodyHint: "Toca un párrafo para ver el original en inglés.", bodyHintAdmin: "Selecciona texto o cambia el idioma del artículo.", bilingual: "Lectura bilingüe", original: "Original en inglés", translated: "Traducción", warning: "La traducción por IA puede contener errores. El artículo en inglés es la versión de referencia.", mismatch: "Los párrafos difieren; se muestran por separado para evitar correspondencias incorrectas." },
-  ja: { mobileEnglish: "英語", mobileTranslated: "翻訳", bodyHint: "段落をタップすると英語原文に切り替わります。", bodyHintAdmin: "文章を選択するか、本文全体の言語を切り替えられます。", bilingual: "二言語で読む", original: "英語原文", translated: "翻訳版", warning: "AI翻訳には誤りが含まれる場合があります。英語原文を正本としてください。", mismatch: "段落構成が異なるため、誤った対応付けを避けて別々に表示します。" },
-  "zh-CN": { mobileEnglish: "英文", mobileTranslated: "译文", bodyHint: "轻点段落即可切换到英文原文。", bodyHintAdmin: "可选择文字或切换整篇正文语言。", bilingual: "双语阅读", original: "英文原文", translated: "译文", warning: "AI 翻译可能有误，请以英文原文为准。", mismatch: "两种语言的段落结构不同，将分别展示以避免错误对应。" },
-  "zh-TW": { mobileEnglish: "英文", mobileTranslated: "譯文", bodyHint: "點按段落即可切換到英文原文。", bodyHintAdmin: "可選取文字或切換整篇內文語言。", bilingual: "雙語閱讀", original: "英文原文", translated: "譯文", warning: "AI 翻譯可能有誤，請以英文原文為準。", mismatch: "兩種語言的段落結構不同，將分別顯示以避免錯誤對應。" },
+  en: { retryMissing: "Retry missing translation", retrying: "Repairing…", mobileEnglish: "English", mobileTranslated: "Translation", bodyHint: "Tap a paragraph to compare the English original.", bodyHintAdmin: "Select text or switch the whole body.", bilingual: "Bilingual reading", original: "English original", translated: "Translation", warning: "AI translations may contain mistakes. English is the authoritative article.", mismatch: "The two versions have different paragraph structures; shown separately to avoid false alignment." },
+  es: { retryMissing: "Reintentar traducción faltante", retrying: "Reparando…", mobileEnglish: "Inglés", mobileTranslated: "Traducción", bodyHint: "Toca un párrafo para ver el original en inglés.", bodyHintAdmin: "Selecciona texto o cambia el idioma del artículo.", bilingual: "Lectura bilingüe", original: "Original en inglés", translated: "Traducción", warning: "La traducción por IA puede contener errores. El artículo en inglés es la versión de referencia.", mismatch: "Los párrafos difieren; se muestran por separado para evitar correspondencias incorrectas." },
+  ja: { retryMissing: "不足している翻訳を再試行", retrying: "修復中…", mobileEnglish: "英語", mobileTranslated: "翻訳", bodyHint: "段落をタップすると英語原文に切り替わります。", bodyHintAdmin: "文章を選択するか、本文全体の言語を切り替えられます。", bilingual: "二言語で読む", original: "英語原文", translated: "翻訳版", warning: "AI翻訳には誤りが含まれる場合があります。英語原文を正本としてください。", mismatch: "段落構成が異なるため、誤った対応付けを避けて別々に表示します。" },
+  "zh-CN": { retryMissing: "重试缺失的译文", retrying: "正在修复…", mobileEnglish: "英文", mobileTranslated: "译文", bodyHint: "轻点段落即可切换到英文原文。", bodyHintAdmin: "可选择文字或切换整篇正文语言。", bilingual: "双语阅读", original: "英文原文", translated: "译文", warning: "AI 翻译可能有误，请以英文原文为准。", mismatch: "两种语言的段落结构不同，将分别展示以避免错误对应。" },
+  "zh-TW": { retryMissing: "重試缺失的譯文", retrying: "正在修復…", mobileEnglish: "英文", mobileTranslated: "譯文", bodyHint: "點按段落即可切換到英文原文。", bodyHintAdmin: "可選取文字或切換整篇內文語言。", bilingual: "雙語閱讀", original: "英文原文", translated: "譯文", warning: "AI 翻譯可能有誤，請以英文原文為準。", mismatch: "兩種語言的段落結構不同，將分別顯示以避免錯誤對應。" },
 } as const;
 
 const sections = [
@@ -117,11 +117,17 @@ export function BilingualBrief({
   english,
   selectable,
   latestEnglishVersionId = null,
+  onRetryMissingSection,
+  retryingMissingSection = false,
+  englishRetryAvailable = false,
 }: {
   translated: CanonicalArticle;
   english: CanonicalArticle;
   selectable: boolean;
   latestEnglishVersionId?: number | null;
+  onRetryMissingSection?: (field: "what_happened" | "why_it_matters" | "what_next") => void;
+  retryingMissingSection?: boolean;
+  englishRetryAvailable?: boolean;
 }) {
   const { language, t } = useBrieflyLanguage();
   const { width } = useWindowDimensions();
@@ -153,6 +159,22 @@ export function BilingualBrief({
             stacked={stacked}
             selectable={selectable}
           />
+          {!String(translated[field] ?? "").trim() &&
+            (String(english[field] ?? "").trim() || englishRetryAvailable) &&
+            onRetryMissingSection ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${t[localizedLabel]}: ${label.retryMissing}`}
+                disabled={retryingMissingSection}
+                onPress={() => onRetryMissingSection(field)}
+                style={[styles.retrySectionButton, { borderColor: colors.border }]}
+              >
+                {retryingMissingSection && <ActivityIndicator size="small" color={colors.accent} />}
+                <Text style={[styles.retrySectionText, { color: colors.accent }]}>
+                  {retryingMissingSection ? label.retrying : label.retryMissing}
+                </Text>
+              </Pressable>
+            ) : null}
         </View>
       ))}
     </View>
@@ -325,6 +347,8 @@ const styles = StyleSheet.create({
   header: { fontSize: 20, fontWeight: "800" },
   note: { fontSize: 13, lineHeight: 20 },
   section: { gap: 8 },
+  retrySectionButton: { alignSelf: "flex-start", minHeight: 44, borderWidth: StyleSheet.hairlineWidth, borderRadius: 999, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 8 },
+  retrySectionText: { fontSize: 12, fontWeight: "800" },
   sectionHeadingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, minWidth: 0 },
   sectionHeadingText: { flex: 1, minWidth: 0 },
   summaryMobilePair: { gap: 5 },

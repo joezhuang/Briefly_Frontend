@@ -254,7 +254,7 @@ export type BriefRepairStatus = {
 };
 
 export type BriefRepairResult = {
-  status: "succeeded" | "not_needed";
+  status: "succeeded" | "not_needed" | "translation_pending";
   source_article_version_id?: number;
   article_version_id: number;
   event_id?: string;
@@ -268,9 +268,12 @@ export function getBriefRepairStatus(articleVersionId: number) {
   );
 }
 
-export function requestBriefRepair(articleVersionId: number) {
+export function requestBriefRepair(articleVersionId: number, targetLanguage?: string) {
+  const query = targetLanguage && targetLanguage !== "en"
+    ? `?target_language=${encodeURIComponent(targetLanguage)}`
+    : "";
   return postJson<BriefRepairResult>(
-    `/api/articles/version/${encodeURIComponent(String(articleVersionId))}/brief-repair`,
+    `/api/articles/version/${encodeURIComponent(String(articleVersionId))}/brief-repair${query}`,
     {},
   );
 }

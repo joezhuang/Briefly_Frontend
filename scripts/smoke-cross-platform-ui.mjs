@@ -643,6 +643,39 @@ ensure(notificationsSource.includes('prepare: false,') &&
        !notificationsSource.includes('prepare: true'),
        "Notification polling must never start paid canonical or translation generation");
 
+// A user-initiated Retry of empty English brief sections must also restore
+// the corresponding pre-existing translated brief without starting generation.
+const briefRepairScreen = read("src/app/story/[slug].tsx");
+const briefRepairView = read("src/components/article-view.tsx");
+ensure(briefRepairScreen.includes('repairedEnglishBriefVersion.current = briefRepairArticleVersionId') &&
+       briefRepairScreen.includes('getExperimentalArticleByEventId(resolvedEventId, {') &&
+       briefRepairScreen.includes('prepare: false,') &&
+       briefRepairScreen.includes('matchedBilingualOriginal(localized, authoritativeArticle)') &&
+       briefRepairScreen.includes('setReloadKey((value) => value + 1)'),
+       "Retry of an English brief waits for its matching cached translated sections using read-only polling");
+ensure(briefRepairView.includes('const sourceBrief=bilingualOriginal??article;') &&
+       briefRepairView.includes('hasMissingSourceBrief&&briefRepair?.available') &&
+       briefRepairView.includes('bilingualOriginal?<><BilingualBrief'),
+       "Bilingual Story shows the original English brief Retry when its source is incomplete");
+const bilingualSource = read("src/components/bilingual-reading.tsx");
+ensure(bilingualSource.includes('onRetryMissingSection(field)') &&
+       bilingualSource.includes('!String(translated[field] ?? "").trim()') &&
+       bilingualSource.includes('englishRetryAvailable') &&
+       bilingualSource.includes('retryingMissingSection'),
+       "Missing translated brief sections have their own accessible Retry button");
+ensure(briefRepairView.includes('onBriefTranslationRepair?:(field:') &&
+       briefRepairView.includes('onBriefTranslationRepair(id==="whatHappened"') &&
+       briefRepairView.includes('onRetryMissingSection={!immutable'),
+       "Translated-only and bilingual Story layouts expose the repair control");
+ensure(briefRepairScreen.includes('result.status === "translation_pending"') &&
+       briefRepairScreen.includes('requestBriefRepair(briefRepairArticleVersionId, targetLanguage)') &&
+       briefRepairScreen.includes('matchedBilingualOriginal(article, authoritativeArticle) !== null'),
+       "Translation-only Retry targets the approved current English pair, without a new article version");
+const apiSource = read("src/api/briefly.ts");
+ensure(apiSource.includes('status: "succeeded" | "not_needed" | "translation_pending"') &&
+       apiSource.includes('target_language='),
+       "Retry API supports version-checked existing translation repairs");
+
 let passed = 0;
 for (const check of checks) {
   requireAll(check.file, check.needles);

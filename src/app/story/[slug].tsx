@@ -308,10 +308,12 @@ export default function StoryDetailScreen() {
     value: null,
   });
   const [briefRepairBusyKey, setBriefRepairBusyKey] = useState("");
+  const [briefTranslationRecoveryKey, setBriefTranslationRecoveryKey] = useState("");
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(false);
   const [bilingualGeneration, setBilingualGeneration] = useState<BilingualGenerationState | null>(null);
   // One automatic request at most per user / immutable English version / language.
   const autoTranslationRequested = useRef(new Set<string>());
+  const repairedEnglishBriefVersion = useRef<number | null>(null);
   const historyRecordedKey = useRef("");
   const storyOpenTrackedKey = useRef("");
 
@@ -442,7 +444,8 @@ export default function StoryDetailScreen() {
   const briefRepair =
     briefRepairState.key === briefRepairKey ? briefRepairState.value : null;
   const briefRepairBusy =
-    !!briefRepairKey && briefRepairBusyKey === briefRepairKey;
+    !!briefRepairKey &&
+    (briefRepairBusyKey === briefRepairKey || briefTranslationRecoveryKey === briefRepairKey);
 
   useEffect(() => {
     if (!resolvedSlug || !authReady) return;
@@ -1247,7 +1250,79 @@ export default function StoryDetailScreen() {
     }
   };
 
-  const handleBriefRepair = async () => {
+  // When English Retry repairs an existing source version, its already cached
+  // localization may take a moment to gain the same brief fields. Poll only
+  // read-only localized content; do not submit another translation request.
+  useEffect(() => {
+    if (!authoritativeArticle || !article || !resolvedEventId ||
+        repairedEnglishBriefVersion.current !== authoritativeArticle.article_version_id ||
+        articleRequestLanguage === "en" || isSharedStory ||
+        (article.content_language ?? article.language) === "en" ||
+        !matchedBilingualOriginal(article, authoritativeArticle)) return;
+
+    const sections = ["what_happened", "why_it_matters", "what_next"] as const;
+    const missingTranslation = sections.some(
+      (section) => !!String(authoritativeArticle[section] ?? "").trim() &&
+        !String(article[section] ?? "").trim(),
+    );
+    if (!missingTranslation) {
+      repairedEnglishBriefVersion.current = null;
+      setBriefTranslationRecoveryKey("");
+      return;
+    }
+
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let attempts = 0;
+    const poll = async () => {
+      try {
+        const localized = await getExperimentalArticleByEventId(resolvedEventId, {
+          language: articleRequestLanguage,
+          includeDraft: canUseDraftTranslation,
+          prepare: false,
+        });
+        if (!active) return;
+        if (matchedBilingualOriginal(localized, authoritativeArticle) &&
+            sections.every((section) =>
+              !String(authoritativeArticle[section] ?? "").trim() ||
+              !!String(localized[section] ?? "").trim(),
+            )) {
+          repairedEnglishBriefVersion.current = null;
+          setBriefTranslationRecoveryKey("");
+          setArticle((current) => current ? {
+            ...localized,
+            image_url: current.image_url,
+            video_url: current.video_url,
+            video_thumbnail_url: current.video_thumbnail_url,
+            videos: current.videos,
+            canonical_stale: current.canonical_stale,
+            latest_evidence_at: current.latest_evidence_at,
+            stale_refresh_entitled: current.stale_refresh_entitled,
+          } : localized);
+          return;
+        }
+      } catch {
+        // A transient status error does not authorize new Ollama work.
+      }
+      if (!active) return;
+      if (++attempts < 40) {
+        timer = setTimeout(() => void poll(), 3000);
+      } else {
+        repairedEnglishBriefVersion.current = null;
+        setBriefTranslationRecoveryKey("");
+      }
+    };
+    timer = setTimeout(() => void poll(), 3000);
+    return () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [
+    authoritativeArticle, article, resolvedEventId, articleRequestLanguage,
+    isSharedStory, canUseDraftTranslation,
+  ]);
+
+  const handleBriefRepair = async (targetLanguage?: string) => {
     if (!briefRepairArticleVersionId || briefRepairBusy) return;
 
     if (!user) {
@@ -1257,10 +1332,24 @@ export default function StoryDetailScreen() {
       return;
     }
 
+    // Starting an entirely new translation remains Pro-only. Repairing
+    // English itself uses the existing signed-in Retry permission.
+    const sourceMissing = ["what_happened", "why_it_matters", "what_next"].some(
+      (field) => !String(authoritativeArticle?.[field as "what_happened" | "why_it_matters" | "what_next"] ?? "").trim(),
+    );
+    if (targetLanguage && !sourceMissing && !isPro) {
+      router.push(`/upgrade?returnTo=${encodeURIComponent(currentStoryHref)}` as never);
+      return;
+    }
+
     const key = String(briefRepairArticleVersionId);
     setBriefRepairBusyKey(key);
     try {
-      await requestBriefRepair(briefRepairArticleVersionId);
+      const result = await requestBriefRepair(briefRepairArticleVersionId, targetLanguage);
+      if (result.status === "succeeded" || result.status === "translation_pending") {
+        repairedEnglishBriefVersion.current = briefRepairArticleVersionId;
+        if (targetLanguage) setBriefTranslationRecoveryKey(key);
+      }
       setReloadKey((value) => value + 1);
     } catch (err: unknown) {
       Alert.alert(
@@ -1611,13 +1700,16 @@ export default function StoryDetailScreen() {
         followingEnabled={followingEnabled}
         videoAccess={videoAccess}
         floatingVideoEnabled={videoAccess.allowed && floatingVideoEnabled}
-        briefRepair={
-          (displayedArticle.content_language ?? displayedArticle.language) === "en"
-            ? briefRepair
-            : null
-        }
+        briefRepair={briefRepair}
         briefRepairBusy={briefRepairBusy}
         onBriefRepair={() => void handleBriefRepair()}
+        onBriefTranslationRepair={
+          !isSharedStory &&
+          (displayedArticle.content_language ?? displayedArticle.language) !== "en" &&
+          matchedBilingualOriginal(article, authoritativeArticle) !== null
+            ? () => void handleBriefRepair(articleRequestLanguage)
+            : undefined
+        }
         translationAction={
           showGoogleTranslate && translateSourceUrl ? (
             <WebTranslateButton
