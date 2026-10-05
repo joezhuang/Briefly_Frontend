@@ -671,6 +671,10 @@ ensure(briefRepairScreen.includes('result.status === "translation_pending"') &&
        briefRepairScreen.includes('requestBriefRepair(briefRepairArticleVersionId, targetLanguage)') &&
        briefRepairScreen.includes('matchedBilingualOriginal(article, authoritativeArticle) !== null'),
        "Translation-only Retry targets the approved current English pair, without a new article version");
+ensure(briefRepairScreen.includes("repairedEnglishBriefFields.current.some(") &&
+       briefRepairScreen.includes("result.repaired_sections ?? []") &&
+       briefRepairScreen.includes("setBriefTranslationRecoveryKey(\"\")"),
+       "Translated recovery waits for repaired English to reload before concluding that the translated sections are complete");
 const apiSource = read("src/api/briefly.ts");
 ensure(apiSource.includes('status: "succeeded" | "not_needed" | "translation_pending"') &&
        apiSource.includes('target_language='),

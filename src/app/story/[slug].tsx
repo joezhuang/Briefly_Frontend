@@ -314,6 +314,7 @@ export default function StoryDetailScreen() {
   // One automatic request at most per user / immutable English version / language.
   const autoTranslationRequested = useRef(new Set<string>());
   const repairedEnglishBriefVersion = useRef<number | null>(null);
+  const repairedEnglishBriefFields = useRef<Array<"what_happened" | "why_it_matters" | "what_next">>([]);
   const historyRecordedKey = useRef("");
   const storyOpenTrackedKey = useRef("");
 
@@ -1261,12 +1262,19 @@ export default function StoryDetailScreen() {
         !matchedBilingualOriginal(article, authoritativeArticle)) return;
 
     const sections = ["what_happened", "why_it_matters", "what_next"] as const;
+    // The English Retry endpoint responds before the Story reload has fetched
+    // the repaired source. Do not mistake the old empty English field for a
+    // fully synchronized translation and cancel the localized repair watcher.
+    if (repairedEnglishBriefFields.current.some(
+      (section) => !String(authoritativeArticle[section] ?? "").trim(),
+    )) return;
     const missingTranslation = sections.some(
       (section) => !!String(authoritativeArticle[section] ?? "").trim() &&
         !String(article[section] ?? "").trim(),
     );
     if (!missingTranslation) {
       repairedEnglishBriefVersion.current = null;
+      repairedEnglishBriefFields.current = [];
       setBriefTranslationRecoveryKey("");
       return;
     }
@@ -1288,6 +1296,7 @@ export default function StoryDetailScreen() {
               !!String(localized[section] ?? "").trim(),
             )) {
           repairedEnglishBriefVersion.current = null;
+          repairedEnglishBriefFields.current = [];
           setBriefTranslationRecoveryKey("");
           setArticle((current) => current ? {
             ...localized,
@@ -1309,6 +1318,7 @@ export default function StoryDetailScreen() {
         timer = setTimeout(() => void poll(), 3000);
       } else {
         repairedEnglishBriefVersion.current = null;
+        repairedEnglishBriefFields.current = [];
         setBriefTranslationRecoveryKey("");
       }
     };
@@ -1348,6 +1358,9 @@ export default function StoryDetailScreen() {
       const result = await requestBriefRepair(briefRepairArticleVersionId, targetLanguage);
       if (result.status === "succeeded" || result.status === "translation_pending") {
         repairedEnglishBriefVersion.current = briefRepairArticleVersionId;
+        repairedEnglishBriefFields.current = result.status === "succeeded"
+          ? result.repaired_sections ?? []
+          : [];
         if (targetLanguage) setBriefTranslationRecoveryKey(key);
       }
       setReloadKey((value) => value + 1);
