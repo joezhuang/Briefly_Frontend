@@ -35,6 +35,7 @@ type PodcastPlayerContextValue = {
   status: ReturnType<typeof useAudioPlayerStatus>;
   minimizeRequest: number;
   play: (track: PodcastTrack) => void;
+  pauseForSpeech: () => void;
   toggle: (track?: PodcastTrack) => void;
   addToQueue: (track: PodcastTrack) => void;
   playQueueTrack: (index: number) => void;
@@ -258,6 +259,12 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
       status.duration,
     ],
   );
+
+  // TTS pronunciation is a separate, user-initiated audio session. Pause
+  // the podcast without clearing its queue or changing its position.
+  const pauseForSpeech = useCallback(() => {
+    player.pause();
+  }, [player]);
 
   const addToQueue = useCallback(
     (track: PodcastTrack) => {
@@ -518,6 +525,7 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
       status,
       minimizeRequest,
       play,
+      pauseForSpeech,
       toggle,
       addToQueue,
       playQueueTrack,
@@ -540,6 +548,7 @@ export function PodcastPlayerProvider({ children }: PropsWithChildren) {
       minimizeRequest,
       moveQueueItem,
       play,
+      pauseForSpeech,
       playNext,
       playPrevious,
       playQueueTrack,

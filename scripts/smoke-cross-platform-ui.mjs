@@ -697,6 +697,47 @@ ensure(apiSource.includes('status: "succeeded" | "not_needed" | "translation_pen
        apiSource.includes('target_language='),
        "Retry API supports version-checked existing translation repairs");
 
+// On-device English speech must remain a free, version-scoped bilingual
+// reading action with no backend inference or competing podcast playback.
+const speechButtonSource = read("src/components/english-speech-button.tsx");
+const speechControllerSource = read("src/context/english-speech.tsx");
+const podcastPlayerSource = read("src/context/podcast-player.tsx");
+const rootLayoutSource = read("src/app/_layout.tsx");
+const packageManifest = JSON.parse(read("package.json"));
+const packageLock = JSON.parse(read("package-lock.json"));
+ensure(packageManifest.dependencies["expo-speech"] === "~57.0.3" &&
+       packageLock.packages[""].dependencies["expo-speech"] === "~57.0.3" &&
+       packageLock.packages["node_modules/expo-speech"].version === "57.0.3",
+       "Expo 57 on-device speech must be locked in the manifest and npm lockfile");
+ensure(rootLayoutSource.includes("<PodcastPlayerProvider>") &&
+       rootLayoutSource.includes("<EnglishSpeechProvider>") &&
+       rootLayoutSource.indexOf("<PodcastPlayerProvider>") < rootLayoutSource.indexOf("<EnglishSpeechProvider>"),
+       "Speech context must be shared across bilingual passages beneath podcast playback");
+ensure(speechControllerSource.includes('import * as Speech from "expo-speech"') &&
+       speechControllerSource.includes("Speech.speak(chunk, {") &&
+       speechControllerSource.includes("void Speech.stop()") &&
+       speechControllerSource.includes("pauseForSpeech()") &&
+       speechControllerSource.includes('language: locale') &&
+       speechControllerSource.includes("rate: 0.9") &&
+       speechControllerSource.includes('AppState.addEventListener("change"'),
+       "Speech must use device TTS, speak one passage at a time and stop on app background");
+ensure(podcastPlayerSource.includes("pauseForSpeech: () => void") &&
+       podcastPlayerSource.includes("const pauseForSpeech = useCallback(() => {") &&
+       podcastPlayerSource.includes("player.pause();"),
+       "English speech must pause a playing podcast without clearing its queue");
+ensure(speechButtonSource.includes('toggle(passageId, text, "en-US")') &&
+       speechButtonSource.includes("accessibilityRole=") &&
+       speechButtonSource.includes("accessibilityLabel={playing ? labels.stop : labels.listen}") &&
+       speechButtonSource.includes("minHeight: 44"),
+       "Free English Listen/Stop actions use explicit English speech and touch-size accessibility");
+ensure(bilingualSource.includes('passageId={`${english.article_version_id}:summary:${field}`}') &&
+       bilingualSource.includes('passageId={`${english.article_version_id}:body:${index}`}') &&
+       bilingualSource.includes('<EnglishSpeechButton passageId={passageId} english={english} compact />') &&
+       bilingualSource.includes('english={englishParagraphs[index].text}') &&
+       bilingualSource.includes('index === 1 && (') &&
+       bilingualSource.includes('wholeBodyEnglish && ('),
+       "English Listen appears for summary and body passages in aligned/unaligned web and mobile layouts");
+
 let passed = 0;
 for (const check of checks) {
   requireAll(check.file, check.needles);

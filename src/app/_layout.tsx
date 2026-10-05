@@ -18,6 +18,7 @@ import {
   useBrieflyAppConfig,
 } from "@/context/app-config";
 import { LanguageProvider } from "@/context/language";
+import { EnglishSpeechProvider } from "@/context/english-speech";
 import { PodcastPlayerProvider } from "@/context/podcast-player";
 import { ReadingHistoryProvider } from "@/context/reading-history";
 import { TranslationPreferencesProvider } from "@/context/translation-preferences";
@@ -188,6 +189,7 @@ export default function RootLayout() {
               <BrieflyAppConfigProvider>
                 <ProductAnalyticsSession />
                 <PodcastPlayerProvider>
+                  <EnglishSpeechProvider>
                   <AnalysisReadinessProvider>
                     <TranslationPreferencesProvider>
                     <ReadingHistoryProvider>
@@ -197,6 +199,7 @@ export default function RootLayout() {
                     </ReadingHistoryProvider>
                     </TranslationPreferencesProvider>
                   </AnalysisReadinessProvider>
+                  </EnglishSpeechProvider>
                 </PodcastPlayerProvider>
               </BrieflyAppConfigProvider>
             </BrieflyAuthProvider>
