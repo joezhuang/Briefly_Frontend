@@ -519,7 +519,7 @@ const checks = [
     file: "src/components/article-view.tsx",
     needles: [
       "bilingualOriginal?:CanonicalArticle|null",
-      "bilingualOriginal?<BilingualBrief",
+      "<BilingualBrief translated={article} english={bilingualOriginal}",
       "bilingualOriginal?<BilingualBody",
     ],
   },
