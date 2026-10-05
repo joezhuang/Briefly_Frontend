@@ -360,6 +360,7 @@ const checks = [
     needles: [
       "getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: canUseDraftTranslation })",
       "matchedBilingualOriginal(article, historicalOriginal)",
+      '(value.content_language ?? value.language) === "en"',
       "bilingualLatestEnglishVersionId",
     ],
   },
@@ -619,6 +620,11 @@ ensure(startupTranslation.includes('canUseDraftTranslation') &&
        "Pro auto-translation must not be blocked by legacy publication status or newly arrived evidence");
 ensure(storySource.includes('includeDraft: PREVIEW_DRAFTS || canUseDraftTranslation'),
        "Pro must read a draft canonical source to start translation");
+ensure(!storySource.includes('value.status === "published"') &&
+       !storySource.includes('article.status === "published" && matchedEnglishArticle.status === "published"') &&
+       storySource.includes('(value.content_language ?? value.language) === "en"') &&
+       storySource.includes('article.article_version_id != null && matchedEnglishArticle.article_version_id != null'),
+       "Legacy draft/published flags must not hide version-matched English or approved bilingual shares");
 
 // Translation notifications are part of the shared generation notification tray,
 // not a screen-local spinner. They must survive leaving the Story screen.

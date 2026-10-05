@@ -691,7 +691,8 @@ export default function StoryDetailScreen() {
     let active = true;
     void getCanonicalArticleByVersionId(oldEnglishSourceId, { includeDraft: canUseDraftTranslation })
       .then((value) => {
-        if (active && value.status === "published" && value.article_version_id === oldEnglishSourceId) {
+        if (active && value.article_version_id === oldEnglishSourceId &&
+            (value.content_language ?? value.language) === "en") {
           setHistoricalOriginalState({key: historicalEnglishKey, value});
         }
       })
@@ -1617,7 +1618,6 @@ export default function StoryDetailScreen() {
         bilingualLatestEnglishVersionId={authoritativeArticle?.article_version_id ?? null}
         shareBilingualPair={
           effectiveLanguageMode === "bilingual" && matchedEnglishArticle &&
-          article.status === "published" && matchedEnglishArticle.status === "published" &&
           article.article_version_id != null && matchedEnglishArticle.article_version_id != null
             ? {
                 translationVersionId: article.article_version_id,
