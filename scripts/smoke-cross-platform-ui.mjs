@@ -642,6 +642,12 @@ ensure(notificationsSource.includes('kind === "refresh" || item.kind === "transl
 ensure(notificationsSource.includes('prepare: false,') &&
        !notificationsSource.includes('prepare: true'),
        "Notification polling must never start paid canonical or translation generation");
+ensure(notificationsSource.includes('if (item.kind === "translation") {') &&
+       notificationsSource.includes('const canonicalReady =\n              item.baseVersionId != null') &&
+       !notificationsSource.includes('const staleTranslation =') &&
+       !notificationsSource.includes('if (item.kind !== "translation" &&'),
+       "Translation notification checks return before initial/refresh article handling");
+
 
 // A user-initiated Retry of empty English brief sections must also restore
 // the corresponding pre-existing translated brief without starting generation.
@@ -654,9 +660,9 @@ ensure(briefRepairScreen.includes('repairedEnglishBriefVersion.current = briefRe
        briefRepairScreen.includes('setReloadKey((value) => value + 1)'),
        "Retry of an English brief waits for its matching cached translated sections using read-only polling");
 ensure(briefRepairView.includes('const sourceBrief=bilingualOriginal??article;') &&
-       briefRepairView.includes('hasMissingSourceBrief&&briefRepair?.available') &&
+       briefRepairView.includes('hasMissingSourceBrief&&bilingualOriginal.article_version_id===bilingualLatestEnglishVersionId&&briefRepair?.available') &&
        briefRepairView.includes('bilingualOriginal?<><BilingualBrief'),
-       "Bilingual Story shows the original English brief Retry when its source is incomplete");
+       "Bilingual Story shows English brief Retry only for the current matching source version");
 const bilingualSource = read("src/components/bilingual-reading.tsx");
 ensure(bilingualSource.includes('onRetryMissingSection(field)') &&
        bilingualSource.includes('!String(translated[field] ?? "").trim()') &&
@@ -675,6 +681,11 @@ ensure(briefRepairScreen.includes("repairedEnglishBriefFields.current.some(") &&
        briefRepairScreen.includes("result.repaired_sections ?? []") &&
        briefRepairScreen.includes("setBriefTranslationRecoveryKey(\"\")"),
        "Translated recovery waits for repaired English to reload before concluding that the translated sections are complete");
+ensure(briefRepairScreen.includes('useRef<("what_happened" | "why_it_matters" | "what_next")[]>([])') &&
+       briefRepairScreen.includes('const finishedTimer = setTimeout(() => setBriefTranslationRecoveryKey(""), 0)') &&
+       briefRepairScreen.includes('return () => clearTimeout(finishedTimer)'),
+       "Completed translation repair clears busy state asynchronously and cleans up its timer");
+
 const apiSource = read("src/api/briefly.ts");
 ensure(apiSource.includes('status: "succeeded" | "not_needed" | "translation_pending"') &&
        apiSource.includes('target_language='),

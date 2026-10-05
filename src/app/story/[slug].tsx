@@ -314,7 +314,7 @@ export default function StoryDetailScreen() {
   // One automatic request at most per user / immutable English version / language.
   const autoTranslationRequested = useRef(new Set<string>());
   const repairedEnglishBriefVersion = useRef<number | null>(null);
-  const repairedEnglishBriefFields = useRef<Array<"what_happened" | "why_it_matters" | "what_next">>([]);
+  const repairedEnglishBriefFields = useRef<("what_happened" | "why_it_matters" | "what_next")[]>([]);
   const historyRecordedKey = useRef("");
   const storyOpenTrackedKey = useRef("");
 
@@ -1275,8 +1275,10 @@ export default function StoryDetailScreen() {
     if (!missingTranslation) {
       repairedEnglishBriefVersion.current = null;
       repairedEnglishBriefFields.current = [];
-      setBriefTranslationRecoveryKey("");
-      return;
+      // Clear the busy indicator after this effect, not during render
+      // synchronization. A completed repair may already be cached.
+      const finishedTimer = setTimeout(() => setBriefTranslationRecoveryKey(""), 0);
+      return () => clearTimeout(finishedTimer);
     }
 
     let active = true;

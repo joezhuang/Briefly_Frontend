@@ -453,25 +453,16 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               prepare: false,
             });
             const nextVersionId = article.article_version_id;
+            // Translation watchers returned above and use their own
+            // immutable source/version status endpoint. The remaining items
+            // are initial article generation or a refreshed English version.
             const canonicalReady =
-              item.kind === "translation"
-                ? nextVersionId != null &&
-                  (item.baseVersionId == null || nextVersionId === item.baseVersionId)
-                : item.baseVersionId != null
-                  ? nextVersionId != null && nextVersionId !== item.baseVersionId
-                  : nextVersionId != null;
+              item.baseVersionId != null
+                ? nextVersionId != null && nextVersionId !== item.baseVersionId
+                : nextVersionId != null;
 
             if (!canonicalReady) {
-              const staleTranslation =
-                item.kind === "translation" &&
-                item.baseVersionId != null &&
-                nextVersionId != null &&
-                nextVersionId !== item.baseVersionId;
-              const inactiveArticleGeneration =
-                item.kind !== "translation" &&
-                article.generation_status !== "processing";
-
-              if (staleTranslation || inactiveArticleGeneration) {
+              if (article.generation_status !== "processing") {
                 console.warn("[Briefly Notifications] stopped stale article watcher", {
                   eventId: item.eventId,
                   kind: item.kind ?? "initial",
@@ -524,11 +515,6 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               } else if (translationStatus === "failed") {
                 terminalFailures.push(item);
               }
-              return;
-            }
-
-            if (item.kind === "translation") {
-              terminalFailures.push(item);
               return;
             }
 
