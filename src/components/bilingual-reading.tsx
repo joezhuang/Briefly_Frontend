@@ -201,32 +201,52 @@ function TappableBodyParagraph({
   englishHint,
   translatedHint,
   passageId,
+  selectable = false,
+  initiallyEnglish = false,
 }: {
   localized: string;
   english: string;
   passageId: string;
   englishHint: string;
   translatedHint: string;
+  selectable?: boolean;
+  initiallyEnglish?: boolean;
 }) {
   const { colors } = useBrieflyTheme();
-  const [showEnglish, setShowEnglish] = useState(false);
+  const [showEnglish, setShowEnglish] = useState(initiallyEnglish);
+  const englishAvailable = !!english.trim();
   const currentText = (showEnglish ? english : localized) || "—";
+  const switchLanguage = () => setShowEnglish((current) => !current);
+
   return (
     <View style={styles.bodyParagraphItem}>
-      <View style={styles.bodyParagraphControls}>
-        <Text style={[styles.columnLabel, { color: colors.textMuted }]}>EN</Text>
-        <EnglishSpeechButton passageId={passageId} english={english} compact />
-      </View>
+      {englishAvailable && (
+        <View style={styles.bodyParagraphControls}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={showEnglish ? translatedHint : englishHint}
+            accessibilityState={{ selected: showEnglish }}
+            onPress={switchLanguage}
+            style={[styles.mobileSwitcher, styles.paragraphLanguageButton, {
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+            }]}
+          >
+            <Text style={[styles.mobileOptionText, { color: colors.accent }]}>
+              {showEnglish ? translatedHint : "EN"} ↔
+            </Text>
+          </Pressable>
+          <EnglishSpeechButton passageId={passageId} english={english} compact />
+        </View>
+      )}
       <Text
-        accessibilityRole="button"
+        selectable={selectable}
+        accessibilityRole={selectable || !englishAvailable ? undefined : "button"}
         accessibilityLabel={currentText}
-        accessibilityHint={showEnglish ? translatedHint : englishHint}
-        onPress={() => setShowEnglish((current) => !current)}
+        accessibilityHint={selectable || !englishAvailable ? undefined : (showEnglish ? translatedHint : englishHint)}
+        onPress={!selectable && englishAvailable ? switchLanguage : undefined}
         style={[styles.bodyParagraph, { color: colors.text }]}
       >
-        {showEnglish && (
-          <Text style={[styles.inlineEnglishMark, { color: colors.accent }]}>EN · </Text>
-        )}
         {currentText}
       </Text>
     </View>
@@ -337,7 +357,19 @@ export function BilingualBody({
           <View key={index} style={styles.bodyParagraphItem}>
             {wholeBodyEnglish && (
               <View style={styles.bodyParagraphControls}>
-                <Text style={[styles.columnLabel, { color: colors.textMuted }]}>EN</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={label.mobileTranslated}
+                  onPress={() => setWholeBodyEnglish(false)}
+                  style={[styles.mobileSwitcher, styles.paragraphLanguageButton, {
+                    borderColor: colors.border,
+                    backgroundColor: colors.surface,
+                  }]}
+                >
+                  <Text style={[styles.mobileOptionText, { color: colors.accent }]}>
+                    {label.mobileTranslated} ↔
+                  </Text>
+                </Pressable>
                 <EnglishSpeechButton
                   passageId={`${english.article_version_id}:body:${index}`}
                   english={paragraph.text}
@@ -362,27 +394,17 @@ export function BilingualBody({
         </Text>
         {switchWholeBody}
       </View>
-      {localizedParagraphs.map((paragraph, index) =>
-        selectable ? (
-          <View key={index} style={styles.bodyParagraphItem}>
-            <View style={styles.bodyParagraphControls}>
-              <Text style={[styles.columnLabel, { color: colors.textMuted }]}>EN</Text>
-              <EnglishSpeechButton passageId={`${english.article_version_id}:body:${index}`} english={englishParagraphs[index].text} compact />
-            </View>
-            <Text selectable style={[styles.bodyParagraph, { color: colors.text }]}>
-              {(wholeBodyEnglish ? englishParagraphs[index].text : paragraph.text) || "—"}
-            </Text>
-          </View>
-        ) : (
-          <TappableBodyParagraph
-            key={`${translated.article_version_id}:${english.article_version_id}:${index}`}
-            localized={paragraph.text}
-            english={englishParagraphs[index].text}
-            passageId={`${english.article_version_id}:body:${index}`}
-            englishHint={label.mobileEnglish}
-            translatedHint={label.mobileTranslated}
-          />
-        ),
+      {localizedParagraphs.map((paragraph, index) => (
+        <TappableBodyParagraph
+          key={`${translated.article_version_id}:${english.article_version_id}:${index}:${wholeBodyEnglish}`}
+          localized={paragraph.text}
+          english={englishParagraphs[index].text}
+          passageId={`${english.article_version_id}:body:${index}`}
+          englishHint={label.mobileEnglish}
+          translatedHint={label.mobileTranslated}
+          selectable={selectable}
+          initiallyEnglish={selectable && wholeBodyEnglish}
+        />
       )}
     </View>
   );
@@ -415,6 +437,6 @@ const styles = StyleSheet.create({
   bodyHintRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   bodyHint: { flex: 1, fontSize: 12, lineHeight: 17 },
   bodyParagraph: { fontSize: 19, lineHeight: 31 },
-  inlineEnglishMark: { fontSize: 12, fontWeight: "800" },
+  paragraphLanguageButton: { alignSelf: "auto" },
   separateParagraph: { marginBottom: 14 },
 });

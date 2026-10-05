@@ -17,11 +17,18 @@ picker. Audio remains a free reading aid, separate from generated podcasts.
 - On **mobile summary sections**, Listen/Stop is in the same heading row as
   the English/Translation switch. On **desktop**, it is immediately beside
   the English-original label.
-- On **mobile body paragraphs**, Listen/Stop is beside an **EN** indicator
-  in the paragraph's control row. The paragraph text can still be tapped to
-  compare languages. On **desktop body paragraphs**, it is next to the
-  English label. Misaligned paragraphs are never falsely paired; the English
-  originals have their own listen controls only when displayed.
+- On **mobile aligned body paragraphs**, **EN ↔** next to Listen/Stop is
+  itself a language-toggle button. Once the paragraph shows English, that
+  button changes to the UI-localized **Translation ↔** label. Regular readers
+  can still tap the paragraph to toggle; admins retain selectable paragraph
+  text and use the explicit button instead. No `EN ·` marker is inserted
+  into the start of the paragraph. When English text is blank, neither
+  button is shown.
+- On **desktop body paragraphs**, Listen is beside the English label.
+  Misaligned paragraphs are never falsely paired; on narrow screens the
+  English-only side retains its whole-body switch, and its per-paragraph
+  switch returns to the translation rather than pretending that paragraph
+  indexes correspond between languages.
 - `EnglishVoicePicker` appears only within Bilingual mode when the device
   provides multiple English voices. Leaving Bilingual mode stops any speech.
 
@@ -58,10 +65,15 @@ This release exposes only English listening in Bilingual mode.
    original. Switch between English, Translated, and Bilingual modes. The
    speaker buttons and voice picker should appear **only in Bilingual**.
 2. On a narrow phone, verify each summary's English/Translation switch
-   and Listen occupy the same heading row. In body paragraphs, Listen sits
-   beside EN and works even while the translation is displayed.
-3. On wide web, verify each Listen is adjacent to its English label. For
-   unaligned bodies, do not display a button next to a translated paragraph.
+   and Listen occupy the same heading row. In an aligned body paragraph,
+   tap **EN ↔** beside Listen: only that paragraph should show English,
+   and the button should change to the translated-language switch. Tap it
+   again or tap the paragraph to return to the translation. There must be
+   no extra `EN ·` text prepended inside the paragraph itself.
+3. On wide web, verify each Listen is adjacent to its English label. On
+   mobile with unaligned body structures, use the whole-body English switch;
+   the control beside Listen returns to the translation. Never incorrectly
+   align paragraph indexes or show Listen beside untranslated content.
 4. Tap two passages in sequence; the second should stop the first. Leave
    Bilingual mode while audio is playing; speech should stop.
 5. Start a podcast and then Listen. Podcast pauses without losing its

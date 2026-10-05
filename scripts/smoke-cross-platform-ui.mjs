@@ -410,10 +410,10 @@ const checks = [
       "heading={t[localizedLabel]}",
       "label.bodyHint",
       "label.bodyHintAdmin",
-      "accessibilityHint={showEnglish ? translatedHint : englishHint}",
-      "onPress={() => setShowEnglish((current) => !current)}",
-      "EN · ",
-      "selectable ? (",
+      "accessibilityLabel={showEnglish ? translatedHint : englishHint}",
+      "onPress={!selectable && englishAvailable ? switchLanguage : undefined}",
+      '{showEnglish ? translatedHint : "EN"} ↔',
+      "selectable={selectable}",
     ],
   },
   {
@@ -753,10 +753,22 @@ ensure(bilingualSource.includes('const [mobileLanguage, setMobileLanguage] = use
        bilingualSource.includes('<View style={styles.englishColumnHeading}>') &&
        bilingualSource.includes('justifyContent: "flex-start", flexWrap: "wrap"') &&
        bilingualSource.includes('<View style={styles.bodyParagraphControls}>') &&
-       bilingualSource.includes('color: colors.textMuted }]}>EN</Text>') &&
+       bilingualSource.includes('accessibilityLabel={showEnglish ? translatedHint : englishHint}') &&
+       bilingualSource.includes('onPress={switchLanguage}') &&
+       bilingualSource.includes('{showEnglish ? translatedHint : "EN"} ↔') &&
        bilingualSource.includes('english={englishParagraphs[index].text}') &&
-       bilingualSource.includes('wholeBodyEnglish && ('),
-       "Mobile Listen shares the summary switch row; paragraph and desktop controls are beside EN");
+       bilingualSource.includes('wholeBodyEnglish && (') &&
+       !bilingualSource.includes('inlineEnglishMark') &&
+       !bilingualSource.includes('EN ·'),
+       "Mobile Listen shares the summary switch row; EN beside paragraph Listen is the language toggle without inline prefixes");
+ensure(bilingualSource.includes('selectable={selectable}') &&
+       bilingualSource.includes('onPress={!selectable && englishAvailable ? switchLanguage : undefined}') &&
+       bilingualSource.includes('initiallyEnglish={selectable && wholeBodyEnglish}') &&
+       bilingualSource.includes('key={`${translated.article_version_id}:${english.article_version_id}:${index}:${wholeBodyEnglish}`}') &&
+       bilingualSource.includes('onPress={() => setWholeBodyEnglish(false)}') &&
+       bilingualSource.includes('englishAvailable && (') &&
+       !bilingualSource.includes('style={[styles.columnLabel, { color: colors.textMuted }]}>EN</Text>'),
+       "Mobile bilingual English switch preserves paragraph taps and admin selection, avoids false alignment, and hides controls for empty English");
 ensure(bilingualSource.includes("const { stop } = useEnglishSpeech();") &&
        bilingualSource.includes("useEffect(() => () => { stop(); }, [stop]);") &&
        bilingualSource.includes("<EnglishVoicePicker />") &&
