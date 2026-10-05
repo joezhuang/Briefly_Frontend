@@ -1615,7 +1615,6 @@ export default function StoryDetailScreen() {
         podcastEnabled={podcastEnabled}
         translationEnabled={translationEnabled}
         bilingualOriginal={effectiveLanguageMode === "bilingual" && bilingualEnabled ? matchedEnglishArticle : null}
-        englishSpeechSource={(displayedArticle.content_language ?? displayedArticle.language) === "en" ? displayedArticle : matchedEnglishArticle}
         bilingualLatestEnglishVersionId={authoritativeArticle?.article_version_id ?? null}
         shareBilingualPair={
           effectiveLanguageMode === "bilingual" && matchedEnglishArticle &&

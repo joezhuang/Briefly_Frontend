@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, useWindowDimensions, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { EnglishSpeechButton } from "@/components/english-speech-button";
+import { EnglishSpeechButton, EnglishVoicePicker } from "@/components/english-speech-button";
+import { useEnglishSpeech } from "@/context/english-speech";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle } from "@/models/article";
@@ -81,20 +82,22 @@ function BilingualPair({
           <Text numberOfLines={2} style={[styles.sectionTitle, styles.sectionHeadingText, { color: colors.accent }]}>
             {heading}
           </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={mobileLanguage === "translated" ? label.mobileEnglish : label.mobileTranslated}
-            onPress={() => setMobileLanguage((current) =>
-              current === "translated" ? "english" : "translated",
-            )}
-            style={[styles.mobileSwitcher, { borderColor: colors.border, backgroundColor: colors.surface }]}
-          >
-            <Text style={[styles.mobileOptionText, { color: colors.accent }]}>
-              {mobileLanguage === "translated" ? label.mobileEnglish : label.mobileTranslated} ↔
-            </Text>
-          </Pressable>
+          <View style={styles.sectionActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={mobileLanguage === "translated" ? label.mobileEnglish : label.mobileTranslated}
+              onPress={() => setMobileLanguage((current) =>
+                current === "translated" ? "english" : "translated",
+              )}
+              style={[styles.mobileSwitcher, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            >
+              <Text style={[styles.mobileOptionText, { color: colors.accent }]}>
+                {mobileLanguage === "translated" ? label.mobileEnglish : label.mobileTranslated} ↔
+              </Text>
+            </Pressable>
+            <EnglishSpeechButton passageId={passageId} english={english} compact />
+          </View>
         </View>
-        <EnglishSpeechButton passageId={passageId} english={english} compact />
         <Text selectable={selectable} style={[styles.paragraph, { color: colors.text }]}>
           {(mobileLanguage === "translated" ? localized : english) || "—"}
         </Text>
@@ -143,15 +146,18 @@ export function BilingualBrief({
   const stacked = width < 800;
   return (
     <View style={[styles.brief, { backgroundColor: colors.surfaceMuted }]}>
-      {!stacked && (
-        <Text style={[styles.header, { color: colors.text }]}>
-          {label.bilingual}
-          {latestEnglishVersionId != null &&
-            english.article_version_id !== latestEnglishVersionId
-              ? ` · v${english.version_number ?? english.article_version_id}`
-              : ""}
-        </Text>
-      )}
+      <View style={styles.bilingualHeader}>
+        {!stacked && (
+          <Text style={[styles.header, { color: colors.text }]}>
+            {label.bilingual}
+            {latestEnglishVersionId != null &&
+              english.article_version_id !== latestEnglishVersionId
+                ? ` · v${english.version_number ?? english.article_version_id}`
+                : ""}
+          </Text>
+        )}
+        <EnglishVoicePicker />
+      </View>
       {sections.map(([field, localizedLabel, englishLabel]) => (
         <View key={field} style={styles.section}>
           {!stacked && (
@@ -206,20 +212,23 @@ function TappableBodyParagraph({
   const [showEnglish, setShowEnglish] = useState(false);
   const currentText = (showEnglish ? english : localized) || "—";
   return (
-    <View style={styles.paragraphSpeechRow}>
+    <View style={styles.bodyParagraphItem}>
+      <View style={styles.bodyParagraphControls}>
+        <Text style={[styles.columnLabel, { color: colors.textMuted }]}>EN</Text>
+        <EnglishSpeechButton passageId={passageId} english={english} compact />
+      </View>
       <Text
         accessibilityRole="button"
         accessibilityLabel={currentText}
         accessibilityHint={showEnglish ? translatedHint : englishHint}
         onPress={() => setShowEnglish((current) => !current)}
-        style={[styles.bodyParagraph, styles.growText, { color: colors.text }]}
+        style={[styles.bodyParagraph, { color: colors.text }]}
       >
         {showEnglish && (
           <Text style={[styles.inlineEnglishMark, { color: colors.accent }]}>EN · </Text>
         )}
         {currentText}
       </Text>
-      <EnglishSpeechButton passageId={passageId} english={english} compact />
     </View>
   );
 }
@@ -236,9 +245,13 @@ export function BilingualBody({
   const { language } = useBrieflyLanguage();
   const { width } = useWindowDimensions();
   const { colors } = useBrieflyTheme();
+  const { stop } = useEnglishSpeech();
   const label = copy[language] ?? copy.en;
   const stacked = width < 800;
   const [wholeBodyEnglish, setWholeBodyEnglish] = useState(false);
+  // Leaving Bilingual mode removes these controls. Don't leave an old passage
+  // speaking while the user is back in the English-only/translated-only view.
+  useEffect(() => () => { stop(); }, [stop]);
   const localizedParagraphs = translated.body ?? [];
   const englishParagraphs = english.body ?? [];
   // Only allow passage-level comparison when order and paragraph types match.
@@ -260,11 +273,14 @@ export function BilingualBody({
                 {column.paragraphs.map((paragraph, i) => (
                   <View key={i} style={styles.column}>
                     {index === 1 && (
-                      <EnglishSpeechButton
-                        passageId={`${english.article_version_id}:body:${i}`}
-                        english={paragraph.text}
-                        compact
-                      />
+                      <View style={styles.bodyParagraphControls}>
+                        <Text style={[styles.columnLabel, { color: colors.textMuted }]}>EN</Text>
+                        <EnglishSpeechButton
+                          passageId={`${english.article_version_id}:body:${i}`}
+                          english={paragraph.text}
+                          compact
+                        />
+                      </View>
                     )}
                     <Text selectable={selectable} style={[styles.paragraph, styles.separateParagraph, { color: colors.text }]}>
                       {paragraph.text}
@@ -318,17 +334,20 @@ export function BilingualBody({
           {switchWholeBody}
         </View>
         {paragraphs.map((paragraph, index) => (
-          <View key={index} style={styles.paragraphSpeechRow}>
-            <Text selectable={selectable} style={[styles.bodyParagraph, styles.growText, { color: colors.text }]}>
+          <View key={index} style={styles.bodyParagraphItem}>
+            {wholeBodyEnglish && (
+              <View style={styles.bodyParagraphControls}>
+                <Text style={[styles.columnLabel, { color: colors.textMuted }]}>EN</Text>
+                <EnglishSpeechButton
+                  passageId={`${english.article_version_id}:body:${index}`}
+                  english={paragraph.text}
+                  compact
+                />
+              </View>
+            )}
+            <Text selectable={selectable} style={[styles.bodyParagraph, { color: colors.text }]}>
               {paragraph.text}
             </Text>
-            {wholeBodyEnglish && (
-              <EnglishSpeechButton
-                passageId={`${english.article_version_id}:body:${index}`}
-                english={paragraph.text}
-                compact
-              />
-            )}
           </View>
         ))}
       </View>
@@ -345,11 +364,14 @@ export function BilingualBody({
       </View>
       {localizedParagraphs.map((paragraph, index) =>
         selectable ? (
-          <View key={index} style={styles.paragraphSpeechRow}>
-            <Text selectable style={[styles.bodyParagraph, styles.growText, { color: colors.text }]}>
+          <View key={index} style={styles.bodyParagraphItem}>
+            <View style={styles.bodyParagraphControls}>
+              <Text style={[styles.columnLabel, { color: colors.textMuted }]}>EN</Text>
+              <EnglishSpeechButton passageId={`${english.article_version_id}:body:${index}`} english={englishParagraphs[index].text} compact />
+            </View>
+            <Text selectable style={[styles.bodyParagraph, { color: colors.text }]}>
               {(wholeBodyEnglish ? englishParagraphs[index].text : paragraph.text) || "—"}
             </Text>
-            <EnglishSpeechButton passageId={`${english.article_version_id}:body:${index}`} english={englishParagraphs[index].text} compact />
           </View>
         ) : (
           <TappableBodyParagraph
@@ -371,9 +393,11 @@ const styles = StyleSheet.create({
   header: { fontSize: 20, fontWeight: "800" },
   note: { fontSize: 13, lineHeight: 20 },
   section: { gap: 8 },
-  englishColumnHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 5 },
-  paragraphSpeechRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  growText: { flex: 1, minWidth: 0 },
+  englishColumnHeading: { flexDirection: "row", alignItems: "center", justifyContent: "flex-start", flexWrap: "wrap", gap: 8 },
+  bodyParagraphItem: { gap: 6 },
+  bodyParagraphControls: { flexDirection: "row", alignItems: "center", justifyContent: "flex-start", gap: 8 },
+  bilingualHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 },
+  sectionActions: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 0 },
   retrySectionButton: { alignSelf: "flex-start", minHeight: 44, borderWidth: StyleSheet.hairlineWidth, borderRadius: 999, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 8 },
   retrySectionText: { fontSize: 12, fontWeight: "800" },
   sectionHeadingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, minWidth: 0 },

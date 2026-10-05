@@ -89,7 +89,7 @@ const checks = [
       "account?.is_admin===true",
       "selectable={adminTextSelectable}",
       "<Text selectable={adminTextSelectable} style={[styles.headline",
-      '<View key={`${p.type}-${i}`} style={styles.speechParagraph}>',
+      '<Text selectable={adminTextSelectable} key={`${p.type}-${i}`}',
       "briefMoreButton",
     ],
   },
@@ -738,15 +738,30 @@ ensure(bilingualSource.includes('passageId={`${english.article_version_id}:summa
        bilingualSource.includes('index === 1 && (') &&
        bilingualSource.includes('wholeBodyEnglish && ('),
        "English Listen appears for summary and body passages in aligned/unaligned web and mobile layouts");
-ensure(storySource.includes('englishSpeechSource={(displayedArticle.content_language ?? displayedArticle.language) === "en" ? displayedArticle : matchedEnglishArticle}') &&
-       storySource.includes('(displayedArticle.content_language ?? displayedArticle.language) === "en"') &&
-       articleViewSource.includes('englishSpeechSource=null') &&
-       articleViewSource.includes('englishSpeechSource?:CanonicalArticle|null') &&
-       articleViewSource.includes('return value?<View style={styles.briefSection}><BriefSummarySection') &&
-       articleViewSource.includes('spokenBodyAligned&&<EnglishSpeechButton') &&
-       articleViewSource.includes('English original · Listen') &&
-       articleViewSource.includes('speechEnglish&&!spokenBodyAligned&&isTranslatedBrief'),
-       "Mobile Listen controls must also be available in translated-only and English-only reading modes");
+ensure(storySource.includes('bilingualOriginal={effectiveLanguageMode === "bilingual" && bilingualEnabled ? matchedEnglishArticle : null}') &&
+       !storySource.includes("englishSpeechSource=") &&
+       !articleViewSource.includes("EnglishSpeechButton") &&
+       !articleViewSource.includes("EnglishVoicePicker") &&
+       !articleViewSource.includes("englishSpeechSource") &&
+       articleViewSource.includes('bilingualOriginal?<><BilingualBrief') &&
+       articleViewSource.includes('bilingualOriginal?<BilingualBody'),
+       "Listen controls must only render with the version-matched English original in Bilingual mode");
+ensure(bilingualSource.includes('const [mobileLanguage, setMobileLanguage] = useState<"translated" | "english">("translated")') &&
+       bilingualSource.includes('<View style={styles.sectionActions}>') &&
+       bilingualSource.includes('<EnglishSpeechButton passageId={passageId} english={english} compact />') &&
+       bilingualSource.includes('style={[styles.mobileSwitcher, { borderColor: colors.border, backgroundColor: colors.surface }]}') &&
+       bilingualSource.includes('<View style={styles.englishColumnHeading}>') &&
+       bilingualSource.includes('justifyContent: "flex-start", flexWrap: "wrap"') &&
+       bilingualSource.includes('<View style={styles.bodyParagraphControls}>') &&
+       bilingualSource.includes('color: colors.textMuted }]}>EN</Text>') &&
+       bilingualSource.includes('english={englishParagraphs[index].text}') &&
+       bilingualSource.includes('wholeBodyEnglish && ('),
+       "Mobile Listen shares the summary switch row; paragraph and desktop controls are beside EN");
+ensure(bilingualSource.includes("const { stop } = useEnglishSpeech();") &&
+       bilingualSource.includes("useEffect(() => () => { stop(); }, [stop]);") &&
+       bilingualSource.includes("<EnglishVoicePicker />") &&
+       !articleViewSource.includes("<EnglishVoicePicker />"),
+       "Leaving Bilingual mode stops speech, and voice selection exists only within Bilingual mode");
 ensure(speechControllerSource.includes("  useContext,") &&
        speechControllerSource.includes("export function useEnglishSpeech(): SpeechController {") &&
        speechControllerSource.includes("const context = useContext(SpeechContext);") &&
@@ -760,8 +775,8 @@ ensure(speechControllerSource.includes("Speech.getAvailableVoicesAsync()") &&
        speechControllerSource.includes('Platform.OS === "web" ? 220 : 950') &&
        speechButtonSource.includes("export function EnglishVoicePicker()") &&
        speechButtonSource.includes("voices.map((voice)") &&
-       articleViewSource.includes("<EnglishVoicePicker />"),
-       "Web reader must prefer natural-sounding installed voices and let the user override the choice without cloud inference");
+       bilingualSource.includes("<EnglishVoicePicker />"),
+       "Web bilingual reader must prefer natural-sounding installed voices and let the user override the choice without cloud inference");
 
 let passed = 0;
 for (const check of checks) {
