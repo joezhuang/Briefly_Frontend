@@ -747,6 +747,12 @@ ensure(storySource.includes('englishSpeechSource={(displayedArticle.content_lang
        articleViewSource.includes('English original · Listen') &&
        articleViewSource.includes('speechEnglish&&!spokenBodyAligned&&isTranslatedBrief'),
        "Mobile Listen controls must also be available in translated-only and English-only reading modes");
+ensure(speechControllerSource.includes("  useContext,") &&
+       speechControllerSource.includes("export function useEnglishSpeech(): SpeechController {") &&
+       speechControllerSource.includes("const context = useContext(SpeechContext);") &&
+       speechControllerSource.includes("voices: Speech.Voice[];"),
+       "Shared speech hook must import useContext and retain typed voice arrays");
+
 ensure(speechControllerSource.includes("Speech.getAvailableVoicesAsync()") &&
        speechControllerSource.includes("voiceRank(b) - voiceRank(a)") &&
        speechControllerSource.includes("VOICE_STORAGE_KEY") &&

@@ -5,6 +5,7 @@ import {
   createContext,
   type PropsWithChildren,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -194,7 +195,7 @@ export function EnglishSpeechProvider({ children }: PropsWithChildren) {
   return <SpeechContext.Provider value={value}>{children}</SpeechContext.Provider>;
 }
 
-export function useEnglishSpeech() {
+export function useEnglishSpeech(): SpeechController {
   const context = useContext(SpeechContext);
   if (!context) {
     throw new Error("useEnglishSpeech requires EnglishSpeechProvider");
