@@ -12,6 +12,21 @@ import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 
+function withFollowIntent(returnTo: string, eventId: string) {
+  const [pathname, query = ""] = returnTo.split("?", 2);
+  const params = new URLSearchParams(query);
+  params.set("followEvent", eventId);
+  return `${pathname}?${params.toString()}`;
+}
+
+function withoutFollowIntent(returnTo: string) {
+  const [pathname, query = ""] = returnTo.split("?", 2);
+  const params = new URLSearchParams(query);
+  params.delete("followEvent");
+  const nextQuery = params.toString();
+  return `${pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+}
+
 const copy = {
   en: { follow: "Follow event", actionFollow: "Follow", following: "Following", updates: "Updates", error: "Could not update this event. Please try again." },
   es: { follow: "Seguir evento", actionFollow: "Seguir", following: "Siguiendo", updates: "Actualizaciones", error: "No se pudo actualizar este evento. Inténtalo de nuevo." },
@@ -40,9 +55,33 @@ export function EventFollowButton({
     if (!ready || !user) return;
 
     let active = true;
-    getEventFollowState(eventId)
-      .then((state) => {
-        if (active) setFollowing(state.following);
+    const followIntent =
+      new URLSearchParams(returnTo.split("?", 2)[1] ?? "").get("followEvent") === eventId;
+
+    void getEventFollowState(eventId)
+      .then(async (state) => {
+        if (!active) return;
+        if (!followIntent || state.following) {
+          setFollowing(state.following);
+          if (followIntent) router.replace(withoutFollowIntent(returnTo) as never);
+          return;
+        }
+
+        setBusy(true);
+        try {
+          await followEvent(eventId);
+          if (!active) return;
+          setFollowing(true);
+          trackProductEvent("event_follow", {
+            eventId,
+            properties: { source: "story_sign_in_return" },
+          });
+          router.replace(withoutFollowIntent(returnTo) as never);
+        } catch {
+          if (active) setFollowing(false);
+        } finally {
+          if (active) setBusy(false);
+        }
       })
       .catch(() => {
         if (active) setFollowing(null);
@@ -51,11 +90,16 @@ export function EventFollowButton({
     return () => {
       active = false;
     };
-  }, [eventId, ready, user]);
+  }, [eventId, ready, returnTo, user]);
 
   const onPress = async () => {
     if (!user) {
-      router.push(`/sign-in?returnTo=${encodeURIComponent(returnTo)}` as never);
+      const followReturnTo = withFollowIntent(returnTo, eventId);
+      trackProductEvent("event_follow_sign_in", {
+        eventId,
+        properties: { source: "story" },
+      });
+      router.push(`/sign-in?returnTo=${encodeURIComponent(followReturnTo)}` as never);
       return;
     }
 
