@@ -178,6 +178,7 @@ export default function StoryDetailScreen() {
     mode,
     translationVersion,
     englishVersion,
+    followEvent,
   } = useLocalSearchParams<{
     slug?: string | string[];
     eventId?: string | string[];
@@ -194,6 +195,7 @@ export default function StoryDetailScreen() {
     mode?: string | string[];
     translationVersion?: string | string[];
     englishVersion?: string | string[];
+    followEvent?: string | string[];
   }>();
 
   const resolvedSlug = useMemo(
@@ -203,6 +205,10 @@ export default function StoryDetailScreen() {
   const resolvedEventId = useMemo(
     () => (Array.isArray(eventId) ? eventId[0] : eventId),
     [eventId],
+  );
+  const resolvedFollowEvent = useMemo(
+    () => (Array.isArray(followEvent) ? followEvent[0] : followEvent),
+    [followEvent],
   );
   const resolvedImageUrl = useMemo(
     () => (Array.isArray(imageUrl) ? imageUrl[0] : imageUrl),
@@ -328,6 +334,7 @@ export default function StoryDetailScreen() {
     if (!resolvedSlug) return "/";
     const params = new URLSearchParams();
     if (resolvedEventId) params.set("eventId", resolvedEventId);
+    if (resolvedFollowEvent) params.set("followEvent", resolvedFollowEvent);
     if (resolvedImageUrl) params.set("imageUrl", resolvedImageUrl);
     if (resolvedPreviewHeadline) {
       params.set("previewHeadline", resolvedPreviewHeadline);
@@ -348,6 +355,7 @@ export default function StoryDetailScreen() {
     return `/story/${encodeURIComponent(resolvedSlug)}${query ? `?${query}` : ""}`;
   }, [
     resolvedEventId,
+    resolvedFollowEvent,
     resolvedImageUrl,
     resolvedPreviewHeadline,
     resolvedScope,
