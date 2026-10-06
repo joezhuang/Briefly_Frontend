@@ -347,6 +347,7 @@ export default function StoryDetailScreen() {
   const [storyFocused, setStoryFocused] = useState(true);
   const [loginNudgeEligibleKey, setLoginNudgeEligibleKey] = useState("");
   const [loginNudgeVisibleKey, setLoginNudgeVisibleKey] = useState("");
+  const [loginNudgeDismissedKey, setLoginNudgeDismissedKey] = useState("");
   const [readerEngagedKey, setReaderEngagedKey] = useState("");
   const [sessionEngagedStoryCount, setSessionEngagedStoryCount] = useState(
     anonymousEngagedStoriesThisSession.size,
@@ -455,6 +456,7 @@ export default function StoryDetailScreen() {
     !mobileWebInstallChoiceActive;
   const loginNudgeEligible =
     loginNudgeBaseEligible &&
+    loginNudgeDismissedKey !== storyIdentity &&
     (!loginNudgeSuppressionEnabled ||
       loginNudgeEligibleKey === storyIdentity);
 
@@ -568,6 +570,7 @@ export default function StoryDetailScreen() {
 
   const dismissLoginNudge = () => {
     setLoginNudgeVisibleKey("");
+    setLoginNudgeDismissedKey(storyIdentity);
     setLoginNudgeEligibleKey("");
     if (loginNudgeSuppressionEnabled) {
       void AsyncStorage.setItem(
