@@ -371,7 +371,7 @@ export default function StoryDetailScreen() {
       articleVersionId: article?.article_version_id ?? null,
       properties: { source: resolvedSource ?? "story" },
     });
-    router.push(\`/sign-in?returnTo=\${encodeURIComponent(currentStoryHref)}\` as never);
+    router.push(`/sign-in?returnTo=${encodeURIComponent(currentStoryHref)}` as never);
   };
 
   const isWeb = Platform.OS === "web";
