@@ -21,6 +21,34 @@ function requireAll(relativePath, needles) {
 
 const checks = [
   {
+    name: "Follow sign-in preserves shared story state and completes the requested follow",
+    file: "src/components/event-follow-button.tsx",
+    needles: [
+      'params.set("followEvent", eventId)',
+      'properties: { source: "story_sign_in_return" }',
+      'router.replace(withoutFollowIntent(returnTo) as never)',
+      'event_follow_sign_in',
+    ],
+  },
+  {
+    name: "Story follow uses the full story href instead of dropping language/share state",
+    file: "src/components/article-view.tsx",
+    needles: [
+      'const followReturnTo=shareHref||',
+      'returnTo={followReturnTo}',
+    ],
+  },
+  {
+    name: "Story route carries one-time follow intent across OAuth return",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      'followEvent?: string | string[]',
+      'const resolvedFollowEvent = useMemo(',
+      'params.set("followEvent", resolvedFollowEvent)',
+      'resolvedFollowEvent,',
+    ],
+  },
+  {
     name: "iOS shares the story headline and URL together instead of URL-only",
     file: "src/navigation/platform-share.ts",
     needles: [
