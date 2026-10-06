@@ -21,6 +21,20 @@ function requireAll(relativePath, needles) {
 
 const checks = [
   {
+    name: "Signed-out story readers get a delayed non-blocking login nudge",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      "LOGIN_NUDGE_DELAY_MS = 15_000",
+      "LOGIN_NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000",
+      "AppState.addEventListener",
+      "AsyncStorage.getItem(LOGIN_NUDGE_DISMISSED_AT_KEY)",
+      "view related videos",
+      "router.push(\`/sign-in?returnTo=\${encodeURIComponent(currentStoryHref)}\` as never)",
+      "showLoginNudge && !user",
+      "Not now",
+    ],
+  },
+  {
     name: "Follow sign-in preserves shared story state and completes the requested follow",
     file: "src/components/event-follow-button.tsx",
     needles: [
