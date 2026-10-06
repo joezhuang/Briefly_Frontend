@@ -21,6 +21,13 @@ function requireAll(relativePath, needles) {
 
 const checks = [
   {
+    name: "Story-to-story navigation remounts media so old video playback stops",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      'key={\`story-media:\${displayedArticle.event_id}:\${displayedArticle.article_version_id ?? "preview"}\`}',
+    ],
+  },
+  {
     name: "Signed-out story readers get a delayed non-blocking login nudge",
     file: "src/app/story/[slug].tsx",
     needles: [
