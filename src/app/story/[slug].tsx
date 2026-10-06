@@ -56,11 +56,17 @@ const LAZY_ARTICLE_POLL_MS = 5000;
 const PODCAST_POLL_MS = 5000;
 const BILINGUAL_POLL_MS = 5000;
 const BILINGUAL_MAX_POLLS = 24;
-const LOGIN_NUDGE_DELAY_MS = 15_000;
+const SHARED_LOGIN_NUDGE_DELAY_MS = 15_000;
+const NORMAL_WEB_LOGIN_NUDGE_DELAY_MS = 60_000;
+const NORMAL_WEB_ENGAGED_STORY_THRESHOLD = 2;
+const NORMAL_NATIVE_ENGAGED_STORY_THRESHOLD = 3;
 const LOGIN_NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const LOGIN_NUDGE_REPEAT_COOLDOWN_MS = 30 * 60 * 1000;
 const LOGIN_NUDGE_DISMISSED_AT_KEY = "briefly.storyLoginNudge.dismissedAt";
 const LOGIN_NUDGE_LAST_SHOWN_AT_KEY = "briefly.storyLoginNudge.lastShownAt";
+
+const anonymousEngagedStoriesThisSession = new Set<string>();
+let normalWebLoginNudgeActiveMs = 0;
 
 const storyToolsCopy = {
   en: { title: "Story tools", collapse: "Collapse", expand: "Show" },
@@ -342,6 +348,9 @@ export default function StoryDetailScreen() {
   const [loginNudgeEligibleKey, setLoginNudgeEligibleKey] = useState("");
   const [loginNudgeVisibleKey, setLoginNudgeVisibleKey] = useState("");
   const [readerEngagedKey, setReaderEngagedKey] = useState("");
+  const [sessionEngagedStoryCount, setSessionEngagedStoryCount] = useState(
+    anonymousEngagedStoriesThisSession.size,
+  );
   const [sharedAppChoiceDismissedKey, setSharedAppChoiceDismissedKey] = useState("");
   const [bilingualGeneration, setBilingualGeneration] = useState<BilingualGenerationState | null>(null);
   // One automatic request at most per user / immutable English version / language.
@@ -420,13 +429,26 @@ export default function StoryDetailScreen() {
     isMobileWebBrowser() &&
     !sharedAppChoiceDismissed;
   const loginNudgeText = loginNudgeCopy[language] ?? loginNudgeCopy.en;
+  const normalEngagementThreshold =
+    Platform.OS === "web"
+      ? NORMAL_WEB_ENGAGED_STORY_THRESHOLD
+      : NORMAL_NATIVE_ENGAGED_STORY_THRESHOLD;
+  const loginNudgeEngagementReached =
+    isSharedStory
+      ? readerEngaged
+      : sessionEngagedStoryCount >= normalEngagementThreshold;
+  const loginNudgeDelayMs =
+    isSharedStory
+      ? SHARED_LOGIN_NUDGE_DELAY_MS
+      : Platform.OS === "web"
+        ? NORMAL_WEB_LOGIN_NUDGE_DELAY_MS
+        : null;
 
   useEffect(() => {
     let active = true;
     if (
       !authReady ||
       !!user ||
-      !isSharedStory ||
       !resolvedEventId ||
       !storyArticleMatchesRoute ||
       article?.article_version_id == null ||
@@ -468,7 +490,7 @@ export default function StoryDetailScreen() {
     ) return;
 
     const timing = loginNudgeTimingRef.current;
-    if (timing.key !== storyIdentity) {
+    if (isSharedStory && timing.key !== storyIdentity) {
       timing.key = storyIdentity;
       timing.elapsed = 0;
     }
@@ -478,32 +500,45 @@ export default function StoryDetailScreen() {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let active = true;
 
+    const currentElapsed = () =>
+      isSharedStory ? timing.elapsed : normalWebLoginNudgeActiveMs;
+    const saveElapsed = (elapsed: number) => {
+      if (isSharedStory) timing.elapsed = elapsed;
+      else normalWebLoginNudgeActiveMs = elapsed;
+    };
     const show = () => {
       if (!active || !storyFocused || AppState.currentState !== "active") return;
       setLoginNudgeVisibleKey(storyIdentity);
       void AsyncStorage.setItem(LOGIN_NUDGE_LAST_SHOWN_AT_KEY, String(Date.now())).catch(() => null);
     };
     const schedule = () => {
-      if (!active || startedAt == null || timer) return;
-      timer = setTimeout(show, Math.max(0, LOGIN_NUDGE_DELAY_MS - timing.elapsed));
+      if (!active || startedAt == null || timer || loginNudgeDelayMs == null) return;
+      timer = setTimeout(
+        show,
+        Math.max(0, loginNudgeDelayMs - currentElapsed()),
+      );
+    };
+    const recordActiveTime = () => {
+      if (startedAt == null || loginNudgeDelayMs == null) return;
+      saveElapsed(
+        Math.min(
+          loginNudgeDelayMs,
+          currentElapsed() + Date.now() - startedAt,
+        ),
+      );
     };
 
-    if (readerEngaged) timer = setTimeout(show, 0);
+    if (loginNudgeEngagementReached) timer = setTimeout(show, 0);
     else schedule();
 
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         startedAt = Date.now();
-        if (readerEngaged) timer = setTimeout(show, 0);
+        if (loginNudgeEngagementReached) timer = setTimeout(show, 0);
         else schedule();
         return;
       }
-      if (startedAt != null) {
-        timing.elapsed = Math.min(
-          LOGIN_NUDGE_DELAY_MS,
-          timing.elapsed + Date.now() - startedAt,
-        );
-      }
+      recordActiveTime();
       startedAt = null;
       if (timer) clearTimeout(timer);
       timer = null;
@@ -511,18 +546,15 @@ export default function StoryDetailScreen() {
 
     return () => {
       active = false;
-      if (startedAt != null) {
-        timing.elapsed = Math.min(
-          LOGIN_NUDGE_DELAY_MS,
-          timing.elapsed + Date.now() - startedAt,
-        );
-      }
+      recordActiveTime();
       if (timer) clearTimeout(timer);
       subscription.remove();
     };
   }, [
+    isSharedStory,
+    loginNudgeDelayMs,
     loginNudgeEligibleKey,
-    readerEngaged,
+    loginNudgeEngagementReached,
     showLoginNudge,
     storyFocused,
     storyIdentity,
@@ -534,7 +566,12 @@ export default function StoryDetailScreen() {
   };
 
   const markReaderEngaged = () => {
+    if (user) return;
     setReaderEngagedKey(storyIdentity);
+    if (!anonymousEngagedStoriesThisSession.has(storyIdentity)) {
+      anonymousEngagedStoriesThisSession.add(storyIdentity);
+      setSessionEngagedStoryCount(anonymousEngagedStoriesThisSession.size);
+    }
   };
 
   const openLoginFromNudge = () => {
