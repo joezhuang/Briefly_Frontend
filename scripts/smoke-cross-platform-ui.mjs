@@ -55,11 +55,12 @@ const checks = [
     needles: [
       "SHARED_LOGIN_NUDGE_DELAY_MS = 15_000",
       "NORMAL_WEB_LOGIN_NUDGE_DELAY_MS = 60_000",
-      "NORMAL_WEB_ENGAGED_STORY_THRESHOLD = 2",
-      "NORMAL_NATIVE_ENGAGED_STORY_THRESHOLD = 3",
-      "anonymousEngagedStoriesThisSession",
+      "NORMAL_WEB_STORY_OPEN_THRESHOLD = 2",
+      "NORMAL_NATIVE_STORY_OPEN_THRESHOLD = 3",
+      "anonymousOpenedStoriesThisSession",
       "normalWebLoginNudgeActiveMs",
-      "sessionEngagedStoryCount >= normalEngagementThreshold",
+      "sessionStoryOpenCount >= normalStoryOpenThreshold",
+      "anonymousOpenedStoriesThisSession.add(storyIdentity)",
       "isSharedStory",
       "readerEngaged",
       "loginNudgeDelayMs",
@@ -70,6 +71,16 @@ const checks = [
       "loginNudgeCopy",
       "view related videos",
       "router.push(\`/sign-in?returnTo=\${encodeURIComponent(currentStoryHref)}\` as never)",
+    ],
+  },
+  {
+    name: "Login nudge floats above the current reading position instead of appearing off-screen",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      'pointerEvents="box-none" style={styles.loginNudgeHost}',
+      'position: "absolute"',
+      'bottom: 18',
+      'maxWidth: 640',
     ],
   },
   {

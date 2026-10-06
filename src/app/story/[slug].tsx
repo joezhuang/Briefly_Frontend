@@ -58,14 +58,14 @@ const BILINGUAL_POLL_MS = 5000;
 const BILINGUAL_MAX_POLLS = 24;
 const SHARED_LOGIN_NUDGE_DELAY_MS = 15_000;
 const NORMAL_WEB_LOGIN_NUDGE_DELAY_MS = 60_000;
-const NORMAL_WEB_ENGAGED_STORY_THRESHOLD = 2;
-const NORMAL_NATIVE_ENGAGED_STORY_THRESHOLD = 3;
+const NORMAL_WEB_STORY_OPEN_THRESHOLD = 2;
+const NORMAL_NATIVE_STORY_OPEN_THRESHOLD = 3;
 const LOGIN_NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const LOGIN_NUDGE_REPEAT_COOLDOWN_MS = 30 * 60 * 1000;
 const LOGIN_NUDGE_DISMISSED_AT_KEY = "briefly.storyLoginNudge.dismissedAt";
 const LOGIN_NUDGE_LAST_SHOWN_AT_KEY = "briefly.storyLoginNudge.lastShownAt";
 
-const anonymousEngagedStoriesThisSession = new Set<string>();
+const anonymousOpenedStoriesThisSession = new Set<string>();
 let normalWebLoginNudgeActiveMs = 0;
 
 const storyToolsCopy = {
@@ -348,8 +348,8 @@ export default function StoryDetailScreen() {
   const [loginNudgeEligibleKey, setLoginNudgeEligibleKey] = useState("");
   const [loginNudgeVisibleKey, setLoginNudgeVisibleKey] = useState("");
   const [readerEngagedKey, setReaderEngagedKey] = useState("");
-  const [sessionEngagedStoryCount, setSessionEngagedStoryCount] = useState(
-    anonymousEngagedStoriesThisSession.size,
+  const [sessionStoryOpenCount, setSessionStoryOpenCount] = useState(
+    anonymousOpenedStoriesThisSession.size,
   );
   const [sharedAppChoiceDismissedKey, setSharedAppChoiceDismissedKey] = useState("");
   const [bilingualGeneration, setBilingualGeneration] = useState<BilingualGenerationState | null>(null);
@@ -429,20 +429,42 @@ export default function StoryDetailScreen() {
     isMobileWebBrowser() &&
     !sharedAppChoiceDismissed;
   const loginNudgeText = loginNudgeCopy[language] ?? loginNudgeCopy.en;
-  const normalEngagementThreshold =
+  const normalStoryOpenThreshold =
     Platform.OS === "web"
-      ? NORMAL_WEB_ENGAGED_STORY_THRESHOLD
-      : NORMAL_NATIVE_ENGAGED_STORY_THRESHOLD;
+      ? NORMAL_WEB_STORY_OPEN_THRESHOLD
+      : NORMAL_NATIVE_STORY_OPEN_THRESHOLD;
   const loginNudgeEngagementReached =
     isSharedStory
       ? readerEngaged
-      : sessionEngagedStoryCount >= normalEngagementThreshold;
+      : sessionStoryOpenCount >= normalStoryOpenThreshold;
   const loginNudgeDelayMs =
     isSharedStory
       ? SHARED_LOGIN_NUDGE_DELAY_MS
       : Platform.OS === "web"
         ? NORMAL_WEB_LOGIN_NUDGE_DELAY_MS
         : null;
+
+  useEffect(() => {
+    if (
+      !authReady ||
+      !!user ||
+      isSharedStory ||
+      !resolvedEventId ||
+      !storyArticleMatchesRoute ||
+      article?.article_version_id == null
+    ) return;
+    if (anonymousOpenedStoriesThisSession.has(storyIdentity)) return;
+    anonymousOpenedStoriesThisSession.add(storyIdentity);
+    setSessionStoryOpenCount(anonymousOpenedStoriesThisSession.size);
+  }, [
+    article?.article_version_id,
+    authReady,
+    isSharedStory,
+    resolvedEventId,
+    storyArticleMatchesRoute,
+    storyIdentity,
+    user,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -568,10 +590,6 @@ export default function StoryDetailScreen() {
   const markReaderEngaged = () => {
     if (user) return;
     setReaderEngagedKey(storyIdentity);
-    if (!anonymousEngagedStoriesThisSession.has(storyIdentity)) {
-      anonymousEngagedStoriesThisSession.add(storyIdentity);
-      setSessionEngagedStoryCount(anonymousEngagedStoriesThisSession.size);
-    }
   };
 
   const openLoginFromNudge = () => {
@@ -1825,23 +1843,6 @@ export default function StoryDetailScreen() {
         )}
       </View>
 
-      {showLoginNudge && !user && (
-        <View accessibilityLabel={loginNudgeText.title} style={[styles.loginNudge, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
-          <View style={styles.loginNudgeCopy}>
-            <Text style={[styles.loginNudgeTitle, { color: colors.text }]}>{loginNudgeText.title}</Text>
-            <Text style={[styles.loginNudgeBody, { color: colors.textMuted }]}>{loginNudgeText.body}</Text>
-          </View>
-          <View style={styles.loginNudgeActions}>
-            <Pressable accessibilityRole="button" onPress={openLoginFromNudge} style={[styles.loginNudgePrimary, { backgroundColor: colors.text }]}>
-              <Text style={[styles.loginNudgePrimaryText, { color: colors.background }]}>{loginNudgeText.signIn}</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" onPress={dismissLoginNudge} style={styles.loginNudgeSecondary}>
-              <Text style={[styles.loginNudgeSecondaryText, { color: colors.textMuted }]}>{loginNudgeText.notNow}</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
-
       <ArticleView
         article={displayedArticle}
         mediaActive={storyMediaActive}
@@ -1999,12 +2000,57 @@ export default function StoryDetailScreen() {
           </>
         }
       />
+
+      {showLoginNudge && !user && (
+        <View pointerEvents="box-none" style={styles.loginNudgeHost}>
+          <View
+            accessibilityLabel={loginNudgeText.title}
+            style={[
+              styles.loginNudge,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <View style={styles.loginNudgeCopy}>
+              <Text style={[styles.loginNudgeTitle, { color: colors.text }]}>
+                {loginNudgeText.title}
+              </Text>
+              <Text style={[styles.loginNudgeBody, { color: colors.textMuted }]}>
+                {loginNudgeText.body}
+              </Text>
+            </View>
+            <View style={styles.loginNudgeActions}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={openLoginFromNudge}
+                style={[styles.loginNudgePrimary, { backgroundColor: colors.text }]}
+              >
+                <Text style={[styles.loginNudgePrimaryText, { color: colors.background }]}>
+                  {loginNudgeText.signIn}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={dismissLoginNudge}
+                style={styles.loginNudgeSecondary}
+              >
+                <Text style={[styles.loginNudgeSecondaryText, { color: colors.textMuted }]}>
+                  {loginNudgeText.notNow}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  loginNudge: { marginHorizontal: 12, marginVertical: 8, borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, padding: 12, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10 },
+  loginNudgeHost: { position: "absolute", left: 12, right: 12, bottom: 18, zIndex: 70, elevation: 10, alignItems: "center" },
+  loginNudge: { width: "100%", maxWidth: 640, borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, padding: 12, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 10 },
   loginNudgeCopy: { flex: 1, minWidth: 220, gap: 3 },
   loginNudgeTitle: { fontSize: 14, fontWeight: "800" },
   loginNudgeBody: { fontSize: 12, lineHeight: 17 },
