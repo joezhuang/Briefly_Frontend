@@ -132,12 +132,14 @@ export function EventPreviewView({
   onRetry,
   sourceScope,
   videoAccess,
+  mediaActive = true,
   signedIn = false,
 }: {
   article: CanonicalArticle;
   onRetry?: () => void;
   sourceScope?: "top" | "national" | "local";
   videoAccess: FeatureAccessState;
+  mediaActive?: boolean;
   signedIn?: boolean;
 }) {
   const { width } = useWindowDimensions();
@@ -228,13 +230,15 @@ export function EventPreviewView({
           <View style={styles.topVideoSection}>
             <View style={styles.topVideoPlayer}>
               {videoAccess.allowed ? (
-                <StoryVideo
+                mediaActive ? <StoryVideo
                   key={selectedVideo.url}
                   url={selectedVideo.url}
                   posterUrl={poster}
                   accessibilityLabel={selectedVideo.title || article.headline}
                   playLabel={copy.playVideo}
-                />
+                /> : poster ? (
+                  <Image source={{ uri: poster }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                ) : null
               ) : (
                 <Pressable
                   accessibilityRole="button"

@@ -12,6 +12,8 @@ type SharedAppChoiceProps = {
   readingLanguage?: string | null;
   bilingualTranslationVersionId?: number | null;
   bilingualEnglishVersionId?: number | null;
+  dismissed?: boolean;
+  onDismissed?: () => void;
 };
 
 type MobilePlatform = "ios" | "android" | "desktop";
@@ -210,7 +212,7 @@ export function SharedAppChoice(props: SharedAppChoiceProps) {
     }
   };
 
-  if (config?.mobile_app_promotion_enabled !== true || dismissed || platform === "desktop" || !appUrl) return null;
+  if (config?.mobile_app_promotion_enabled !== true || props.dismissed || dismissed || platform === "desktop" || !appUrl) return null;
 
   return (
     <View
@@ -236,7 +238,7 @@ export function SharedAppChoice(props: SharedAppChoiceProps) {
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          onPress={() => setDismissed(true)}
+          onPress={() => { setDismissed(true); props.onDismissed?.(); }}
           style={styles.continueButton}
         >
           <Text style={[styles.secondaryText, { color: colors.textMuted }]}>{text.continue}</Text>

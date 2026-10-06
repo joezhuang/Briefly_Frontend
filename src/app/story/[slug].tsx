@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, AppState, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -58,7 +58,9 @@ const BILINGUAL_POLL_MS = 5000;
 const BILINGUAL_MAX_POLLS = 24;
 const LOGIN_NUDGE_DELAY_MS = 15_000;
 const LOGIN_NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const LOGIN_NUDGE_REPEAT_COOLDOWN_MS = 30 * 60 * 1000;
 const LOGIN_NUDGE_DISMISSED_AT_KEY = "briefly.storyLoginNudge.dismissedAt";
+const LOGIN_NUDGE_LAST_SHOWN_AT_KEY = "briefly.storyLoginNudge.lastShownAt";
 
 const storyToolsCopy = {
   en: { title: "Story tools", collapse: "Collapse", expand: "Show" },
@@ -66,6 +68,14 @@ const storyToolsCopy = {
   ja: { title: "記事ツール", collapse: "閉じる", expand: "表示" },
   "zh-CN": { title: "报道工具", collapse: "收起", expand: "展开" },
   "zh-TW": { title: "報導工具", collapse: "收起", expand: "展開" },
+} as const;
+
+const loginNudgeCopy = {
+  en: { title: "Do more with Briefly", body: "Sign in free to follow stories, view related videos, join the discussion, and keep your experience across devices.", signIn: "Sign in", notNow: "Not now" },
+  es: { title: "Haz más con Briefly", body: "Inicia sesión gratis para seguir noticias, ver vídeos relacionados, participar en la conversación y mantener tu experiencia entre dispositivos.", signIn: "Iniciar sesión", notNow: "Ahora no" },
+  ja: { title: "Brieflyをもっと活用", body: "無料でログインすると、ニュースのフォロー、関連動画の視聴、ディスカッションへの参加、端末間での利用継続ができます。", signIn: "ログイン", notNow: "今はしない" },
+  "zh-CN": { title: "充分使用 Briefly", body: "免费登录即可关注新闻、查看相关视频、参与讨论，并在不同设备间延续使用体验。", signIn: "登录", notNow: "暂不" },
+  "zh-TW": { title: "充分使用 Briefly", body: "免費登入即可追蹤新聞、查看相關影片、參與討論，並在不同裝置間延續使用體驗。", signIn: "登入", notNow: "暫不" },
 } as const;
 
 type PodcastState = {
@@ -127,6 +137,13 @@ function applyStoryVideoSwitch(
     videos: [],
     image_url: safeImage,
   };
+}
+
+function isMobileWebBrowser() {
+  if (Platform.OS !== "web" || typeof navigator === "undefined") return false;
+  const agent = navigator.userAgent ?? "";
+  return /android|iPhone|iPad|iPod/i.test(agent) ||
+    (/Macintosh/i.test(agent) && navigator.maxTouchPoints > 1);
 }
 
 function getStoryUrl(currentStoryHref: string): string | null {
@@ -278,6 +295,7 @@ export default function StoryDetailScreen() {
 
   const { language, t, setTransientLanguage } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+  const navigation = useNavigation();
   const { autoTranslateStories, preferencesReady } = useTranslationPreferences();
 
   useEffect(() => {
@@ -320,7 +338,11 @@ export default function StoryDetailScreen() {
   const [briefRepairBusyKey, setBriefRepairBusyKey] = useState("");
   const [briefTranslationRecoveryKey, setBriefTranslationRecoveryKey] = useState("");
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(false);
-  const [showLoginNudge, setShowLoginNudge] = useState(false);
+  const [storyFocused, setStoryFocused] = useState(true);
+  const [loginNudgeEligibleKey, setLoginNudgeEligibleKey] = useState("");
+  const [loginNudgeVisibleKey, setLoginNudgeVisibleKey] = useState("");
+  const [readerEngagedKey, setReaderEngagedKey] = useState("");
+  const [sharedAppChoiceDismissedKey, setSharedAppChoiceDismissedKey] = useState("");
   const [bilingualGeneration, setBilingualGeneration] = useState<BilingualGenerationState | null>(null);
   // One automatic request at most per user / immutable English version / language.
   const autoTranslationRequested = useRef(new Set<string>());
@@ -328,42 +350,16 @@ export default function StoryDetailScreen() {
   const repairedEnglishBriefFields = useRef<("what_happened" | "why_it_matters" | "what_next")[]>([]);
   const historyRecordedKey = useRef("");
   const storyOpenTrackedKey = useRef("");
+  const loginNudgeTimingRef = useRef({ key: "", elapsed: 0 });
 
   useEffect(() => {
-    if (!authReady || user) return;
-    let active = true;
-    let elapsed = 0;
-    let startedAt = AppState.currentState === "active" ? Date.now() : null;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const schedule = () => {
-      if (!active || startedAt == null || timer) return;
-      timer = setTimeout(() => {
-        timer = null;
-        if (active && AppState.currentState === "active") setShowLoginNudge(true);
-      }, Math.max(0, LOGIN_NUDGE_DELAY_MS - elapsed));
-    };
-    void AsyncStorage.getItem(LOGIN_NUDGE_DISMISSED_AT_KEY).then((value) => {
-      if (!active || Date.now() - Number(value || 0) < LOGIN_NUDGE_COOLDOWN_MS) return;
-      schedule();
-    }).catch(() => schedule());
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") { startedAt = Date.now(); schedule(); return; }
-      if (startedAt != null) elapsed += Date.now() - startedAt;
-      startedAt = null;
-      if (timer) clearTimeout(timer);
-      timer = null;
-    });
+    const unsubscribeFocus = navigation.addListener("focus", () => setStoryFocused(true));
+    const unsubscribeBlur = navigation.addListener("blur", () => setStoryFocused(false));
     return () => {
-      active = false;
-      if (timer) clearTimeout(timer);
-      subscription.remove();
+      unsubscribeFocus();
+      unsubscribeBlur();
     };
-  }, [authReady, user, resolvedSlug]);
-
-  const dismissLoginNudge = () => {
-    setShowLoginNudge(false);
-    void AsyncStorage.setItem(LOGIN_NUDGE_DISMISSED_AT_KEY, String(Date.now())).catch(() => null);
-  };
+  }, [navigation]);
 
   const isWeb = Platform.OS === "web";
   // Shared-link recipients should only read pre-existing translations. In
@@ -408,6 +404,139 @@ export default function StoryDetailScreen() {
     pinnedTranslationVersion,
     pinnedEnglishVersion,
   ]);
+  const storyIdentity = `${resolvedEventId ?? ""}:${resolvedSlug ?? ""}`;
+  const storyArticleMatchesRoute =
+    !!article &&
+    (resolvedEventId
+      ? article.event_id === resolvedEventId
+      : article.slug === resolvedSlug);
+  const storyMediaActive = storyFocused && storyArticleMatchesRoute;
+  const readerEngaged = readerEngagedKey === storyIdentity;
+  const showLoginNudge = loginNudgeVisibleKey === storyIdentity;
+  const sharedAppChoiceDismissed = sharedAppChoiceDismissedKey === storyIdentity;
+  const mobileWebInstallChoiceActive =
+    isSharedStory &&
+    appConfig?.mobile_app_promotion_enabled === true &&
+    isMobileWebBrowser() &&
+    !sharedAppChoiceDismissed;
+  const loginNudgeText = loginNudgeCopy[language] ?? loginNudgeCopy.en;
+
+  useEffect(() => {
+    let active = true;
+    if (
+      !authReady ||
+      !!user ||
+      !isSharedStory ||
+      !resolvedEventId ||
+      !storyArticleMatchesRoute ||
+      article?.article_version_id == null ||
+      appConfig == null ||
+      mobileWebInstallChoiceActive
+    ) return;
+
+    void Promise.all([
+      AsyncStorage.getItem(LOGIN_NUDGE_DISMISSED_AT_KEY),
+      AsyncStorage.getItem(LOGIN_NUDGE_LAST_SHOWN_AT_KEY),
+    ]).then(([dismissedAt, lastShownAt]) => {
+      if (!active) return;
+      const now = Date.now();
+      if (now - Number(dismissedAt || 0) < LOGIN_NUDGE_COOLDOWN_MS) return;
+      if (now - Number(lastShownAt || 0) < LOGIN_NUDGE_REPEAT_COOLDOWN_MS) return;
+      setLoginNudgeEligibleKey(storyIdentity);
+    }).catch(() => {
+      if (active) setLoginNudgeEligibleKey(storyIdentity);
+    });
+
+    return () => { active = false; };
+  }, [
+    appConfig,
+    article?.article_version_id,
+    authReady,
+    isSharedStory,
+    mobileWebInstallChoiceActive,
+    resolvedEventId,
+    storyArticleMatchesRoute,
+    storyIdentity,
+    user,
+  ]);
+
+  useEffect(() => {
+    if (
+      loginNudgeEligibleKey !== storyIdentity ||
+      showLoginNudge ||
+      !storyFocused
+    ) return;
+
+    const timing = loginNudgeTimingRef.current;
+    if (timing.key !== storyIdentity) {
+      timing.key = storyIdentity;
+      timing.elapsed = 0;
+    }
+
+    let startedAt: number | null =
+      AppState.currentState === "active" ? Date.now() : null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let active = true;
+
+    const show = () => {
+      if (!active || !storyFocused || AppState.currentState !== "active") return;
+      setLoginNudgeVisibleKey(storyIdentity);
+      void AsyncStorage.setItem(LOGIN_NUDGE_LAST_SHOWN_AT_KEY, String(Date.now())).catch(() => null);
+    };
+    const schedule = () => {
+      if (!active || startedAt == null || timer) return;
+      timer = setTimeout(show, Math.max(0, LOGIN_NUDGE_DELAY_MS - timing.elapsed));
+    };
+
+    if (readerEngaged) timer = setTimeout(show, 0);
+    else schedule();
+
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        startedAt = Date.now();
+        if (readerEngaged) timer = setTimeout(show, 0);
+        else schedule();
+        return;
+      }
+      if (startedAt != null) {
+        timing.elapsed = Math.min(
+          LOGIN_NUDGE_DELAY_MS,
+          timing.elapsed + Date.now() - startedAt,
+        );
+      }
+      startedAt = null;
+      if (timer) clearTimeout(timer);
+      timer = null;
+    });
+
+    return () => {
+      active = false;
+      if (startedAt != null) {
+        timing.elapsed = Math.min(
+          LOGIN_NUDGE_DELAY_MS,
+          timing.elapsed + Date.now() - startedAt,
+        );
+      }
+      if (timer) clearTimeout(timer);
+      subscription.remove();
+    };
+  }, [
+    loginNudgeEligibleKey,
+    readerEngaged,
+    showLoginNudge,
+    storyFocused,
+    storyIdentity,
+  ]);
+
+  const dismissLoginNudge = () => {
+    setLoginNudgeVisibleKey("");
+    void AsyncStorage.setItem(LOGIN_NUDGE_DISMISSED_AT_KEY, String(Date.now())).catch(() => null);
+  };
+
+  const markReaderEngaged = () => {
+    setReaderEngagedKey(storyIdentity);
+  };
+
   const openLoginFromNudge = () => {
     trackProductEvent("story_login_nudge_sign_in", {
       eventId: article?.event_id ?? resolvedEventId ?? null,
@@ -1489,10 +1618,13 @@ export default function StoryDetailScreen() {
           readingLanguage={resolvedReadLanguage}
           bilingualTranslationVersionId={pinnedTranslationVersion}
           bilingualEnglishVersionId={pinnedEnglishVersion}
+          dismissed={sharedAppChoiceDismissed}
+          onDismissed={() => setSharedAppChoiceDismissedKey(storyIdentity)}
         />
       )}
         <EventPreviewView
           article={previewArticle}
+          mediaActive={storyMediaActive}
           videoAccess={videoAccess}
           signedIn={!!user}
           sourceScope={
@@ -1588,6 +1720,8 @@ export default function StoryDetailScreen() {
           readingLanguage={resolvedReadLanguage}
           bilingualTranslationVersionId={pinnedTranslationVersion}
           bilingualEnglishVersionId={pinnedEnglishVersion}
+          dismissed={sharedAppChoiceDismissed}
+          onDismissed={() => setSharedAppChoiceDismissedKey(storyIdentity)}
         />
       )}
       <View
@@ -1655,25 +1789,26 @@ export default function StoryDetailScreen() {
       </View>
 
       {showLoginNudge && !user && (
-        <View accessibilityLabel="Do more with Briefly" style={[styles.loginNudge, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
+        <View accessibilityLabel={loginNudgeText.title} style={[styles.loginNudge, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
           <View style={styles.loginNudgeCopy}>
-            <Text style={[styles.loginNudgeTitle, { color: colors.text }]}>Do more with Briefly</Text>
-            <Text style={[styles.loginNudgeBody, { color: colors.textMuted }]}>Sign in free to follow stories, view related videos, join the discussion, and keep your experience across devices.</Text>
+            <Text style={[styles.loginNudgeTitle, { color: colors.text }]}>{loginNudgeText.title}</Text>
+            <Text style={[styles.loginNudgeBody, { color: colors.textMuted }]}>{loginNudgeText.body}</Text>
           </View>
           <View style={styles.loginNudgeActions}>
             <Pressable accessibilityRole="button" onPress={openLoginFromNudge} style={[styles.loginNudgePrimary, { backgroundColor: colors.text }]}>
-              <Text style={[styles.loginNudgePrimaryText, { color: colors.background }]}>Sign in</Text>
+              <Text style={[styles.loginNudgePrimaryText, { color: colors.background }]}>{loginNudgeText.signIn}</Text>
             </Pressable>
             <Pressable accessibilityRole="button" onPress={dismissLoginNudge} style={styles.loginNudgeSecondary}>
-              <Text style={[styles.loginNudgeSecondaryText, { color: colors.textMuted }]}>Not now</Text>
+              <Text style={[styles.loginNudgeSecondaryText, { color: colors.textMuted }]}>{loginNudgeText.notNow}</Text>
             </Pressable>
           </View>
         </View>
       )}
 
       <ArticleView
-        key={`story-media:${displayedArticle.event_id}:${displayedArticle.article_version_id ?? "preview"}`}
         article={displayedArticle}
+        mediaActive={storyMediaActive}
+        onReaderEngaged={markReaderEngaged}
         refreshKey={
           displayedArticle.authoritative_article_version_id ??
           displayedArticle.article_version_id ??

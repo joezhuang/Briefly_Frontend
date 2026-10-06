@@ -21,24 +21,61 @@ function requireAll(relativePath, needles) {
 
 const checks = [
   {
-    name: "Story-to-story navigation remounts media so old video playback stops",
+    name: "Story route focus and route identity stop old video playback",
     file: "src/app/story/[slug].tsx",
     needles: [
-      'key={\`story-media:\${displayedArticle.event_id}:\${displayedArticle.article_version_id ?? "preview"}\`}',
+      "useNavigation",
+      'navigation.addListener("focus"',
+      'navigation.addListener("blur"',
+      "storyArticleMatchesRoute",
+      "storyMediaActive = storyFocused && storyArticleMatchesRoute",
+      "mediaActive={storyMediaActive}",
     ],
   },
   {
-    name: "Signed-out story readers get a delayed non-blocking login nudge",
+    name: "Article and preview video trees unmount while their Story route is inactive",
+    file: "src/components/article-view.tsx",
+    needles: [
+      "mediaActive=true",
+      "videoFloating||!mediaActive",
+      "mediaActive&&videoAccess.allowed&&floatingVideoEnabled",
+    ],
+  },
+  {
+    name: "Preview video also stops when its Story route becomes inactive",
+    file: "src/components/event-preview-view.tsx",
+    needles: [
+      "mediaActive = true",
+      "mediaActive ? <StoryVideo",
+    ],
+  },
+  {
+    name: "Shared-story login nudge waits for engagement and avoids competing prompts",
     file: "src/app/story/[slug].tsx",
     needles: [
       "LOGIN_NUDGE_DELAY_MS = 15_000",
       "LOGIN_NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000",
-      "AppState.addEventListener",
-      "AsyncStorage.getItem(LOGIN_NUDGE_DISMISSED_AT_KEY)",
+      "LOGIN_NUDGE_REPEAT_COOLDOWN_MS = 30 * 60 * 1000",
+      "LOGIN_NUDGE_LAST_SHOWN_AT_KEY",
+      "!isSharedStory",
+      "!storyArticleMatchesRoute",
+      "article?.article_version_id == null",
+      "mobileWebInstallChoiceActive",
+      "readerEngaged",
+      "onReaderEngaged={markReaderEngaged}",
+      "loginNudgeCopy",
       "view related videos",
       "router.push(\`/sign-in?returnTo=\${encodeURIComponent(currentStoryHref)}\` as never)",
-      "showLoginNudge && !user",
-      "Not now",
+    ],
+  },
+  {
+    name: "Mobile-web install chooser dismissal releases the later login nudge",
+    file: "src/components/shared-app-choice.web.tsx",
+    needles: [
+      "dismissed?: boolean",
+      "props.dismissed",
+      "onDismissed?: () => void",
+      "props.onDismissed?.()",
     ],
   },
   {

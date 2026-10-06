@@ -6,6 +6,8 @@ export function SharedAppChoice(_props: {
   readingLanguage?: string | null;
   bilingualTranslationVersionId?: number | null;
   bilingualEnglishVersionId?: number | null;
+  dismissed?: boolean;
+  onDismissed?: () => void;
 }) {
   return null;
 }
