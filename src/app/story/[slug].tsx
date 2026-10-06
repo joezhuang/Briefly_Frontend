@@ -365,15 +365,6 @@ export default function StoryDetailScreen() {
     void AsyncStorage.setItem(LOGIN_NUDGE_DISMISSED_AT_KEY, String(Date.now())).catch(() => null);
   };
 
-  const openLoginFromNudge = () => {
-    trackProductEvent("story_login_nudge_sign_in", {
-      eventId: article?.event_id ?? resolvedEventId ?? null,
-      articleVersionId: article?.article_version_id ?? null,
-      properties: { source: resolvedSource ?? "story" },
-    });
-    router.push(`/sign-in?returnTo=${encodeURIComponent(currentStoryHref)}` as never);
-  };
-
   const isWeb = Platform.OS === "web";
   // Shared-link recipients should only read pre-existing translations. In
   // particular, a Pro recipient must not start local inference by opening X.
@@ -417,6 +408,15 @@ export default function StoryDetailScreen() {
     pinnedTranslationVersion,
     pinnedEnglishVersion,
   ]);
+  const openLoginFromNudge = () => {
+    trackProductEvent("story_login_nudge_sign_in", {
+      eventId: article?.event_id ?? resolvedEventId ?? null,
+      articleVersionId: article?.article_version_id ?? null,
+      properties: { source: resolvedSource ?? "story" },
+    });
+    router.push(`/sign-in?returnTo=${encodeURIComponent(currentStoryHref)}` as never);
+  };
+
   // Notification links must reopen in the translated reading language even
   // when the user's original link explicitly requested English content.
   const translationNotificationHref = useMemo(() => {
