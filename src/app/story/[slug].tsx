@@ -445,23 +445,22 @@ export default function StoryDetailScreen() {
       : Platform.OS === "web"
         ? NORMAL_WEB_LOGIN_NUDGE_DELAY_MS
         : null;
+  const loginNudgeBaseEligible =
+    authReady &&
+    !user &&
+    !!resolvedEventId &&
+    storyArticleMatchesRoute &&
+    article?.article_version_id != null &&
+    appConfig != null &&
+    !mobileWebInstallChoiceActive;
+  const loginNudgeEligible =
+    loginNudgeBaseEligible &&
+    (!loginNudgeSuppressionEnabled ||
+      loginNudgeEligibleKey === storyIdentity);
 
   useEffect(() => {
     let active = true;
-    if (
-      !authReady ||
-      !!user ||
-      !resolvedEventId ||
-      !storyArticleMatchesRoute ||
-      article?.article_version_id == null ||
-      appConfig == null ||
-      mobileWebInstallChoiceActive
-    ) return;
-
-    if (!loginNudgeSuppressionEnabled) {
-      setLoginNudgeEligibleKey(storyIdentity);
-      return () => { active = false; };
-    }
+    if (!loginNudgeBaseEligible || !loginNudgeSuppressionEnabled) return;
 
     void Promise.all([
       AsyncStorage.getItem(LOGIN_NUDGE_DISMISSED_AT_KEY),
@@ -478,21 +477,14 @@ export default function StoryDetailScreen() {
 
     return () => { active = false; };
   }, [
-    appConfig,
-    article?.article_version_id,
-    authReady,
-    isSharedStory,
+    loginNudgeBaseEligible,
     loginNudgeSuppressionEnabled,
-    mobileWebInstallChoiceActive,
-    resolvedEventId,
-    storyArticleMatchesRoute,
     storyIdentity,
-    user,
   ]);
 
   useEffect(() => {
     if (
-      loginNudgeEligibleKey !== storyIdentity ||
+      !loginNudgeEligible ||
       showLoginNudge ||
       !storyFocused
     ) return;
@@ -566,7 +558,7 @@ export default function StoryDetailScreen() {
   }, [
     isSharedStory,
     loginNudgeDelayMs,
-    loginNudgeEligibleKey,
+    loginNudgeEligible,
     loginNudgeSuppressionEnabled,
     loginNudgeEngagementReached,
     showLoginNudge,
