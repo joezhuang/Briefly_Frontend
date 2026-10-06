@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, AppState, Platform, Pressable, StyleSheet, Text, View } from "react-native";
@@ -329,20 +330,11 @@ export default function StoryDetailScreen() {
   const storyOpenTrackedKey = useRef("");
 
   useEffect(() => {
-    if (!authReady || user) {
-      setShowLoginNudge(false);
-      return;
-    }
+    if (!authReady || user) return;
     let active = true;
     let elapsed = 0;
     let startedAt = AppState.currentState === "active" ? Date.now() : null;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const readDismissedAt = () => {
-      if (Platform.OS !== "web" || typeof window === "undefined") return 0;
-      try { return Number(window.localStorage.getItem(LOGIN_NUDGE_DISMISSED_AT_KEY) || 0); }
-      catch { return 0; }
-    };
-    if (Date.now() - readDismissedAt() < LOGIN_NUDGE_COOLDOWN_MS) return;
     const schedule = () => {
       if (!active || startedAt == null || timer) return;
       timer = setTimeout(() => {
@@ -350,7 +342,10 @@ export default function StoryDetailScreen() {
         if (active && AppState.currentState === "active") setShowLoginNudge(true);
       }, Math.max(0, LOGIN_NUDGE_DELAY_MS - elapsed));
     };
-    schedule();
+    void AsyncStorage.getItem(LOGIN_NUDGE_DISMISSED_AT_KEY).then((value) => {
+      if (!active || Date.now() - Number(value || 0) < LOGIN_NUDGE_COOLDOWN_MS) return;
+      schedule();
+    }).catch(() => schedule());
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") { startedAt = Date.now(); schedule(); return; }
       if (startedAt != null) elapsed += Date.now() - startedAt;
@@ -367,10 +362,7 @@ export default function StoryDetailScreen() {
 
   const dismissLoginNudge = () => {
     setShowLoginNudge(false);
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      try { window.localStorage.setItem(LOGIN_NUDGE_DISMISSED_AT_KEY, String(Date.now())); }
-      catch { /* Private browsing may disable storage. */ }
-    }
+    void AsyncStorage.setItem(LOGIN_NUDGE_DISMISSED_AT_KEY, String(Date.now())).catch(() => null);
   };
 
   const openLoginFromNudge = () => {
