@@ -429,6 +429,8 @@ export default function StoryDetailScreen() {
     isMobileWebBrowser() &&
     !sharedAppChoiceDismissed;
   const loginNudgeText = loginNudgeCopy[language] ?? loginNudgeCopy.en;
+  const loginNudgeSuppressionEnabled =
+    appConfig?.login_nudge_suppression_enabled !== false;
   const normalEngagementThreshold =
     Platform.OS === "web"
       ? NORMAL_WEB_ENGAGED_STORY_THRESHOLD
@@ -456,6 +458,11 @@ export default function StoryDetailScreen() {
       mobileWebInstallChoiceActive
     ) return;
 
+    if (!loginNudgeSuppressionEnabled) {
+      setLoginNudgeEligibleKey(storyIdentity);
+      return () => { active = false; };
+    }
+
     void Promise.all([
       AsyncStorage.getItem(LOGIN_NUDGE_DISMISSED_AT_KEY),
       AsyncStorage.getItem(LOGIN_NUDGE_LAST_SHOWN_AT_KEY),
@@ -475,6 +482,7 @@ export default function StoryDetailScreen() {
     article?.article_version_id,
     authReady,
     isSharedStory,
+    loginNudgeSuppressionEnabled,
     mobileWebInstallChoiceActive,
     resolvedEventId,
     storyArticleMatchesRoute,
@@ -509,7 +517,12 @@ export default function StoryDetailScreen() {
     const show = () => {
       if (!active || !storyFocused || AppState.currentState !== "active") return;
       setLoginNudgeVisibleKey(storyIdentity);
-      void AsyncStorage.setItem(LOGIN_NUDGE_LAST_SHOWN_AT_KEY, String(Date.now())).catch(() => null);
+      if (loginNudgeSuppressionEnabled) {
+        void AsyncStorage.setItem(
+          LOGIN_NUDGE_LAST_SHOWN_AT_KEY,
+          String(Date.now()),
+        ).catch(() => null);
+      }
     };
     const schedule = () => {
       if (!active || startedAt == null || timer || loginNudgeDelayMs == null) return;
@@ -554,6 +567,7 @@ export default function StoryDetailScreen() {
     isSharedStory,
     loginNudgeDelayMs,
     loginNudgeEligibleKey,
+    loginNudgeSuppressionEnabled,
     loginNudgeEngagementReached,
     showLoginNudge,
     storyFocused,
@@ -562,7 +576,13 @@ export default function StoryDetailScreen() {
 
   const dismissLoginNudge = () => {
     setLoginNudgeVisibleKey("");
-    void AsyncStorage.setItem(LOGIN_NUDGE_DISMISSED_AT_KEY, String(Date.now())).catch(() => null);
+    setLoginNudgeEligibleKey("");
+    if (loginNudgeSuppressionEnabled) {
+      void AsyncStorage.setItem(
+        LOGIN_NUDGE_DISMISSED_AT_KEY,
+        String(Date.now()),
+      ).catch(() => null);
+    }
   };
 
   const markReaderEngaged = () => {

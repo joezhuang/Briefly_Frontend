@@ -67,10 +67,31 @@ const checks = [
       "onReaderEngaged={markReaderEngaged}",
       "LOGIN_NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000",
       "LOGIN_NUDGE_REPEAT_COOLDOWN_MS = 30 * 60 * 1000",
+      "login_nudge_suppression_enabled",
+      "!loginNudgeSuppressionEnabled",
+      "setLoginNudgeEligibleKey(\"\")",
       "mobileWebInstallChoiceActive",
       "loginNudgeCopy",
       "view related videos",
       "router.push(\`/sign-in?returnTo=\${encodeURIComponent(currentStoryHref)}\` as never)",
+    ],
+  },
+  {
+    name: "Dashboard can disable login nudge suppression for QA",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      "Login nudge suppression",
+      'onChange("login_nudge_suppression_enabled", value)',
+      "30 minutes",
+      "7 days",
+    ],
+  },
+  {
+    name: "App config defaults login nudge suppression on",
+    file: "src/api/briefly.ts",
+    needles: [
+      "login_nudge_suppression_enabled: boolean",
+      "value.login_nudge_suppression_enabled !== false",
     ],
   },
   {

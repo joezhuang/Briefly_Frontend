@@ -2799,6 +2799,14 @@ function RuntimeConfigEditor({
       <ConfigToggle label="Bilingual reader (experimental)" detail="Off by default. Show matched English and translated article versions together; does not generate new translations." value={config.bilingual_reader_enabled} onValueChange={(value) => onChange("bilingual_reader_enabled", value)} />
       <ConfigToggle label="Following" detail="Allow users to follow living events." value={config.following_enabled} onValueChange={(value) => onChange("following_enabled", value)} />
       <ConfigToggle label="Search" detail="Allow users to search the canonical event universe." value={config.search_enabled} onValueChange={(value) => onChange("search_enabled", value)} />
+      <ConfigToggle
+        label="Login nudge suppression"
+        detail="Keep production anti-spam protection: suppress another login nudge for 30 minutes after it is shown and for 7 days after Not now. Turn this off temporarily to ignore persisted suppression while testing."
+        value={config.login_nudge_suppression_enabled}
+        onValueChange={(value) =>
+          onChange("login_nudge_suppression_enabled", value)
+        }
+      />
 
       </ConfigGroup>
 
