@@ -74,9 +74,19 @@ const checks = [
     ],
   },
   {
-    name: "Login nudge floats above the current reading position instead of appearing off-screen",
+    name: "Shared login nudge keeps its proven in-flow placement",
     file: "src/app/story/[slug].tsx",
     needles: [
+      "showLoginNudge && !user && isSharedStory",
+      "styles.loginNudgeShared",
+      "backgroundColor: colors.surfaceMuted",
+    ],
+  },
+  {
+    name: "Normal-browsing login nudge floats above the current reading position",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      "showLoginNudge && !user && !isSharedStory",
       'pointerEvents="box-none" style={styles.loginNudgeHost}',
       'position: "absolute"',
       'bottom: 18',

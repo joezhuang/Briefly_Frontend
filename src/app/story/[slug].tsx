@@ -1843,6 +1843,48 @@ export default function StoryDetailScreen() {
         )}
       </View>
 
+      {showLoginNudge && !user && isSharedStory && (
+        <View
+          accessibilityLabel={loginNudgeText.title}
+          style={[
+            styles.loginNudgeShared,
+            {
+              backgroundColor: colors.surfaceMuted,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View style={styles.loginNudgeCopy}>
+            <Text style={[styles.loginNudgeTitle, { color: colors.text }]}>
+              {loginNudgeText.title}
+            </Text>
+            <Text style={[styles.loginNudgeBody, { color: colors.textMuted }]}>
+              {loginNudgeText.body}
+            </Text>
+          </View>
+          <View style={styles.loginNudgeActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={openLoginFromNudge}
+              style={[styles.loginNudgePrimary, { backgroundColor: colors.text }]}
+            >
+              <Text style={[styles.loginNudgePrimaryText, { color: colors.background }]}>
+                {loginNudgeText.signIn}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={dismissLoginNudge}
+              style={styles.loginNudgeSecondary}
+            >
+              <Text style={[styles.loginNudgeSecondaryText, { color: colors.textMuted }]}>
+                {loginNudgeText.notNow}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
       <ArticleView
         article={displayedArticle}
         mediaActive={storyMediaActive}
@@ -2001,7 +2043,7 @@ export default function StoryDetailScreen() {
         }
       />
 
-      {showLoginNudge && !user && (
+      {showLoginNudge && !user && !isSharedStory && (
         <View pointerEvents="box-none" style={styles.loginNudgeHost}>
           <View
             accessibilityLabel={loginNudgeText.title}
@@ -2050,6 +2092,7 @@ export default function StoryDetailScreen() {
 
 const styles = StyleSheet.create({
   loginNudgeHost: { position: "absolute", left: 12, right: 12, bottom: 18, zIndex: 70, elevation: 10, alignItems: "center" },
+  loginNudgeShared: { marginHorizontal: 12, marginVertical: 8, borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, padding: 12, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10 },
   loginNudge: { width: "100%", maxWidth: 640, borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, padding: 12, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 10 },
   loginNudgeCopy: { flex: 1, minWidth: 220, gap: 3 },
   loginNudgeTitle: { fontSize: 14, fontWeight: "800" },
