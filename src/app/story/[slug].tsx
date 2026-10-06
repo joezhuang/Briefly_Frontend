@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, AppState, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { trackProductEvent } from "@/analytics/product-analytics";
@@ -55,6 +55,9 @@ const LAZY_ARTICLE_POLL_MS = 5000;
 const PODCAST_POLL_MS = 5000;
 const BILINGUAL_POLL_MS = 5000;
 const BILINGUAL_MAX_POLLS = 24;
+const LOGIN_NUDGE_DELAY_MS = 15_000;
+const LOGIN_NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const LOGIN_NUDGE_DISMISSED_AT_KEY = "briefly.storyLoginNudge.dismissedAt";
 
 const storyToolsCopy = {
   en: { title: "Story tools", collapse: "Collapse", expand: "Show" },
@@ -316,6 +319,7 @@ export default function StoryDetailScreen() {
   const [briefRepairBusyKey, setBriefRepairBusyKey] = useState("");
   const [briefTranslationRecoveryKey, setBriefTranslationRecoveryKey] = useState("");
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(false);
+  const [showLoginNudge, setShowLoginNudge] = useState(false);
   const [bilingualGeneration, setBilingualGeneration] = useState<BilingualGenerationState | null>(null);
   // One automatic request at most per user / immutable English version / language.
   const autoTranslationRequested = useRef(new Set<string>());
@@ -323,6 +327,60 @@ export default function StoryDetailScreen() {
   const repairedEnglishBriefFields = useRef<("what_happened" | "why_it_matters" | "what_next")[]>([]);
   const historyRecordedKey = useRef("");
   const storyOpenTrackedKey = useRef("");
+
+  useEffect(() => {
+    if (!authReady || user) {
+      setShowLoginNudge(false);
+      return;
+    }
+    let active = true;
+    let elapsed = 0;
+    let startedAt = AppState.currentState === "active" ? Date.now() : null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const readDismissedAt = () => {
+      if (Platform.OS !== "web" || typeof window === "undefined") return 0;
+      try { return Number(window.localStorage.getItem(LOGIN_NUDGE_DISMISSED_AT_KEY) || 0); }
+      catch { return 0; }
+    };
+    if (Date.now() - readDismissedAt() < LOGIN_NUDGE_COOLDOWN_MS) return;
+    const schedule = () => {
+      if (!active || startedAt == null || timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        if (active && AppState.currentState === "active") setShowLoginNudge(true);
+      }, Math.max(0, LOGIN_NUDGE_DELAY_MS - elapsed));
+    };
+    schedule();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") { startedAt = Date.now(); schedule(); return; }
+      if (startedAt != null) elapsed += Date.now() - startedAt;
+      startedAt = null;
+      if (timer) clearTimeout(timer);
+      timer = null;
+    });
+    return () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+      subscription.remove();
+    };
+  }, [authReady, user, resolvedSlug]);
+
+  const dismissLoginNudge = () => {
+    setShowLoginNudge(false);
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      try { window.localStorage.setItem(LOGIN_NUDGE_DISMISSED_AT_KEY, String(Date.now())); }
+      catch { /* Private browsing may disable storage. */ }
+    }
+  };
+
+  const openLoginFromNudge = () => {
+    trackProductEvent("story_login_nudge_sign_in", {
+      eventId: article?.event_id ?? resolvedEventId ?? null,
+      articleVersionId: article?.article_version_id ?? null,
+      properties: { source: resolvedSource ?? "story" },
+    });
+    router.push(\`/sign-in?returnTo=\${encodeURIComponent(currentStoryHref)}\` as never);
+  };
 
   const isWeb = Platform.OS === "web";
   // Shared-link recipients should only read pre-existing translations. In
@@ -1604,6 +1662,23 @@ export default function StoryDetailScreen() {
         )}
       </View>
 
+      {showLoginNudge && !user && (
+        <View accessibilityLabel="Do more with Briefly" style={[styles.loginNudge, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
+          <View style={styles.loginNudgeCopy}>
+            <Text style={[styles.loginNudgeTitle, { color: colors.text }]}>Do more with Briefly</Text>
+            <Text style={[styles.loginNudgeBody, { color: colors.textMuted }]}>Sign in free to follow stories, view related videos, join the discussion, and keep your experience across devices.</Text>
+          </View>
+          <View style={styles.loginNudgeActions}>
+            <Pressable accessibilityRole="button" onPress={openLoginFromNudge} style={[styles.loginNudgePrimary, { backgroundColor: colors.text }]}>
+              <Text style={[styles.loginNudgePrimaryText, { color: colors.background }]}>Sign in</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={dismissLoginNudge} style={styles.loginNudgeSecondary}>
+              <Text style={[styles.loginNudgeSecondaryText, { color: colors.textMuted }]}>Not now</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
       <ArticleView
         article={displayedArticle}
         refreshKey={
@@ -1764,6 +1839,15 @@ export default function StoryDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  loginNudge: { marginHorizontal: 12, marginVertical: 8, borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, padding: 12, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10 },
+  loginNudgeCopy: { flex: 1, minWidth: 220, gap: 3 },
+  loginNudgeTitle: { fontSize: 14, fontWeight: "800" },
+  loginNudgeBody: { fontSize: 12, lineHeight: 17 },
+  loginNudgeActions: { flexDirection: "row", alignItems: "center", gap: 6 },
+  loginNudgePrimary: { minHeight: 38, paddingHorizontal: 14, borderRadius: 19, justifyContent: "center" },
+  loginNudgePrimaryText: { fontSize: 12, fontWeight: "800" },
+  loginNudgeSecondary: { minHeight: 38, paddingHorizontal: 10, justifyContent: "center" },
+  loginNudgeSecondaryText: { fontSize: 12, fontWeight: "700" },
   storyTools: {
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
