@@ -1672,6 +1672,7 @@ export default function StoryDetailScreen() {
       )}
 
       <ArticleView
+        key={`story-media:${displayedArticle.event_id}:${displayedArticle.article_version_id ?? "preview"}`}
         article={displayedArticle}
         refreshKey={
           displayedArticle.authoritative_article_version_id ??
