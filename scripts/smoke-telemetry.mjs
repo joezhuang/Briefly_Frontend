@@ -63,7 +63,7 @@ const checks = [
     name: "Beta Dashboard exposes independent test-account switches",
     file: "src/app/beta-dashboard.tsx",
     needles: [
-      'title="Test-account telemetry"',
+      'title="Telemetry & health thresholds"',
       'label="Include test accounts in product analytics"',
       'label="Include test accounts in error monitoring"',
       "Save telemetry controls",
@@ -83,9 +83,9 @@ const checks = [
     name: "Beta Dashboard shows live analytics and monitoring health",
     file: "src/app/beta-dashboard.tsx",
     needles: [
-      'title="Telemetry health"',
+      'title="Telemetry health & alerts"',
       "telemetryHealth.analytics.events_24h",
-      "telemetryHealth.errors.errors_24h",
+      "telemetryHealth.errors.server_errors_24h",
       "telemetryHealth.errors.unresolved_errors",
       "Refresh telemetry",
     ],
