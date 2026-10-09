@@ -50,7 +50,9 @@ type PendingAnalysis =
       href: string;
     };
 
-type ReadyAnalysis = PendingAnalysis;
+type ReadyAnalysis = PendingAnalysis & {
+  outcome?: "ready" | "not_ready";
+};
 
 type StoredNotifications = {
   pending: Record<string, PendingAnalysis>;
@@ -134,6 +136,34 @@ const copy = {
   },
 } as const;
 
+const notReadyCopy = {
+  en: {
+    title: "Story not ready yet",
+    detail:
+      "Briefly couldn't prepare a reliable article from the currently available reports. You can still read the original reports.",
+  },
+  es: {
+    title: "La historia aún no está lista",
+    detail:
+      "Briefly no pudo preparar un artículo fiable con los informes disponibles. Aún puedes leer las fuentes originales.",
+  },
+  ja: {
+    title: "記事はまだ準備できていません",
+    detail:
+      "現在利用できる報道だけでは、Briefly は信頼できる記事を準備できませんでした。元の報道は引き続き読めます。",
+  },
+  "zh-CN": {
+    title: "报道暂时还没准备好",
+    detail:
+      "根据目前可用的报道，Briefly 还无法可靠地生成这篇文章。你仍然可以阅读下方的原始报道。",
+  },
+  "zh-TW": {
+    title: "報導暫時還沒準備好",
+    detail:
+      "根據目前可用的報導，Briefly 還無法可靠地產生這篇文章。你仍然可以閱讀下方的原始報導。",
+  },
+} as const;
+
 function storageKey(ownerKey: string) {
   return `${STORAGE_KEY_PREFIX}:${ownerKey}`;
 }
@@ -180,6 +210,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   const { addToQueue, isQueued } = usePodcastPlayer();
   const { colors } = useBrieflyTheme();
   const labels = copy[language] ?? copy.en;
+  const notReadyLabels = notReadyCopy[language] ?? notReadyCopy.en;
   const ownerKey = userId ? `user:${userId}` : "guest";
   const syncOwnerRef = useRef<string | null>(null);
 
@@ -201,12 +232,13 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
     if (item.type === "podcast") {
       return `podcast:${item.articleVersionId}:${item.language}`;
     }
+    const outcome = item.outcome ?? "ready";
     if (item.kind === "refresh" || item.kind === "translation") {
       // Every immutable English version/language completion is separately
       // notifiable; opening an older ready item must not suppress a newer one.
-      return `article:${item.kind}:${item.eventId}:${item.baseVersionId ?? "initial"}:${item.targetLanguage ?? "canonical"}`;
+      return `article:${item.kind}:${item.eventId}:${item.baseVersionId ?? "initial"}:${item.targetLanguage ?? "canonical"}:${outcome}`;
     }
-    return `article:${item.eventId}:${item.targetLanguage ?? "canonical"}`;
+    return `article:${item.eventId}:${item.targetLanguage ?? "canonical"}:${outcome}`;
   }, []);
 
   useEffect(() => {
@@ -391,6 +423,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
     const poll = async () => {
       const completed: ReadyAnalysis[] = [];
+      const terminalNotifications: ReadyAnalysis[] = [];
       const terminalFailures: PendingAnalysis[] = [];
 
       await Promise.all(
@@ -402,7 +435,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                 item.language,
               );
               if (podcast.status === "ready") {
-                completed.push(item);
+                completed.push({ ...item, outcome: "ready" });
                 if (
                   active &&
                   podcast.audio_url &&
@@ -440,7 +473,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                 job.language === item.targetLanguage &&
                 job.translation_article_version_id != null
               ) {
-                completed.push(item);
+                completed.push({ ...item, outcome: "ready" });
               } else if (job.status === "failed" || job.status === "interrupted") {
                 terminalFailures.push(item);
               }
@@ -463,14 +496,20 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
             if (!canonicalReady) {
               if (article.generation_status !== "processing") {
-                console.warn("[Briefly Notifications] stopped stale article watcher", {
-                  eventId: item.eventId,
-                  kind: item.kind ?? "initial",
-                  baseVersionId: item.baseVersionId ?? null,
-                  currentVersionId: nextVersionId ?? null,
-                  generationStatus: article.generation_status ?? null,
+                console.warn(
+                  "[Briefly Notifications] article generation ended without a canonical version",
+                  {
+                    eventId: item.eventId,
+                    kind: item.kind ?? "initial",
+                    baseVersionId: item.baseVersionId ?? null,
+                    currentVersionId: nextVersionId ?? null,
+                    generationStatus: article.generation_status ?? null,
+                  },
+                );
+                terminalNotifications.push({
+                  ...item,
+                  outcome: "not_ready",
                 });
-                terminalFailures.push(item);
               }
               return;
             }
@@ -511,6 +550,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                 completed.push({
                   ...item,
                   headline: localized.headline || item.headline,
+                  outcome: "ready",
                 });
               } else if (translationStatus === "failed") {
                 terminalFailures.push(item);
@@ -518,7 +558,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
               return;
             }
 
-            completed.push(item);
+            completed.push({ ...item, outcome: "ready" });
           } catch {
             // Keep watching transient request failures and localization generation.
           }
@@ -527,9 +567,13 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
       if (!active) return;
 
-      if (completed.length > 0 || terminalFailures.length > 0) {
+      if (
+        completed.length > 0 ||
+        terminalNotifications.length > 0 ||
+        terminalFailures.length > 0
+      ) {
         const completedKeys = new Set(
-          [...completed, ...terminalFailures].map(keyFor),
+          [...completed, ...terminalNotifications, ...terminalFailures].map(keyFor),
         );
         setState((current) => {
           if (current.ownerKey !== ownerKey) return current;
@@ -537,12 +581,14 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
           const knownIdentities = new Set(
             current.ready.map(notificationIdentity),
           );
-          const uniqueCompleted = completed.filter((item) => {
-            const identity = notificationIdentity(item);
-            if (knownIdentities.has(identity)) return false;
-            knownIdentities.add(identity);
-            return true;
-          });
+          const uniqueCompleted = [...completed, ...terminalNotifications].filter(
+            (item) => {
+              const identity = notificationIdentity(item);
+              if (knownIdentities.has(identity)) return false;
+              knownIdentities.add(identity);
+              return true;
+            },
+          );
 
           return {
             ...current,
@@ -556,7 +602,8 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
         });
       }
 
-      const terminalCount = completed.length + terminalFailures.length;
+      const terminalCount =
+        completed.length + terminalNotifications.length + terminalFailures.length;
       if (terminalCount >= entries.length) return;
 
       timer = setTimeout(() => void poll(), POLL_MS);
@@ -589,8 +636,9 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
   const openReady = (item: ReadyAnalysis) => {
     setState((current) => {
       if (current.ownerKey !== ownerKey) return current;
+      const selectedIdentity = notificationIdentity(item);
       const nextReady = current.ready.filter(
-        (candidate) => keyFor(candidate) !== keyFor(item),
+        (candidate) => notificationIdentity(candidate) !== selectedIdentity,
       );
       return {
         ...current,
@@ -658,7 +706,7 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
 
               {visibleReady.map((item) => (
                 <Pressable
-                  key={keyFor(item)}
+                  key={notificationIdentity(item)}
                   accessibilityRole="button"
                   onPress={() => openReady(item)}
                   style={({ pressed }) => [
@@ -671,13 +719,15 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                       style={[styles.rowKicker, { color: colors.background }]}
                       numberOfLines={1}
                     >
-                      {item.type === "podcast"
-                        ? labels.podcast
-                        : item.targetLanguage && item.targetLanguage !== "en"
-                          ? labels.translation
-                          : item.kind === "refresh"
-                            ? labels.updated
-                            : labels.ready}
+                      {item.outcome === "not_ready"
+                        ? notReadyLabels.title
+                        : item.type === "podcast"
+                          ? labels.podcast
+                          : item.targetLanguage && item.targetLanguage !== "en"
+                            ? labels.translation
+                            : item.kind === "refresh"
+                              ? labels.updated
+                              : labels.ready}
                     </Text>
                     <Text
                       style={[styles.headline, { color: colors.background }]}
@@ -685,6 +735,14 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                     >
                       {item.headline}
                     </Text>
+                    {item.outcome === "not_ready" ? (
+                      <Text
+                        style={[styles.detail, { color: colors.background }]}
+                        numberOfLines={3}
+                      >
+                        {notReadyLabels.detail}
+                      </Text>
+                    ) : null}
                   </View>
                   <Text style={[styles.arrow, { color: colors.background }]}>→</Text>
                 </Pressable>
@@ -785,6 +843,7 @@ const styles = StyleSheet.create({
     opacity: 0.78,
   },
   headline: { fontSize: 15, lineHeight: 20, fontWeight: "800" },
+  detail: { fontSize: 12, lineHeight: 17, opacity: 0.82 },
   more: { marginTop: 2, fontSize: 11, opacity: 0.78 },
   arrow: { fontSize: 22, fontWeight: "700" },
   bubble: {
