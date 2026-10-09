@@ -30,6 +30,8 @@ const checks = [
       "consecutiveFailures",
       "queue = [...batch, ...queue]",
       "telemetry is never allowed to",
+      '"story_login_nudge_sign_in"',
+      '"event_follow_sign_in"',
     ],
   },
   {
