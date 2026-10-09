@@ -789,6 +789,12 @@ ensure(notificationsSource.includes('if (item.kind === "translation") {') &&
        !notificationsSource.includes('const staleTranslation =') &&
        !notificationsSource.includes('if (item.kind !== "translation" &&'),
        "Translation notification checks return before initial/refresh article handling");
+ensure(notificationsSource.includes('terminalNotifications.push({') &&
+       notificationsSource.includes('outcome: "not_ready"') &&
+       notificationsSource.includes('notReadyLabels.detail') &&
+       notificationsSource.includes('key={notificationIdentity(item)}'),
+       "Watched canonical generation terminal failures remain visible in the durable in-app notification tray");
+
 
 
 // A user-initiated Retry of empty English brief sections must also restore
