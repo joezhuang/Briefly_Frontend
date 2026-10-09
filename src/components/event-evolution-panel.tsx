@@ -333,7 +333,13 @@ export function EventEvolutionPanel({
   const meaningful = useMemo(
     () =>
       (intelligence?.developments ?? [])
-        .filter((item) => item.is_meaningful_update)
+        .filter(
+          (item) =>
+            item.detector_version === "event-evolution-v5" &&
+            item.update_type === "meaningful_development" &&
+            item.material_state_change === true &&
+            item.is_meaningful_update,
+        )
         .sort((a, b) => parseTime(b.observed_at) - parseTime(a.observed_at)),
     [intelligence],
   );

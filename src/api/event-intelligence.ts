@@ -57,6 +57,8 @@ export type EventDevelopment = {
   observed_at: string;
   update_type: "new_event" | "meaningful_development" | "evidence_growth" | string;
   is_meaningful_update: boolean;
+  material_state_change?: boolean;
+  detector_version?: string | null;
   new_evidence_count: number;
   new_unique_source_count: number;
   new_languages: string[];

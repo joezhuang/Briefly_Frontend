@@ -764,6 +764,12 @@ ensure(!storySource.includes('value.status === "published"') &&
 
 // Translation notifications are part of the shared generation notification tray,
 // not a screen-local spinner. They must survive leaving the Story screen.
+const eventEvolutionSource = read("src/components/event-evolution-panel.tsx");
+ensure(eventEvolutionSource.includes('item.detector_version === "event-evolution-v5"') &&
+       eventEvolutionSource.includes('item.update_type === "meaningful_development"') &&
+       eventEvolutionSource.includes('item.material_state_change === true'),
+       "Story Evolution update callouts must use the v5 material-development contract");
+
 const notificationsSource = read("src/context/analysis-readiness.tsx");
 ensure(startupTranslation.includes('watchTranslation({') &&
        statusAction.includes('watchTranslation({') &&
