@@ -94,7 +94,7 @@ const checks = [
     name: "Public app configuration does not expose test account emails",
     file: "src/api/briefly.ts",
     needles: [
-      'export function getBrieflyAppConfig()',
+      'export async function getBrieflyAppConfig()',
       'export type BrieflyAppConfig = {',
     ],
     forbidden: ["test_account_emails: string[];\n  email_password_login_enabled"],
