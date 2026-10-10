@@ -72,3 +72,19 @@ npx tsc --noEmit
 npm run smoke:ui
 npm run lint
 ```
+
+
+## Mobile web reliability
+
+Mobile Safari/WebKit needs a stricter speech queue policy than desktop browsers.
+
+- First playback does not call `speechSynthesis.cancel()` before `speak()`.
+- If another passage is already speaking or queued, Briefly cancels that queue,
+  waits briefly for WebKit's asynchronous cancellation to settle, then starts
+  the replacement utterance.
+- The active `SpeechSynthesisUtterance` is kept in a ref for the duration of
+  playback.
+- A paused synthesizer is resumed before the new utterance is queued.
+
+This avoids the WebKit failure mode where a late asynchronous cancel clears the
+new utterance and the mobile-web Listen button appears to do nothing.
