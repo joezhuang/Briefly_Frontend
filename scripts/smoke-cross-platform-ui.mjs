@@ -529,11 +529,11 @@ const checks = [
     ],
   },
   {
-    name: "Mobile bilingual passages switch their own cached language inline",
+    name: "Mobile bilingual passages switch visible language and stop stale speech",
     file: "src/components/bilingual-reading.tsx",
     needles: [
       'useState<"translated" | "english">("translated")',
-      "onPress={() => setMobileLanguage((current) =>",
+      "onPress={switchMobileLanguage}",
       "minHeight: 44",
       "matchedBilingualOriginal(",
     ],
