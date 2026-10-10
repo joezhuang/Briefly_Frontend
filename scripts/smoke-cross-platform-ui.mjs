@@ -825,6 +825,13 @@ ensure(speechContextSource.includes('window.speechSynthesis') &&
        speechContextSource.includes('"voiceschanged"') &&
        speechContextSource.includes('bestBrowserVoice'),
        "Web speech uses the direct Web Speech API with delayed voice discovery and best free voice selection");
+ensure(speechContextSource.includes('const replacingWebSpeech =') &&
+       speechContextSource.includes('webUtteranceRef.current = utterance') &&
+       speechContextSource.includes('if (replacingWebSpeech || synth.speaking || synth.pending)') &&
+       speechContextSource.includes('webRestartTimerRef.current = setTimeout(startWeb, 120)') &&
+       speechContextSource.includes('do not call cancel() before speak() when the queue is') &&
+       speechContextSource.includes('if (synth.paused) synth.resume()'),
+       "Mobile WebKit speech must avoid cancel-before-first-speak and retain utterances during playback");
 ensure(speechButtonSource.includes('export function LanguageSpeechButton') &&
        speechButtonSource.includes('onPress={() => toggle(passageId, speechText, locale)}') &&
        bilingualSource.includes('<LanguageSpeechButton') &&
