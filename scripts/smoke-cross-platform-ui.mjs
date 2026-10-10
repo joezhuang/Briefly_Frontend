@@ -817,6 +817,19 @@ ensure(briefRepairView.includes('const sourceBrief=bilingualOriginal??article;')
        briefRepairView.includes('hasMissingSourceBrief&&bilingualOriginal.article_version_id===bilingualLatestEnglishVersionId&&briefRepair?.available') &&
        briefRepairView.includes('bilingualOriginal?<><BilingualBrief'),
        "Bilingual Story shows English brief Retry only for the current matching source version");
+const speechContextSource = read("src/context/english-speech.tsx");
+const speechButtonSource = read("src/components/english-speech-button.tsx");
+ensure(speechContextSource.includes('window.speechSynthesis') &&
+       speechContextSource.includes('new SpeechSynthesisUtterance') &&
+       speechContextSource.includes('"voiceschanged"') &&
+       speechContextSource.includes('toggleSequence'),
+       "Web bilingual speech uses the direct Web Speech API with delayed voice discovery");
+ensure(speechButtonSource.includes('export function BilingualSpeechButton') &&
+       speechButtonSource.includes('translatedLanguage') &&
+       speechButtonSource.includes('toggleSequence(passageId, segments)') &&
+       bilingualSource.includes('<BilingualSpeechButton'),
+       "Bilingual Listen queues translated speech followed by English");
+
 const bilingualSource = read("src/components/bilingual-reading.tsx");
 ensure(bilingualSource.includes('onRetryMissingSection(field)') &&
        bilingualSource.includes('!String(translated[field] ?? "").trim()') &&
