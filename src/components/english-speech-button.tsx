@@ -8,11 +8,11 @@ import { useBrieflyTheme } from "@/context/theme";
 // Text-to-speech is device-provided and free for all readers. The English
 // source is passed explicitly, independent of the visible reading/UI language.
 const copy = {
-  en: { listen: "Listen to English", stop: "Stop English", shortListen: "Listen", shortStop: "Stop", voice: "English voice", pick: "Choose English voice" },
-  es: { listen: "Escuchar en inglés", stop: "Detener inglés", shortListen: "Escuchar", shortStop: "Detener", voice: "Voz inglesa", pick: "Elegir voz inglesa" },
-  ja: { listen: "英語を聴く", stop: "英語の再生を停止", shortListen: "聴く", shortStop: "停止", voice: "英語の音声", pick: "英語の音声を選ぶ" },
-  "zh-CN": { listen: "收听英语", stop: "停止英语朗读", shortListen: "收听", shortStop: "停止", voice: "英语音色", pick: "选择英语音色" },
-  "zh-TW": { listen: "收聽英語", stop: "停止英語朗讀", shortListen: "收聽", shortStop: "停止", voice: "英語音色", pick: "選擇英語音色" },
+  en: { listen: "Listen to English", stop: "Stop English", shortListen: "Listen", shortStop: "Stop", currentListen: "Listen to current language", currentStop: "Stop listening", voice: "English voice", pick: "Choose English voice" },
+  es: { listen: "Escuchar en inglés", stop: "Detener inglés", shortListen: "Escuchar", shortStop: "Detener", currentListen: "Escuchar el idioma actual", currentStop: "Detener la lectura", voice: "Voz inglesa", pick: "Elegir voz inglesa" },
+  ja: { listen: "英語を聴く", stop: "英語の再生を停止", shortListen: "聴く", shortStop: "停止", currentListen: "表示中の言語を聴く", currentStop: "読み上げを停止", voice: "英語の音声", pick: "英語の音声を選ぶ" },
+  "zh-CN": { listen: "收听英语", stop: "停止英语朗读", shortListen: "收听", shortStop: "停止", currentListen: "朗读当前语言", currentStop: "停止朗读", voice: "英语音色", pick: "选择英语音色" },
+  "zh-TW": { listen: "收聽英語", stop: "停止英語朗讀", shortListen: "收聽", shortStop: "停止", currentListen: "朗讀目前語言", currentStop: "停止朗讀", voice: "英語音色", pick: "選擇英語音色" },
 } as const;
 
 export function EnglishSpeechButton({
@@ -76,7 +76,7 @@ export function LanguageSpeechButton({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={playing ? labels.stop : labels.shortListen}
+      accessibilityLabel={playing ? labels.currentStop : labels.currentListen}
       accessibilityState={{ selected: playing }}
       onPress={() => toggle(passageId, speechText, locale)}
       style={[
