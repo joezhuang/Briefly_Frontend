@@ -88,3 +88,19 @@ Mobile Safari/WebKit needs a stricter speech queue policy than desktop browsers.
 
 This avoids the WebKit failure mode where a late asynchronous cancel clears the
 new utterance and the mobile-web Listen button appears to do nothing.
+
+
+## X in-app browser
+
+The free browser/device TTS path is supported in normal Safari/Chrome mobile
+browsers, but embedded WebViews such as X's in-app browser may not expose a
+working `speechSynthesis` implementation.
+
+Briefly detects the current X in-app browser user-agent tokens
+(`TwitterAndroid` and `Twitter for iPhone`) and replaces Listen with an
+**Open in browser to listen** fallback. Tapping it explains that the reader
+should use X's menu to open the page in Safari or Chrome. The English voice
+picker is hidden in that unsupported environment.
+
+This is intentionally a capability/container fallback rather than a paid TTS
+fallback, preserving the no-API-key, no-per-character-cost speech policy.
