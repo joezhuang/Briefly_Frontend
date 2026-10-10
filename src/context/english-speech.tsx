@@ -147,6 +147,8 @@ export function EnglishSpeechProvider({ children }: PropsWithChildren) {
   const activeRef = useRef<string | null>(null);
   const serialRef = useRef(0);
   const availableVoicesRef = useRef<Speech.Voice[]>([]);
+  const webUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const webRestartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -203,7 +205,13 @@ export function EnglishSpeechProvider({ children }: PropsWithChildren) {
     activeRef.current = null;
     setActivePassage(null);
 
+    if (webRestartTimerRef.current) {
+      clearTimeout(webRestartTimerRef.current);
+      webRestartTimerRef.current = null;
+    }
+
     if (Platform.OS === "web" && typeof window !== "undefined") {
+      webUtteranceRef.current = null;
       window.speechSynthesis?.cancel();
       return;
     }
@@ -237,6 +245,8 @@ export function EnglishSpeechProvider({ children }: PropsWithChildren) {
         return;
       }
 
+      const replacingWebSpeech =
+        Platform.OS === "web" && activeRef.current !== null;
       const serial = ++serialRef.current;
       activeRef.current = passageId;
       setActivePassage(passageId);
@@ -255,25 +265,22 @@ export function EnglishSpeechProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        // Keep the whole start path inside the user's click. The browser Web
-        // Speech API is synchronous here, avoiding an async Expo stop/speak
-        // boundary that can turn into a silent no-op on the web.
-        synth.cancel();
-
-        const browserVoices = synth.getVoices();
         const speakWeb = (index: number) => {
           if (serial !== serialRef.current) return;
           const segment = prepared[index];
           if (!segment) {
+            webUtteranceRef.current = null;
             finish();
             return;
           }
 
           const utterance = new SpeechSynthesisUtterance(segment.text);
+          webUtteranceRef.current = utterance;
           utterance.lang = segment.locale;
           utterance.rate = 1.0;
           utterance.pitch = 1.0;
 
+          const browserVoices = synth.getVoices();
           const preferredEnglish =
             localeMatches(segment.locale, "en-US") && selectedVoice
               ? browserVoices.find(
@@ -287,8 +294,16 @@ export function EnglishSpeechProvider({ children }: PropsWithChildren) {
             bestBrowserVoice(browserVoices, segment.locale);
           if (matchingVoice) utterance.voice = matchingVoice;
 
-          utterance.onend = () => speakWeb(index + 1);
+          utterance.onend = () => {
+            if (webUtteranceRef.current === utterance) {
+              webUtteranceRef.current = null;
+            }
+            speakWeb(index + 1);
+          };
           utterance.onerror = (event) => {
+            if (webUtteranceRef.current === utterance) {
+              webUtteranceRef.current = null;
+            }
             if (
               (event.error === "canceled" || event.error === "interrupted") &&
               serial !== serialRef.current
@@ -297,10 +312,32 @@ export function EnglishSpeechProvider({ children }: PropsWithChildren) {
             }
             finish();
           };
+
+          // A paused synthesizer will queue utterances silently until resumed.
+          // Resume first, then enqueue this user-requested passage.
+          if (synth.paused) synth.resume();
           synth.speak(utterance);
         };
 
-        speakWeb(0);
+        const startWeb = () => {
+          webRestartTimerRef.current = null;
+          if (serial !== serialRef.current) return;
+          speakWeb(0);
+        };
+
+        if (replacingWebSpeech || synth.speaking || synth.pending) {
+          // WebKit completes cancel() asynchronously. Starting a replacement
+          // utterance in the same tick can let the late cancel remove the new
+          // utterance too, producing a silent button on mobile Safari/WebKit.
+          synth.cancel();
+          webUtteranceRef.current = null;
+          webRestartTimerRef.current = setTimeout(startWeb, 120);
+        } else {
+          // First playback must stay inside the original user gesture. In
+          // particular, do not call cancel() before speak() when the queue is
+          // already empty; mobile Safari can treat that sequence as a no-op.
+          startWeb();
+        }
         return;
       }
 
