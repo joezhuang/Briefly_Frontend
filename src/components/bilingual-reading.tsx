@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, useWindowDimensions, Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
-  BilingualSpeechButton,
   EnglishSpeechButton,
   EnglishVoicePicker,
+  LanguageSpeechButton,
 } from "@/components/english-speech-button";
 import { useEnglishSpeech } from "@/context/english-speech";
 import { useBrieflyLanguage } from "@/context/language";
@@ -76,8 +76,15 @@ function BilingualPair({
 }) {
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+  const { stop } = useEnglishSpeech();
   const label = copy[language] ?? copy.en;
   const [mobileLanguage, setMobileLanguage] = useState<"translated" | "english">("translated");
+  const switchMobileLanguage = () => {
+    stop();
+    setMobileLanguage((current) =>
+      current === "translated" ? "english" : "translated",
+    );
+  };
 
   // Independent paragraph/section toggle: no network request, and both versions
   // remain loaded. Desktop retains the familiar side-by-side comparison.
@@ -92,20 +99,17 @@ function BilingualPair({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={mobileLanguage === "translated" ? label.mobileEnglish : label.mobileTranslated}
-              onPress={() => setMobileLanguage((current) =>
-                current === "translated" ? "english" : "translated",
-              )}
+              onPress={switchMobileLanguage}
               style={[styles.mobileSwitcher, { borderColor: colors.border, backgroundColor: colors.surface }]}
             >
               <Text style={[styles.mobileOptionText, { color: colors.accent }]}>
                 {mobileLanguage === "translated" ? label.mobileEnglish : label.mobileTranslated} ↔
               </Text>
             </Pressable>
-            <BilingualSpeechButton
-              passageId={passageId}
-              translated={localized}
-              english={english}
-              translatedLanguage={translatedLanguage}
+            <LanguageSpeechButton
+              passageId={`${passageId}:${mobileLanguage}`}
+              text={mobileLanguage === "translated" ? localized : english}
+              locale={mobileLanguage === "translated" ? translatedLanguage : "en-US"}
               compact
             />
           </View>
@@ -120,17 +124,23 @@ function BilingualPair({
   return (
     <View style={[styles.pair, { borderColor: colors.border }]}>
       <View style={styles.column}>
-        <Text style={[styles.columnLabel, { color: colors.accent }]}>{label.translated}</Text>
+        <View style={styles.englishColumnHeading}>
+          <Text style={[styles.columnLabel, { color: colors.accent }]}>{label.translated}</Text>
+          <LanguageSpeechButton
+            passageId={`${passageId}:translated`}
+            text={localized}
+            locale={translatedLanguage}
+            compact
+          />
+        </View>
         <Text selectable={selectable} style={[styles.paragraph, { color: colors.text }]}>{localized || "—"}</Text>
       </View>
       <View style={styles.column}>
         <View style={styles.englishColumnHeading}>
           <Text style={[styles.columnLabel, { color: colors.textMuted }]}>{label.original}</Text>
-          <BilingualSpeechButton
-            passageId={passageId}
-            translated={localized}
+          <EnglishSpeechButton
+            passageId={`${passageId}:english`}
             english={english}
-            translatedLanguage={translatedLanguage}
             compact
           />
         </View>
@@ -236,10 +246,14 @@ function TappableBodyParagraph({
   initiallyEnglish?: boolean;
 }) {
   const { colors } = useBrieflyTheme();
+  const { stop } = useEnglishSpeech();
   const [showEnglish, setShowEnglish] = useState(initiallyEnglish);
   const englishAvailable = !!english.trim();
   const currentText = (showEnglish ? english : localized) || "—";
-  const switchLanguage = () => setShowEnglish((current) => !current);
+  const switchLanguage = () => {
+    stop();
+    setShowEnglish((current) => !current);
+  };
 
   return (
     <View style={styles.bodyParagraphItem}>
@@ -259,11 +273,10 @@ function TappableBodyParagraph({
               {showEnglish ? translatedHint : "EN"} ↔
             </Text>
           </Pressable>
-          <BilingualSpeechButton
-            passageId={passageId}
-            translated={localized}
-            english={english}
-            translatedLanguage={translatedLanguage}
+          <LanguageSpeechButton
+            passageId={`${passageId}:${showEnglish ? "english" : "translated"}`}
+            text={showEnglish ? english : localized}
+            locale={showEnglish ? "en-US" : translatedLanguage}
             compact
           />
         </View>
@@ -323,16 +336,25 @@ export function BilingualBody({
                 <Text style={[styles.columnLabel, { color: colors.accent }]}>{column.label}</Text>
                 {column.paragraphs.map((paragraph, i) => (
                   <View key={i} style={styles.column}>
-                    {index === 1 && (
-                      <View style={styles.bodyParagraphControls}>
-                        <Text style={[styles.columnLabel, { color: colors.textMuted }]}>EN</Text>
+                    <View style={styles.bodyParagraphControls}>
+                      <Text style={[styles.columnLabel, { color: colors.textMuted }]}>
+                        {index === 1 ? "EN" : label.translated}
+                      </Text>
+                      {index === 1 ? (
                         <EnglishSpeechButton
-                          passageId={`${english.article_version_id}:body:${i}`}
+                          passageId={`${english.article_version_id}:body:${i}:english`}
                           english={paragraph.text}
                           compact
                         />
-                      </View>
-                    )}
+                      ) : (
+                        <LanguageSpeechButton
+                          passageId={`${translated.article_version_id}:body:${i}:translated`}
+                          text={paragraph.text}
+                          locale={translatedLanguage}
+                          compact
+                        />
+                      )}
+                    </View>
                     <Text selectable={selectable} style={[styles.paragraph, styles.separateParagraph, { color: colors.text }]}>
                       {paragraph.text}
                     </Text>
@@ -364,11 +386,15 @@ export function BilingualBody({
   // Admins keep the existing long-press/text selection behaviour. A whole-body
   // switch is also necessary when paragraphs cannot be safely aligned.
   const needsWholeBodySwitch = selectable || !aligned;
+  const toggleWholeBodyLanguage = () => {
+    stop();
+    setWholeBodyEnglish((current) => !current);
+  };
   const switchWholeBody = needsWholeBodySwitch ? (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={wholeBodyEnglish ? label.mobileTranslated : label.mobileEnglish}
-      onPress={() => setWholeBodyEnglish((current) => !current)}
+      onPress={toggleWholeBodyLanguage}
       style={[styles.mobileSwitcher, { borderColor: colors.border, backgroundColor: colors.surface }]}
     >
       <Text style={[styles.mobileOptionText, { color: colors.accent }]}>
@@ -387,12 +413,15 @@ export function BilingualBody({
         </View>
         {paragraphs.map((paragraph, index) => (
           <View key={index} style={styles.bodyParagraphItem}>
-            {wholeBodyEnglish && (
-              <View style={styles.bodyParagraphControls}>
+            <View style={styles.bodyParagraphControls}>
+              {wholeBodyEnglish && (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={label.mobileTranslated}
-                  onPress={() => setWholeBodyEnglish(false)}
+                  onPress={() => {
+                    stop();
+                    setWholeBodyEnglish(false);
+                  }}
                   style={[styles.mobileSwitcher, styles.paragraphLanguageButton, {
                     borderColor: colors.border,
                     backgroundColor: colors.surface,
@@ -402,13 +431,14 @@ export function BilingualBody({
                     {label.mobileTranslated} ↔
                   </Text>
                 </Pressable>
-                <EnglishSpeechButton
-                  passageId={`${english.article_version_id}:body:${index}`}
-                  english={paragraph.text}
-                  compact
-                />
-              </View>
-            )}
+              )}
+              <LanguageSpeechButton
+                passageId={`${wholeBodyEnglish ? english.article_version_id : translated.article_version_id}:body:${index}:${wholeBodyEnglish ? "english" : "translated"}`}
+                text={paragraph.text}
+                locale={wholeBodyEnglish ? "en-US" : translatedLanguage}
+                compact
+              />
+            </View>
             <Text selectable={selectable} style={[styles.bodyParagraph, { color: colors.text }]}>
               {paragraph.text}
             </Text>
