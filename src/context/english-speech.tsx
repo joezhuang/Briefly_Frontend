@@ -66,15 +66,57 @@ function isEnglishVoice(voice: Speech.Voice): boolean {
 
 /** All browsers have different voice catalogues. Prefer installed natural
  * English voices, but always let readers choose another available voice. */
-function voiceRank(voice: Speech.Voice): number {
-  const name = voice.name.toLowerCase();
-  let score = voice.quality === Speech.VoiceQuality.Enhanced ? 50 : 0;
-  if (/natural|neural|premium|enhanced/.test(name)) score += 40;
-  if (/microsoft.*(aria|jenny|guy|sonia|ryan)/.test(name)) score += 25;
-  if (/google.*(us|uk|english)/.test(name)) score += 20;
-  if (/samantha|ava|alex|daniel|serena|karen/.test(name)) score += 15;
-  if (/^en-us$/i.test(voice.language)) score += 5;
+function naturalVoiceNameScore(value: string): number {
+  const name = value.toLowerCase();
+  let score = 0;
+  if (/natural|neural/.test(name)) score += 100;
+  if (/premium|enhanced|online/.test(name)) score += 70;
+  if (/microsoft/.test(name)) score += 35;
+  if (/google/.test(name)) score += 30;
+  if (/siri/.test(name)) score += 30;
+  if (
+    /aria|jenny|guy|sonia|ryan|ava|samantha|alex|daniel|serena|karen|kyoko|otoya|tingting|meijia/.test(
+      name,
+    )
+  ) {
+    score += 20;
+  }
   return score;
+}
+
+function voiceRank(voice: Speech.Voice): number {
+  let score =
+    voice.quality === Speech.VoiceQuality.Enhanced ? 120 : 0;
+  score += naturalVoiceNameScore(voice.name);
+  return score;
+}
+
+function browserVoiceRank(
+  voice: SpeechSynthesisVoice,
+  requestedLocale: string,
+): number {
+  const requested = normalizedLocale(requestedLocale).toLowerCase();
+  const candidate = normalizedLocale(voice.lang).toLowerCase();
+  let score = naturalVoiceNameScore(
+    `${voice.name} ${voice.voiceURI}`,
+  );
+  if (candidate === requested) score += 80;
+  else if (localeMatches(candidate, requested)) score += 40;
+  if (voice.default) score += 5;
+  return score;
+}
+
+function bestBrowserVoice(
+  voices: SpeechSynthesisVoice[],
+  locale: string,
+): SpeechSynthesisVoice | undefined {
+  return voices
+    .filter((voice) => localeMatches(voice.lang, locale))
+    .sort(
+      (a, b) =>
+        browserVoiceRank(b, locale) - browserVoiceRank(a, locale) ||
+        a.name.localeCompare(b.name),
+    )[0];
 }
 
 function speechChunks(value: string, maximum: number): string[] {
@@ -242,13 +284,7 @@ export function EnglishSpeechProvider({ children }: PropsWithChildren) {
               : null;
           const matchingVoice =
             preferredEnglish ??
-            browserVoices.find(
-              (voice) =>
-                voice.lang.toLowerCase() === segment.locale.toLowerCase(),
-            ) ??
-            browserVoices.find((voice) =>
-              localeMatches(voice.lang, segment.locale),
-            );
+            bestBrowserVoice(browserVoices, segment.locale);
           if (matchingVoice) utterance.voice = matchingVoice;
 
           utterance.onend = () => speakWeb(index + 1);
