@@ -823,13 +823,14 @@ const speechButtonSource = read("src/components/english-speech-button.tsx");
 ensure(speechContextSource.includes('window.speechSynthesis') &&
        speechContextSource.includes('new SpeechSynthesisUtterance') &&
        speechContextSource.includes('"voiceschanged"') &&
-       speechContextSource.includes('toggleSequence'),
-       "Web bilingual speech uses the direct Web Speech API with delayed voice discovery");
-ensure(speechButtonSource.includes('export function BilingualSpeechButton') &&
-       speechButtonSource.includes('translatedLanguage') &&
-       speechButtonSource.includes('toggleSequence(passageId, segments)') &&
-       bilingualSource.includes('<BilingualSpeechButton'),
-       "Bilingual Listen queues translated speech followed by English");
+       speechContextSource.includes('bestBrowserVoice'),
+       "Web speech uses the direct Web Speech API with delayed voice discovery and best free voice selection");
+ensure(speechButtonSource.includes('export function LanguageSpeechButton') &&
+       speechButtonSource.includes('onPress={() => toggle(passageId, speechText, locale)}') &&
+       bilingualSource.includes('<LanguageSpeechButton') &&
+       bilingualSource.includes('mobileLanguage === "translated" ? localized : english') &&
+       bilingualSource.includes('showEnglish ? english : localized'),
+       "Bilingual Listen speaks only the language currently visible to the reader");
 ensure(bilingualSource.includes('onRetryMissingSection(field)') &&
        bilingualSource.includes('!String(translated[field] ?? "").trim()') &&
        bilingualSource.includes('englishRetryAvailable') &&
@@ -893,13 +894,12 @@ ensure(speechButtonSource.includes('toggle(passageId, text, "en-US")') &&
        "Free English Listen/Stop actions use explicit English speech and touch-size accessibility");
 ensure(bilingualSource.includes('passageId={`${english.article_version_id}:summary:${field}`}') &&
        bilingualSource.includes('passageId={`${english.article_version_id}:body:${index}`}') &&
-       bilingualSource.includes('<BilingualSpeechButton') &&
-       bilingualSource.includes('translated={localized}') &&
-       bilingualSource.includes('english={english}') &&
-       bilingualSource.includes('english={englishParagraphs[index].text}') &&
-       bilingualSource.includes('index === 1 && (') &&
-       bilingualSource.includes('wholeBodyEnglish && ('),
-       "Bilingual Listen appears for aligned summary/body passages while unaligned views keep safe single-language controls");
+       bilingualSource.includes('<LanguageSpeechButton') &&
+       bilingualSource.includes('locale={mobileLanguage === "translated" ? translatedLanguage : "en-US"}') &&
+       bilingualSource.includes('<EnglishSpeechButton') &&
+       bilingualSource.includes('locale={wholeBodyEnglish ? "en-US" : translatedLanguage}') &&
+       bilingualSource.includes('index === 1 ? ('),
+       "Bilingual Listen covers aligned and unaligned layouts without cross-language sequencing");
 ensure(storySource.includes('bilingualOriginal={effectiveLanguageMode === "bilingual" && bilingualEnabled ? matchedEnglishArticle : null}') &&
        !storySource.includes("englishSpeechSource=") &&
        !articleViewSource.includes("EnglishSpeechButton") &&
@@ -909,31 +909,27 @@ ensure(storySource.includes('bilingualOriginal={effectiveLanguageMode === "bilin
        articleViewSource.includes('bilingualOriginal?<BilingualBody'),
        "Listen controls must only render with the version-matched English original in Bilingual mode");
 ensure(bilingualSource.includes('const [mobileLanguage, setMobileLanguage] = useState<"translated" | "english">("translated")') &&
-       bilingualSource.includes('<View style={styles.sectionActions}>') &&
-       bilingualSource.includes('<BilingualSpeechButton') &&
-       bilingualSource.includes('translatedLanguage={translatedLanguage}') &&
-       bilingualSource.includes('style={[styles.mobileSwitcher, { borderColor: colors.border, backgroundColor: colors.surface }]}') &&
-       bilingualSource.includes('<View style={styles.englishColumnHeading}>') &&
-       bilingualSource.includes('justifyContent: "flex-start", flexWrap: "wrap"') &&
-       bilingualSource.includes('<View style={styles.bodyParagraphControls}>') &&
+       bilingualSource.includes('onPress={switchMobileLanguage}') &&
+       bilingualSource.includes('<LanguageSpeechButton') &&
+       bilingualSource.includes('text={mobileLanguage === "translated" ? localized : english}') &&
+       bilingualSource.includes('locale={mobileLanguage === "translated" ? translatedLanguage : "en-US"}') &&
        bilingualSource.includes('accessibilityLabel={showEnglish ? translatedHint : englishHint}') &&
        bilingualSource.includes('onPress={switchLanguage}') &&
-       bilingualSource.includes('{showEnglish ? translatedHint : "EN"} ↔') &&
-       bilingualSource.includes('english={englishParagraphs[index].text}') &&
-       bilingualSource.includes('wholeBodyEnglish && (') &&
+       bilingualSource.includes('text={showEnglish ? english : localized}') &&
+       bilingualSource.includes('locale={showEnglish ? "en-US" : translatedLanguage}') &&
        !bilingualSource.includes('inlineEnglishMark') &&
        !bilingualSource.includes('EN ·'),
-       "Mobile bilingual Listen shares the language-switch row and carries the translated locale");
+       "Mobile Listen follows the visible summary/paragraph language and stops before language switches");
 ensure(bilingualSource.includes('selectable={selectable}') &&
        bilingualSource.includes('onPress={!selectable && englishAvailable ? switchLanguage : undefined}') &&
        bilingualSource.includes('initiallyEnglish={selectable && wholeBodyEnglish}') &&
        bilingualSource.includes('key={`${translated.article_version_id}:${english.article_version_id}:${index}:${wholeBodyEnglish}`}') &&
-       bilingualSource.includes('onPress={() => setWholeBodyEnglish(false)}') &&
+       bilingualSource.includes('setWholeBodyEnglish(false)') &&
        bilingualSource.includes('englishAvailable && (') &&
        bilingualSource.includes('{showEnglish ? translatedHint : "EN"} ↔') &&
        !bilingualSource.includes('inlineEnglishMark') &&
        !bilingualSource.includes('EN ·'),
-       "Mobile bilingual English switch preserves paragraph taps and admin selection, avoids false alignment, and hides controls for empty English");
+       "Mobile bilingual language switches preserve paragraph taps/admin selection and stop stale speech");
 ensure(bilingualSource.includes("const { stop } = useEnglishSpeech();") &&
        bilingualSource.includes("useEffect(() => () => { stop(); }, [stop]);") &&
        bilingualSource.includes("<EnglishVoicePicker />") &&
@@ -947,14 +943,16 @@ ensure(speechControllerSource.includes("  useContext,") &&
 
 ensure(speechControllerSource.includes("Speech.getAvailableVoicesAsync()") &&
        speechControllerSource.includes("voiceRank(b) - voiceRank(a)") &&
+       speechControllerSource.includes("naturalVoiceNameScore") &&
+       speechControllerSource.includes("browserVoiceRank") &&
+       speechControllerSource.includes("bestBrowserVoice") &&
        speechControllerSource.includes("VOICE_STORAGE_KEY") &&
        speechControllerSource.includes("preferredEnglish") &&
-       speechControllerSource.includes("localeMatches(voice.lang, segment.locale)") &&
        speechControllerSource.includes('Platform.OS === "web" ? 220 : 950') &&
        speechButtonSource.includes("export function EnglishVoicePicker()") &&
        speechButtonSource.includes("voices.map((voice)") &&
        bilingualSource.includes("<EnglishVoicePicker />"),
-       "Bilingual reader prefers natural installed voices, matches each language, and lets the user override English without cloud inference");
+       "Free speech prefers the best available natural/enhanced system voice for each language");
 
 let passed = 0;
 for (const check of checks) {
