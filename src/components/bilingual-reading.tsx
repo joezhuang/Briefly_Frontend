@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, useWindowDimensions, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { EnglishSpeechButton, EnglishVoicePicker } from "@/components/english-speech-button";
+import {
+  BilingualSpeechButton,
+  EnglishSpeechButton,
+  EnglishVoicePicker,
+} from "@/components/english-speech-button";
 import { useEnglishSpeech } from "@/context/english-speech";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -60,10 +64,12 @@ function BilingualPair({
   selectable,
   heading,
   passageId,
+  translatedLanguage,
 }: {
   localized: string;
   english: string;
   passageId: string;
+  translatedLanguage: string;
   stacked: boolean;
   selectable: boolean;
   heading?: string;
@@ -95,7 +101,13 @@ function BilingualPair({
                 {mobileLanguage === "translated" ? label.mobileEnglish : label.mobileTranslated} ↔
               </Text>
             </Pressable>
-            <EnglishSpeechButton passageId={passageId} english={english} compact />
+            <BilingualSpeechButton
+              passageId={passageId}
+              translated={localized}
+              english={english}
+              translatedLanguage={translatedLanguage}
+              compact
+            />
           </View>
         </View>
         <Text selectable={selectable} style={[styles.paragraph, { color: colors.text }]}>
@@ -114,7 +126,13 @@ function BilingualPair({
       <View style={styles.column}>
         <View style={styles.englishColumnHeading}>
           <Text style={[styles.columnLabel, { color: colors.textMuted }]}>{label.original}</Text>
-          <EnglishSpeechButton passageId={passageId} english={english} compact />
+          <BilingualSpeechButton
+            passageId={passageId}
+            translated={localized}
+            english={english}
+            translatedLanguage={translatedLanguage}
+            compact
+          />
         </View>
         <Text selectable={selectable} style={[styles.paragraph, { color: colors.text }]}>{english || "—"}</Text>
       </View>
@@ -144,6 +162,8 @@ export function BilingualBrief({
   const { colors } = useBrieflyTheme();
   const label = copy[language] ?? copy.en;
   const stacked = width < 800;
+  const translatedLanguage =
+    translated.content_language ?? translated.language ?? language;
   return (
     <View style={[styles.brief, { backgroundColor: colors.surfaceMuted }]}>
       <View style={styles.bilingualHeader}>
@@ -170,6 +190,7 @@ export function BilingualBrief({
             localized={String(translated[field] || "")}
             english={String(english[field] || "")}
             passageId={`${english.article_version_id}:summary:${field}`}
+            translatedLanguage={translatedLanguage}
             stacked={stacked}
             selectable={selectable}
           />
@@ -201,6 +222,7 @@ function TappableBodyParagraph({
   englishHint,
   translatedHint,
   passageId,
+  translatedLanguage,
   selectable = false,
   initiallyEnglish = false,
 }: {
@@ -209,6 +231,7 @@ function TappableBodyParagraph({
   passageId: string;
   englishHint: string;
   translatedHint: string;
+  translatedLanguage: string;
   selectable?: boolean;
   initiallyEnglish?: boolean;
 }) {
@@ -236,7 +259,13 @@ function TappableBodyParagraph({
               {showEnglish ? translatedHint : "EN"} ↔
             </Text>
           </Pressable>
-          <EnglishSpeechButton passageId={passageId} english={english} compact />
+          <BilingualSpeechButton
+            passageId={passageId}
+            translated={localized}
+            english={english}
+            translatedLanguage={translatedLanguage}
+            compact
+          />
         </View>
       )}
       <Text
@@ -268,6 +297,8 @@ export function BilingualBody({
   const { stop } = useEnglishSpeech();
   const label = copy[language] ?? copy.en;
   const stacked = width < 800;
+  const translatedLanguage =
+    translated.content_language ?? translated.language ?? language;
   const [wholeBodyEnglish, setWholeBodyEnglish] = useState(false);
   // Leaving Bilingual mode removes these controls. Don't leave an old passage
   // speaking while the user is back in the English-only/translated-only view.
@@ -321,6 +352,7 @@ export function BilingualBody({
             localized={paragraph.text}
             english={englishParagraphs[index].text}
             passageId={`${english.article_version_id}:body:${index}`}
+            translatedLanguage={translatedLanguage}
             stacked={false}
             selectable={selectable}
           />
@@ -402,6 +434,7 @@ export function BilingualBody({
           passageId={`${english.article_version_id}:body:${index}`}
           englishHint={label.mobileEnglish}
           translatedHint={label.mobileTranslated}
+          translatedLanguage={translatedLanguage}
           selectable={selectable}
           initiallyEnglish={selectable && wholeBodyEnglish}
         />
