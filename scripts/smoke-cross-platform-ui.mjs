@@ -817,6 +817,7 @@ ensure(briefRepairView.includes('const sourceBrief=bilingualOriginal??article;')
        briefRepairView.includes('hasMissingSourceBrief&&bilingualOriginal.article_version_id===bilingualLatestEnglishVersionId&&briefRepair?.available') &&
        briefRepairView.includes('bilingualOriginal?<><BilingualBrief'),
        "Bilingual Story shows English brief Retry only for the current matching source version");
+const bilingualSource = read("src/components/bilingual-reading.tsx");
 const speechContextSource = read("src/context/english-speech.tsx");
 const speechButtonSource = read("src/components/english-speech-button.tsx");
 ensure(speechContextSource.includes('window.speechSynthesis') &&
@@ -829,8 +830,6 @@ ensure(speechButtonSource.includes('export function BilingualSpeechButton') &&
        speechButtonSource.includes('toggleSequence(passageId, segments)') &&
        bilingualSource.includes('<BilingualSpeechButton'),
        "Bilingual Listen queues translated speech followed by English");
-
-const bilingualSource = read("src/components/bilingual-reading.tsx");
 ensure(bilingualSource.includes('onRetryMissingSection(field)') &&
        bilingualSource.includes('!String(translated[field] ?? "").trim()') &&
        bilingualSource.includes('englishRetryAvailable') &&
@@ -858,11 +857,10 @@ ensure(apiSource.includes('status: "succeeded" | "not_needed" | "translation_pen
        apiSource.includes('target_language='),
        "Retry API supports version-checked existing translation repairs");
 
-// On-device English speech must remain a free, version-scoped bilingual
+// Device/browser speech must remain a free, version-scoped bilingual
 // reading action with no backend inference or competing podcast playback.
 const articleViewSource = read("src/components/article-view.tsx");
-const speechButtonSource = read("src/components/english-speech-button.tsx");
-const speechControllerSource = read("src/context/english-speech.tsx");
+const speechControllerSource = speechContextSource;
 const podcastPlayerSource = read("src/context/podcast-player.tsx");
 const rootLayoutSource = read("src/app/_layout.tsx");
 const packageManifest = JSON.parse(read("package.json"));
@@ -876,13 +874,14 @@ ensure(rootLayoutSource.includes("<PodcastPlayerProvider>") &&
        rootLayoutSource.indexOf("<PodcastPlayerProvider>") < rootLayoutSource.indexOf("<EnglishSpeechProvider>"),
        "Speech context must be shared across bilingual passages beneath podcast playback");
 ensure(speechControllerSource.includes('import * as Speech from "expo-speech"') &&
-       speechControllerSource.includes("Speech.speak(chunk, {") &&
-       speechControllerSource.includes("void Speech.stop()") &&
+       speechControllerSource.includes("Speech.speak(segment.text, {") &&
+       speechControllerSource.includes("window.speechSynthesis") &&
+       speechControllerSource.includes("synth.speak(utterance)") &&
        speechControllerSource.includes("pauseForSpeech()") &&
-       speechControllerSource.includes('language: locale') &&
+       speechControllerSource.includes('language: segment.locale') &&
        speechControllerSource.includes("rate: 1.0") &&
        speechControllerSource.includes('AppState.addEventListener("change"'),
-       "Speech must use device TTS, speak one passage at a time and stop on app background");
+       "Speech must use native TTS on mobile, direct browser TTS on web, one passage at a time");
 ensure(podcastPlayerSource.includes("pauseForSpeech: () => void") &&
        podcastPlayerSource.includes("const pauseForSpeech = useCallback(() => {") &&
        podcastPlayerSource.includes("player.pause();"),
@@ -894,11 +893,13 @@ ensure(speechButtonSource.includes('toggle(passageId, text, "en-US")') &&
        "Free English Listen/Stop actions use explicit English speech and touch-size accessibility");
 ensure(bilingualSource.includes('passageId={`${english.article_version_id}:summary:${field}`}') &&
        bilingualSource.includes('passageId={`${english.article_version_id}:body:${index}`}') &&
-       bilingualSource.includes('<EnglishSpeechButton passageId={passageId} english={english} compact />') &&
+       bilingualSource.includes('<BilingualSpeechButton') &&
+       bilingualSource.includes('translated={localized}') &&
+       bilingualSource.includes('english={english}') &&
        bilingualSource.includes('english={englishParagraphs[index].text}') &&
        bilingualSource.includes('index === 1 && (') &&
        bilingualSource.includes('wholeBodyEnglish && ('),
-       "English Listen appears for summary and body passages in aligned/unaligned web and mobile layouts");
+       "Bilingual Listen appears for aligned summary/body passages while unaligned views keep safe single-language controls");
 ensure(storySource.includes('bilingualOriginal={effectiveLanguageMode === "bilingual" && bilingualEnabled ? matchedEnglishArticle : null}') &&
        !storySource.includes("englishSpeechSource=") &&
        !articleViewSource.includes("EnglishSpeechButton") &&
@@ -909,7 +910,8 @@ ensure(storySource.includes('bilingualOriginal={effectiveLanguageMode === "bilin
        "Listen controls must only render with the version-matched English original in Bilingual mode");
 ensure(bilingualSource.includes('const [mobileLanguage, setMobileLanguage] = useState<"translated" | "english">("translated")') &&
        bilingualSource.includes('<View style={styles.sectionActions}>') &&
-       bilingualSource.includes('<EnglishSpeechButton passageId={passageId} english={english} compact />') &&
+       bilingualSource.includes('<BilingualSpeechButton') &&
+       bilingualSource.includes('translatedLanguage={translatedLanguage}') &&
        bilingualSource.includes('style={[styles.mobileSwitcher, { borderColor: colors.border, backgroundColor: colors.surface }]}') &&
        bilingualSource.includes('<View style={styles.englishColumnHeading}>') &&
        bilingualSource.includes('justifyContent: "flex-start", flexWrap: "wrap"') &&
@@ -921,7 +923,7 @@ ensure(bilingualSource.includes('const [mobileLanguage, setMobileLanguage] = use
        bilingualSource.includes('wholeBodyEnglish && (') &&
        !bilingualSource.includes('inlineEnglishMark') &&
        !bilingualSource.includes('EN ·'),
-       "Mobile Listen shares the summary switch row; EN beside paragraph Listen is the language toggle without inline prefixes");
+       "Mobile bilingual Listen shares the language-switch row and carries the translated locale");
 ensure(bilingualSource.includes('selectable={selectable}') &&
        bilingualSource.includes('onPress={!selectable && englishAvailable ? switchLanguage : undefined}') &&
        bilingualSource.includes('initiallyEnglish={selectable && wholeBodyEnglish}') &&
@@ -946,12 +948,13 @@ ensure(speechControllerSource.includes("  useContext,") &&
 ensure(speechControllerSource.includes("Speech.getAvailableVoicesAsync()") &&
        speechControllerSource.includes("voiceRank(b) - voiceRank(a)") &&
        speechControllerSource.includes("VOICE_STORAGE_KEY") &&
-       speechControllerSource.includes('voice: selectedVoice') &&
+       speechControllerSource.includes("preferredEnglish") &&
+       speechControllerSource.includes("localeMatches(voice.lang, segment.locale)") &&
        speechControllerSource.includes('Platform.OS === "web" ? 220 : 950') &&
        speechButtonSource.includes("export function EnglishVoicePicker()") &&
        speechButtonSource.includes("voices.map((voice)") &&
        bilingualSource.includes("<EnglishVoicePicker />"),
-       "Web bilingual reader must prefer natural-sounding installed voices and let the user override the choice without cloud inference");
+       "Bilingual reader prefers natural installed voices, matches each language, and lets the user override English without cloud inference");
 
 let passed = 0;
 for (const check of checks) {
