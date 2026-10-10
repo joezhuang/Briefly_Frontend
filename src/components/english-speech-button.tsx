@@ -8,11 +8,11 @@ import { useBrieflyTheme } from "@/context/theme";
 // Text-to-speech is device-provided and free for all readers. The English
 // source is passed explicitly, independent of the visible reading/UI language.
 const copy = {
-  en: { listen: "Listen to English", stop: "Stop English", shortListen: "Listen", shortStop: "Stop", voice: "English voice", pick: "Choose English voice" },
-  es: { listen: "Escuchar en inglés", stop: "Detener inglés", shortListen: "Escuchar", shortStop: "Detener", voice: "Voz inglesa", pick: "Elegir voz inglesa" },
-  ja: { listen: "英語を聴く", stop: "英語の再生を停止", shortListen: "聴く", shortStop: "停止", voice: "英語の音声", pick: "英語の音声を選ぶ" },
-  "zh-CN": { listen: "收听英语", stop: "停止英语朗读", shortListen: "收听", shortStop: "停止", voice: "英语音色", pick: "选择英语音色" },
-  "zh-TW": { listen: "收聽英語", stop: "停止英語朗讀", shortListen: "收聽", shortStop: "停止", voice: "英語音色", pick: "選擇英語音色" },
+  en: { listen: "Listen to English", stop: "Stop English", shortListen: "Listen", shortStop: "Stop", listenBoth: "Listen to both languages", voice: "English voice", pick: "Choose English voice" },
+  es: { listen: "Escuchar en inglés", stop: "Detener inglés", shortListen: "Escuchar", shortStop: "Detener", listenBoth: "Escuchar ambos idiomas", voice: "Voz inglesa", pick: "Elegir voz inglesa" },
+  ja: { listen: "英語を聴く", stop: "英語の再生を停止", shortListen: "聴く", shortStop: "停止", listenBoth: "両方の言語を聴く", voice: "英語の音声", pick: "英語の音声を選ぶ" },
+  "zh-CN": { listen: "收听英语", stop: "停止英语朗读", shortListen: "收听", shortStop: "停止", listenBoth: "收听双语", voice: "英语音色", pick: "选择英语音色" },
+  "zh-TW": { listen: "收聽英語", stop: "停止英語朗讀", shortListen: "收聽", shortStop: "停止", listenBoth: "收聽雙語", voice: "英語音色", pick: "選擇英語音色" },
 } as const;
 
 export function EnglishSpeechButton({
@@ -48,6 +48,60 @@ export function EnglishSpeechButton({
           {playing ? "■" : "🔊"}
         </Text>
         <Text style={[styles.label, { color: colors.accent }]}>{actionLabel}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+export function BilingualSpeechButton({
+  passageId,
+  translated,
+  english,
+  translatedLanguage,
+  compact = true,
+}: {
+  passageId: string;
+  translated: string;
+  english: string;
+  translatedLanguage: string;
+  compact?: boolean;
+}) {
+  const { colors } = useBrieflyTheme();
+  const { language } = useBrieflyLanguage();
+  const { activePassage, toggleSequence } = useEnglishSpeech();
+  const translatedText = String(translated || "").trim();
+  const englishText = String(english || "").trim();
+  if (!translatedText && !englishText) return null;
+
+  const labels = copy[language] ?? copy.en;
+  const playing = activePassage === passageId;
+  const segments = [
+    ...(translatedText
+      ? [{ text: translatedText, locale: translatedLanguage }]
+      : []),
+    ...(englishText ? [{ text: englishText, locale: "en-US" }] : []),
+  ];
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={playing ? labels.stop : labels.listenBoth}
+      accessibilityState={{ selected: playing }}
+      onPress={() => toggleSequence(passageId, segments)}
+      style={[
+        styles.button,
+        { borderColor: colors.border, backgroundColor: colors.surface },
+      ]}
+    >
+      <View style={styles.content}>
+        <Text style={[styles.symbol, { color: colors.accent }]}>
+          {playing ? "■" : "🔊"}
+        </Text>
+        <Text style={[styles.label, { color: colors.accent }]}>
+          {playing
+            ? (compact ? labels.shortStop : labels.stop)
+            : (compact ? labels.shortListen : labels.listenBoth)}
+        </Text>
       </View>
     </Pressable>
   );
