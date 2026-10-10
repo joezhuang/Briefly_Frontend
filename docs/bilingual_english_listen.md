@@ -88,3 +88,12 @@ Run `npm run smoke:ui`, `npm run smoke:journey`,
 Device speech needs an app binary with `expo-speech`; an OTA update cannot
 install a missing native module. Changing button placement alone requires
 no further native rebuild if the module is already installed.
+
+
+## Web and bilingual playback
+
+- Web playback uses the browser Web Speech API directly so speech starts inside the user's click gesture.
+- iOS and Android continue to use `expo-speech`.
+- In aligned bilingual mode, one Listen action reads the translated passage first and then the matching English original.
+- Each segment requests a voice matching its language. The existing English voice picker still controls the English segment.
+- If paragraph structures do not align, Briefly avoids inventing a bilingual speech pair; the existing per-language controls remain independent.
