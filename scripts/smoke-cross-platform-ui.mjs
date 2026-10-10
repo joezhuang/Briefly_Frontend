@@ -838,6 +838,12 @@ ensure(speechButtonSource.includes('export function LanguageSpeechButton') &&
        bilingualSource.includes('mobileLanguage === "translated" ? localized : english') &&
        bilingualSource.includes('showEnglish ? english : localized'),
        "Bilingual Listen speaks only the language currently visible to the reader");
+ensure(speechButtonSource.includes('function isXInAppBrowser(): boolean') &&
+       speechButtonSource.includes('/TwitterAndroid|Twitter for iPhone/i') &&
+       speechButtonSource.includes('return <XBrowserSpeechFallback />') &&
+       speechButtonSource.includes('Open in browser to listen') &&
+       speechButtonSource.includes('if (isXInAppBrowser() || voices.length < 2) return null;'),
+       "X in-app browser replaces unsupported free TTS with an external-browser listening hint");
 ensure(bilingualSource.includes('onRetryMissingSection(field)') &&
        bilingualSource.includes('!String(translated[field] ?? "").trim()') &&
        bilingualSource.includes('englishRetryAvailable') &&
