@@ -78,3 +78,20 @@ parameters.
 The proxy accepts only HTTP(S) image URLs coming from the canonical Briefly article,
 requires an `image/*` response type, caps the image at 10 MB, and applies short CDN
 caching for living events. Legacy immutable share links use the longer cache policy.
+
+
+## Native app-link compatibility
+
+Both the canonical custom domain and the legacy Vercel hostname remain declared as
+native app-link hosts:
+
+- `briefly-news.deeplyapp.uk`
+- `briefly-news-analysis.vercel.app`
+
+iOS includes both as Associated Domains and Android includes both in verified HTTPS
+intent filters for `/s/`, `/story/`, and `/share/`.
+
+Adding a new Associated Domain or Android intent-filter host changes native app
+entitlements/manifest data, so users need an app build containing the new domain before
+links from that domain can hand off from an in-app browser such as X to Briefly. The
+legacy hostname remains supported so previously shared links continue opening the app.

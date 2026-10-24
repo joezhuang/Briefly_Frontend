@@ -12,6 +12,7 @@
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.hybridgalaxy.briefly",
       "associatedDomains": [
+        "applinks:briefly-news.deeplyapp.uk",
         "applinks:briefly-news-analysis.vercel.app"
       ]
     },
@@ -29,11 +30,41 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "briefly-news-analysis.vercel.app", "pathPrefix": "/s/" },
-            { "scheme": "https", "host": "briefly-news-analysis.vercel.app", "pathPrefix": "/story/" },
-            { "scheme": "https", "host": "briefly-news-analysis.vercel.app", "pathPrefix": "/share/" }
+            {
+              "scheme": "https",
+              "host": "briefly-news.deeplyapp.uk",
+              "pathPrefix": "/s/"
+            },
+            {
+              "scheme": "https",
+              "host": "briefly-news.deeplyapp.uk",
+              "pathPrefix": "/story/"
+            },
+            {
+              "scheme": "https",
+              "host": "briefly-news.deeplyapp.uk",
+              "pathPrefix": "/share/"
+            },
+            {
+              "scheme": "https",
+              "host": "briefly-news-analysis.vercel.app",
+              "pathPrefix": "/s/"
+            },
+            {
+              "scheme": "https",
+              "host": "briefly-news-analysis.vercel.app",
+              "pathPrefix": "/story/"
+            },
+            {
+              "scheme": "https",
+              "host": "briefly-news-analysis.vercel.app",
+              "pathPrefix": "/share/"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "permissions": [

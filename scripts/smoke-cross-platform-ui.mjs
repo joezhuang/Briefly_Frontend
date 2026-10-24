@@ -691,6 +691,23 @@ const generationAction = storySection(
   "  const bilingualGenerationText =",
 );
 const ensure = (condition, message) => { if (!condition) throw new Error(message); };
+const nativeAppConfig = JSON.parse(read("app.json"));
+const iosAssociatedDomains = nativeAppConfig.expo?.ios?.associatedDomains ?? [];
+const androidIntentData =
+  nativeAppConfig.expo?.android?.intentFilters?.flatMap((filter) => filter.data ?? []) ?? [];
+ensure(iosAssociatedDomains.includes("applinks:briefly-news.deeplyapp.uk") &&
+       iosAssociatedDomains.includes("applinks:briefly-news-analysis.vercel.app"),
+       "iOS keeps the legacy Vercel universal link while adding the custom Briefly domain");
+ensure(androidIntentData.some((item) =>
+         item.scheme === "https" &&
+         item.host === "briefly-news.deeplyapp.uk" &&
+         item.pathPrefix === "/s/") &&
+       androidIntentData.some((item) =>
+         item.scheme === "https" &&
+         item.host === "briefly-news-analysis.vercel.app" &&
+         item.pathPrefix === "/s/"),
+       "Android verifies both the custom Briefly domain and the legacy Vercel share host");
+
 const publicWebUrlSource = read("src/navigation/public-web-url.ts");
 const storyShareSource = read("src/navigation/story-share.ts");
 const storyRouteSource = read("src/app/story/[slug].tsx");
