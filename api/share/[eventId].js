@@ -163,7 +163,7 @@ module.exports = async function handler(request, response) {
   const protocol = String(
     first(request.headers["x-forwarded-proto"]) || "https",
   ).split(",")[0].trim();
-  const host = String(request.headers.host || "briefly-news-analysis.vercel.app");
+  const host = String(request.headers.host || "briefly-news.deeplyapp.uk");
   const origin = `${protocol}://${host}`;
 
   if (!key) {

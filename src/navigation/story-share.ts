@@ -1,4 +1,5 @@
 import type { CanonicalArticle } from "@/models/article";
+import { getBrieflyPublicWebBase } from "@/navigation/public-web-url";
 
 const BRIEFLY_UI_LANGUAGES = ["en", "es", "ja", "zh-CN", "zh-TW"] as const;
 
@@ -38,9 +39,9 @@ export function buildPublicStoryShareUrl(
   contentLanguageOverride?: string,
   bilingualPair?: { translationVersionId: number; englishVersionId: number } | null,
 ) {
-  const webBase = process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, "");
+  const webBase = getBrieflyPublicWebBase();
   const eventId = String(article.event_id || "").trim();
-  if (!webBase || !eventId) return null;
+  if (!eventId) return null;
 
   const url = new URL(`${webBase}/s/${encodeURIComponent(eventId)}`);
   const uiFromHref = uiLanguageFromHref(_href);

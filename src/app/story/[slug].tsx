@@ -35,6 +35,7 @@ import { RelatedStoriesCarousel } from "@/components/related-stories-carousel";
 import { ScreenState } from "@/components/screen-state";
 // Metro uses the native or web implementation, preserving the existing homepage install banner.
 import { SharedAppChoice } from "@/components/shared-app-choice";
+import { getBrieflyPublicWebBase } from "@/navigation/public-web-url";
 import { StaleStoryNotice } from "@/components/stale-story-notice";
 // Metro resolves the platform-specific .native/.web implementation at runtime.
 // eslint-disable-next-line import/no-unresolved
@@ -153,14 +154,7 @@ function isMobileWebBrowser() {
 }
 
 function getStoryUrl(currentStoryHref: string): string | null {
-  const configuredBase = process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace(/\/$/, "");
-  if (configuredBase) return `${configuredBase}${currentStoryHref}`;
-
-  if (Platform.OS === "web" && typeof window !== "undefined") {
-    return window.location.href;
-  }
-
-  return null;
+  return `${getBrieflyPublicWebBase()}${currentStoryHref}`;
 }
 
 function getGoogleTranslateStoryUrl(

@@ -19,6 +19,25 @@ function requireAll(relativePath, needles) {
   }
 }
 
+const publicWebUrlSource = read("src/navigation/public-web-url.ts");
+const storyShareSource = read("src/navigation/story-share.ts");
+const storyRouteSource = read("src/app/story/[slug].tsx");
+const richShareSource = read("api/share/[eventId].js");
+
+ensure(publicWebUrlSource.includes('https://briefly-news.deeplyapp.uk') &&
+       publicWebUrlSource.includes('https://briefly-news-analysis.vercel.app') &&
+       publicWebUrlSource.includes('LEGACY_BRIEFLY_WEB_URLS.has(configured)') &&
+       publicWebUrlSource.includes('return CANONICAL_BRIEFLY_WEB_URL'),
+       "New public links use the Deeply custom domain while recognizing the legacy Vercel alias");
+ensure(storyShareSource.includes('getBrieflyPublicWebBase()') &&
+       !storyShareSource.includes('process.env.EXPO_PUBLIC_BRIEFLY_WEB_URL?.replace'),
+       "Story shares use the canonical Briefly public web base");
+ensure(storyRouteSource.includes('getBrieflyPublicWebBase()') &&
+       storyRouteSource.includes('return \`${getBrieflyPublicWebBase()}\${currentStoryHref}\`;'),
+       "Story-derived public URLs use the same canonical domain");
+ensure(richShareSource.includes('request.headers.host || "briefly-news.deeplyapp.uk"'),
+       "Rich share metadata falls back to the custom Briefly domain");
+
 const checks = [
   {
     name: "Story route focus and route identity stop old video playback",

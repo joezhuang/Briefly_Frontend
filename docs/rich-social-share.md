@@ -3,7 +3,7 @@
 New shares use an event-stable URL:
 
 ```text
-https://briefly-news-analysis.vercel.app/s/<event_id>
+https://briefly-news.deeplyapp.uk/s/<event_id>
 ```
 
 Vercel rewrites this request to `api/share/[eventId].js`. The function fetches the
@@ -35,7 +35,16 @@ The canonical story remains the actual reading surface.
 
 ## Legacy compatibility
 
-Previously shared URLs such as:
+The former public hostname remains a supported alias for existing links:
+
+```text
+https://briefly-news-analysis.vercel.app/s/<event_id>
+```
+
+New shares use `https://briefly-news.deeplyapp.uk`, but the old Vercel deployment is
+not removed or redirected by this change, so previously shared links continue to work.
+
+Previously shared version URLs such as:
 
 ```text
 /share/623
