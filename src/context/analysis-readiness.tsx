@@ -72,6 +72,17 @@ function pendingAnalysisKey(item: PendingAnalysis) {
 }
 
 function normalizePendingAnalysis(item: PendingAnalysis): PendingAnalysis {
+  if (
+    item.type === "article" &&
+    item.kind !== "translation" &&
+    item.kind !== "refresh" &&
+    item.targetLanguage != null
+  ) {
+    // Legacy initial-analysis watchers could inherit the current UI language.
+    // They own canonical readiness only; translation has its own watcher.
+    item = { ...item, targetLanguage: null };
+  }
+
   if (item.type !== "article" || item.kind !== "refresh") return item;
 
   // A canonical refresh watcher tracks only the next English canonical version.
@@ -345,11 +356,11 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
         item.kind === "refresh"
           ? null
           : item.targetLanguage ?? (language !== "en" ? language : null);
-      const next: PendingAnalysis = {
+      const next = normalizePendingAnalysis({
         ...item,
         targetLanguage,
         type: "article",
-      };
+      } as PendingAnalysis);
       const key = keyFor(next);
       setState((current) => {
         if (current.ownerKey !== ownerKey) return current;
