@@ -831,6 +831,13 @@ ensure(notificationsSource.includes('if (item.kind === "translation") {') &&
        !notificationsSource.includes('const staleTranslation =') &&
        !notificationsSource.includes('if (item.kind !== "translation" &&'),
        "Translation notification checks return before initial/refresh article handling");
+ensure(notificationsSource.includes('function normalizePendingAnalysis(item: PendingAnalysis)') &&
+       notificationsSource.includes('item.type !== "article" || item.kind !== "refresh"') &&
+       notificationsSource.includes('{ ...item, targetLanguage: null }') &&
+       notificationsSource.includes('item.kind === "refresh"\n          ? null') &&
+       notificationsSource.includes('if (item.kind === "refresh") {') &&
+       notificationsSource.includes('completed.push({ ...item, targetLanguage: null, outcome: "ready" })'),
+       "Canonical refresh watchers never inherit localization and legacy persisted refresh watches are repaired");
 ensure(notificationsSource.includes('terminalNotifications.push({') &&
        notificationsSource.includes('outcome: "not_ready"') &&
        notificationsSource.includes('notReadyLabels.detail') &&

@@ -64,6 +64,25 @@ type NotificationState = StoredNotifications & {
   expanded: boolean;
 };
 
+function pendingAnalysisKey(item: PendingAnalysis) {
+  if (item.type === "podcast") {
+    return `podcast:${item.articleVersionId}:${item.language}`;
+  }
+  return `article:${item.kind ?? "initial"}:${item.eventId}:${item.baseVersionId ?? "initial"}:${item.targetLanguage ?? "canonical"}`;
+}
+
+function normalizePendingAnalysis(item: PendingAnalysis): PendingAnalysis {
+  if (item.type !== "article" || item.kind !== "refresh") return item;
+
+  // A canonical refresh watcher tracks only the next English canonical version.
+  // Translation is a separate durable job/watch. Older builds accidentally copied
+  // the current UI language onto refresh watchers, which made them poll a localized
+  // article forever even when no translation had been requested.
+  return item.targetLanguage == null
+    ? item
+    : { ...item, targetLanguage: null };
+}
+
 type AnalysisReadinessContextValue = {
   watchAnalysis: (
     item: Omit<Extract<PendingAnalysis, { type: "article" }>, "type">,
@@ -173,8 +192,13 @@ function validStoredNotifications(value: unknown): StoredNotifications | null {
   const candidate = value as Partial<StoredNotifications>;
   if (!candidate.pending || typeof candidate.pending !== "object") return null;
   if (!Array.isArray(candidate.ready)) return null;
+  const normalizedPending = Object.fromEntries(
+    Object.values(candidate.pending as Record<string, PendingAnalysis>)
+      .map((item) => normalizePendingAnalysis(item))
+      .map((item) => [pendingAnalysisKey(item), item]),
+  );
   return {
-    pending: candidate.pending as Record<string, PendingAnalysis>,
+    pending: normalizedPending,
     ready: candidate.ready as ReadyAnalysis[],
   };
 }
@@ -221,12 +245,10 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
     expanded: false,
   });
 
-  const keyFor = useCallback((item: PendingAnalysis) => {
-    if (item.type === "podcast") {
-      return `podcast:${item.articleVersionId}:${item.language}`;
-    }
-    return `article:${item.kind ?? "initial"}:${item.eventId}:${item.baseVersionId ?? "initial"}:${item.targetLanguage ?? "canonical"}`;
-  }, []);
+  const keyFor = useCallback(
+    (item: PendingAnalysis) => pendingAnalysisKey(item),
+    [],
+  );
 
   const notificationIdentity = useCallback((item: ReadyAnalysis) => {
     if (item.type === "podcast") {
@@ -320,7 +342,9 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
       if (!storageReady) return;
 
       const targetLanguage =
-        item.targetLanguage ?? (language !== "en" ? language : null);
+        item.kind === "refresh"
+          ? null
+          : item.targetLanguage ?? (language !== "en" ? language : null);
       const next: PendingAnalysis = {
         ...item,
         targetLanguage,
@@ -511,6 +535,14 @@ export function AnalysisReadinessProvider({ children }: PropsWithChildren) {
                   outcome: "not_ready",
                 });
               }
+              return;
+            }
+
+            // Refresh readiness is complete as soon as the new canonical English
+            // version exists. Never chain a canonical refresh watcher to localization;
+            // translation has its own immutable source/language watcher.
+            if (item.kind === "refresh") {
+              completed.push({ ...item, targetLanguage: null, outcome: "ready" });
               return;
             }
 
