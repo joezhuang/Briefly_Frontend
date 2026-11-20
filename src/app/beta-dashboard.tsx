@@ -2480,6 +2480,11 @@ function RuntimeConfigEditor({
     canonicalMinSourcesDraft ?? String(config?.canonical_min_sources ?? 1);
   const canonicalMinSourcesValid =
     /^(?:[1-9]|1[0-9]|20)$/.test(canonicalMinSourcesText);
+  const [nationalMinSourcesDraft, setNationalMinSourcesDraft] = useState<string | null>(null);
+  const nationalMinSourcesText =
+    nationalMinSourcesDraft ?? String(config?.national_canonical_min_sources ?? 2);
+  const nationalMinSourcesValid =
+    /^(?:[1-9]|1[0-9]|20)$/.test(nationalMinSourcesText);
   const toggleGroup = (key: string) =>
     setOpenGroups((current) => ({
       ...current,
@@ -3081,7 +3086,7 @@ function RuntimeConfigEditor({
       <ConfigToggle label="Local feed" detail="Show the Local feed." value={config.local_feed_enabled} onValueChange={(value) => onChange("local_feed_enabled", value)} />
       <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
         <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
-          <Text style={[styles.configLabel, { color: colors.text }]}>Minimum full-text sources for initial canonical generation</Text>
+          <Text style={[styles.configLabel, { color: colors.text }]}>Top / Local minimum full-text sources for initial canonical generation</Text>
           <Text style={[styles.configDetail, { color: colors.textMuted }]}>Default 1. Count distinct original publishers whose full text is successfully extracted before generating a new article. Google News itself is not a publisher. Existing-story refresh and Deeply breaking updates have separate rules.</Text>
         </View>
         <View style={stackWideFields ? styles.configInputFullWidth : undefined}>
@@ -3121,6 +3126,48 @@ function RuntimeConfigEditor({
       </View>
       <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
         <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>National minimum independent full-text sources</Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Default 2. National events remain visible with one relevant publisher, but Briefly waits for this many independent usable full-text reports before generating a new canonical analysis. Existing published articles are unaffected.
+          </Text>
+        </View>
+        <View style={stackWideFields ? styles.configInputFullWidth : undefined}>
+          <TextInput
+            value={nationalMinSourcesText}
+            keyboardType="number-pad"
+            accessibilityLabel="National minimum independent full-text sources"
+            onChangeText={(text) => {
+              const next = text.replace(/[^0-9]/g, "");
+              setNationalMinSourcesDraft(next);
+              const number = Number(next);
+              if (next !== "" && Number.isInteger(number) && number >= 1 && number <= 20) {
+                onChange("national_canonical_min_sources", number);
+              }
+            }}
+            onBlur={() => {
+              if (nationalMinSourcesValid) setNationalMinSourcesDraft(null);
+            }}
+            placeholder="2"
+            placeholderTextColor={colors.textMuted}
+            style={[
+              styles.configInput,
+              stackWideFields && styles.configInputFullWidth,
+              {
+                borderColor: nationalMinSourcesValid ? colors.border : colors.accent,
+                backgroundColor: colors.background,
+                color: colors.text,
+              },
+            ]}
+          />
+          {!nationalMinSourcesValid && (
+            <Text style={[styles.configDetail, { color: colors.accent }]}>
+              Enter a whole number from 1 to 20 before saving.
+            </Text>
+          )}
+        </View>
+      </View>
+      <View style={[styles.configFieldRow, stackWideFields && styles.configFieldRowStacked, { borderBottomColor: colors.border }]}>
+        <View style={[styles.configCopy, stackWideFields && styles.configCopyStacked]}>
           <Text style={[styles.configLabel, { color: colors.text }]}>Default feed</Text>
           <Text style={[styles.configDetail, { color: colors.textMuted }]}>Use top, national, or local. If disabled, Briefly falls back to the first enabled feed.</Text>
         </View>
@@ -3140,13 +3187,13 @@ function RuntimeConfigEditor({
       <View style={styles.configActions}>
         <Pressable
           accessibilityRole="button"
-          disabled={saving || !canonicalMinSourcesValid}
+          disabled={saving || !canonicalMinSourcesValid || !nationalMinSourcesValid}
           onPress={onSave}
           style={({ pressed }) => [
             styles.configSaveButton,
             {
               backgroundColor: colors.text,
-              opacity: saving || !canonicalMinSourcesValid ? 0.5 : pressed ? 0.72 : 1,
+              opacity: saving || !canonicalMinSourcesValid || !nationalMinSourcesValid ? 0.5 : pressed ? 0.72 : 1,
             },
           ]}
         >

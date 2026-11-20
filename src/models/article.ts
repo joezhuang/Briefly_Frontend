@@ -50,7 +50,8 @@ export type CanonicalArticle = {
     | "failed"
     | "disabled"
     | "pro_required"
-    | "source_only";
+    | "source_only"
+    | "insufficient_sources";
   generation_policy?:
     | "local_only"
     | "top_eligible"

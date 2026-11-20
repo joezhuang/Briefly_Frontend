@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { trackProductEvent } from "@/analytics/product-analytics";
@@ -54,11 +54,16 @@ const previewCopy = {
     preparing: "Briefly is preparing this analysis from the event evidence.",
     playVideo: "Play video",
     waiting: "You do not need to wait here. Keep browsing other stories and Briefly will notify you in the app when this analysis is ready to read.",
+    moreReporting: "More reporting needed",
+    moreReportingBody: "Briefly is waiting for more independent, usable reporting before preparing its analysis. You can still read the original reports below.",
+    failedBody: "Briefly encountered a problem preparing the analysis. You can retry, or read the original reports below.",
+    readOriginalReports: "Read original reports",
+    noCoverage: "Original reports are not yet available for this event.",
     sourceOnly: "Source coverage",
     proVideo: "PRO · Play video",
     signInVideo: "Sign in to play video",
     sourceOnlyBody: "Briefly has not generated an analysis for this event. Read the original reports below, or watch the available source videos above.",
-    failed: "Briefly could not prepare an authoritative analysis from the available source material.",
+    failed: "Analysis couldn't be completed",
     retry: "Retry",
     retrying: "Retrying…",
     retryFailed: "Unable to restart generation. Please try again.",
@@ -69,11 +74,16 @@ const previewCopy = {
     preparing: "Briefly está preparando este análisis a partir de la evidencia del evento.",
     playVideo: "Reproducir vídeo",
     waiting: "No necesitas esperar aquí. Sigue explorando otras noticias y Briefly te avisará dentro de la app cuando el análisis esté listo para leer.",
+    moreReporting: "Se necesitan más fuentes",
+    moreReportingBody: "Briefly espera más informes independientes y utilizables antes de preparar su análisis. Puedes leer las noticias originales más abajo.",
+    failedBody: "Hubo un problema al preparar el análisis. Puedes reintentarlo o leer las fuentes originales más abajo.",
+    readOriginalReports: "Leer noticias originales",
+    noCoverage: "Aún no hay noticias originales disponibles para este suceso.",
     sourceOnly: "Cobertura de fuentes",
     proVideo: "PRO · Reproducir vídeo",
     signInVideo: "Inicia sesión para ver el vídeo",
     sourceOnlyBody: "Briefly todavía no ha generado un análisis. Puedes leer los reportajes originales o ver los vídeos disponibles arriba.",
-    failed: "Briefly no pudo preparar un análisis autorizado con las fuentes disponibles.",
+    failed: "No se pudo completar el análisis",
     retry: "Reintentar",
     retrying: "Reintentando…",
     retryFailed: "No se pudo reiniciar la generación. Inténtalo de nuevo.",
@@ -84,11 +94,16 @@ const previewCopy = {
     preparing: "イベントの根拠情報からBriefly分析を準備しています。",
     playVideo: "動画を再生",
     waiting: "ここで待つ必要はありません。他のニュースを見ながらお待ちください。分析が読めるようになったらBriefly内でお知らせします。",
+    moreReporting: "報道を確認中です",
+    moreReportingBody: "Brieflyは独立した利用可能な報道がさらに集まるまで分析を保留しています。下の元記事を直接読むことができます。",
+    failedBody: "分析の準備中に問題が発生しました。再試行するか、下の元記事をご覧ください。",
+    readOriginalReports: "元記事を読む",
+    noCoverage: "この出来事の元記事はまだありません。",
     sourceOnly: "元記事の報道",
     proVideo: "PRO · 動画を再生",
     signInVideo: "ログインして動画を視聴",
     sourceOnlyBody: "この出来事の分析はまだ生成されていません。元記事を読んだり、上にある動画を視聴したりできます。",
-    failed: "利用可能な情報から信頼できるBriefly分析を作成できませんでした。",
+    failed: "分析を完了できませんでした",
     retry: "再試行",
     retrying: "再試行中…",
     retryFailed: "生成を再開できませんでした。もう一度お試しください。",
@@ -99,11 +114,16 @@ const previewCopy = {
     preparing: "Briefly 正在根据事件证据准备这篇分析。",
     playVideo: "播放视频",
     waiting: "你不需要停留在这里等待。可以继续浏览其他新闻，分析准备好后 Briefly 会在应用内通知你。",
+    moreReporting: "等待更多独立报道",
+    moreReportingBody: "Briefly 正在等待更多可用的独立报道，再生成可靠的分析。你仍可阅读下方的原始报道。",
+    failedBody: "准备分析时遇到问题。你可以重试，或阅读下方的原始报道。",
+    readOriginalReports: "阅读原始报道",
+    noCoverage: "该事件暂时没有可阅读的原始报道。",
     sourceOnly: "新闻来源",
     proVideo: "PRO · 播放视频",
     signInVideo: "登录后播放视频",
     sourceOnlyBody: "此事件尚未生成 Briefly 分析。你可以阅读下方的原始报道，或观看上方的视频。",
-    failed: "Briefly 无法根据现有来源生成可靠的权威分析。",
+    failed: "分析未能完成",
     retry: "重试",
     retrying: "正在重试…",
     retryFailed: "无法重新启动生成，请重试。",
@@ -114,11 +134,16 @@ const previewCopy = {
     preparing: "Briefly 正在根據事件證據準備這篇分析。",
     playVideo: "播放影片",
     waiting: "你不需要停留在這裡等待。可以繼續瀏覽其他新聞，分析準備好後 Briefly 會在應用內通知你。",
+    moreReporting: "等待更多獨立報導",
+    moreReportingBody: "Briefly 正在等待更多可用的獨立報導，再產生可靠的分析。你仍可閱讀下方的原始報導。",
+    failedBody: "準備分析時發生問題。你可以重試，或閱讀下方的原始報導。",
+    readOriginalReports: "閱讀原始報導",
+    noCoverage: "此事件暫時沒有可閱讀的原始報導。",
     sourceOnly: "新聞來源",
     proVideo: "PRO · 播放影片",
     signInVideo: "登入後播放影片",
     sourceOnlyBody: "此事件尚未產生 Briefly 分析。你可以閱讀下方的原始報導，或觀看上方的影片。",
-    failed: "Briefly 無法根據現有來源產生可靠的權威分析。",
+    failed: "分析未能完成",
     retry: "重試",
     retrying: "正在重試…",
     retryFailed: "無法重新啟動產生，請再試一次。",
@@ -147,8 +172,22 @@ export function EventPreviewView({
   const { colors } = useBrieflyTheme();
   const copy = previewCopy[language] ?? previewCopy.en;
   const sourceCount = article.source_count ?? article.coverage?.length ?? 0;
-  const failed = article.generation_status === "failed";
+  const sourceShortage =
+    article.generation_status === "insufficient_sources" ||
+    article.generation_policy === "insufficient_sources";
+  const failed = article.generation_status === "failed" && !sourceShortage;
   const sourceOnly = article.generation_status === "source_only";
+  const scrollRef = useRef<ScrollView>(null);
+  const coverageOffset = useRef<number | null>(null);
+  const hasOriginalReports = (article.coverage?.length ?? 0) > 0;
+  const scrollToOriginalReports = () => {
+    if (coverageOffset.current != null) {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, coverageOffset.current - 16),
+        animated: true,
+      });
+    }
+  };
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
   const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null);
@@ -222,6 +261,7 @@ export function EventPreviewView({
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={[styles.screen, { backgroundColor: colors.surface }]}
       contentContainerStyle={styles.scrollContent}
     >
@@ -305,11 +345,29 @@ export function EventPreviewView({
 
         <View style={[styles.statusCard, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}> 
           <Text style={[styles.statusTitle, { color: colors.text }]}> 
-            {sourceOnly ? copy.sourceOnly : failed ? copy.failed : copy.preparing}
+            {sourceShortage
+              ? copy.moreReporting
+              : sourceOnly ? copy.sourceOnly : failed ? copy.failed : copy.preparing}
           </Text>
-          {!failed && (
+          <Text style={[styles.statusBody, { color: colors.textMuted }]}>
+            {sourceShortage
+              ? copy.moreReportingBody
+              : sourceOnly ? copy.sourceOnlyBody : failed ? copy.failedBody : copy.waiting}
+          </Text>
+          {hasOriginalReports ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={copy.readOriginalReports}
+              onPress={scrollToOriginalReports}
+              style={styles.coverageJump}
+            >
+              <Text style={[styles.coverageJumpText, { color: colors.accent }]}>
+                {copy.readOriginalReports} ↓
+              </Text>
+            </Pressable>
+          ) : (
             <Text style={[styles.statusBody, { color: colors.textMuted }]}>
-              {sourceOnly ? copy.sourceOnlyBody : copy.waiting}
+              {copy.noCoverage}
             </Text>
           )}
           {failed && onRetry && (
@@ -335,7 +393,10 @@ export function EventPreviewView({
         </View>
 
         {!!article.coverage?.length && (
-          <View style={styles.coverageSection}>
+          <View
+            style={styles.coverageSection}
+            onLayout={(event) => { coverageOffset.current = event.nativeEvent.layout.y; }}
+          >
             <Text style={[styles.coverageTitle, { color: colors.text }]}>{copy.coverage}</Text>
             {article.coverage.map((item) => (
               <Pressable
@@ -391,6 +452,8 @@ const styles = StyleSheet.create({
   statusCard: { marginTop: 28, borderWidth: 1, borderRadius: 16, padding: 18, gap: 14 },
   statusTitle: { fontSize: 16, lineHeight: 23, fontWeight: "800" },
   statusBody: { fontSize: 14, lineHeight: 21 },
+  coverageJump: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center", paddingVertical: 8 },
+  coverageJumpText: { fontSize: 14, fontWeight: "800" },
   retryButton: { alignSelf: "flex-start", borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   retryButtonDisabled: { opacity: 0.55 },
   retryText: { fontSize: 13, fontWeight: "800" },
