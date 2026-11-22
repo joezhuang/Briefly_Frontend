@@ -1039,6 +1039,45 @@ export default function HomeScreen() {
     <FeedCategoryBar active={scope} onFeedScopePress={switchScope} />
   );
 
+  // Keep the explanation in the lead-story column, directly after its
+  // article at every breakpoint. It describes *only* the lead story.
+  const leadContextPanel = !!leadWhyItMatters && (
+    <Pressable
+    accessibilityRole={Platform.OS === "web" ? "link" : "button"}
+    accessibilityLabel={edition.readAnalysis}
+    onPress={() =>
+    router.push(storyTileHref(lead, "feed", scope) as never)
+    }
+    style={({ pressed }) => [
+    styles.contextPanel,
+    {
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    opacity: pressed ? 0.82 : 1,
+    },
+    ]}
+    >
+    <View style={[styles.contextAccent, { backgroundColor: colors.accent }]} />
+    <View style={styles.contextCopy}>
+    <Text style={[styles.contextEyebrow, { color: colors.accent }]}>
+    {edition.context}
+    </Text>
+    <Text
+    style={[styles.contextBody, { color: colors.text }]}
+    numberOfLines={compactEditorial ? 3 : 2}
+    >
+    {leadWhyItMatters}
+    </Text>
+    </View>
+    {!compactEditorial && (
+    <Text style={[styles.contextAction, { color: colors.accent }]}>
+    {edition.readAnalysis} →
+    </Text>
+    )}
+    </Pressable>
+
+  );
+
   const listHeader = (
     <View
       style={[
@@ -1191,6 +1230,7 @@ export default function HomeScreen() {
             <View style={styles.heroGrid}>
               <View style={styles.heroColumn}>
                 {editorialFeature(lead, 1, "hero")}
+                {leadContextPanel}
               </View>
               <View style={styles.secondaryColumn}>
                 {secondary.map((article, index) =>
@@ -1201,6 +1241,7 @@ export default function HomeScreen() {
           ) : (
             <View style={styles.stack}>
               {editorialFeature(lead, 1, "hero")}
+              {leadContextPanel}
               <View style={tablet ? styles.twoColumnGrid : styles.stack}>
                 {secondary.map((article, index) => (
                   <View
@@ -1214,41 +1255,6 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {!!leadWhyItMatters && (
-            <Pressable
-              accessibilityRole={Platform.OS === "web" ? "link" : "button"}
-              accessibilityLabel={edition.readAnalysis}
-              onPress={() =>
-                router.push(storyTileHref(lead, "feed", scope) as never)
-              }
-              style={({ pressed }) => [
-                styles.contextPanel,
-                {
-                  borderColor: colors.border,
-                  backgroundColor: colors.surface,
-                  opacity: pressed ? 0.82 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.contextAccent, { backgroundColor: colors.accent }]} />
-              <View style={styles.contextCopy}>
-                <Text style={[styles.contextEyebrow, { color: colors.accent }]}>
-                  {edition.context}
-                </Text>
-                <Text
-                  style={[styles.contextBody, { color: colors.text }]}
-                  numberOfLines={compactEditorial ? 3 : 2}
-                >
-                  {leadWhyItMatters}
-                </Text>
-              </View>
-              {!compactEditorial && (
-                <Text style={[styles.contextAction, { color: colors.accent }]}>
-                  {edition.readAnalysis} →
-                </Text>
-              )}
-            </Pressable>
-          )}
 
           {developingHighlights.length > 0 && (
             <View style={styles.developingSection}>
