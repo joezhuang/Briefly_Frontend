@@ -585,7 +585,7 @@ export function StoryTile({
             )
           ) : (
             <StoryVideo
-              url={videoUrl}
+              url={videoUrl ?? ""}
               posterUrl={imageUrl}
               accessibilityLabel={copy.play}
               autoStart
