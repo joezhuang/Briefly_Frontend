@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -64,6 +64,7 @@ import {
   type StripePromotion,
 } from "@/api/briefly";
 import { AppHeader } from "@/components/app-header";
+import { AdminChartReview } from "@/components/admin-chart-review";
 import { ScreenState } from "@/components/screen-state";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyAppConfig } from "@/context/app-config";
@@ -100,6 +101,7 @@ const OPERATIONS_TABS = [
   { id: "ai", label: "AI & cost" },
   { id: "activity", label: "Activity" },
   { id: "moderation", label: "Moderation" },
+  { id: "charts", label: "Chart review" },
 ] as const;
 
 type DashboardTab = (typeof DASHBOARD_TABS)[number]["id"];
@@ -3086,7 +3088,7 @@ function RuntimeConfigEditor({
       <ConfigToggle label="Podcast" detail="Show Deeply podcast analysis controls." value={config.podcast_enabled} onValueChange={(value) => onChange("podcast_enabled", value)} />
       <ConfigToggle
         label="Allow Pro users to generate data charts"
-        detail="Off: admins only. On: admins and signed-in Briefly Pro users. Charts are generated only when requested, must cite source numbers, and are reused from the shared cache."
+        detail="Off: admins only. On: admins and signed-in Briefly Pro users may generate or retry within a 24-hour limit. Only admins may review and release charts publicly."
         value={config.data_charts_access_mode === "admin_and_pro"}
         onValueChange={(enabled) =>
           onChange("data_charts_access_mode", enabled ? "admin_and_pro" : "admin_only")
@@ -4035,6 +4037,7 @@ function StripePromotionEditor({
 }
 
 export default function BetaDashboardScreen() {
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
   const { width } = useWindowDimensions();
   const { ready: authReady, user, account } = useBrieflyAuth();
   const {
@@ -4090,13 +4093,19 @@ export default function BetaDashboardScreen() {
   const [telemetryHealthLoading, setTelemetryHealthLoading] = useState(true);
   const [telemetryHealthError, setTelemetryHealthError] = useState(false);
   const [dashboardTab, setDashboardTab] =
-    useState<DashboardTab>("overview");
+    useState<DashboardTab>(tab === "charts" ? "operations" : "overview");
   const [socialBetaTab, setSocialBetaTab] =
     useState<SocialBetaTab>("overview");
   const [settingsTab, setSettingsTab] =
     useState<SettingsTab>("runtime");
   const [operationsTab, setOperationsTab] =
-    useState<OperationsTab>("health");
+    useState<OperationsTab>(tab === "charts" ? "charts" : "health");
+  useEffect(() => {
+    if (tab === "charts") {
+      setDashboardTab("operations");
+      setOperationsTab("charts");
+    }
+  }, [tab]);
   const socialBeta = snapshot?.product.social_beta ?? EMPTY_SOCIAL_BETA;
   const communityEngagement =
     socialBeta.community_engagement ?? EMPTY_COMMUNITY_ENGAGEMENT;
@@ -6114,6 +6123,12 @@ export default function BetaDashboardScreen() {
                   )}
                   </View>
                     </>
+                  )}
+
+                  {operationsTab === "charts" && (
+                    <View style={styles.section}>
+                      <AdminChartReview />
+                    </View>
                   )}
 
                   {operationsTab === "activity" && (
