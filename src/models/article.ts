@@ -77,6 +77,8 @@ export type CanonicalArticle = {
   ranking_score?: number | null;
   article_count?: number | null;
   source_count?: number | null;
+  developing_story_id?: string | null;
+  developing_story_count?: number | null;
   source_url?: string | null;
   what_happened: string;
   why_it_matters: string;
