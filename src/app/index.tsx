@@ -991,14 +991,30 @@ export default function HomeScreen() {
       >
         <View style={styles.headingRow}>
           <View style={styles.headingCopy}>
+            <View style={styles.editionKickerRow}>
+              <View style={[styles.editionAccent, { backgroundColor: colors.accent }]} />
+              <Text style={[styles.editionKicker, { color: colors.accent }]}>
+                {edition.kicker}
+              </Text>
+              <View style={[styles.editionKickerRule, { backgroundColor: colors.border }]} />
+            </View>
+            <Text
+              style={[
+                styles.editionHeadline,
+                mobileHeader && styles.editionHeadlineCompact,
+                { color: colors.text },
+              ]}
+              numberOfLines={2}
+            >
+              {edition.headline}
+            </Text>
             <Text
               style={[
                 styles.subtitle,
                 mobileHeader && styles.subtitleCompact,
                 { color: colors.textMuted },
               ]}
-              adjustsFontSizeToFit
-              numberOfLines={1}
+              numberOfLines={2}
             >
               {t.subtitle}
             </Text>
