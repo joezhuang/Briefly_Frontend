@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { router } from "expo-router";
 import { useBrieflyAppConfig } from "@/context/app-config";
 import {
   ActivityIndicator,
@@ -32,6 +33,10 @@ const chartCopy = {
     generate: "Extract charts",
     update: "Refresh charts with latest extraction",
     updating: "Updating verified charts…",
+    awaitingReview: "Draft charts are awaiting admin review. They are not public yet.",
+    usage: "Your chart extractions used in the past 24 hours",
+    limitReached: "Daily chart extraction allowance reached. Try again after earlier attempts expire.",
+    reviewAdmin: "Open chart review",
     processing: "Checking original reports for comparable data…",
     insufficient: "No figures could be source-verified for publication from the available original reports.",
     retry: "Try extraction again",
@@ -59,6 +64,10 @@ const chartCopy = {
     generate: "Extraer gráficos",
     update: "Actualizar los gráficos",
     updating: "Actualizando cifras verificadas…",
+    awaitingReview: "Los gráficos están pendientes de revisión administrativa y aún no son públicos.",
+    usage: "Extracciones de gráficos usadas en 24 horas",
+    limitReached: "Has alcanzado el límite. Puedes volver a intentarlo cuando expire una solicitud anterior.",
+    reviewAdmin: "Revisar gráficos",
     processing: "Comprobando los datos en las fuentes originales…",
     insufficient: "No se pudieron verificar cifras publicables en las fuentes originales disponibles.",
     retry: "Volver a intentar",
@@ -86,6 +95,10 @@ const chartCopy = {
     generate: "グラフを作成",
     update: "グラフを最新の抽出で更新",
     updating: "検証済みグラフを更新中…",
+    awaitingReview: "グラフは管理者の確認待ちです。まだ公開されていません。",
+    usage: "過去24時間のグラフ抽出利用",
+    limitReached: "抽出回数の上限です。過去の利用枠が更新されてから再試行してください。",
+    reviewAdmin: "グラフを確認",
     processing: "元記事の比較可能な数値を確認中…",
     insufficient: "参照できた元記事から公開可能な数値を検証できませんでした。",
     retry: "再試行",
@@ -113,6 +126,10 @@ const chartCopy = {
     generate: "提取图表",
     update: "使用最新分析更新图表",
     updating: "正在更新已核实图表…",
+    awaitingReview: "图表草稿等待管理员审核，尚未公开。",
+    usage: "过去24小时的图表提取次数",
+    limitReached: "已达到提取次数上限。请等使用额度恢复后重试。",
+    reviewAdmin: "审核图表",
     processing: "正在核对原始报道中的可比较数据…",
     insufficient: "未能从可获取的原始报道中核实适合公开的统计数据。",
     retry: "重新尝试",
@@ -140,6 +157,10 @@ const chartCopy = {
     generate: "擷取圖表",
     update: "使用最新分析更新圖表",
     updating: "正在更新已核實圖表…",
+    awaitingReview: "圖表草稿等待管理員審核，尚未公開。",
+    usage: "過去24小時的圖表擷取次數",
+    limitReached: "已達到擷取次數上限。請等使用額度恢復後再試。",
+    reviewAdmin: "審核圖表",
     processing: "正在核對原始報導中的可比較數據…",
     insufficient: "未能從可取得的原始報導中核實適合公開的統計數據。",
     retry: "重新嘗試",
@@ -442,8 +463,11 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
     try {
       const next = await requestClusterDataCharts(eventId);
       setStatus(next);
-    } catch {
+    } catch (caught) {
       setError(true);
+      if (String(caught).includes("429")) {
+        try { setStatus(await getClusterDataCharts(eventId)); } catch { /* Keep error state */ }
+      }
     } finally {
       setBusy(false);
     }
@@ -471,7 +495,9 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
   const shownComparisons = showMoreComparisons ? comparisons : comparisons.slice(0, 2);
   const keyCardWidth = screenWidth >= 960 ? "31.5%" : "48.5%";
   const comparisonWidth = screenWidth >= 1030 ? "48.5%" : "100%";
-  const canGenerate = status?.can_generate === true;
+  const quota = account?.is_admin === true ? null : status?.quota;
+  const quotaExhausted = Boolean(quota && quota.remaining <= 0);
+  const canGenerate = status?.can_generate === true && !quotaExhausted;
   // Keep an eligible reader's entry point visible when the backend fails.
   // The API remains authoritative: only can_generate=true offers extraction.
   const privilegedViewer = account?.is_admin === true ||
@@ -486,6 +512,23 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
     <View style={[styles.panel, { borderColor: colors.border, backgroundColor: colors.surfaceMuted }]}>
       <Text style={[styles.title, { color: colors.text }]}>{copy.title}</Text>
       <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.details}</Text>
+      {!!quota && (
+        <Text style={[styles.detail, { color: colors.textMuted }]}>
+          {copy.usage}: {quota.used}/{quota.limit} · {quota.remaining} remaining
+        </Text>
+      )}
+      {quotaExhausted && (
+        <Text style={[styles.detail, { color: colors.accent }]}>{copy.limitReached}</Text>
+      )}
+      {status?.awaiting_review && (
+        <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.awaitingReview}</Text>
+      )}
+      {account?.is_admin === true && status?.awaiting_review && (
+        <Pressable accessibilityRole="button" style={styles.reviewLink}
+          onPress={() => router.push("/beta-dashboard?tab=charts" as never)}>
+          <Text style={[styles.source, { color: colors.accent }]}>{copy.reviewAdmin} ↗</Text>
+        </Pressable>
+      )}
       {keyFigures.length > 0 && (
         <View style={styles.dataGroup}>
           <Text style={[styles.groupHeading, { color: colors.text }]}>{copy.keyFigures}</Text>
@@ -616,6 +659,7 @@ const styles = StyleSheet.create({
   detail: { fontSize: 13, lineHeight: 20 },
   chart: { gap: 8 },
   dataGroup: { gap: 12, marginTop: 8 },
+  reviewLink: { alignSelf: "flex-start", minHeight: 40, justifyContent: "center" },
   groupHeading: { fontSize: 15, fontWeight: "900", letterSpacing: 0.2 },
   figureGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10 },
   figureCard: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 12, minHeight: 130 },
