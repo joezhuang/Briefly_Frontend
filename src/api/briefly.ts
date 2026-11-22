@@ -1759,6 +1759,9 @@ export type ClusterDataChartStatus = {
   status: "not_generated" | "processing" | "ready" | "insufficient" | "failed";
   charts: VerifiedDataChart[];
   can_generate: boolean;
+  published?: boolean;
+  awaiting_review?: boolean;
+  quota?: { used: number; limit: number; remaining: number };
   refreshing?: boolean;
   updated_at?: string | null;
 };
@@ -1772,6 +1775,52 @@ export function getClusterDataCharts(eventId: string) {
 export function requestClusterDataCharts(eventId: string) {
   return postJson<ClusterDataChartStatus>(
     `/api/articles/event/${encodeURIComponent(eventId)}/data-charts`, {}
+  );
+}
+
+export type ChartReviewQueueItem = {
+  event_id: string;
+  article_version_id: number;
+  chart_count: number;
+  preview_title: string;
+  updated_at: string | null;
+};
+
+export type ChartReviewQueue = {
+  pending_count: number;
+  items: ChartReviewQueueItem[];
+};
+
+export type ChartReviewDraft = {
+  event_id: string;
+  article_version_id: number;
+  draft_charts: VerifiedDataChart[];
+  published_charts: VerifiedDataChart[];
+  revision: string;
+  ready: boolean;
+};
+
+export function getChartReviewQueue() {
+  return getJson<ChartReviewQueue>("/api/articles/data-charts/review-queue");
+}
+
+export function getChartReview(eventId: string) {
+  return getJson<ChartReviewDraft>(
+    \`/api/articles/event/\${encodeURIComponent(eventId)}/data-charts/review\`
+  );
+}
+
+export function removeChartFromDraft(eventId: string, index: number, revision: string) {
+  return postJson<{ charts: VerifiedDataChart[]; revision: string; released: boolean }>(
+    \`/api/articles/event/\${encodeURIComponent(eventId)}/data-charts/review/remove\`,
+    { index, revision },
+  );
+}
+
+export function releaseChartDraft(eventId: string, revision: string) {
+  return postJson<{ charts: VerifiedDataChart[]; revision: string; released: boolean }>(
+    \`/api/articles/event/\${encodeURIComponent(eventId)}/data-charts/review/release\`,
+    { revision },
   );
 }
 
