@@ -83,6 +83,7 @@ export function PinnedFeedCategoryBar({
   onFeedScopePress?: (scope: HomepageFeedScope) => void;
 }) {
   const { colors } = useBrieflyTheme();
+  const { width } = useWindowDimensions();
   if (!visible) return null;
   return (
     <View
@@ -91,7 +92,7 @@ export function PinnedFeedCategoryBar({
         { backgroundColor: colors.background, borderBottomColor: colors.border },
       ]}
     >
-      <View style={styles.pinnedContent}>
+      <View style={[styles.pinnedContent, width < 480 && styles.pinnedContentCompact]}>
         <FeedCategoryBar active={active} onFeedScopePress={onFeedScopePress} />
       </View>
     </View>
@@ -233,6 +234,9 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: layout.pageMax,
     paddingHorizontal: layout.pagePadding,
+  },
+  pinnedContentCompact: {
+    paddingHorizontal: layout.pagePaddingCompact,
   },
   bar: {
     width: "100%",
