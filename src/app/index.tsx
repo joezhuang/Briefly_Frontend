@@ -1010,6 +1010,7 @@ export default function HomeScreen() {
       </View>
       <StoryTile
         article={article}
+        presentation="editorial"
         size={size}
         fitViewport={size === "hero" && mobileLeadFit}
         videoEnabled={homepageVideoEnabled}
@@ -1417,6 +1418,7 @@ export default function HomeScreen() {
                   >
                     <StoryTile
                       article={article}
+                      presentation="editorial"
                       videoEnabled={homepageVideoEnabled}
                       analyticsSource="feed"
                       analyticsScope={scope}
