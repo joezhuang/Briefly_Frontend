@@ -49,6 +49,7 @@ import {
   type BetaDashboardErrorGroup,
   type BetaDashboardEventQualityCandidate,
   type BetaDashboardEventQualityPage,
+  type BetaDashboardStoryLink,
   type BetaDashboardSnapshot,
   type BetaDashboardTelemetryConfig,
   type BetaDashboardTelemetryHealth,
@@ -1302,6 +1303,7 @@ function EventQualityConsole() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [storyPrimaryId, setStoryPrimaryId] = useState("");
   const [storyRelatedId, setStoryRelatedId] = useState("");
+  const [storyRelationType, setStoryRelationType] = useState<BetaDashboardStoryLink["relation_type"]>("development");
   const [actionError, setActionError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -1409,18 +1411,24 @@ function EventQualityConsole() {
 
   const linkStory = async (primaryId: string, relatedId: string) => {
     if (busyKey || !page?.story_grouping_enabled || !primaryId.trim() || !relatedId.trim()) return;
+    const typeDescription = {
+      coverage: "another report of the same factual incident",
+      development: "a distinct factual development in the same ongoing story",
+      commentary: "an attributed opinion or reaction, not a new factual development",
+    }[storyRelationType];
     const accepted = await confirmAction(
-      "Link related developments?",
-      "These events will appear under one developing story, but will keep their separate canonical articles, timelines, sources and event IDs. This can be undone.",
+      `Link as ${storyRelationType}?`,
+      `Confirm the related event is ${typeDescription}. Both events keep their separate canonical articles, timelines, sources and IDs. You can undo the relationship.`,
       "Link as developing story",
     );
     if (!accepted) return;
     setBusyKey(primaryId + ":" + relatedId);
     setActionError(null);
     try {
-      await linkBetaDashboardDevelopingStory(primaryId.trim(), relatedId.trim());
+      await linkBetaDashboardDevelopingStory(primaryId.trim(), relatedId.trim(), storyRelationType);
       setStoryPrimaryId("");
       setStoryRelatedId("");
+      setStoryRelationType("development");
       await refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Could not link these events");
@@ -1607,6 +1615,39 @@ function EventQualityConsole() {
             autoCapitalize="none"
             style={[styles.configInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
           />
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Relationship type
+          </Text>
+          <View style={[styles.windowRow, { flexWrap: "wrap", gap: 8 }]}>
+            {(["coverage", "development", "commentary"] as const).map((relationType) => (
+              <Pressable
+                key={relationType}
+                accessibilityRole="button"
+                accessibilityState={{ selected: storyRelationType === relationType }}
+                accessibilityLabel={`Link type: ${relationType}`}
+                disabled={!!busyKey}
+                onPress={() => setStoryRelationType(relationType)}
+                style={[
+                  styles.resolveButton,
+                  {
+                    borderColor: storyRelationType === relationType ? colors.accent : colors.border,
+                    backgroundColor: storyRelationType === relationType ? colors.surfaceMuted : colors.surface,
+                  },
+                ]}
+              >
+                <Text style={[styles.resolveText, { color: storyRelationType === relationType ? colors.accent : colors.text }]}>
+                  {relationType[0].toUpperCase() + relationType.slice(1)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            {storyRelationType === "coverage"
+              ? "Coverage: another report of the same incident, without new facts."
+              : storyRelationType === "commentary"
+                ? "Commentary: opinion or reaction to the main event, not a new event."
+                : "Development: a new factual step within the ongoing story."}
+          </Text>
           <Pressable
             disabled={!!busyKey || !storyPrimaryId.trim() || !storyRelatedId.trim()}
             accessibilityRole="button"
