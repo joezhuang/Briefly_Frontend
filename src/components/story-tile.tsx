@@ -140,6 +140,25 @@ const translationCopy: Record<string, { translate: string; original: string; ret
   "zh-TW": { translate: "翻譯", original: "原文", retry: "重試", play: "播放", listen: "收聽 Podcast", close: "關閉影片", share: "分享", community: "社群" },
 };
 
+/** One story route for image cards and compact homepage editorial links. */
+export function storyTileHref(
+  article: CanonicalArticle,
+  analyticsSource?: string,
+  analyticsScope?: string,
+  playableVideoUrl?: string | null,
+): string {
+  const params = new URLSearchParams({
+    eventId: article.event_id,
+    previewHeadline: article.headline,
+  });
+  if (analyticsSource) params.set("source", analyticsSource);
+  if (analyticsScope) params.set("scope", analyticsScope);
+  const imageUrl = article.video_thumbnail_url || article.image_url;
+  if (imageUrl) params.set("imageUrl", imageUrl);
+  if (playableVideoUrl) params.set("videoUrl", playableVideoUrl);
+  return `/story/${article.slug}?${params.toString()}`;
+}
+
 export function StoryTile({
   article,
   size = "standard",
@@ -236,18 +255,7 @@ export function StoryTile({
     : null;
   const imageUrl = article.video_thumbnail_url || article.image_url || null;
   const storyHref =
-    href ??
-    (() => {
-      const params = new URLSearchParams({
-        eventId: article.event_id,
-        previewHeadline: article.headline,
-      });
-      if (analyticsSource) params.set("source", analyticsSource);
-      if (analyticsScope) params.set("scope", analyticsScope);
-      if (imageUrl) params.set("imageUrl", imageUrl);
-      if (videoUrl) params.set("videoUrl", videoUrl);
-      return `/story/${article.slug}?${params.toString()}`;
-    })();
+    href ?? storyTileHref(article, analyticsSource, analyticsScope, videoUrl);
 
   const communityHref = `${storyHref}${storyHref.includes("?") ? "&" : "?"}community=1`;
   const articleReady = article.article_version_id != null;
