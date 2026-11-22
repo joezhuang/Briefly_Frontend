@@ -96,12 +96,14 @@ const SETTINGS_TABS = [
   { id: "audit", label: "Audit" },
 ] as const;
 const OPERATIONS_TABS = [
+  // Put actionable, pending admin review work first rather than letting it
+  // wrap off-screen after five diagnostic tabs on smaller displays.
+  { id: "charts", label: "Chart review" },
   { id: "health", label: "Health" },
   { id: "releases", label: "Releases" },
   { id: "ai", label: "AI & cost" },
   { id: "activity", label: "Activity" },
   { id: "moderation", label: "Moderation" },
-  { id: "charts", label: "Chart review" },
 ] as const;
 
 type DashboardTab = (typeof DASHBOARD_TABS)[number]["id"];

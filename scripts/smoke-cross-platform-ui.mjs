@@ -1337,6 +1337,8 @@ ensure(
   chartsUI.includes('void getClusterDataCharts(eventId)') &&
   chartsUI.includes('status?.refreshing') &&
   chartsUI.includes('chart.relationship_quote') &&
+  read("src/app/beta-dashboard.tsx").indexOf('{ id: "charts", label: "Chart review" }') <
+    read("src/app/beta-dashboard.tsx").indexOf('{ id: "health", label: "Health" }') &&
   chartsUI.includes('quotaExhausted') &&
   chartsUI.includes('status?.awaiting_review') &&
   chartsUI.includes('"/beta-dashboard?tab=charts&eventId="') &&
