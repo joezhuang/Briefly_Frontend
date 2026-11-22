@@ -24,7 +24,24 @@ export function AdminChartReview({ initialEventId }: { initialEventId?: string }
     }
   }, []);
 
-  useEffect(() => { void refreshQueue(); }, [refreshQueue]);
+  useEffect(() => {
+    // Fetch asynchronously rather than invoking a state-updating callback
+    // directly from an effect. Ignore results after unmount.
+    let active = true;
+    void getChartReviewQueue()
+      .then((next) => {
+        if (!active) return;
+        setQueue(next);
+        setError("");
+      })
+      .catch(() => {
+        if (active) setError("Could not load the chart review queue.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
   useEffect(() => {
     // Old dashboard deep links are forwarded to the in-article editor.
     if (initialEventId) router.replace(chartReviewStoryHref(initialEventId) as never);
