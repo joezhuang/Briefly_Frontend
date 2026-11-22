@@ -759,7 +759,26 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
         </View>
       )}
       {isAdmin && !review && reviewRequested && (
-        <Text style={[styles.note, { color: colors.textMuted }]}>{reviewText.loading}</Text>
+        <View style={styles.reviewPanel}>
+          <Text style={[styles.note, { color: reviewError ? colors.accent : colors.textMuted }]}>
+            {reviewError ? reviewText.error : reviewText.loading}
+          </Text>
+          {reviewError && (
+            <Pressable accessibilityRole="button" style={styles.reviewAction}
+              onPress={() => {
+                setModerationError(null);
+                void getChartReview(eventId)
+                  .then((next) => {
+                    if (next.article_version_id === articleVersionId) {
+                      setReviewResponse({ key: chartKey, value: next });
+                    }
+                  })
+                  .catch(() => setModerationError(chartKey));
+              }}>
+              <Text style={[styles.source, { color: colors.accent }]}>{copy.refresh}</Text>
+            </Pressable>
+          )}
+        </View>
       )}
       {isAdmin && review && !reviewMode && readyCharts.length === 0 && (
         <Text style={[styles.note, { color: colors.textMuted }]}>{reviewText.noPublic}</Text>
