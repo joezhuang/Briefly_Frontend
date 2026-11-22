@@ -22,7 +22,11 @@ import {
   type HomepageFeedScope,
 } from "@/api/briefly";
 import { AppHeader } from "@/components/app-header";
-import { FeedCategoryBar } from "@/components/feed-category-bar";
+import {
+  FeedCategoryBar,
+  PinnedFeedCategoryBar,
+  usePinnedFeedCategories,
+} from "@/components/feed-category-bar";
 import { FloatingStoryVideo } from "@/components/floating-story-video";
 // Metro resolves the platform-specific .native/.web implementation at runtime.
 // eslint-disable-next-line import/no-unresolved
@@ -235,6 +239,10 @@ export default function HomeScreen() {
   const coverageRetryCountRef = useRef(0);
   const [coverageRetryTick, setCoverageRetryTick] = useState(0);
   const homeScrollOffsetRef = useRef(initialHomeFeed.scrollOffset);
+  const headerOffsetRef = useRef(0);
+  const categoryOffsetRef = useRef<number | null>(null);
+  const { pinned: categoriesPinned, setBarTop, onScrollOffset } =
+    usePinnedFeedCategories();
   const videoSessionRef = useRef<HomeVideoSession | null>(null);
   const videoFloatingRef = useRef(false);
   const [pendingSwipeDirection, setPendingSwipeDirection] = useState<
@@ -796,6 +804,7 @@ export default function HomeScreen() {
       );
       remembered.scrollOffset = scrollY;
       homeScrollOffsetRef.current = scrollY;
+      onScrollOffset(scrollY);
       setShowTopButton(scrollY > SHOW_TOP_BUTTON_OFFSET);
 
       const session = videoSessionRef.current;
@@ -818,7 +827,7 @@ export default function HomeScreen() {
         void loadFeed("more");
       }
     },
-    [appConfig?.floating_video_enabled, language, loadFeed, newsLocation, scope],
+    [appConfig?.floating_video_enabled, language, loadFeed, newsLocation, onScrollOffset, scope],
   );
 
   const desktop = width >= 1000;
@@ -899,7 +908,15 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <View style={[styles.header, mobileHeader && styles.headerCompact]}>
+      <View
+        style={[styles.header, mobileHeader && styles.headerCompact]}
+        onLayout={(event) => {
+          headerOffsetRef.current = event.nativeEvent.layout.y;
+          if (categoryOffsetRef.current !== null) {
+            setBarTop(headerOffsetRef.current + categoryOffsetRef.current);
+          }
+        }}
+      >
         <View style={styles.headingRow}>
           <View style={styles.headingCopy}>
             <Text
@@ -938,21 +955,28 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {scopeControls}
-      </View>
+        {scope !== "top" && locationReady && (
+          <NewsLocationGate
+            scope={scope}
+            mode={newsLocation.mode}
+            location={newsLocation.location}
+            busy={locationBusy}
+            error={locationError}
+            onEnableAuto={() => void handleEnableAutoLocation()}
+            onSaveManual={(input) => void handleSaveManualLocation(input)}
+            onDisable={() => void handleDisableLocation()}
+          />
+        )}
 
-      {scope !== "top" && locationReady && (
-        <NewsLocationGate
-          scope={scope}
-          mode={newsLocation.mode}
-          location={newsLocation.location}
-          busy={locationBusy}
-          error={locationError}
-          onEnableAuto={() => void handleEnableAutoLocation()}
-          onSaveManual={(input) => void handleSaveManualLocation(input)}
-          onDisable={() => void handleDisableLocation()}
-        />
-      )}
+        <View
+          onLayout={(event) => {
+            categoryOffsetRef.current = event.nativeEvent.layout.y;
+            setBarTop(headerOffsetRef.current + categoryOffsetRef.current);
+          }}
+        >
+          {scopeControls}
+        </View>
+      </View>
 
       {(!authReady || (scope !== "top" && !locationReady)) && (
         <ScreenState loading message={t.loadingStories} />
@@ -1169,6 +1193,7 @@ export default function HomeScreen() {
               setShowTopButton(
                 rememberedOffset > SHOW_TOP_BUTTON_OFFSET,
               );
+              onScrollOffset(rememberedOffset);
             });
           });
         }}
@@ -1189,6 +1214,12 @@ export default function HomeScreen() {
         initialNumToRender={2}
         maxToRenderPerBatch={2}
         windowSize={5}
+      />
+
+      <PinnedFeedCategoryBar
+        visible={categoriesPinned}
+        active={scope}
+        onFeedScopePress={switchScope}
       />
 
       {showWebScopeArrows && (
