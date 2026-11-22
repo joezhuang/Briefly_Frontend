@@ -1,25 +1,14 @@
-/* Paint the entire mobile browser viewport, including the strip exposed
-   during address-bar collapse and rubber-band scrolling. This is a document
-   reset, not a fake fixed footer: the homepage keeps its normal scrolling. */
+/* Reset the browser's default white 8px edge before React hydrates.
+   Percentage height follows Expo's existing root sizing. Avoid 100dvh:
+   Safari/Chrome mobile address-bar collapse can make it taller than the
+   React Native Web scroll surface, exposing a large blank strip. */
 html,
 body,
 #root {
   margin: 0;
   padding: 0;
-  min-height: 100%;
-  background-color: #F4F1EB;
-}
-
-html,
-body {
   height: 100%;
-}
-
-@supports (height: 100dvh) {
-  body,
-  #root {
-    min-height: 100dvh;
-  }
+  background-color: #F4F1EB;
 }
 
 :root {
