@@ -518,6 +518,11 @@ const checks = [
     needles: [
       "Same developing story (not merge)",
       "Link as developing story",
+      'type BetaDashboardStoryLink,',
+      'storyRelationType',
+      'Link type: ${relationType}',
+      'linkBetaDashboardDevelopingStory(primaryId.trim(), relatedId.trim(), storyRelationType)',
+      'Commentary: opinion or reaction to the main event, not a new event.',
       "unlinkBetaDashboardDevelopingStory",
       "page?.story_grouping_enabled",
       "Use Merge above only for genuine duplicate events.",
