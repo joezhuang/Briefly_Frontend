@@ -21,6 +21,46 @@ function requireAll(relativePath, needles) {
 
 const checks = [
   {
+    name: "Editorial homepage stays responsive without changing feed sorting or sticky navigation",
+    file: "src/app/index.tsx",
+    needles: [
+      "const editionCopy = {",
+      "const narrowPhone = width < 400;",
+      "const compactEditorial = width < 700;",
+      "const tablet = width >= 700 && width < 1000;",
+      "const desktop = width >= 1000;",
+      "mobileLeadFit",
+      "styles.editionHeadlineNarrow",
+      "styles.editionHeadlineTablet",
+      "numberOfLines={compactEditorial ? 3 : 2}",
+      "styles.headingRowNarrow",
+      "styles.heroGrid",
+      "styles.twoColumnGrid",
+      "styles.sectionHeading",
+      "styles.featureFrame",
+      "styles.moreSection",
+      "editorialFeature(lead, 1, \"hero\")",
+      "editorialFeature(article, index + 2, \"secondary\")",
+      "const remainingBatches = chunkArticles(remaining);",
+      "ListHeaderComponent={listHeader}",
+      "onScroll={handleScroll}",
+      "onFeedScopePress={switchScope}",
+    ],
+  },
+  {
+    name: "Featured headline scale adapts to narrow mobile while video and article actions remain",
+    file: "src/components/story-tile.tsx",
+    needles: [
+      "width: viewportWidth, height: viewportHeight",
+      "viewportWidth < 540",
+      "viewportWidth < 400",
+      "secondaryHeadlineCompact:",
+      "fitViewport",
+      "onVideoStart",
+      "onVideoStop",
+    ],
+  },
+  {
     name: "Measured pinned category/search navigation reuses the existing responsive tab row",
     file: "src/components/feed-category-bar.tsx",
     needles: [
