@@ -127,6 +127,14 @@ const chartCopy = {
   },
 } as const;
 
+function formatVerifiedValue(value: number, unit: string): string {
+  const amount = Number(value).toLocaleString();
+  const currency = unit.match(/^(A\$|US\$|NZ\$|CA\$|£|€|\$|¥)\s*/i);
+  if (currency) return currency[1] + amount + " " + unit.slice(currency[0].length).trim();
+  if (unit.startsWith("%")) return amount + unit;
+  return amount + " " + unit;
+}
+
 function TrendPlot({ chart, accent, border, textColor }: {
   chart: VerifiedDataChart;
   accent: string;
@@ -134,7 +142,7 @@ function TrendPlot({ chart, accent, border, textColor }: {
   textColor: string;
 }) {
   const [width, setWidth] = useState(0);
-  const maximum = Math.max(1, ...chart.points.map((point) => point.value));
+  const maximum = Math.max(Number.EPSILON, ...chart.points.map((point) => point.value));
   // Use actual year intervals rather than treating an uneven time series
   // as if every observation were equally spaced.
   const years = chart.points.map((point) => {
@@ -181,14 +189,21 @@ function TrendPlot({ chart, accent, border, textColor }: {
         )}
       </View>
       <View style={styles.trendLabels}>
-        {chart.points.map((point, i) =>
-          <View key={"year-" + i} style={styles.trendLabelItem}>
-            <Text style={[styles.trendYear, { color: textColor }]}>{point.label}</Text>
-            <Text style={[styles.trendValue, { color: textColor }]}>
-              {Number(point.value).toLocaleString()}
-            </Text>
-          </View>
-        )}
+        {width > 0 && chart.points.map((point, i) => {
+          const interval = Math.max(1, Math.ceil(chart.points.length / 5));
+          if (i !== 0 && i !== chart.points.length - 1 && i % interval !== 0) return null;
+          return (
+            <View key={"year-" + i} style={[
+              styles.trendLabelItem,
+              { left: Math.max(0, Math.min(width - 56, coordinates[i].x - 28)) },
+            ]}>
+              <Text style={[styles.trendYear, { color: textColor }]}>{point.label}</Text>
+              <Text style={[styles.trendValue, { color: textColor }]}>
+                {Number(point.value).toLocaleString()}
+              </Text>
+            </View>
+          );
+        })}
       </View>
     </View>
   );
@@ -204,7 +219,7 @@ function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSo
 }) {
   const { colors } = useBrieflyTheme();
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
-  const max = Math.max(1, ...chart.points.map((point) => Math.max(0, point.value)));
+  const max = Math.max(Number.EPSILON, ...chart.points.map((point) => Math.max(0, point.value)));
   const total = chart.points.reduce((sum, point) => sum + point.value, 0);
   const qualifier = chart.qualifier === 'forecast' ? copy.forecast
     : chart.qualifier === 'proposal' ? copy.proposal
@@ -217,7 +232,7 @@ function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSo
       {chart.chart_type === "kpi" ? (
         <View style={[styles.kpi, { borderColor: colors.border }]}>
           <Text style={[styles.kpiValue, { color: colors.accent }]}>
-            {Number(chart.points[0].value).toLocaleString()} {chart.unit}
+            {formatVerifiedValue(chart.points[0].value, chart.unit)}
           </Text>
           <Text style={[styles.kpiLabel, { color: colors.text }]}>
             {chart.points[0].label}
@@ -306,6 +321,16 @@ function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSo
             >
               {point.derived ? copy.derived + ": " : ""}“{point.evidence_quote}”
             </Text>
+            {point.derived && point.derivation_source_quote && (
+              <Text style={[styles.evidence, { color: colors.textMuted }]}>
+                “{point.derivation_source_quote}”
+              </Text>
+            )}
+            {point.derived && point.composition_source_quote && (
+              <Text style={[styles.evidence, { color: colors.textMuted }]}>
+                “{point.composition_source_quote}”
+              </Text>
+            )}
           </View>
         );
       })}
@@ -465,8 +490,8 @@ const styles = StyleSheet.create({
   kpiLabel: { fontSize: 13, fontWeight: "600" },
   stackedTrack: { flexDirection: "row", height: 24, borderRadius: 8, overflow: "hidden", marginVertical: 8 },
   trendPlot: { position: "relative", width: "100%", height: 152, borderBottomWidth: 1, marginTop: 8 },
-  trendLabels: { flexDirection: "row", gap: 2, justifyContent: "space-between", marginTop: 8 },
-  trendLabelItem: { flex: 1, minWidth: 0, alignItems: "center" },
+  trendLabels: { position: "relative", minHeight: 40, marginTop: 8 },
+  trendLabelItem: { position: "absolute", width: 56, alignItems: "center" },
   trendYear: { fontSize: 11, fontWeight: "600", textAlign: "center" },
   trendValue: { fontSize: 11, fontWeight: "800", textAlign: "center", marginTop: 3 },
   chartTitle: { fontSize: 17, fontWeight: "800" },

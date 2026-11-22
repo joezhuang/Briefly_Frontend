@@ -1735,6 +1735,8 @@ export type VerifiedDataChartPoint = {
   source_url: string;
   evidence_quote: string;
   derived?: boolean;
+  derivation_source_quote?: string;
+  composition_source_quote?: string;
 };
 
 export type VerifiedDataChart = {
