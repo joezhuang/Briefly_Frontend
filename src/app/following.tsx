@@ -19,7 +19,11 @@ import {
 } from "@/api/event-follow";
 import { trackProductEvent } from "@/analytics/product-analytics";
 import { AppHeader } from "@/components/app-header";
-import { FeedCategoryBar } from "@/components/feed-category-bar";
+import {
+  FeedCategoryBar,
+  PinnedFeedCategoryBar,
+  usePinnedFeedCategories,
+} from "@/components/feed-category-bar";
 import { ScreenState } from "@/components/screen-state";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyAppConfig } from "@/context/app-config";
@@ -127,6 +131,8 @@ export default function FollowingScreen() {
   const [updates, setUpdates] = useState<MeaningfulEventUpdate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const { pinned: categoriesPinned, setBarTop, onScrollOffset } =
+    usePinnedFeedCategories();
 
   useFocusEffect(useCallback(() => {
     if (!authReady || !followingEnabled) return;
@@ -208,10 +214,17 @@ export default function FollowingScreen() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        onScroll={(event) => onScrollOffset(event.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={32}
+      >
         <View style={[styles.page, width < 480 && styles.pageCompact]}>
           <AppHeader />
-          <View style={styles.categoryNav}>
+          <View
+            style={styles.categoryNav}
+            onLayout={(event) => setBarTop(event.nativeEvent.layout.y)}
+          >
             <FeedCategoryBar active="following" />
           </View>
 
@@ -325,6 +338,7 @@ export default function FollowingScreen() {
           )}
         </View>
       </ScrollView>
+      <PinnedFeedCategoryBar visible={categoriesPinned} active="following" />
     </SafeAreaView>
   );
 }
