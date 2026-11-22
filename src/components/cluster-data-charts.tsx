@@ -268,7 +268,6 @@ function ChartBars({ chart, copy }: {
 }) {
   const { colors } = useBrieflyTheme();
   const max = Math.max(Number.EPSILON, ...chart.points.map((point) => Math.max(0, point.value)));
-  const total = chart.points.reduce((sum, point) => sum + point.value, 0);
   const qualifier = chart.qualifier === 'forecast' ? copy.forecast
     : chart.qualifier === 'proposal' ? copy.proposal
     : chart.qualifier === 'target' ? copy.target : null;
@@ -301,31 +300,6 @@ function ChartBars({ chart, copy }: {
       ) : chart.chart_type === "line" ? (
         <TrendPlot chart={chart} accent={colors.accent}
           border={colors.border} textColor={colors.text} />
-      ) : chart.chart_type === "stacked" ? (
-        <>
-          <View style={[styles.stackedTrack, { backgroundColor: colors.border }]}>
-            {chart.points.map((point, index) => (
-              <View key={"slice-" + index} style={{
-                width: ((total > 0 ? 100 * point.value / total : 0) + "%") as `${number}%`,
-                height: "100%",
-                backgroundColor: colors.accent,
-                opacity: Math.max(0.25, 1 - index * 0.13),
-                borderRightWidth: index < chart.points.length - 1 ? 2 : 0,
-                borderRightColor: colors.surfaceMuted,
-              }} />
-            ))}
-          </View>
-          {chart.points.map((point, index) => (
-            <View key={"part-" + index} style={styles.barHeading}>
-              <Text style={[styles.barLabel, { color: colors.text }]}>
-                {point.label}{point.derived ? " · " + copy.derived : ""}
-              </Text>
-              <Text style={[styles.barValue, { color: colors.text }]}>
-                {Number(point.value).toLocaleString()}
-              </Text>
-            </View>
-          ))}
-        </>
       ) : chart.points.map((point, index) => {
         const width = Math.max(0, Math.min(100, point.value / max * 100));
         return (
@@ -470,7 +444,7 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
         .catch(() => {});
     }, 5000);
     return () => { active = false; clearInterval(id); };
-  }, [eventId, status?.status, status?.refreshing]);
+  }, [eventId, status?.status, status?.refreshing, setStatus]);
 
   const generate = async () => {
     if (busy) return;
@@ -699,7 +673,6 @@ const styles = StyleSheet.create({
   kpi: { borderWidth: 1, borderRadius: 12, padding: 16, gap: 5 },
   kpiValue: { fontSize: 22, lineHeight: 28, fontWeight: "900" },
   kpiLabel: { fontSize: 13, lineHeight: 19, fontWeight: "800" },
-  stackedTrack: { flexDirection: "row", height: 24, borderRadius: 8, overflow: "hidden", marginVertical: 8 },
   trendPlot: { position: "relative", width: "100%", height: 152, borderBottomWidth: 1, marginTop: 8 },
   trendLabels: { position: "relative", minHeight: 40, marginTop: 8 },
   trendLabelItem: { position: "absolute", width: 56, alignItems: "center" },

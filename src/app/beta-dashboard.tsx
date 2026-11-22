@@ -4037,7 +4037,7 @@ function StripePromotionEditor({
 }
 
 export default function BetaDashboardScreen() {
-  const { tab, eventId } = useLocalSearchParams<{ tab?: string; eventId?: string }>();
+  const { tab: reviewRouteTab, eventId } = useLocalSearchParams<{ tab?: string; eventId?: string }>();
   const { width } = useWindowDimensions();
   const { ready: authReady, user, account } = useBrieflyAuth();
   const {
@@ -4102,8 +4102,8 @@ export default function BetaDashboardScreen() {
     useState<OperationsTab>("health");
   // Route-driven deep links do not need an effect that synchronously
   // resets local state. Clearing the route override restores manual tabs.
-  const dashboardTab = tab === "charts" ? "operations" : selectedDashboardTab;
-  const operationsTab = tab === "charts" ? "charts" : selectedOperationsTab;
+  const dashboardTab = reviewRouteTab === "charts" ? "operations" : selectedDashboardTab;
+  const operationsTab = reviewRouteTab === "charts" ? "charts" : selectedOperationsTab;
   const socialBeta = snapshot?.product.social_beta ?? EMPTY_SOCIAL_BETA;
   const communityEngagement =
     socialBeta.community_engagement ?? EMPTY_COMMUNITY_ENGAGEMENT;
@@ -4774,7 +4774,7 @@ export default function BetaDashboardScreen() {
                       accessibilityRole="tab"
                       accessibilityState={{ selected: active }}
                       onPress={() => {
-                        if (tab === "charts") router.setParams({ tab: "" });
+                        if (reviewRouteTab === "charts") router.setParams({ tab: "" });
                         setDashboardTab(tab.id);
                       }}
                       style={[
@@ -5464,7 +5464,7 @@ export default function BetaDashboardScreen() {
                         accessibilityRole="tab"
                         accessibilityState={{ selected: active }}
                         onPress={() => {
-                          if (tab === "charts") router.setParams({ tab: "" });
+                          if (reviewRouteTab === "charts") router.setParams({ tab: "" });
                           setOperationsTab(tab.id);
                         }}
                         style={[

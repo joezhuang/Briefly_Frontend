@@ -237,7 +237,7 @@ function WaterfallVisual({ chart }: { chart: VerifiedDataChart }) {
   }
   const steps = chart.points.reduce<{
     running: number;
-    steps: Array<(typeof chart.points)[number] & { before: number; after: number }>;
+    steps: ((typeof chart.points)[number] & { before: number; after: number })[];
   }>((acc, point) => {
     const before = acc.running;
     const after = point.role === "start" || point.role === "end"

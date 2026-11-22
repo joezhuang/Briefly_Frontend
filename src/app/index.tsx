@@ -32,7 +32,6 @@ import { FloatingStoryVideo } from "@/components/floating-story-video";
 // eslint-disable-next-line import/no-unresolved
 import { HomeAdSlot } from "@/components/home-ad-slot";
 // Metro resolves the platform-specific .native/.web implementation at runtime.
-// eslint-disable-next-line import/no-unresolved
 import { HomeInstallBanners } from "@/components/home-install-banners";
 import { NewsLocationGate } from "@/components/news-location-gate";
 import { ScreenState } from "@/components/screen-state";

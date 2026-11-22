@@ -1072,13 +1072,13 @@ export type BetaDashboardStoryCandidatePreview = {
   considered: number;
   linked: number;
   review_candidates: BetaDashboardStoryCandidate[];
-  automatic_candidates: Array<{
+  automatic_candidates: {
     primary_event_id: string;
     related_event_id: string;
     relation_type: BetaDashboardStoryCandidate["relation_type"];
     confidence: number;
     evidence: BetaDashboardStoryCandidate["evidence"];
-  }>;
+  }[];
 };
 
 export function getBetaDashboardDevelopingStoryCandidates() {
