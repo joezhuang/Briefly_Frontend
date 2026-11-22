@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useBrieflyAppConfig } from "@/context/app-config";
 import {
   ActivityIndicator,
   Linking,
@@ -30,7 +31,10 @@ const chartCopy = {
     evidence: "Reported evidence",
     showSources: "View sources and numerical evidence",
     hideSources: "Hide source evidence",
-    error: "Data extraction is unavailable. Please retry.",
+    error: "Chart availability could not be checked. Confirm the updated backend and chart database migration are running, then retry.",
+    checking: "Checking chart availability…",
+    access: "The server has not enabled chart generation for this account. Check your signed-in role and the dashboard setting.",
+    refresh: "Check again",
   },
   es: {
     title: "Explorar los datos",
@@ -43,7 +47,10 @@ const chartCopy = {
     evidence: "Datos reportados",
     showSources: "Ver fuentes y cifras",
     hideSources: "Ocultar fuentes",
-    error: "No se pueden extraer los datos. Inténtalo de nuevo.",
+    error: "No se pudo comprobar la disponibilidad. Comprueba el servidor y la migración de datos, y vuelve a intentarlo.",
+    checking: "Comprobando disponibilidad…",
+    access: "El servidor no ha habilitado la generación para esta cuenta. Comprueba los permisos y los ajustes.",
+    refresh: "Comprobar de nuevo",
   },
   ja: {
     title: "データを詳しく見る",
@@ -56,7 +63,10 @@ const chartCopy = {
     evidence: "出典の記述",
     showSources: "出典と数値の根拠を見る",
     hideSources: "出典を閉じる",
-    error: "データを抽出できません。再試行してください。",
+    error: "グラフ機能を確認できません。バックエンドの更新とデータベース移行を確認してから再試行してください。",
+    checking: "グラフ機能を確認中…",
+    access: "サーバー側でこのアカウントの生成権限が確認できません。管理設定とログイン状態をご確認ください。",
+    refresh: "もう一度確認",
   },
   "zh-CN": {
     title: "探索数据",
@@ -69,7 +79,10 @@ const chartCopy = {
     evidence: "原文依据",
     showSources: "查看来源和数值依据",
     hideSources: "收起来源依据",
-    error: "数据提取暂不可用，请重试。",
+    error: "无法检查图表功能。请确认后端已更新且完成数据库迁移，然后重试。",
+    checking: "正在检查图表功能…",
+    access: "服务器尚未授予此账户图表生成权限。请检查登录身份与后台设置。",
+    refresh: "重新检查",
   },
   "zh-TW": {
     title: "探索數據",
@@ -82,7 +95,10 @@ const chartCopy = {
     evidence: "原文依據",
     showSources: "查看來源與數值依據",
     hideSources: "收起來源依據",
-    error: "數據擷取暫不可用，請重試。",
+    error: "無法檢查圖表功能。請確認後端已更新且完成資料庫遷移，然後重試。",
+    checking: "正在檢查圖表功能…",
+    access: "伺服器尚未授予此帳戶圖表產生權限。請檢查登入身分與後台設定。",
+    refresh: "重新檢查",
   },
 } as const;
 
@@ -167,6 +183,7 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
   articleVersionId: number | null;
 }) {
   const { user, account } = useBrieflyAuth();
+  const { config } = useBrieflyAppConfig();
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const copy = chartCopy[language] ?? chartCopy.en;
@@ -212,14 +229,32 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
     }
   };
 
+  const retryStatus = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(false);
+    try {
+      setStatus(await getClusterDataCharts(eventId));
+    } catch {
+      setError(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const readyCharts =
     status?.status === "ready" && Array.isArray(status.charts)
       ? status.charts
       : [];
   const canGenerate = status?.can_generate === true;
+  // Keep an eligible reader's entry point visible when the backend fails.
+  // The API remains authoritative: only can_generate=true offers extraction.
+  const privilegedViewer = account?.is_admin === true ||
+    (Boolean(user) && account?.translation_entitled === true &&
+      config?.data_charts_access_mode === "admin_and_pro");
 
-  if (!readyCharts.length && !canGenerate && status?.status !== "processing"
-      && status?.status !== "insufficient") {
+  if (!readyCharts.length && !privilegedViewer && !canGenerate
+      && status?.status !== "processing" && status?.status !== "insufficient") {
     return null;
   }
   return (
@@ -240,8 +275,28 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
       {status?.status === "insufficient" && (
         <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.insufficient}</Text>
       )}
-      {error && canGenerate && (
+      {privilegedViewer && !status && !error && (
+        <View style={styles.progress}>
+          <ActivityIndicator size="small" color={colors.accent} />
+          <Text style={[styles.progressText, { color: colors.textMuted }]}>{copy.checking}</Text>
+        </View>
+      )}
+      {privilegedViewer && error && (
         <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.error}</Text>
+      )}
+      {privilegedViewer && !error && status?.status === "not_generated" && !canGenerate && (
+        <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.access}</Text>
+      )}
+      {privilegedViewer && (error || (status?.status === "not_generated" && !canGenerate)) && (
+        <Pressable
+          accessibilityRole="button"
+          disabled={busy}
+          onPress={() => void retryStatus()}
+          style={[styles.generateButton, { backgroundColor: colors.text, opacity: busy ? 0.55 : 1 }]}
+        >
+          {busy && <ActivityIndicator size="small" color={colors.background} />}
+          <Text style={[styles.generateText, { color: colors.background }]}>{copy.refresh}</Text>
+        </Pressable>
       )}
       {canGenerate && (
         <Pressable

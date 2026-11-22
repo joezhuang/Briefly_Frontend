@@ -1333,9 +1333,13 @@ const dashboardUI = read("src/app/beta-dashboard.tsx");
 ensure(
   chartsUI.includes('void getClusterDataCharts(eventId)') &&
   chartsUI.includes('const canGenerate = status?.can_generate === true;') &&
+  chartsUI.includes('const privilegedViewer = account?.is_admin === true') &&
+  chartsUI.includes('onPress={() => void retryStatus()}') &&
+  chartsUI.includes('copy.access') &&
   chartsUI.includes('status?.status === "ready"') &&
   chartsUI.includes('void Linking.openURL(sourceUrl)') &&
   articleUI.includes('<ClusterDataCharts eventId={article.event_id}') &&
+  articleUI.includes('articleVersionId={article.authoritative_article_version_id ?? article.article_version_id}') &&
   dashboardUI.includes('label="Allow Pro users to generate data charts"') &&
   dashboardUI.includes('onChange("data_charts_access_mode", enabled ? "admin_and_pro" : "admin_only")'),
   "Public verified charts and admin-configurable Admin/Pro lazy generation remain available"
