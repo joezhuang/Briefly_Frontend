@@ -235,14 +235,19 @@ function WaterfallVisual({ chart }: { chart: VerifiedDataChart }) {
     roles.slice(1, -1).some((role) => role !== "increase" && role !== "decrease")) {
     return <ComparedBars chart={chart} />;
   }
-  let running = 0;
-  const steps = chart.points.map((point) => {
-    const before = running;
-    if (point.role === "start" || point.role === "end") running = point.value;
-    else if (point.role === "increase") running += point.value;
-    else running -= point.value;
-    return { ...point, before, after: running };
-  });
+  const steps = chart.points.reduce<{
+    running: number;
+    steps: Array<(typeof chart.points)[number] & { before: number; after: number }>;
+  }>((acc, point) => {
+    const before = acc.running;
+    const after = point.role === "start" || point.role === "end"
+      ? point.value
+      : point.role === "increase" ? before + point.value : before - point.value;
+    return {
+      running: after,
+      steps: [...acc.steps, { ...point, before, after }],
+    };
+  }, { running: 0, steps: [] }).steps;
   const maximum = Math.max(1, ...steps.map((step) => Math.max(step.before, step.after)));
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled>

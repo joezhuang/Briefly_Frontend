@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { router } from "expo-router";
 import { useBrieflyAppConfig } from "@/context/app-config";
 import {
@@ -428,22 +428,38 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
   const [comparisonDisclosure, setComparisonDisclosure] = useState({ eventId: "", expanded: false });
   const sourcesExpanded = sourceDisclosure.eventId === eventId && sourceDisclosure.expanded;
   const showMoreComparisons = comparisonDisclosure.eventId === eventId && comparisonDisclosure.expanded;
-  const [status, setStatus] = useState<ClusterDataChartStatus | null>(null);
+  const chartKey = [eventId, articleVersionId ?? "", user?.id ?? "",
+    account?.translation_entitled === true ? "pro" : "free",
+    account?.is_admin === true ? "admin" : "reader"].join(":");
+  const [response, setResponse] = useState<{
+    key: string; value: ClusterDataChartStatus;
+  } | null>(null);
+  const status = response?.key === chartKey ? response.value : null;
+  const setStatus = useCallback((next: ClusterDataChartStatus) => {
+    setResponse({ key: chartKey, value: next });
+  }, [chartKey]);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const error = errorKey === chartKey;
+  const setError = useCallback((next: boolean) => {
+    setErrorKey(next ? chartKey : null);
+  }, [chartKey]);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
 
-  // Public cached results are fetched even for signed-out users. Only the
-  // backend decides whether the current authenticated reader may generate.
+  // Stale cached data from another story or login is never rendered.
+  // The fetch resolves asynchronously, so the effect has no sync state reset.
   useEffect(() => {
     let active = true;
-    setStatus(null);
-    setError(false);
     if (!eventId || !articleVersionId) return () => { active = false; };
     void getClusterDataCharts(eventId)
-      .then((next) => { if (active) setStatus(next); })
+      .then((next) => {
+        if (active) {
+          setStatus(next);
+          setError(false);
+        }
+      })
       .catch(() => { if (active) setError(true); });
     return () => { active = false; };
-  }, [eventId, articleVersionId, user?.id, account?.translation_entitled, account?.is_admin]);
+  }, [eventId, articleVersionId, chartKey, setStatus, setError]);
 
   useEffect(() => {
     if ((status?.status !== "processing" && !status?.refreshing) || !eventId) return;

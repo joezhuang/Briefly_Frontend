@@ -72,8 +72,23 @@ export function AdminChartReview({ initialEventId }: { initialEventId?: string }
     }
   }, []);
   useEffect(() => {
-    if (initialEventId) void openDraft(initialEventId);
-  }, [initialEventId, openDraft]);
+    if (!initialEventId) return;
+    let active = true;
+    void getChartReview(initialEventId)
+      .then((result) => {
+        if (!active) return;
+        setSelected(initialEventId);
+        setDraft(result);
+        setConfirmRemove(null);
+        setConfirmRelease(false);
+        setExpanded(null);
+        setError("");
+      })
+      .catch(() => {
+        if (active) setError("Could not load the chart draft for this story version.");
+      });
+    return () => { active = false; };
+  }, [initialEventId]);
 
   useEffect(() => {
     let active = true;

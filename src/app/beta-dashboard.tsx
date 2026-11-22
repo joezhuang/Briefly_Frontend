@@ -4092,20 +4092,18 @@ export default function BetaDashboardScreen() {
     useState<BetaDashboardTelemetryHealth | null>(null);
   const [telemetryHealthLoading, setTelemetryHealthLoading] = useState(true);
   const [telemetryHealthError, setTelemetryHealthError] = useState(false);
-  const [dashboardTab, setDashboardTab] =
-    useState<DashboardTab>(tab === "charts" ? "operations" : "overview");
+  const [selectedDashboardTab, setDashboardTab] =
+    useState<DashboardTab>("overview");
   const [socialBetaTab, setSocialBetaTab] =
     useState<SocialBetaTab>("overview");
   const [settingsTab, setSettingsTab] =
     useState<SettingsTab>("runtime");
-  const [operationsTab, setOperationsTab] =
-    useState<OperationsTab>(tab === "charts" ? "charts" : "health");
-  useEffect(() => {
-    if (tab === "charts") {
-      setDashboardTab("operations");
-      setOperationsTab("charts");
-    }
-  }, [tab]);
+  const [selectedOperationsTab, setOperationsTab] =
+    useState<OperationsTab>("health");
+  // Route-driven deep links do not need an effect that synchronously
+  // resets local state. Clearing the route override restores manual tabs.
+  const dashboardTab = tab === "charts" ? "operations" : selectedDashboardTab;
+  const operationsTab = tab === "charts" ? "charts" : selectedOperationsTab;
   const socialBeta = snapshot?.product.social_beta ?? EMPTY_SOCIAL_BETA;
   const communityEngagement =
     socialBeta.community_engagement ?? EMPTY_COMMUNITY_ENGAGEMENT;
@@ -4775,7 +4773,10 @@ export default function BetaDashboardScreen() {
                       key={tab.id}
                       accessibilityRole="tab"
                       accessibilityState={{ selected: active }}
-                      onPress={() => setDashboardTab(tab.id)}
+                      onPress={() => {
+                        if (tab === "charts") router.setParams({ tab: "" });
+                        setDashboardTab(tab.id);
+                      }}
                       style={[
                         styles.dashboardTab,
                         {
@@ -5462,7 +5463,10 @@ export default function BetaDashboardScreen() {
                         key={tab.id}
                         accessibilityRole="tab"
                         accessibilityState={{ selected: active }}
-                        onPress={() => setOperationsTab(tab.id)}
+                        onPress={() => {
+                          if (tab === "charts") router.setParams({ tab: "" });
+                          setOperationsTab(tab.id);
+                        }}
                         style={[
                           styles.operationsTab,
                           {

@@ -1806,20 +1806,20 @@ export function getChartReviewQueue() {
 
 export function getChartReview(eventId: string) {
   return getJson<ChartReviewDraft>(
-    \`/api/articles/event/\${encodeURIComponent(eventId)}/data-charts/review\`
+    `/api/articles/event/${encodeURIComponent(eventId)}/data-charts/review`
   );
 }
 
 export function removeChartFromDraft(eventId: string, index: number, revision: string) {
   return postJson<{ charts: VerifiedDataChart[]; revision: string; released: boolean }>(
-    \`/api/articles/event/\${encodeURIComponent(eventId)}/data-charts/review/remove\`,
+    `/api/articles/event/${encodeURIComponent(eventId)}/data-charts/review/remove`,
     { index, revision },
   );
 }
 
 export function releaseChartDraft(eventId: string, revision: string) {
   return postJson<{ charts: VerifiedDataChart[]; revision: string; released: boolean }>(
-    \`/api/articles/event/\${encodeURIComponent(eventId)}/data-charts/review/release\`,
+    `/api/articles/event/${encodeURIComponent(eventId)}/data-charts/review/release`,
     { revision },
   );
 }

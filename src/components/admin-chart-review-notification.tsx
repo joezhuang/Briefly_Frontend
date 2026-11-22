@@ -16,21 +16,26 @@ export function AdminChartReviewNotification() {
   const { ready, user, account } = useBrieflyAuth();
   const { colors } = useBrieflyTheme();
   const pathname = usePathname();
-  const [queue, setQueue] = useState<ChartReviewQueue | null>(null);
-  const [dismissed, setDismissed] = useState<string | null>(null);
+  const [queueByUser, setQueueByUser] = useState<{
+    userId: string;
+    queue: ChartReviewQueue;
+  } | null>(null);
+  const [dismissed, setDismissed] = useState<{
+    userId: string;
+    signature: string;
+  } | null>(null);
   const enabled = ready && !!user && account?.is_admin === true;
+  const userId = user?.id ?? "";
+  // A previous admin's queue must never show during another login.
+  const queue = queueByUser?.userId === userId ? queueByUser.queue : null;
 
   useEffect(() => {
-    if (!enabled) {
-      setQueue(null);
-      setDismissed(null);
-      return;
-    }
+    if (!enabled) return;
     let active = true;
     const refresh = async () => {
       try {
         const next = await getChartReviewQueue();
-        if (active) setQueue(next);
+        if (active) setQueueByUser({ userId, queue: next });
       } catch {
         // Do not interrupt news reading when admin analytics are unavailable.
       }
@@ -45,11 +50,11 @@ export function AdminChartReviewNotification() {
       clearInterval(interval);
       subscription.remove();
     };
-  }, [enabled, user?.id, pathname]);
+  }, [enabled, userId, pathname]);
 
   if (!enabled || !queue?.pending_count || pathname.startsWith("/beta-dashboard")) return null;
   const signature = queueSignature(queue);
-  if (dismissed === signature) return null;
+  if (dismissed?.userId === userId && dismissed.signature === signature) return null;
 
   return (
     <View pointerEvents="box-none" style={styles.position}>
@@ -70,7 +75,7 @@ export function AdminChartReviewNotification() {
             <Text style={[styles.openLabel, { color: colors.background }]}>Review</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Dismiss chart notification"
-            onPress={() => setDismissed(signature)} style={styles.dismiss}>
+            onPress={() => setDismissed({ userId, signature })} style={styles.dismiss}>
             <Text style={[styles.dismissLabel, { color: colors.textMuted }]}>×</Text>
           </Pressable>
         </View>
