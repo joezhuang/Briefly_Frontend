@@ -21,6 +21,42 @@ function requireAll(relativePath, needles) {
 
 const checks = [
   {
+    name: "Homepage editorial cards place text and tools outside photographs at every width",
+    file: "src/components/story-tile.tsx",
+    needles: [
+      'presentation?: "overlay" | "editorial"',
+      'presentation = "overlay"',
+      'const editorial = presentation === "editorial"',
+      "if (editorial) {",
+      "styles.editorialMedia",
+      "styles.editorialBody",
+      "styles.editorialHeadline",
+      "styles.editorialFooter",
+      "styles.editorialSourceLink",
+      "styles.editorialPlay",
+      "videoSurface",
+      "const mediaActions = (",
+      "editorial && [styles.actionIconButtonSurface",
+      "tintColor={editorial ? colors.text : \"#FFFFFF\"}",
+      "videoAvailable && !editorial",
+      "ref={tileRef}",
+      "onVideoStart?.({",
+      "storyTileHref(article, analyticsSource, analyticsScope, videoUrl)",
+    ],
+  },
+  {
+    name: "Homepage opts into image-first cards without changing non-home tile appearance",
+    file: "src/app/index.tsx",
+    needles: [
+      'presentation="editorial"',
+      "editorialFeature(lead, 1, \"hero\")",
+      "editorialFeature(article, index + 2, \"secondary\")",
+      "onFeedScopePress={switchScope}",
+      "const remainingBatches = chunkArticles(remaining);",
+      "<PinnedFeedCategoryBar",
+    ],
+  },
+  {
     name: "Homepage editorial sections use confirmed links and existing article data only",
     file: "src/app/index.tsx",
     needles: [
