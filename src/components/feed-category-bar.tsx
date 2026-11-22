@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import type { HomepageFeedScope } from "@/api/briefly";
+import { layout } from "@/theme/tokens";
 import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
@@ -42,6 +43,59 @@ export function enabledFeedCategories(config: ReturnType<typeof useBrieflyAppCon
     return config.local_feed_enabled !== false;
   });
   return enabled.length ? enabled : ["top"];
+}
+
+/**
+ * Keep only the category/search row visible after it reaches the top edge.
+ * Use the actual measured row position; a fixed scroll threshold would break
+ * with announcements, install banners, language, or location changes.
+ *
+ * The same controller is used by the virtualized homepage and the smaller
+ * Following/Search ScrollViews without altering their scroll containers.
+ */
+export function usePinnedFeedCategories() {
+  const [pinned, setPinned] = useState(false);
+  const barTopRef = useRef<number | null>(null);
+  const scrollOffsetRef = useRef(0);
+
+  const onScrollOffset = useCallback((offset: number) => {
+    scrollOffsetRef.current = Math.max(0, offset);
+    const top = barTopRef.current;
+    const next = top !== null && scrollOffsetRef.current > top + 1;
+    setPinned((previous) => (previous === next ? previous : next));
+  }, []);
+
+  const setBarTop = useCallback((offset: number) => {
+    barTopRef.current = Math.max(0, offset);
+    onScrollOffset(scrollOffsetRef.current);
+  }, [onScrollOffset]);
+
+  return { pinned, setBarTop, onScrollOffset };
+}
+
+export function PinnedFeedCategoryBar({
+  visible,
+  active,
+  onFeedScopePress,
+}: {
+  visible: boolean;
+  active: FeedCategory;
+  onFeedScopePress?: (scope: HomepageFeedScope) => void;
+}) {
+  const { colors } = useBrieflyTheme();
+  if (!visible) return null;
+  return (
+    <View
+      style={[
+        styles.pinnedLayer,
+        { backgroundColor: colors.background, borderBottomColor: colors.border },
+      ]}
+    >
+      <View style={styles.pinnedContent}>
+        <FeedCategoryBar active={active} onFeedScopePress={onFeedScopePress} />
+      </View>
+    </View>
+  );
 }
 
 export function FeedCategoryBar({
@@ -164,6 +218,22 @@ export function FeedCategoryBar({
 }
 
 const styles = StyleSheet.create({
+  pinnedLayer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 30,
+    elevation: 6,
+    paddingVertical: 7,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+  },
+  pinnedContent: {
+    width: "100%",
+    maxWidth: layout.pageMax,
+    paddingHorizontal: layout.pagePadding,
+  },
   bar: {
     width: "100%",
     flexDirection: "row",
