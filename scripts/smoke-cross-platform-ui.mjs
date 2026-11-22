@@ -1330,6 +1330,7 @@ ensure(
 // Generated source-verified charts are a PUBLIC reader feature, while only
 // eligible accounts may request a NEW extraction. Preserve both surfaces.
 const chartsUI = read("src/components/cluster-data-charts.tsx");
+const advancedChartsUI = read("src/components/smart-chart-visual.tsx");
 const articleUI = read("src/components/article-view.tsx");
 const dashboardUI = read("src/app/beta-dashboard.tsx");
 ensure(
@@ -1341,6 +1342,11 @@ ensure(
   chartsUI.includes('chart.chart_type === "kpi"') &&
   chartsUI.includes('chart.chart_type === "line"') &&
   chartsUI.includes('chart.chart_type === "stacked"') &&
+  chartsUI.includes('chart.chart_type === "donut"') &&
+  chartsUI.includes('chart.chart_type === "grouped"') &&
+  chartsUI.includes('chart.chart_type === "dumbbell"') &&
+  chartsUI.includes('chart.chart_type === "waterfall"') &&
+  chartsUI.includes('<SmartChartVisual chart={chart} />') &&
   chartsUI.includes('point.derived') &&
   chartsUI.includes('const keyFigures = readyCharts.filter') &&
   chartsUI.includes('const comparisons = readyCharts.filter') &&
@@ -1354,6 +1360,12 @@ ensure(
   articleUI.includes('styles.podcastFeatureRow') &&
   chartsUI.includes('status?.status === "ready"') &&
   chartsUI.includes('void Linking.openURL(sourceUrl)') &&
+  advancedChartsUI.includes('function DonutVisual(') &&
+  advancedChartsUI.includes('function GroupedVisual(') &&
+  advancedChartsUI.includes('function DumbbellVisual(') &&
+  advancedChartsUI.includes('function WaterfallVisual(') &&
+  advancedChartsUI.includes('accessibilityState={{ selected: styleMode === "donut" }}') &&
+  advancedChartsUI.includes('chart.points.map((point) => point.role)') &&
   articleUI.includes('<ClusterDataCharts eventId={article.event_id}') &&
   articleUI.includes('articleVersionId={article.authoritative_article_version_id ?? article.article_version_id}') &&
   dashboardUI.includes('label="Allow Pro users to generate data charts"') &&

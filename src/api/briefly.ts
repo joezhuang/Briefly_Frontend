@@ -1737,12 +1737,15 @@ export type VerifiedDataChartPoint = {
   derived?: boolean;
   derivation_source_quote?: string;
   composition_source_quote?: string;
+  group?: string;
+  series?: string;
+  role?: "start" | "increase" | "decrease" | "end";
 };
 
 export type VerifiedDataChart = {
   title: string;
   unit: string;
-  chart_type: "bar" | "line" | "stacked" | "kpi";
+  chart_type: "bar" | "line" | "stacked" | "donut" | "grouped" | "dumbbell" | "waterfall" | "kpi";
   qualifier?: "reported" | "forecast" | "proposal" | "target";
   partial?: boolean;
   points: VerifiedDataChartPoint[];

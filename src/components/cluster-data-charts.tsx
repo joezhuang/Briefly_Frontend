@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 
+import { SmartChartVisual } from "@/components/smart-chart-visual";
 import {
   getClusterDataCharts,
   requestClusterDataCharts,
@@ -260,6 +261,12 @@ function ChartBars({ chart, copy }: {
           )}
           {qualifier && <Text style={[styles.kpiQualifier, { color: colors.textMuted }]}>{qualifier}</Text>}
         </View>
+      ) : (chart.chart_type === "donut" ||
+        chart.chart_type === "stacked" ||
+        chart.chart_type === "grouped" ||
+        chart.chart_type === "dumbbell" ||
+        chart.chart_type === "waterfall") ? (
+        <SmartChartVisual chart={chart} />
       ) : chart.chart_type === "line" ? (
         <TrendPlot chart={chart} accent={colors.accent}
           border={colors.border} textColor={colors.text} />
