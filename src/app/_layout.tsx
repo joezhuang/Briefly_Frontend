@@ -4,6 +4,7 @@ import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { Fragment, PropsWithChildren, useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 
 import { trackProductEvent } from "@/analytics/product-analytics";
@@ -127,6 +128,38 @@ function AppStack() {
   const pathname = usePathname();
   const { resolvedMode, colors } = useBrieflyTheme();
   const { config: appConfig } = useBrieflyAppConfig();
+
+  // Mobile browsers resize their visual viewport when the address bar
+  // collapses. The native SafeAreaView only paints inside the React root;
+  // colour the actual document and overscroll/toolbar surfaces as well so
+  // that viewport transitions never expose the browser's default white.
+  // Keep document styles scoped to web and in sync with manual/system theme.
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+
+    const background = colors.background;
+    const root = document.getElementById("root");
+    document.documentElement.style.backgroundColor = background;
+    document.body.style.backgroundColor = background;
+    if (root) root.style.backgroundColor = background;
+
+    // Do not lock scrolling or set a fixed viewport height: the homepage
+    // owns its scroll restoration and must follow the visual viewport.
+    if (typeof CSS !== "undefined" && CSS.supports("height", "100dvh")) {
+      document.body.style.minHeight = "100dvh";
+      if (root) root.style.minHeight = "100dvh";
+    }
+
+    let themeColor = document.querySelector<HTMLMetaElement>(
+      'meta[name="theme-color"]',
+    );
+    if (!themeColor) {
+      themeColor = document.createElement("meta");
+      themeColor.name = "theme-color";
+      document.head.appendChild(themeColor);
+    }
+    themeColor.content = background;
+  }, [colors.background]);
   const maintenanceAllowed =
     pathname.startsWith("/beta-dashboard") ||
     pathname.startsWith("/sign-in") ||
