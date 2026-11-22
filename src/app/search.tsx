@@ -12,7 +12,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { searchBrieflyArticles } from "@/api/search";
 import { AppHeader } from "@/components/app-header";
-import { FeedCategoryBar } from "@/components/feed-category-bar";
+import {
+  FeedCategoryBar,
+  PinnedFeedCategoryBar,
+  usePinnedFeedCategories,
+} from "@/components/feed-category-bar";
 import { ScreenState } from "@/components/screen-state";
 import { StoryTile } from "@/components/story-tile";
 import { useBrieflyAppConfig } from "@/context/app-config";
@@ -45,6 +49,8 @@ export default function SearchScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const { pinned: categoriesPinned, setBarTop, onScrollOffset } =
+    usePinnedFeedCategories();
 
   const searchEnabled = appConfig?.search_enabled !== false;
   const trimmedQuery = query.trim();
@@ -110,10 +116,20 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        onScroll={(event) => onScrollOffset(event.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={32}
+      >
         <View style={[styles.page, width < 480 && styles.pageCompact]}>
           <AppHeader />
-          <View style={styles.categoryNav}><FeedCategoryBar active="search" /></View>
+          <View
+            style={styles.categoryNav}
+            onLayout={(event) => setBarTop(event.nativeEvent.layout.y)}
+          >
+            <FeedCategoryBar active="search" />
+          </View>
 
           <View style={styles.header}>
             <Text style={[styles.subtitle, { color: colors.textMuted }]}>
@@ -164,6 +180,7 @@ export default function SearchScreen() {
           ) : null}
         </View>
       </ScrollView>
+      <PinnedFeedCategoryBar visible={categoriesPinned} active="search" />
     </SafeAreaView>
   );
 }
