@@ -1384,11 +1384,18 @@ export default function HomeScreen() {
         keyExtractor={(batch) => batch.map(storyKey).join(":")}
         ListHeaderComponent={listHeader}
         renderItem={({ item: batch, index }) => {
-          const storiesBeforeBatch = 3 + index * VIRTUAL_BATCH_SIZE;
+          // Count featured and promoted stories once for native ad cadence.
+          // The remainder stays virtualized and each article still renders in
+          // the existing fully interactive StoryTile.
+          const storiesBeforeBatch =
+            3 + developingHighlights.length + index * VIRTUAL_BATCH_SIZE;
           const storiesAfterBatch = storiesBeforeBatch + batch.length;
           const crossedAdBoundary =
             Math.floor(storiesAfterBatch / homeAdInterval) >
             Math.floor(storiesBeforeBatch / homeAdInterval);
+          // Alternate two and three columns rather than a repetitive wall of
+          // identical cards. Tablets remain two-column; phones remain one.
+          const twoColumnEdition = desktop && index % 2 === 1;
 
           return (
             <View
@@ -1398,6 +1405,14 @@ export default function HomeScreen() {
                 width < 480 && styles.pageCompact,
               ]}
             >
+              {index > 0 && index % 2 === 1 && (
+                <View style={styles.feedInterlude}>
+                  <Text style={[styles.feedInterludeText, { color: colors.accent }]}>
+                    {edition.brief}
+                  </Text>
+                  <View style={[styles.feedInterludeRule, { backgroundColor: colors.border }]} />
+                </View>
+              )}
               <View
                 style={[
                   styles.feedGrid,
@@ -1409,7 +1424,7 @@ export default function HomeScreen() {
                     key={storyKey(article)}
                     style={
                       desktop
-                        ? styles.third
+                        ? twoColumnEdition ? styles.half : styles.third
                         : tablet
                           ? styles.half
                           : styles.full
@@ -1813,6 +1828,21 @@ const styles = StyleSheet.create({
   moreHeading: { fontSize: 26, lineHeight: 32, fontWeight: "900", letterSpacing: -0.4 },
   moreSubtitle: { fontSize: 13, lineHeight: 19 },
   moreRule: { height: 3, width: 42, borderRadius: 2 },
+  feedInterlude: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 26,
+    marginBottom: 4,
+    gap: 14,
+  },
+  feedInterludeText: {
+    fontSize: 11,
+    lineHeight: 16,
+    letterSpacing: 1.4,
+    fontWeight: "900",
+    flexShrink: 0,
+  },
+  feedInterludeRule: { flex: 1, height: StyleSheet.hairlineWidth },
   feedGrid: { marginTop: 10, gap: 12 },
   feedGridWide: { flexDirection: "row", flexWrap: "wrap" },
   third: { flexBasis: "31%", flexGrow: 1, minWidth: 0 },
