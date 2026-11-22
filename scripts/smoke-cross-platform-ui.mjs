@@ -21,6 +21,53 @@ function requireAll(relativePath, needles) {
 
 const checks = [
   {
+    name: "Homepage editorial sections use confirmed links and existing article data only",
+    file: "src/app/index.tsx",
+    needles: [
+      "selectHomepageDevelopments(articles, desktop ? 3 : 2, PAGE_SIZE)",
+      "const remainingBatches = chunkArticles(remaining);",
+      "const leadWhyItMatters",
+      "lead?.article_version_id != null && leadLanguageMatches",
+      "styles.contextPanel",
+      "styles.developingSection",
+      "developingHighlights.map((article) => (",
+      "article.developing_story_count",
+      "styles.developingGridWide",
+      "storyTileHref(article, \"feed\", scope)",
+      "const twoColumnEdition = desktop && index % 2 === 1",
+      "const storiesBeforeBatch =",
+      "3 + developingHighlights.length + index * VIRTUAL_BATCH_SIZE",
+      "const crossedAdBoundary =",
+      "<StoryTile",
+      "{...videoPropsFor(article)}",
+      "<PinnedFeedCategoryBar",
+    ],
+  },
+  {
+    name: "Confirmed story selection excludes duplicates but retains independent stories",
+    file: "src/services/home-editorial.ts",
+    needles: [
+      "export function selectHomepageDevelopments(",
+      "(article.developing_story_count ?? 0) <= 1",
+      "const group = article.developing_story_id || article.event_id;",
+      "if (groups.has(group)) continue;",
+      "articles.slice(3, Math.max(3, pageSize))",
+      "articles.slice(3).filter(",
+      "!promotedEventIds.has(article.event_id)",
+    ],
+  },
+  {
+    name: "Shared story link preserves original tiles' navigation and video access",
+    file: "src/components/story-tile.tsx",
+    needles: [
+      "export function storyTileHref(",
+      "href ?? storyTileHref(article, analyticsSource, analyticsScope, videoUrl)",
+      "if (playableVideoUrl) params.set(\"videoUrl\", playableVideoUrl);",
+      "onVideoStart",
+      "onVideoStop",
+    ],
+  },
+  {
     name: "Editorial homepage stays responsive without changing feed sorting or sticky navigation",
     file: "src/app/index.tsx",
     needles: [
