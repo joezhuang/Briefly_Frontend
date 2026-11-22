@@ -10,7 +10,7 @@ import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 
 const copy = {
-  en: { heading: "Developing story", detail: "Other developments", open: "Read development" },
+  en: { heading: "Developing story", detail: "Related developments", open: "Read development" },
   es: { heading: "Noticia en desarrollo", detail: "Otros acontecimientos", open: "Leer actualización" },
   ja: { heading: "続報のあるニュース", detail: "関連する動き", open: "記事を読む" },
   "zh-CN": { heading: "持续发展的新闻", detail: "相关进展", open: "阅读进展" },
