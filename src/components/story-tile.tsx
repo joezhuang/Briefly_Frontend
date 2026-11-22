@@ -496,6 +496,9 @@ export function StoryTile({
       <View style={styles.content}>
         <Text style={styles.category}>
           {(article.category ?? t.topStory).toUpperCase()}
+          {(article.developing_story_count ?? 0) > 1
+            ? ` · ${language === "zh-CN" ? "持续新闻" : language === "zh-TW" ? "持續新聞" : language === "ja" ? "続報" : language === "es" ? "En desarrollo" : "Developing story"} (${article.developing_story_count})`
+            : ""}
         </Text>
 
         <View style={styles.bottom}>
