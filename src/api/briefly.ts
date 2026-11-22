@@ -1030,11 +1030,24 @@ export type BetaDashboardEventMerge = {
   survivor_headline?: string;
 };
 
+export type BetaDashboardStoryLink = {
+  primary_event_id: string;
+  related_event_id: string;
+  primary_headline?: string | null;
+  related_headline?: string | null;
+  relation_type: "development" | "coverage" | "commentary";
+  status: "active" | "reverted";
+  confidence: number;
+  created_at?: string | null;
+};
+
 export type BetaDashboardEventQualityPage = {
   candidates: BetaDashboardEventQualityCandidate[];
   candidate_count: number;
   merges: BetaDashboardEventMerge[];
   merge_count: number;
+  story_grouping_enabled?: boolean;
+  story_links?: BetaDashboardStoryLink[];
 };
 
 export function getBetaDashboardEventQuality() {
@@ -1065,6 +1078,36 @@ export function undoBetaDashboardEventMerge(sourceEventId: string) {
       encodeURIComponent(sourceEventId) +
       "/undo",
     { confirm: true },
+  );
+}
+
+export function linkBetaDashboardDevelopingStory(
+  primaryEventId: string,
+  relatedEventId: string,
+  relationType: BetaDashboardStoryLink["relation_type"] = "development",
+) {
+  return postJson<BetaDashboardStoryLink>(
+    "/api/beta-dashboard/event-quality/story-links",
+    {
+      primary_event_id: primaryEventId,
+      related_event_id: relatedEventId,
+      relation_type: relationType,
+      confirm: true,
+    },
+  );
+}
+
+export function unlinkBetaDashboardDevelopingStory(
+  primaryEventId: string,
+  relatedEventId: string,
+) {
+  return postJson<BetaDashboardStoryLink>(
+    "/api/beta-dashboard/event-quality/story-links/undo",
+    {
+      primary_event_id: primaryEventId,
+      related_event_id: relatedEventId,
+      confirm: true,
+    },
   );
 }
 
