@@ -944,6 +944,36 @@ export default function HomeScreen() {
     };
   };
 
+  const editorialFeature = (
+    article: CanonicalArticle,
+    index: number,
+    size: "hero" | "secondary",
+  ) => (
+    <View
+      key={storyKey(article)}
+      style={[styles.featureFrame, { borderColor: colors.border }]}
+    >
+      <View style={styles.featureRail}>
+        <Text style={[styles.featureIndex, { color: colors.accent }]}>
+          {String(index).padStart(2, "0")}
+        </Text>
+        <View style={[styles.featureRailRule, { backgroundColor: colors.border }]} />
+        <Text style={[styles.featureLabel, { color: colors.textMuted }]} numberOfLines={1}>
+          {index === 1 ? edition.lead : edition.next}
+        </Text>
+      </View>
+      <StoryTile
+        article={article}
+        size={size}
+        fitViewport={size === "hero" && mobileLeadFit}
+        videoEnabled={homepageVideoEnabled}
+        analyticsSource="feed"
+        analyticsScope={scope}
+        {...videoPropsFor(article)}
+      />
+    </View>
+  );
+
   const openFloatingVideoStory = () => {
     const session = videoSessionRef.current;
     if (!session || !session.storyReady) return;
@@ -1092,60 +1122,62 @@ export default function HomeScreen() {
 
       {authReady && locationUsable && !loading && !error && lead && (
         <>
+          <View style={[styles.sectionHeading, { borderTopColor: colors.border }]}>
+            <View style={styles.sectionHeadingCopy}>
+              <Text style={[styles.sectionEyebrow, { color: colors.accent }]}>
+                {edition.inFocus}
+              </Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {edition[scope]}
+              </Text>
+            </View>
+            <View style={[styles.sectionCount, { borderColor: colors.border }]}>
+              <Text style={[styles.sectionCountText, { color: colors.textMuted }]}>
+                {String(Math.min(articles.length, 3)).padStart(2, "0")} {edition.stories}
+              </Text>
+            </View>
+          </View>
+
           {desktop ? (
             <View style={styles.heroGrid}>
               <View style={styles.heroColumn}>
-                <StoryTile
-                  article={lead}
-                  size="hero"
-                  videoEnabled={homepageVideoEnabled}
-                  analyticsSource="feed"
-                  analyticsScope={scope}
-                  {...videoPropsFor(lead)}
-                />
+                {editorialFeature(lead, 1, "hero")}
               </View>
               <View style={styles.secondaryColumn}>
-                {secondary.map((article) => (
-                  <StoryTile
-                    key={storyKey(article)}
-                    article={article}
-                    size="secondary"
-                    videoEnabled={homepageVideoEnabled}
-                    analyticsSource="feed"
-                    analyticsScope={scope}
-                    {...videoPropsFor(article)}
-                  />
-                ))}
+                {secondary.map((article, index) =>
+                  editorialFeature(article, index + 2, "secondary")
+                )}
               </View>
             </View>
           ) : (
             <View style={styles.stack}>
-              <StoryTile
-                article={lead}
-                size="hero"
-                fitViewport={mobileLeadFit}
-                videoEnabled={homepageVideoEnabled}
-                analyticsSource="feed"
-                analyticsScope={scope}
-                {...videoPropsFor(lead)}
-              />
+              {editorialFeature(lead, 1, "hero")}
               <View style={tablet ? styles.twoColumnGrid : styles.stack}>
-                {secondary.map((article) => (
+                {secondary.map((article, index) => (
                   <View
                     key={storyKey(article)}
                     style={tablet ? styles.half : undefined}
                   >
-                    <StoryTile
-                      article={article}
-                      size="secondary"
-                      videoEnabled={homepageVideoEnabled}
-                      analyticsSource="feed"
-                      analyticsScope={scope}
-                      {...videoPropsFor(article)}
-                    />
+                    {editorialFeature(article, index + 2, "secondary")}
                   </View>
                 ))}
               </View>
+            </View>
+          )}
+
+          {remaining.length > 0 && (
+            <View style={[styles.moreSection, { borderTopColor: colors.border }]}>
+              <View style={styles.moreSectionCopy}>
+                <Text style={[styles.moreHeading, { color: colors.text }]}>
+                  {edition.more}
+                </Text>
+                {!mobileHeader && (
+                  <Text style={[styles.moreSubtitle, { color: colors.textMuted }]}>
+                    {edition.moreDetail}
+                  </Text>
+                )}
+              </View>
+              <View style={[styles.moreRule, { backgroundColor: colors.accent }]} />
             </View>
           )}
         </>
