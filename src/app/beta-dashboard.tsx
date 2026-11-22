@@ -1691,11 +1691,11 @@ function EventQualityConsole() {
         <View style={[styles.auditItem, { borderTopColor: colors.border, gap: 10 }]}>
           <View style={styles.auditItemCopy}>
             <Text style={[styles.configLabel, { color: colors.text }]}>
-              Review potentially related stories
+              Optional relationship diagnostics
             </Text>
             <Text style={[styles.configDetail, { color: colors.textMuted }]}>
               Compare distinct events using their main headlines and supporting reports.
-              Suggestions never link automatically from this review.
+              Ingestion automatically links well-corroborated news. Uncertain matches stay independent; no manual approval is required.
             </Text>
           </View>
           <Pressable
@@ -1705,7 +1705,7 @@ function EventQualityConsole() {
             style={[styles.resolveButton, { borderColor: colors.border }]}
           >
             <Text style={[styles.resolveText, { color: colors.text }]}>
-              {candidateLoading ? "Checking recent events…" : "Find matching stories"}
+              {candidateLoading ? "Checking recent events…" : "Inspect recent matches (optional)"}
             </Text>
           </Pressable>
           {!!candidateError && (
@@ -1747,7 +1747,7 @@ function EventQualityConsole() {
                   style={[styles.resolveButton, { borderColor: colors.border }]}
                 >
                   <Text style={[styles.resolveText, { color: colors.text }]}>
-                    {selected ? "Close relationship review" : "Review this relationship"}
+                    {selected ? "Close relationship review" : "Inspect relationship evidence"}
                   </Text>
                 </Pressable>
                 {selected && (
@@ -1780,7 +1780,7 @@ function EventQualityConsole() {
           })}
           {candidatePreview && !candidatePreview.review_candidates.length && (
             <Text style={[styles.configDetail, { color: colors.textMuted }]}>
-              No uncertain links were found in the recent bounded search.
+              No uncertain matches found. No action needed.
             </Text>
           )}
         </View>
