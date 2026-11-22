@@ -1040,7 +1040,7 @@ export default function HomeScreen() {
                 narrowPhone && styles.editionHeadlineNarrow,
                 { color: colors.text },
               ]}
-              numberOfLines={2}
+              numberOfLines={compactEditorial ? 3 : 2}
             >
               {edition.headline}
             </Text>
