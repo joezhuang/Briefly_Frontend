@@ -6,7 +6,7 @@ import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { Fragment, PropsWithChildren, useEffect, useRef, useState } from "react";
-import { Platform } from "react-native";
+import { Platform, View } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 
 import { trackProductEvent } from "@/analytics/product-analytics";
@@ -146,8 +146,8 @@ function AppStack() {
     document.body.style.backgroundColor = background;
     if (root) root.style.backgroundColor = background;
 
-    // Do not force 100dvh or min-height here: when mobile browser chrome
-    // collapses, an oversized root can create an empty bottom band.
+    // CSS owns exact mobile root sizing; do not imperatively add any
+    // dynamic minimum height, which can produce a growing bottom band.
 
     let themeColor = document.querySelector<HTMLMetaElement>(
       'meta[name="theme-color"]',
@@ -186,10 +186,10 @@ function AppStack() {
   }
 
   return (
-    <>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar style={resolvedMode === "dark" ? "light" : "dark"} />
       <AnimatedSplashOverlay />
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="saved/index" />
         <Stack.Screen name="saved/[snapshotId]" />
@@ -204,7 +204,7 @@ function AppStack() {
         <Stack.Screen name="share/[versionId]" />
       </Stack>
       {appConfig?.podcast_enabled !== false && <GlobalPodcastPlayer />}
-    </>
+    </View>
   );
 }
 
