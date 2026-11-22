@@ -1228,6 +1228,105 @@ export default function HomeScreen() {
             </View>
           )}
 
+          {!!leadWhyItMatters && (
+            <Pressable
+              accessibilityRole={Platform.OS === "web" ? "link" : "button"}
+              accessibilityLabel={edition.readAnalysis}
+              onPress={() =>
+                router.push(storyTileHref(lead, "feed", scope) as never)
+              }
+              style={({ pressed }) => [
+                styles.contextPanel,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  opacity: pressed ? 0.82 : 1,
+                },
+              ]}
+            >
+              <View style={[styles.contextAccent, { backgroundColor: colors.accent }]} />
+              <View style={styles.contextCopy}>
+                <Text style={[styles.contextEyebrow, { color: colors.accent }]}>
+                  {edition.context}
+                </Text>
+                <Text
+                  style={[styles.contextBody, { color: colors.text }]}
+                  numberOfLines={compactEditorial ? 3 : 2}
+                >
+                  {leadWhyItMatters}
+                </Text>
+              </View>
+              {!narrowPhone && (
+                <Text style={[styles.contextAction, { color: colors.accent }]}>
+                  {edition.readAnalysis} →
+                </Text>
+              )}
+            </Pressable>
+          )}
+
+          {developingHighlights.length > 0 && (
+            <View style={styles.developingSection}>
+              <View style={[styles.sectionHeading, { borderTopColor: colors.border }]}>
+                <View style={styles.sectionHeadingCopy}>
+                  <Text style={[styles.sectionEyebrow, { color: colors.accent }]}>
+                    {edition.inFocus}
+                  </Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    {edition.evolving}
+                  </Text>
+                  <Text style={[styles.developingDetail, { color: colors.textMuted }]}>
+                    {edition.evolvingDetail}
+                  </Text>
+                </View>
+                <View style={[styles.developingSignal, { backgroundColor: colors.accent }]} />
+              </View>
+              <View
+                style={[
+                  styles.developingGrid,
+                  (desktop || tablet) && styles.developingGridWide,
+                ]}
+              >
+                {developingHighlights.map((article) => (
+                  <Pressable
+                    key={storyKey(article)}
+                    accessibilityRole={Platform.OS === "web" ? "link" : "button"}
+                    accessibilityLabel={`${edition.evolving}: ${article.headline}`}
+                    onPress={() =>
+                      router.push(storyTileHref(article, "feed", scope) as never)
+                    }
+                    style={({ pressed }) => [
+                      styles.developingCard,
+                      {
+                        backgroundColor: colors.surfaceMuted,
+                        borderColor: colors.border,
+                        opacity: pressed ? 0.80 : 1,
+                      },
+                      desktop ? styles.developingThird : tablet ? styles.developingHalf : styles.full,
+                    ]}
+                  >
+                    <View style={styles.developingCardMeta}>
+                      <Text style={[styles.developingCardCategory, { color: colors.accent }]} numberOfLines={1}>
+                        {(article.category || edition.evolving).toUpperCase()}
+                      </Text>
+                      <Text style={[styles.developingCardCount, { color: colors.textMuted }]}>
+                        {article.developing_story_count} {edition.connected}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[styles.developingCardTitle, { color: colors.text }]}
+                      numberOfLines={3}
+                    >
+                      {article.headline}
+                    </Text>
+                    <Text style={[styles.developingCardArrow, { color: colors.accent }]}>
+                      ↗
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+
           {remaining.length > 0 && (
             <View style={[styles.moreSection, { borderTopColor: colors.border }]}>
               <View style={styles.moreSectionCopy}>
