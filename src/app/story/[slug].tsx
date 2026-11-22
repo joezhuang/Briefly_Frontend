@@ -200,6 +200,7 @@ export default function StoryDetailScreen() {
     translationVersion,
     englishVersion,
     followEvent,
+    chartReview,
   } = useLocalSearchParams<{
     slug?: string | string[];
     eventId?: string | string[];
@@ -217,6 +218,7 @@ export default function StoryDetailScreen() {
     translationVersion?: string | string[];
     englishVersion?: string | string[];
     followEvent?: string | string[];
+    chartReview?: string | string[];
   }>();
 
   const resolvedSlug = useMemo(
@@ -1878,6 +1880,7 @@ export default function StoryDetailScreen() {
 
       <ArticleView
         article={displayedArticle}
+        chartReviewRequested={(Array.isArray(chartReview) ? chartReview[0] : chartReview) === "1"}
         mediaActive={storyMediaActive}
         onReaderEngaged={markReaderEngaged}
         refreshKey={
