@@ -1283,9 +1283,9 @@ ensure(
   "Lead Why it matters appears immediately after the first story, not after the secondaries, at every breakpoint"
 );
 
-// Mobile browser chrome collapse must not add a second dynamic-viewport
-// height below the React Native Web root. This catches the reported enlarged
-// white band on initial load and after the address bar disappears.
+// Mobile address-bar collapse must resize the Expo root to the current
+// visual viewport rather than growing its minimum height. Colour every
+// navigator layer to prevent white exposure on initial load or scroll.
 const browserRootCss = read("src/global.css");
 const rootLayout = read("src/app/_layout.tsx");
 const browserManifest = JSON.parse(read("public/manifest.webmanifest"));
@@ -1297,8 +1297,14 @@ ensure(
   browserRootCss.includes("html,\nbody,\n#root {") &&
   browserRootCss.includes("margin: 0;") &&
   browserRootCss.includes("height: 100%;") &&
+  browserRootCss.includes("@supports (height: 100dvh)") &&
+  browserRootCss.includes("@media (max-width: 900px)") &&
+  browserRootCss.includes("height: 100dvh;") &&
+  browserRootCss.includes("min-height: 0;") &&
   !browserRootCss.includes("min-height: 100dvh;") &&
   !rootLayout.includes('style.minHeight = "100dvh"') &&
+  rootLayout.includes('contentStyle: { backgroundColor: colors.background }') &&
+  rootLayout.includes('<View style={{ flex: 1, backgroundColor: colors.background }}>') &&
   browserManifest.background_color === "#F4F1EB" &&
   browserManifest.theme_color === "#F4F1EB",
   "Mobile web viewport avoids a growing bottom gap and matches the active page colour"
