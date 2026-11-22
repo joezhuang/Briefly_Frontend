@@ -511,6 +511,25 @@ const checks = [
     needles: [
       '<DevelopingStoryLinks eventId={eventId} members={intelligence?.story_members} />',
     ],
+  }  {
+        name: "Developing-story suggestions share backend classification and require focused human review",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      "getBetaDashboardDevelopingStoryCandidates()",
+      "Find matching stories",
+      "Review this relationship",
+      "No automatic group merge is allowed.",
+      "Confirm and link as",
+      'setStoryRelationType(candidate.relation_type)',
+    ],
+  },
+  {
+    name: "Review candidate API is read only and typed",
+    file: "src/api/briefly.ts",
+    needles: [
+      "export type BetaDashboardStoryCandidatePreview = {",
+      '"/api/beta-dashboard/event-quality/story-candidates"',
+    ],
   },
   {
     name: "Admin Event Quality has reversible developing-story links separate from merges",
