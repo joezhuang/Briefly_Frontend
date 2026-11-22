@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { trackProductEvent } from "@/analytics/product-analytics";
 import {
@@ -20,6 +20,8 @@ const copy = {
     title: "Evidence",
     timeline: "Timeline",
     coverage: "Coverage",
+    loading: "Loading event details…",
+    unavailable: "Event details are temporarily unavailable.",
     whatWeKnow: "What we know",
     disputed: "Disputed",
     unknown: "Still unknown",
@@ -39,6 +41,8 @@ const copy = {
     title: "Evidencia",
     timeline: "Cronología",
     coverage: "Cobertura",
+    loading: "Cargando detalles del evento…",
+    unavailable: "Los detalles del evento no están disponibles.",
     whatWeKnow: "Lo que sabemos",
     disputed: "En disputa",
     unknown: "Aún no se sabe",
@@ -58,6 +62,8 @@ const copy = {
     title: "根拠",
     timeline: "タイムライン",
     coverage: "報道範囲",
+    loading: "詳細を読み込み中…",
+    unavailable: "詳細を読み込めませんでした。",
     whatWeKnow: "確認できていること",
     disputed: "食い違い",
     unknown: "まだ不明",
@@ -77,6 +83,8 @@ const copy = {
     title: "证据",
     timeline: "时间线",
     coverage: "报道范围",
+    loading: "正在加载事件详情…",
+    unavailable: "暂时无法加载事件详情。",
     whatWeKnow: "目前可确认",
     disputed: "存在争议",
     unknown: "仍不明确",
@@ -96,6 +104,8 @@ const copy = {
     title: "證據",
     timeline: "時間線",
     coverage: "報導範圍",
+    loading: "正在載入事件詳情…",
+    unavailable: "暫時無法載入事件詳情。",
     whatWeKnow: "目前可確認",
     disputed: "存在爭議",
     unknown: "仍不明確",
@@ -295,8 +305,8 @@ export function EventEvidencePanel({
   const [failedEventId, setFailedEventId] = useState<string | null>(null);
   const [lensState, setLensState] = useState<{
     eventId: string;
-    lens: EventLens;
-  }>({ eventId, lens: "evidence" });
+    lens: EventLens | null;
+  }>({ eventId, lens: null });
 
   const intelligence =
     intelligenceState?.eventId === eventId ? intelligenceState.value : null;
@@ -306,23 +316,29 @@ export function EventEvidencePanel({
     ...(timelineEnabled ? (["timeline"] as EventLens[]) : []),
     ...(coverageEnabled ? (["coverage"] as EventLens[]) : []),
   ];
-  const requestedLens =
-    lensState.eventId === eventId ? lensState.lens : enabledLenses[0] ?? null;
+  // Every lens starts collapsed; selecting the open tab closes it.
+  // Switching stories also resets the visible lens without affecting others.
+  const requestedLens = lensState.eventId === eventId ? lensState.lens : null;
   const activeLens =
     requestedLens && enabledLenses.includes(requestedLens)
       ? requestedLens
-      : enabledLenses[0] ?? null;
+      : null;
 
   const selectLens = (lens: EventLens) => {
-    if (lens === activeLens) return;
-    setLensState({ eventId, lens });
-    trackProductEvent("event_lens_select", {
-      eventId,
-      properties: { lens },
-    });
+    const nextLens = activeLens === lens ? null : lens;
+    setLensState({ eventId, lens: nextLens });
+    if (nextLens) {
+      trackProductEvent("event_lens_select", {
+        eventId,
+        properties: { lens: nextLens },
+      });
+    }
   };
 
   useEffect(() => {
+    // Don't fetch event intelligence until Evidence or Coverage is expanded.
+    // Timeline has its own lazy fetch when its component is mounted.
+    if (activeLens !== "evidence" && activeLens !== "coverage") return;
     if (!evidenceEnabled && !coverageEnabled) return;
 
     let active = true;
@@ -335,18 +351,13 @@ export function EventEvidencePanel({
         }
       })
       .catch(() => {
-        if (active) {
-          setFailedEventId(eventId);
-          if (timelineEnabled) {
-            setLensState({ eventId, lens: "timeline" });
-          }
-        }
+        if (active) setFailedEventId(eventId);
       });
 
     return () => {
       active = false;
     };
-  }, [coverageEnabled, evidenceEnabled, eventId, refreshKey, timelineEnabled]);
+  }, [activeLens, coverageEnabled, evidenceEnabled, eventId, refreshKey]);
 
   const assessment = intelligence?.assessment;
   const corroborated = useMemo(
@@ -442,13 +453,12 @@ export function EventEvidencePanel({
       >
         {tabs.map((tab) => {
           const selected = activeLens === tab.id;
-          const disabled = tab.id !== "timeline" && !intelligence;
           return (
             <Pressable
               key={tab.id}
               accessibilityRole="button"
-              accessibilityState={{ selected, disabled }}
-              disabled={disabled}
+              accessibilityState={{ expanded: selected }}
+
               onPress={() => selectLens(tab.id)}
               style={({ pressed }) => [
                 styles.tab,
@@ -456,8 +466,7 @@ export function EventEvidencePanel({
                   styles.tabSelected,
                   { backgroundColor: colors.surface, borderColor: colors.border },
                 ],
-                pressed && !disabled && styles.tabPressed,
-                disabled && styles.tabDisabled,
+                pressed && styles.tabPressed,
               ]}
             >
               <Text
@@ -478,6 +487,16 @@ export function EventEvidencePanel({
           );
         })}
       </View>
+
+      {(activeLens === "evidence" || activeLens === "coverage") &&
+        !intelligence && (
+          <View style={[styles.loadState, { borderColor: colors.border }]}>
+            {!failed && <ActivityIndicator color={colors.accent} size="small" />}
+            <Text style={[styles.loadLabel, { color: colors.textMuted }]}>
+              {failed ? text.unavailable : text.loading}
+            </Text>
+          </View>
+        )}
 
       {evidenceEnabled && activeLens === "evidence" && intelligence && (
         <View
@@ -627,6 +646,17 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: "900",
   },
+  loadState: {
+    marginTop: 10,
+    minHeight: 54,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  loadLabel: { fontSize: 13, flexShrink: 1 },
   container: {
     marginTop: 10,
     borderWidth: StyleSheet.hairlineWidth,
