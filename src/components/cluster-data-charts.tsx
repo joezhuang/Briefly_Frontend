@@ -30,6 +30,8 @@ const chartCopy = {
     showLess: "Show fewer comparisons",
     details: "Source-verified figures from this news event",
     generate: "Extract charts",
+    update: "Refresh charts with latest extraction",
+    updating: "Updating verified charts…",
     processing: "Checking original reports for comparable data…",
     insufficient: "No figures could be source-verified for publication from the available original reports.",
     retry: "Try extraction again",
@@ -55,6 +57,8 @@ const chartCopy = {
     showLess: "Mostrar menos",
     details: "Cifras verificadas en las fuentes de esta noticia",
     generate: "Extraer gráficos",
+    update: "Actualizar los gráficos",
+    updating: "Actualizando cifras verificadas…",
     processing: "Comprobando los datos en las fuentes originales…",
     insufficient: "No se pudieron verificar cifras publicables en las fuentes originales disponibles.",
     retry: "Volver a intentar",
@@ -80,6 +84,8 @@ const chartCopy = {
     showLess: "表示を減らす",
     details: "報道元で確認された数値",
     generate: "グラフを作成",
+    update: "グラフを最新の抽出で更新",
+    updating: "検証済みグラフを更新中…",
     processing: "元記事の比較可能な数値を確認中…",
     insufficient: "参照できた元記事から公開可能な数値を検証できませんでした。",
     retry: "再試行",
@@ -105,6 +111,8 @@ const chartCopy = {
     showLess: "收起部分对比",
     details: "来自原始报道并经过核验的数值",
     generate: "提取图表",
+    update: "使用最新分析更新图表",
+    updating: "正在更新已核实图表…",
     processing: "正在核对原始报道中的可比较数据…",
     insufficient: "未能从可获取的原始报道中核实适合公开的统计数据。",
     retry: "重新尝试",
@@ -130,6 +138,8 @@ const chartCopy = {
     showLess: "收起部分比較",
     details: "來自原始報導並經過核實的數值",
     generate: "擷取圖表",
+    update: "使用最新分析更新圖表",
+    updating: "正在更新已核實圖表…",
     processing: "正在核對原始報導中的可比較數據…",
     insufficient: "未能從可取得的原始報導中核實適合公開的統計數據。",
     retry: "重新嘗試",
@@ -402,7 +412,7 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
   }, [eventId, articleVersionId, user?.id, account?.translation_entitled, account?.is_admin]);
 
   useEffect(() => {
-    if (status?.status !== "processing" || !eventId) return;
+    if ((status?.status !== "processing" && !status?.refreshing) || !eventId) return;
     let active = true;
     const id = setInterval(() => {
       void getClusterDataCharts(eventId)
@@ -410,7 +420,7 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
         .catch(() => {});
     }, 5000);
     return () => { active = false; clearInterval(id); };
-  }, [eventId, status?.status]);
+  }, [eventId, status?.status, status?.refreshing]);
 
   const generate = async () => {
     if (busy) return;
@@ -530,10 +540,12 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
           )}
         </View>
       )}
-      {status?.status === "processing" && (
+      {(status?.status === "processing" || status?.refreshing) && (
         <View style={styles.progress}>
           <ActivityIndicator size="small" color={colors.accent} />
-          <Text style={[styles.progressText, { color: colors.textMuted }]}>{copy.processing}</Text>
+          <Text style={[styles.progressText, { color: colors.textMuted }]}>
+            {status?.refreshing ? copy.updating : copy.processing}
+          </Text>
         </View>
       )}
       {status?.status === "insufficient" && (
@@ -565,7 +577,8 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
       {canGenerate && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={status?.status === "failed" ? copy.retry : copy.generate}
+          accessibilityLabel={status?.status === "ready" ? copy.update :
+            status?.status === "failed" ? copy.retry : copy.generate}
           disabled={busy}
           onPress={() => void generate()}
           style={[styles.generateButton, {
@@ -575,7 +588,8 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
         >
           {busy && <ActivityIndicator size="small" color={colors.background} />}
           <Text style={[styles.generateText, { color: colors.background }]}>
-            {status?.status === "failed" ? copy.retry : copy.generate}
+            {status?.status === "ready" ? copy.update :
+              status?.status === "failed" ? copy.retry : copy.generate}
           </Text>
         </Pressable>
       )}

@@ -1757,6 +1757,7 @@ export type ClusterDataChartStatus = {
   status: "not_generated" | "processing" | "ready" | "insufficient" | "failed";
   charts: VerifiedDataChart[];
   can_generate: boolean;
+  refreshing?: boolean;
   updated_at?: string | null;
 };
 
