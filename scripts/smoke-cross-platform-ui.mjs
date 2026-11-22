@@ -488,6 +488,42 @@ const checks = [
     ],
   },
   {
+    name: "Developing-story links remain navigable in previews and existing evolution panel",
+    file: "src/components/developing-story-links.tsx",
+    needles: [
+      'getEventIntelligence(eventId, 1)',
+      'members?: DevelopingStoryMember[]',
+      'accessibilityRole="link"',
+      'router.push(',
+      'Related developments',
+    ],
+  },
+  {
+    name: "Developing stories reuse the existing event preview and timeline",
+    file: "src/components/event-preview-view.tsx",
+    needles: [
+      '<DevelopingStoryLinks eventId={article.event_id} />',
+    ],
+  },
+  {
+    name: "Event evolution also renders related developing-story events",
+    file: "src/components/event-evolution-panel.tsx",
+    needles: [
+      '<DevelopingStoryLinks eventId={eventId} members={intelligence?.story_members} />',
+    ],
+  },
+  {
+    name: "Admin Event Quality has reversible developing-story links separate from merges",
+    file: "src/app/beta-dashboard.tsx",
+    needles: [
+      "Same developing story (not merge)",
+      "Link as developing story",
+      "unlinkBetaDashboardDevelopingStory",
+      "page?.story_grouping_enabled",
+      "Use Merge above only for genuine duplicate events.",
+    ],
+  },
+  {
     name: "Source-only preview keeps video at top and gates playback",
     file: "src/components/event-preview-view.tsx",
     needles: [
