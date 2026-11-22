@@ -466,7 +466,10 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
     } catch (caught) {
       setError(true);
       if (String(caught).includes("429")) {
-        try { setStatus(await getClusterDataCharts(eventId)); } catch { /* Keep error state */ }
+        try {
+          setStatus(await getClusterDataCharts(eventId));
+          setError(false);
+        } catch { /* Keep error state */ }
       }
     } finally {
       setBusy(false);

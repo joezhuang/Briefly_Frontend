@@ -1339,12 +1339,12 @@ ensure(
   chartsUI.includes('chart.relationship_quote') &&
   chartsUI.includes('quotaExhausted') &&
   chartsUI.includes('status?.awaiting_review') &&
-  chartsUI.includes('"/beta-dashboard?tab=charts"') &&
+  chartsUI.includes('"/beta-dashboard?tab=charts&eventId="') &&
   read("src/components/admin-chart-review-notification.tsx").includes('getChartReviewQueue()') &&
   read("src/components/admin-chart-review.tsx").includes('releaseChartDraft(') &&
-  read("src/app/beta-dashboard.tsx").includes('<AdminChartReview />') &&
+  read("src/app/beta-dashboard.tsx").includes('<AdminChartReview initialEventId={eventId} />') &&
   chartsUI.includes('copy.update') &&
-  chartsUI.includes('const canGenerate = status?.can_generate === true;') &&
+  chartsUI.includes('const canGenerate = status?.can_generate === true && !quotaExhausted;') &&
   chartsUI.includes('const privilegedViewer = account?.is_admin === true') &&
   chartsUI.includes('onPress={() => void retryStatus()}') &&
   chartsUI.includes('copy.access') &&
