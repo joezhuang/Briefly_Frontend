@@ -1039,43 +1039,46 @@ export default function HomeScreen() {
     <FeedCategoryBar active={scope} onFeedScopePress={switchScope} />
   );
 
-  // Keep the explanation in the lead-story column, directly after its
-  // article at every breakpoint. It describes *only* the lead story.
+  // A lead-story explanation should follow its own article, not the entire
+  // featured-story group. Render this once, at every responsive breakpoint.
   const leadContextPanel = !!leadWhyItMatters && (
     <Pressable
-    accessibilityRole={Platform.OS === "web" ? "link" : "button"}
-    accessibilityLabel={edition.readAnalysis}
-    onPress={() =>
-    router.push(storyTileHref(lead, "feed", scope) as never)
-    }
-    style={({ pressed }) => [
-    styles.contextPanel,
-    {
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    opacity: pressed ? 0.82 : 1,
-    },
-    ]}
+      accessibilityRole={Platform.OS === "web" ? "link" : "button"}
+      accessibilityLabel={edition.readAnalysis}
+      onPress={() => router.push(storyTileHref(lead, "feed", scope) as never)}
+      style={({ pressed }) => [
+        styles.contextPanel,
+        !desktop && styles.contextPanelStacked,
+        {
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+          opacity: pressed ? 0.82 : 1,
+        },
+      ]}
     >
-    <View style={[styles.contextAccent, { backgroundColor: colors.accent }]} />
-    <View style={styles.contextCopy}>
-    <Text style={[styles.contextEyebrow, { color: colors.accent }]}>
-    {edition.context}
-    </Text>
-    <Text
-    style={[styles.contextBody, { color: colors.text }]}
-    numberOfLines={compactEditorial ? 3 : 2}
-    >
-    {leadWhyItMatters}
-    </Text>
-    </View>
-    {!compactEditorial && (
-    <Text style={[styles.contextAction, { color: colors.accent }]}>
-    {edition.readAnalysis} →
-    </Text>
-    )}
+      <View style={[styles.contextAccent, { backgroundColor: colors.accent }]} />
+      <View style={styles.contextCopy}>
+        <Text style={[styles.contextEyebrow, { color: colors.accent }]}>
+          {edition.context}
+        </Text>
+        <Text
+          style={[styles.contextBody, { color: colors.text }]}
+          numberOfLines={compactEditorial ? 3 : 2}
+        >
+          {leadWhyItMatters}
+        </Text>
+        {compactEditorial && (
+          <Text style={[styles.contextActionInline, { color: colors.accent }]}>
+            {edition.readAnalysis} →
+          </Text>
+        )}
+      </View>
+      {!compactEditorial && (
+        <Text style={[styles.contextAction, { color: colors.accent }]}>
+          {edition.readAnalysis} →
+        </Text>
+      )}
     </Pressable>
-
   );
 
   const listHeader = (
@@ -1745,6 +1748,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14,
   },
+  contextPanelStacked: { marginTop: 0 },
   contextAccent: { width: 4, borderRadius: 4, alignSelf: "stretch" },
   contextCopy: { flex: 1, minWidth: 0, gap: 5 },
   contextEyebrow: {
@@ -1754,6 +1758,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   contextBody: { fontSize: 15, lineHeight: 22, fontWeight: "600" },
+  contextActionInline: {
+    alignSelf: "flex-start",
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "800",
+    marginTop: 5,
+  },
   contextAction: {
     maxWidth: 185,
     fontSize: 12,
