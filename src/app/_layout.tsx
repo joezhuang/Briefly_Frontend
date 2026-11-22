@@ -12,6 +12,7 @@ import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { trackProductEvent } from "@/analytics/product-analytics";
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { AppErrorBoundary } from "@/components/app-error-boundary";
+import { AdminChartReviewNotification } from "@/components/admin-chart-review-notification";
 import { GlobalPodcastPlayer } from "@/components/global-podcast-player";
 import { ScreenState } from "@/components/screen-state";
 import { AnalysisReadinessProvider } from "@/context/analysis-readiness";
@@ -204,6 +205,7 @@ function AppStack() {
         <Stack.Screen name="share/[versionId]" />
       </Stack>
       {appConfig?.podcast_enabled !== false && <GlobalPodcastPlayer />}
+      <AdminChartReviewNotification />
     </View>
   );
 }
