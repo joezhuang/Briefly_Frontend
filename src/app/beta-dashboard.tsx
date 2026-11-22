@@ -22,6 +22,7 @@ import {
   getBetaDashboardAdminAuditLog,
   getBetaDashboardBillingHealth,
   getBetaDashboardEventQuality,
+  getBetaDashboardDevelopingStoryCandidates,
   getBetaDashboardAppConfig,
   getBetaDashboardAppConfigHistory,
   getBetaDashboardCustomerSupport,
@@ -49,6 +50,8 @@ import {
   type BetaDashboardErrorGroup,
   type BetaDashboardEventQualityCandidate,
   type BetaDashboardEventQualityPage,
+  type BetaDashboardStoryCandidate,
+  type BetaDashboardStoryCandidatePreview,
   type BetaDashboardStoryLink,
   type BetaDashboardSnapshot,
   type BetaDashboardTelemetryConfig,
@@ -1304,6 +1307,10 @@ function EventQualityConsole() {
   const [storyPrimaryId, setStoryPrimaryId] = useState("");
   const [storyRelatedId, setStoryRelatedId] = useState("");
   const [storyRelationType, setStoryRelationType] = useState<BetaDashboardStoryLink["relation_type"]>("development");
+  const [candidatePreview, setCandidatePreview] = useState<BetaDashboardStoryCandidatePreview | null>(null);
+  const [candidateLoading, setCandidateLoading] = useState(false);
+  const [candidateError, setCandidateError] = useState<string | null>(null);
+  const [reviewCandidate, setReviewCandidate] = useState<BetaDashboardStoryCandidate | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -1409,6 +1416,20 @@ function EventQualityConsole() {
     }
   };
 
+  const findStoryCandidates = async () => {
+    if (candidateLoading || busyKey) return;
+    setCandidateLoading(true);
+    setCandidateError(null);
+    setReviewCandidate(null);
+    try {
+      setCandidatePreview(await getBetaDashboardDevelopingStoryCandidates());
+    } catch (error) {
+      setCandidateError(error instanceof Error ? error.message : "Could not inspect related stories");
+    } finally {
+      setCandidateLoading(false);
+    }
+  };
+
   const linkStory = async (primaryId: string, relatedId: string) => {
     if (busyKey || !page?.story_grouping_enabled || !primaryId.trim() || !relatedId.trim()) return;
     const typeDescription = {
@@ -1429,6 +1450,7 @@ function EventQualityConsole() {
       setStoryPrimaryId("");
       setStoryRelatedId("");
       setStoryRelationType("development");
+      setReviewCandidate(null);
       await refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Could not link these events");
@@ -1661,6 +1683,104 @@ function EventQualityConsole() {
           {!!actionError && (
             <Text style={[styles.configDetail, { color: colors.error }]}>
               {actionError}
+            </Text>
+          )}
+        </View>
+      )}
+      {page?.story_grouping_enabled && (
+        <View style={[styles.auditItem, { borderTopColor: colors.border, gap: 10 }]}>
+          <View style={styles.auditItemCopy}>
+            <Text style={[styles.configLabel, { color: colors.text }]}>
+              Review potentially related stories
+            </Text>
+            <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+              Compare distinct events using their main headlines and supporting reports.
+              Suggestions never link automatically from this review.
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            disabled={!!busyKey || candidateLoading}
+            onPress={() => void findStoryCandidates()}
+            style={[styles.resolveButton, { borderColor: colors.border }]}
+          >
+            <Text style={[styles.resolveText, { color: colors.text }]}>
+              {candidateLoading ? "Checking recent events…" : "Find matching stories"}
+            </Text>
+          </Pressable>
+          {!!candidateError && (
+            <Text style={[styles.configDetail, { color: colors.error }]}>
+              {candidateError}
+            </Text>
+          )}
+          {candidatePreview && (
+            <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+              {candidatePreview.considered} comparisons · {candidatePreview.review_candidates.length} need review ·{" "}
+              {candidatePreview.automatic_candidates.length} eligible automatic matches (preview only)
+            </Text>
+          )}
+          {(candidatePreview?.review_candidates ?? []).slice(0, 12).map((candidate) => {
+            const key = candidate.left_event_id + ":" + candidate.right_event_id;
+            const selected = reviewCandidate?.left_event_id === candidate.left_event_id
+              && reviewCandidate?.right_event_id === candidate.right_event_id;
+            const groupConflict = candidate.left_root_id !== candidate.left_event_id
+              || candidate.right_root_id !== candidate.right_event_id;
+            return (
+              <View key={key} style={[styles.auditItem, { borderTopColor: colors.border, gap: 8 }]}>
+                <Text style={[styles.configLabel, { color: colors.text }]}>
+                  {candidate.evidence.left_subject || candidate.left_event_id}
+                </Text>
+                <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                  Related: {candidate.evidence.right_subject || candidate.right_event_id}
+                </Text>
+                <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                  {candidate.reason.replaceAll("_", " ")} ·{" "}
+                  {Math.round(candidate.confidence * 100)}% match evidence
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={!!busyKey}
+                  onPress={() => {
+                    setReviewCandidate(selected ? null : candidate);
+                    setStoryRelationType(candidate.relation_type);
+                  }}
+                  style={[styles.resolveButton, { borderColor: colors.border }]}
+                >
+                  <Text style={[styles.resolveText, { color: colors.text }]}>
+                    {selected ? "Close relationship review" : "Review this relationship"}
+                  </Text>
+                </Pressable>
+                {selected && (
+                  <View style={{ gap: 8 }}>
+                    <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+                      Main subjects share: {(candidate.evidence.main_shared_anchors ?? []).join(", ") || "no direct headline anchors"}.
+                      Supporting reports share: {(candidate.evidence.shared_anchors ?? []).join(", ") || "none"}.
+                    </Text>
+                    {groupConflict ? (
+                      <Text style={[styles.configDetail, { color: colors.error }]}>
+                        One or both events already belong to another developing-story group.
+                        Review existing links before changing group membership. No automatic group merge is allowed.
+                      </Text>
+                    ) : (
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={!!busyKey}
+                        onPress={() => void linkStory(candidate.left_event_id, candidate.right_event_id)}
+                        style={[styles.resolveButton, { borderColor: colors.accent }]}
+                      >
+                        <Text style={[styles.resolveText, { color: colors.accent }]}>
+                          Confirm and link as {storyRelationType}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+          {candidatePreview && !candidatePreview.review_candidates.length && (
+            <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+              No uncertain links were found in the recent bounded search.
             </Text>
           )}
         </View>
