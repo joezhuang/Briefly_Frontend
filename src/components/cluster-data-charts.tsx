@@ -523,9 +523,10 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
       {status?.awaiting_review && (
         <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.awaitingReview}</Text>
       )}
-      {account?.is_admin === true && status?.awaiting_review && (
+      {account?.is_admin === true && (status?.awaiting_review || status?.published) && (
         <Pressable accessibilityRole="button" style={styles.reviewLink}
-          onPress={() => router.push("/beta-dashboard?tab=charts" as never)}>
+          onPress={() => router.push(("/beta-dashboard?tab=charts&eventId=" +
+            encodeURIComponent(eventId)) as never)}>
           <Text style={[styles.source, { color: colors.accent }]}>{copy.reviewAdmin} ↗</Text>
         </Pressable>
       )}

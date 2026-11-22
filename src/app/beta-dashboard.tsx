@@ -4037,7 +4037,7 @@ function StripePromotionEditor({
 }
 
 export default function BetaDashboardScreen() {
-  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const { tab, eventId } = useLocalSearchParams<{ tab?: string; eventId?: string }>();
   const { width } = useWindowDimensions();
   const { ready: authReady, user, account } = useBrieflyAuth();
   const {
@@ -6127,7 +6127,7 @@ export default function BetaDashboardScreen() {
 
                   {operationsTab === "charts" && (
                     <View style={styles.section}>
-                      <AdminChartReview />
+                      <AdminChartReview initialEventId={eventId} />
                     </View>
                   )}
 

@@ -45,7 +45,7 @@ export function AdminChartReviewNotification() {
       clearInterval(interval);
       subscription.remove();
     };
-  }, [enabled, user?.id]);
+  }, [enabled, user?.id, pathname]);
 
   if (!enabled || !queue?.pending_count || pathname.startsWith("/beta-dashboard")) return null;
   const signature = queueSignature(queue);

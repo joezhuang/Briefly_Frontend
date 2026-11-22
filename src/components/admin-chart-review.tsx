@@ -42,7 +42,7 @@ function ChartPreview({ chart }: { chart: VerifiedDataChart }) {
   );
 }
 
-export function AdminChartReview() {
+export function AdminChartReview({ initialEventId }: { initialEventId?: string }) {
   const { colors } = useBrieflyTheme();
   const [queue, setQueue] = useState<ChartReviewQueue | null>(null);
   const [draft, setDraft] = useState<ChartReviewDraft | null>(null);
@@ -71,6 +71,10 @@ export function AdminChartReview() {
       setError("Could not load the chart draft for this story version.");
     }
   }, []);
+  useEffect(() => {
+    if (initialEventId) void openDraft(initialEventId);
+  }, [initialEventId, openDraft]);
+
   useEffect(() => {
     let active = true;
     void getChartReviewQueue()
