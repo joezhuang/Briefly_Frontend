@@ -135,8 +135,20 @@ function TrendPlot({ chart, accent, border, textColor }: {
 }) {
   const [width, setWidth] = useState(0);
   const maximum = Math.max(1, ...chart.points.map((point) => point.value));
+  // Use actual year intervals rather than treating an uneven time series
+  // as if every observation were equally spaced.
+  const years = chart.points.map((point) => {
+    const match = point.label.match(/\b(?:19|20|21)\d{2}\b/);
+    return match ? Number(match[0]) : null;
+  });
+  const yearValues = years.filter((year): year is number => year != null);
+  const realYears = yearValues.length === years.length && new Set(yearValues).size > 1;
+  const firstYear = realYears ? Math.min(...yearValues) : 0;
+  const yearSpan = realYears ? Math.max(...yearValues) - firstYear : 1;
   const coordinates = chart.points.map((point, index) => ({
-    x: 10 + Math.max(0, width - 20) * index / Math.max(1, chart.points.length - 1),
+    x: 10 + Math.max(0, width - 20) *
+      (realYears ? ((years[index] as number) - firstYear) / yearSpan
+        : index / Math.max(1, chart.points.length - 1)),
     y: 10 + 125 * (1 - point.value / maximum),
   }));
   return (
@@ -158,7 +170,7 @@ function TrendPlot({ chart, accent, border, textColor }: {
             left: (point.x + previous.x - length) / 2,
             top: (point.y + previous.y - 3) / 2,
             backgroundColor: accent, borderRadius: 2,
-            transform: [{ rotate: (Math.atan2(dy, dx) * 180 / Math.PI) + "deg" }],
+            transform: [{ rotate: ((Math.atan2(dy, dx) * 180 / Math.PI) + "deg") as `${number}deg` }],
           }} />;
         })}
         {width > 0 && coordinates.map((point, i) =>
@@ -219,7 +231,7 @@ function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSo
           <View style={[styles.stackedTrack, { backgroundColor: colors.border }]}>
             {chart.points.map((point, index) => (
               <View key={"slice-" + index} style={{
-                width: ((total > 0 ? 100 * point.value / total : 0) + "%") as never,
+                width: ((total > 0 ? 100 * point.value / total : 0) + "%") as `${number}%`,
                 height: "100%",
                 backgroundColor: colors.accent,
                 opacity: Math.max(0.25, 1 - index * 0.13),
@@ -252,7 +264,7 @@ function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSo
             <View style={[styles.barTrack, { backgroundColor: colors.border }]}>
               <View style={[styles.barFill, {
                 backgroundColor: colors.accent,
-                width: ((width + "%") as never),
+                width: (width + "%") as `${number}%`,
               }]} />
             </View>
           </View>
