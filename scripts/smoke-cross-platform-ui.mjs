@@ -1341,9 +1341,18 @@ ensure(
     read("src/app/beta-dashboard.tsx").indexOf('{ id: "health", label: "Health" }') &&
   chartsUI.includes('quotaExhausted') &&
   chartsUI.includes('status?.awaiting_review') &&
-  chartsUI.includes('"/beta-dashboard?tab=charts&eventId="') &&
+  chartsUI.includes('const readyCharts = isAdmin && review') &&
+  chartsUI.includes('review.draft_charts : review.published_charts') &&
+  chartsUI.includes('removeChartFromDraft(eventId, index, review.revision)') &&
+  chartsUI.includes('releaseChartDraft(eventId, review.revision)') &&
+  chartsUI.includes('styles.reviewPanel') &&
+  chartsUI.includes('renderRemove(chart)') &&
+  read("src/app/story/[slug].tsx").includes('chartReviewRequested={(Array.isArray(chartReview)') &&
+  articleUI.includes('reviewRequested={chartReviewRequested}') &&
+  read("src/utils/chart-review-link.ts").includes('&chartReview=1') &&
   read("src/components/admin-chart-review-notification.tsx").includes('getChartReviewQueue()') &&
-  read("src/components/admin-chart-review.tsx").includes('releaseChartDraft(') &&
+  read("src/components/admin-chart-review.tsx").includes('chartReviewStoryHref(item.event_id)') &&
+  read("src/components/admin-chart-review-notification.tsx").includes('chartReviewStoryHref(queue.items[0].event_id)') &&
   read("src/app/beta-dashboard.tsx").includes('<AdminChartReview initialEventId={eventId} />') &&
   chartsUI.includes('copy.update') &&
   chartsUI.includes('const canGenerate = status?.can_generate === true && !quotaExhausted;') &&
