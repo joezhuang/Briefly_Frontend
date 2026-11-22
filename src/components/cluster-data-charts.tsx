@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { router } from "expo-router";
 import { useBrieflyAppConfig } from "@/context/app-config";
 import {
   ActivityIndicator,
@@ -14,7 +13,11 @@ import {
 import { SmartChartVisual } from "@/components/smart-chart-visual";
 import {
   getClusterDataCharts,
+  getChartReview,
+  removeChartFromDraft,
+  releaseChartDraft,
   requestClusterDataCharts,
+  type ChartReviewDraft,
   type ClusterDataChartStatus,
   type VerifiedDataChart,
 } from "@/api/briefly";
@@ -177,6 +180,104 @@ const chartCopy = {
     forecast: "預測",
     proposal: "政策建議",
     target: "目標",
+  },
+} as const;
+
+const reviewCopy = {
+  "en": {
+    draft: "Draft preview",
+    public: "Public view",
+    label: "Admin chart review · private",
+    intro: "Preview charts in the exact public layout. Draft edits are not public until released.",
+    noPublic: "No public charts have been released.",
+    remove: "Remove chart",
+    removeConfirm: "Remove this chart from the draft?",
+    confirmRemove: "Confirm removal",
+    cancel: "Cancel",
+    release: "Release selected charts",
+    withdraw: "Withdraw public charts",
+    releaseConfirm: "Publish this selection to everyone?",
+    withdrawConfirm: "Withdraw the currently public charts?",
+    confirmRelease: "Confirm release",
+    busy: "Saving…",
+    error: "Review changed or action failed. Please reload before retrying.",
+    loading: "Loading chart review…",
+  },
+  "es": {
+    draft: "Vista del borrador",
+    public: "Vista pública",
+    label: "Revisión administrativa · privada",
+    intro: "Vista previa con el mismo diseño público. Los cambios requieren publicación.",
+    noPublic: "Aún no hay gráficos publicados.",
+    remove: "Quitar gráfico",
+    removeConfirm: "¿Quitar este gráfico del borrador?",
+    confirmRemove: "Confirmar eliminación",
+    cancel: "Cancelar",
+    release: "Publicar gráficos seleccionados",
+    withdraw: "Retirar gráficos públicos",
+    releaseConfirm: "¿Publicar esta selección para todos?",
+    withdrawConfirm: "¿Retirar los gráficos públicos?",
+    confirmRelease: "Confirmar publicación",
+    busy: "Guardando…",
+    error: "La revisión cambió o la acción falló. Actualiza el borrador.",
+    loading: "Cargando revisión…",
+  },
+  "ja": {
+    draft: "下書きプレビュー",
+    public: "公開表示",
+    label: "管理者レビュー · 非公開",
+    intro: "公開版と同じ表示で確認できます。公開まで変更は反映されません。",
+    noPublic: "公開済みグラフはまだありません。",
+    remove: "グラフを削除",
+    removeConfirm: "下書きから削除しますか？",
+    confirmRemove: "削除を確認",
+    cancel: "キャンセル",
+    release: "選択したグラフを公開",
+    withdraw: "公開グラフを取り下げ",
+    releaseConfirm: "この内容を全読者に公開しますか？",
+    withdrawConfirm: "公開グラフを取り下げますか？",
+    confirmRelease: "公開を確定",
+    busy: "保存中…",
+    error: "変更を保存できません。下書きを再読み込みしてください。",
+    loading: "レビューを読み込み中…",
+  },
+  "zh-CN": {
+    draft: "草稿预览",
+    public: "公开版本",
+    label: "管理员审核 · 未公开",
+    intro: "图表以正式阅读布局显示，发布前不会影响公开版本。",
+    noPublic: "尚无已发布图表。",
+    remove: "移除图表",
+    removeConfirm: "从草稿中移除此图表？",
+    confirmRemove: "确认移除",
+    cancel: "取消",
+    release: "发布所选图表",
+    withdraw: "撤回公开图表",
+    releaseConfirm: "将此选择发布给所有读者？",
+    withdrawConfirm: "撤回已发布的图表？",
+    confirmRelease: "确认发布",
+    busy: "正在保存…",
+    error: "审核版本已变化或操作失败，请重新加载。",
+    loading: "正在加载审核…",
+  },
+  "zh-TW": {
+    draft: "草稿預覽",
+    public: "公開版本",
+    label: "管理員審核 · 未公開",
+    intro: "圖表以正式閱讀版面顯示，發布前不會影響公開版本。",
+    noPublic: "尚無已發布圖表。",
+    remove: "移除圖表",
+    removeConfirm: "從草稿中移除此圖表？",
+    confirmRemove: "確認移除",
+    cancel: "取消",
+    release: "發布所選圖表",
+    withdraw: "撤回公開圖表",
+    releaseConfirm: "將此選擇發布給所有讀者？",
+    withdrawConfirm: "撤回已發布的圖表？",
+    confirmRelease: "確認發布",
+    busy: "正在儲存…",
+    error: "審核版本已變更或操作失敗，請重新載入。",
+    loading: "正在載入審核…",
   },
 } as const;
 
@@ -388,9 +489,10 @@ function ChartEvidence({ chart, evidenceLabel, sourceLabel, derivedLabel }: {
   );
 }
 
-export function ClusterDataCharts({ eventId, articleVersionId }: {
+export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested = false }: {
   eventId: string;
   articleVersionId: number | null;
+  reviewRequested?: boolean;
 }) {
   const { user, account } = useBrieflyAuth();
   const { config } = useBrieflyAppConfig();
@@ -398,6 +500,8 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
   const { colors } = useBrieflyTheme();
   const { width: screenWidth } = useWindowDimensions();
   const copy = chartCopy[language] ?? chartCopy.en;
+  const reviewText = reviewCopy[language] ?? reviewCopy.en;
+  const isAdmin = account?.is_admin === true;
   const [sourceDisclosure, setSourceDisclosure] = useState({ eventId: "", expanded: false });
   const [comparisonDisclosure, setComparisonDisclosure] = useState({ eventId: "", expanded: false });
   const sourcesExpanded = sourceDisclosure.eventId === eventId && sourceDisclosure.expanded;
@@ -418,6 +522,27 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
     setErrorKey(next ? chartKey : null);
   }, [chartKey]);
   const [busy, setBusy] = useState(false);
+  const [reviewResponse, setReviewResponse] = useState<{
+    key: string; value: ChartReviewDraft;
+  } | null>(null);
+  const review = isAdmin && reviewResponse?.key === chartKey &&
+    reviewResponse.value.article_version_id === articleVersionId
+      ? reviewResponse.value : null;
+  const [reviewView, setReviewView] = useState<{
+    key: string; mode: "draft" | "public";
+  } | null>(null);
+  const [removeConfirmation, setRemoveConfirmation] = useState<{
+    key: string; index: number;
+  } | null>(null);
+  const [releaseConfirmation, setReleaseConfirmation] = useState<string | null>(null);
+  const [moderating, setModerating] = useState(false);
+  const [moderationError, setModerationError] = useState<string | null>(null);
+  const reviewMode = isAdmin && Boolean(review?.ready) &&
+    (reviewView?.key === chartKey
+      ? reviewView.mode === "draft"
+      : reviewRequested || status?.awaiting_review === true);
+  const reviewError = moderationError === chartKey;
+  const confirmingRelease = releaseConfirmation === chartKey;
 
   // Stale cached data from another story or login is never rendered.
   // The fetch resolves asynchronously, so the effect has no sync state reset.
@@ -434,6 +559,21 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
       .catch(() => { if (active) setError(true); });
     return () => { active = false; };
   }, [eventId, articleVersionId, chartKey, setStatus, setError]);
+
+  useEffect(() => {
+    if (!isAdmin || !eventId || !articleVersionId) return;
+    let active = true;
+    void getChartReview(eventId)
+      .then((next) => {
+        if (active && next.article_version_id === articleVersionId) {
+          setReviewResponse({ key: chartKey, value: next });
+        }
+      })
+      .catch(() => {
+        if (active) setModerationError(chartKey);
+      });
+    return () => { active = false; };
+  }, [isAdmin, eventId, articleVersionId, chartKey, status?.status, status?.awaiting_review]);
 
   useEffect(() => {
     if ((status?.status !== "processing" && !status?.refreshing) || !eventId) return;
@@ -466,6 +606,43 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
     }
   };
 
+  const moderateChart = async (action: "remove" | "release", index?: number) => {
+    if (!isAdmin || !review?.ready || moderating || !eventId) return;
+    setModerating(true);
+    setModerationError(null);
+    try {
+      if (action === "remove" && index !== undefined) {
+        await removeChartFromDraft(eventId, index, review.revision);
+      } else if (action === "release") {
+        await releaseChartDraft(eventId, review.revision);
+      } else {
+        return;
+      }
+      const [nextReview, nextStatus] = await Promise.all([
+        getChartReview(eventId), getClusterDataCharts(eventId),
+      ]);
+      if (nextReview.article_version_id === articleVersionId) {
+        setReviewResponse({ key: chartKey, value: nextReview });
+      }
+      setStatus(nextStatus);
+      setReviewView({ key: chartKey, mode: action === "release" ? "public" : "draft" });
+      setRemoveConfirmation(null);
+      setReleaseConfirmation(null);
+    } catch {
+      setModerationError(chartKey);
+      try {
+        const next = await getChartReview(eventId);
+        if (next.article_version_id === articleVersionId) {
+          setReviewResponse({ key: chartKey, value: next });
+        }
+      } catch { /* Keep the actionable error. */ }
+      setRemoveConfirmation(null);
+      setReleaseConfirmation(null);
+    } finally {
+      setModerating(false);
+    }
+  };
+
   const retryStatus = async () => {
     if (busy) return;
     setBusy(true);
@@ -479,8 +656,10 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
     }
   };
 
-  const readyCharts =
-    status?.status === "ready" && Array.isArray(status.charts)
+  // Both the draft and public versions use the exact same reader renderer.
+  const readyCharts = isAdmin && review
+    ? reviewMode ? review.draft_charts : review.published_charts
+    : status?.status === "ready" && Array.isArray(status.charts)
       ? status.charts
       : [];
   const keyFigures = readyCharts.filter((chart) => chart.chart_type === "kpi" && chart.points.length === 1);
@@ -491,6 +670,40 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
   const quota = account?.is_admin === true ? null : status?.quota;
   const quotaExhausted = Boolean(quota && quota.remaining <= 0);
   const canGenerate = status?.can_generate === true && !quotaExhausted;
+  const renderRemove = (chart: VerifiedDataChart) => {
+    if (!reviewMode || !review?.ready) return null;
+    const index = review.draft_charts.indexOf(chart);
+    if (index < 0) return null;
+    const confirming = removeConfirmation?.key === chartKey &&
+      removeConfirmation.index === index;
+    return (
+      <View style={styles.moderationAction}>
+        {confirming && <Text style={[styles.note, { color: colors.textMuted }]}>
+          {reviewText.removeConfirm}
+        </Text>}
+        <View style={styles.reviewActionRow}>
+          <Pressable accessibilityRole="button"
+            accessibilityLabel={confirming ? reviewText.confirmRemove : reviewText.remove + ": " + chart.title}
+            disabled={moderating}
+            onPress={() => confirming ? void moderateChart("remove", index) :
+              setRemoveConfirmation({ key: chartKey, index })}
+            style={[styles.reviewAction, { borderColor: colors.border }]}>
+            <Text style={[styles.source, { color: colors.accent }]}>
+              {confirming ? reviewText.confirmRemove : reviewText.remove}
+            </Text>
+          </Pressable>
+          {confirming && (
+            <Pressable accessibilityRole="button" onPress={() => setRemoveConfirmation(null)}
+              style={styles.reviewAction}>
+              <Text style={[styles.source, { color: colors.textMuted }]}>
+                {reviewText.cancel}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+    );
+  };
   // Keep an eligible reader's entry point visible when the backend fails.
   // The API remains authoritative: only can_generate=true offers extraction.
   const privilegedViewer = account?.is_admin === true ||
