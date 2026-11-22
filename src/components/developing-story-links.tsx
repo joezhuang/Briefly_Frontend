@@ -32,7 +32,6 @@ export function DevelopingStoryLinks({
   useEffect(() => {
     if (members !== undefined) return;
     let active = true;
-    setFetched([]);
     getEventIntelligence(eventId, 1)
       .then((value) => {
         if (active) setFetched(value.story_members ?? []);
