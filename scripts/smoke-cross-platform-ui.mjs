@@ -1336,6 +1336,7 @@ const dashboardUI = read("src/app/beta-dashboard.tsx");
 ensure(
   chartsUI.includes('void getClusterDataCharts(eventId)') &&
   chartsUI.includes('status?.refreshing') &&
+  chartsUI.includes('chart.relationship_quote') &&
   chartsUI.includes('copy.update') &&
   chartsUI.includes('const canGenerate = status?.can_generate === true;') &&
   chartsUI.includes('const privilegedViewer = account?.is_admin === true') &&

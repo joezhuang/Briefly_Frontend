@@ -1748,6 +1748,8 @@ export type VerifiedDataChart = {
   chart_type: "bar" | "line" | "stacked" | "donut" | "grouped" | "dumbbell" | "waterfall" | "kpi";
   qualifier?: "reported" | "forecast" | "proposal" | "target";
   partial?: boolean;
+  relationship_quote?: string;
+  relationship_source_url?: string;
   points: VerifiedDataChartPoint[];
 };
 

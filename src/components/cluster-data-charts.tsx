@@ -376,6 +376,19 @@ function ChartEvidence({ chart, evidenceLabel, sourceLabel, derivedLabel }: {
           </View>
         );
       })}
+      {chart.relationship_quote && (
+        <View style={styles.sourceDetails}>
+          <Text style={[styles.evidence, { color: colors.textMuted }]}>
+            “{chart.relationship_quote}”
+          </Text>
+          {chart.relationship_source_url && /^https?:\/\//i.test(chart.relationship_source_url) && (
+            <Pressable accessibilityRole="link"
+              onPress={() => void Linking.openURL(chart.relationship_source_url!)}>
+              <Text style={[styles.source, { color: colors.accent }]}>{sourceLabel} ↗</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
     </View>
   );
 }
