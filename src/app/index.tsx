@@ -1241,7 +1241,7 @@ export default function HomeScreen() {
                   {leadWhyItMatters}
                 </Text>
               </View>
-              {!narrowPhone && (
+              {!compactEditorial && (
                 <Text style={[styles.contextAction, { color: colors.accent }]}>
                   {edition.readAnalysis} →
                 </Text>
