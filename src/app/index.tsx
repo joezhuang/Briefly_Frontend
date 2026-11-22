@@ -1711,10 +1711,7 @@ const styles = StyleSheet.create({
   },
   sectionCountText: { fontSize: 10, lineHeight: 14, fontWeight: "800", letterSpacing: 0.6 },
   featureFrame: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 20,
-    padding: 6,
-    gap: 5,
+    gap: 8,
     minWidth: 0,
   },
   featureRail: {
