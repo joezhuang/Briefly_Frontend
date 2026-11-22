@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { getChartReviewQueue, type ChartReviewQueue } from "@/api/briefly";
+import { chartReviewStoryHref } from "@/utils/chart-review-link";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyTheme } from "@/context/theme";
 
@@ -70,7 +71,9 @@ export function AdminChartReviewNotification() {
         </View>
         <View style={styles.actions}>
           <Pressable accessibilityRole="button"
-            onPress={() => router.push("/beta-dashboard?tab=charts" as never)}
+            onPress={() => router.push((queue.items[0]?.event_id
+              ? chartReviewStoryHref(queue.items[0].event_id)
+              : "/beta-dashboard?tab=charts") as never)}
             style={[styles.openButton, { backgroundColor: colors.text }]}>
             <Text style={[styles.openLabel, { color: colors.background }]}>Review</Text>
           </Pressable>
