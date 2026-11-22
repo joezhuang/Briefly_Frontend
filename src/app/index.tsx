@@ -93,6 +93,76 @@ const feedCopy = {
   },
 } as const;
 
+// Home-only editorial hierarchy. Feed selection, navigation, media controls
+// and article ranking still use the existing shared components.
+const editionCopy = {
+  en: {
+    kicker: "THE BRIEFLY EDITION",
+    headline: "A clearer view of the news.",
+    inFocus: "IN FOCUS",
+    more: "More to explore",
+    moreDetail: "Continue through the latest reporting",
+    top: "Leading stories",
+    national: "Across the nation",
+    local: "Closer to home",
+    stories: "STORIES",
+    lead: "LEAD STORY",
+    next: "ALSO IN THE NEWS",
+  },
+  es: {
+    kicker: "LA EDICIÓN BRIEFLY",
+    headline: "Las noticias, con perspectiva.",
+    inFocus: "EN PRIMER PLANO",
+    more: "Más noticias",
+    moreDetail: "Sigue explorando las últimas noticias",
+    top: "Noticias destacadas",
+    national: "En todo el país",
+    local: "Noticias cercanas",
+    stories: "NOTICIAS",
+    lead: "NOTICIA PRINCIPAL",
+    next: "TAMBIÉN HOY",
+  },
+  ja: {
+    kicker: "BRIEFLY ニュース",
+    headline: "ニュースの全体像を、もっと明確に。",
+    inFocus: "注目のニュース",
+    more: "ほかのニュース",
+    moreDetail: "さまざまな視点からニュースをチェック",
+    top: "主要ニュース",
+    national: "国内のニュース",
+    local: "地域のニュース",
+    stories: "件",
+    lead: "トップニュース",
+    next: "注目記事",
+  },
+  "zh-CN": {
+    kicker: "BRIEFLY 今日视野",
+    headline: "新闻不止标题，更有全貌。",
+    inFocus: "焦点新闻",
+    more: "更多新闻",
+    moreDetail: "继续了解最新报道与不同视角",
+    top: "重要新闻",
+    national: "全国新闻",
+    local: "本地新闻",
+    stories: "条新闻",
+    lead: "头条报道",
+    next: "其他焦点",
+  },
+  "zh-TW": {
+    kicker: "BRIEFLY 今日視野",
+    headline: "新聞不只標題，更有全貌。",
+    inFocus: "焦點新聞",
+    more: "更多新聞",
+    moreDetail: "繼續了解最新報導與不同視角",
+    top: "重要新聞",
+    national: "全國新聞",
+    local: "本地新聞",
+    stories: "則新聞",
+    lead: "頭條報導",
+    next: "其他焦點",
+  },
+} as const;
+
 const scopes: HomepageFeedScope[] = ["top", "national", "local"];
 
 function enabledHomeScopes(config: BrieflyAppConfig | null): HomepageFeedScope[] {
@@ -253,6 +323,7 @@ export default function HomeScreen() {
   const [videoResumeTime, setVideoResumeTime] = useState(0);
 
   const copy = feedCopy[language] ?? feedCopy.en;
+  const edition = editionCopy[language] ?? editionCopy.en;
 
   const replaceArticles = useCallback((next: CanonicalArticle[]) => {
     articlesRef.current = next;
