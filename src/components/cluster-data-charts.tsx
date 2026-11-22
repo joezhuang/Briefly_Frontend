@@ -726,15 +726,43 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
       {quotaExhausted && (
         <Text style={[styles.detail, { color: colors.accent }]}>{copy.limitReached}</Text>
       )}
-      {status?.awaiting_review && (
+      {status?.awaiting_review && (!review || reviewMode) && (
         <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.awaitingReview}</Text>
       )}
-      {account?.is_admin === true && (status?.awaiting_review || status?.published) && (
-        <Pressable accessibilityRole="button" style={styles.reviewLink}
-          onPress={() => router.push(("/beta-dashboard?tab=charts&eventId=" +
-            encodeURIComponent(eventId)) as never)}>
-          <Text style={[styles.source, { color: colors.accent }]}>{copy.reviewAdmin} ↗</Text>
-        </Pressable>
+      {isAdmin && review?.ready && (
+        <View style={[styles.reviewPanel, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+          <Text style={[styles.reviewHeading, { color: colors.text }]}>{reviewText.label}</Text>
+          <Text style={[styles.note, { color: colors.textMuted }]}>{reviewText.intro}</Text>
+          <View style={styles.reviewActionRow}>
+            {(["draft", "public"] as const).map((mode) => {
+              const selected = mode === "draft" ? reviewMode : !reviewMode;
+              return (
+                <Pressable key={mode} accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  onPress={() => {
+                    setReviewView({ key: chartKey, mode });
+                    setRemoveConfirmation(null);
+                    setReleaseConfirmation(null);
+                  }}
+                  style={[styles.reviewAction, { borderColor: colors.border },
+                    selected && { backgroundColor: colors.text, borderColor: colors.text }]}>
+                  <Text style={[styles.source, { color: selected ? colors.background : colors.text }]}>
+                    {mode === "draft" ? reviewText.draft : reviewText.public}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {reviewError && (
+            <Text style={[styles.note, { color: colors.accent }]}>{reviewText.error}</Text>
+          )}
+        </View>
+      )}
+      {isAdmin && !review && reviewRequested && (
+        <Text style={[styles.note, { color: colors.textMuted }]}>{reviewText.loading}</Text>
+      )}
+      {isAdmin && review && !reviewMode && readyCharts.length === 0 && (
+        <Text style={[styles.note, { color: colors.textMuted }]}>{reviewText.noPublic}</Text>
       )}
       {keyFigures.length > 0 && (
         <View style={styles.dataGroup}>
@@ -745,6 +773,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
                 styles.figureCard, { width: keyCardWidth, backgroundColor: colors.surface, borderColor: colors.border },
               ]}>
                 <ChartBars chart={chart} copy={copy} />
+                {renderRemove(chart)}
               </View>
             ))}
           </View>
@@ -759,6 +788,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
                 styles.comparisonCard, { width: comparisonWidth, backgroundColor: colors.surface, borderColor: colors.border },
               ]}>
                 <ChartBars chart={chart} copy={copy} />
+                {renderRemove(chart)}
               </View>
             ))}
           </View>
@@ -801,6 +831,34 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
               ))}
             </View>
           )}
+        </View>
+      )}
+      {reviewMode && review?.ready && (
+        <View style={[styles.releasePanel, { borderTopColor: colors.border }]}>
+          {confirmingRelease && (
+            <Text style={[styles.note, { color: colors.textMuted }]}>
+              {readyCharts.length ? reviewText.releaseConfirm : reviewText.withdrawConfirm}
+            </Text>
+          )}
+          <View style={styles.reviewActionRow}>
+            <Pressable accessibilityRole="button" disabled={moderating}
+              onPress={() => confirmingRelease ? void moderateChart("release") :
+                setReleaseConfirmation(chartKey)}
+              style={[styles.generateButton, { backgroundColor: colors.text,
+                opacity: moderating ? 0.55 : 1 }]}>
+              {moderating && <ActivityIndicator size="small" color={colors.background} />}
+              <Text style={[styles.generateText, { color: colors.background }]}>
+                {moderating ? reviewText.busy : confirmingRelease ? reviewText.confirmRelease :
+                  readyCharts.length ? reviewText.release : reviewText.withdraw}
+              </Text>
+            </Pressable>
+            {confirmingRelease && (
+              <Pressable accessibilityRole="button" onPress={() => setReleaseConfirmation(null)}
+                style={styles.reviewAction}>
+                <Text style={[styles.source, { color: colors.accent }]}>{reviewText.cancel}</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       )}
       {(status?.status === "processing" || status?.refreshing) && (
@@ -867,6 +925,13 @@ const styles = StyleSheet.create({
   chart: { gap: 8 },
   dataGroup: { gap: 12, marginTop: 8 },
   reviewLink: { alignSelf: "flex-start", minHeight: 40, justifyContent: "center" },
+  reviewPanel: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 12, gap: 9 },
+  reviewHeading: { fontSize: 14, fontWeight: "900" },
+  reviewActionRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 9 },
+  reviewAction: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 999,
+    minHeight: 40, justifyContent: "center", paddingHorizontal: 12 },
+  moderationAction: { paddingTop: 9, gap: 7 },
+  releasePanel: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12, gap: 9 },
   groupHeading: { fontSize: 15, fontWeight: "900", letterSpacing: 0.2 },
   figureGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10 },
   figureCard: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 12, minHeight: 130 },
