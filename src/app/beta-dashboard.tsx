@@ -34,6 +34,8 @@ import {
   setBetaDashboardErrorResolution,
   setBetaDashboardTopFeedVisibility,
   mergeBetaDashboardEvents,
+  linkBetaDashboardDevelopingStory,
+  unlinkBetaDashboardDevelopingStory,
   reconcileBetaDashboardBilling,
   rollbackBetaDashboardAppConfig,
   undoBetaDashboardEventMerge,
@@ -1298,6 +1300,9 @@ function EventQualityConsole() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [storyPrimaryId, setStoryPrimaryId] = useState("");
+  const [storyRelatedId, setStoryRelatedId] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -1397,6 +1402,48 @@ function EventQualityConsole() {
     try {
       await undoBetaDashboardEventMerge(sourceEventId);
       await refresh();
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const linkStory = async (primaryId: string, relatedId: string) => {
+    if (busyKey || !page?.story_grouping_enabled || !primaryId.trim() || !relatedId.trim()) return;
+    const accepted = await confirmAction(
+      "Link related developments?",
+      "These events will appear under one developing story, but will keep their separate canonical articles, timelines, sources and event IDs. This can be undone.",
+      "Link as developing story",
+    );
+    if (!accepted) return;
+    setBusyKey(primaryId + ":" + relatedId);
+    setActionError(null);
+    try {
+      await linkBetaDashboardDevelopingStory(primaryId.trim(), relatedId.trim());
+      setStoryPrimaryId("");
+      setStoryRelatedId("");
+      await refresh();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Could not link these events");
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const unlinkStory = async (primaryId: string, relatedId: string) => {
+    if (busyKey) return;
+    const accepted = await confirmAction(
+      "Remove story relationship?",
+      "Both events will return to independent feed eligibility. Neither event history nor its canonical article will be deleted.",
+      "Remove relationship",
+    );
+    if (!accepted) return;
+    setBusyKey(relatedId);
+    setActionError(null);
+    try {
+      await unlinkBetaDashboardDevelopingStory(primaryId, relatedId);
+      await refresh();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Could not remove relationship");
     } finally {
       setBusyKey(null);
     }
@@ -1504,6 +1551,17 @@ function EventQualityConsole() {
                         Keep B · merge A
                       </Text>
                     </Pressable>
+                    {page?.story_grouping_enabled && (
+                      <Pressable
+                        disabled={busy}
+                        onPress={() => void linkStory(candidate.event_a.event_id, candidate.event_b.event_id)}
+                        style={[styles.resolveButton, { borderColor: colors.border }]}
+                      >
+                        <Text style={[styles.resolveText, { color: colors.text }]}>
+                          Same developing story (not merge)
+                        </Text>
+                      </Pressable>
+                    )}
                   </View>
                 </View>
               </View>
@@ -1511,6 +1569,83 @@ function EventQualityConsole() {
           })}
         </View>
       )}
+
+      <View style={[styles.auditToolbar, { borderTopColor: colors.border }]}>
+        <View style={styles.auditToolbarCopy}>
+          <Text style={[styles.configLabel, { color: colors.text }]}>
+            Developing-story relationships
+          </Text>
+          <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+            Distinct developments share one feed card. They retain independent event IDs,
+            original reports, canonical articles, follow state and event timelines.
+            Use Merge above only for genuine duplicate events.
+          </Text>
+          {!page?.story_grouping_enabled && (
+            <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+              Disabled until Phase 38 migration and BRIEFLY_DEVELOPING_STORIES_ENABLED=1 are active.
+            </Text>
+          )}
+        </View>
+      </View>
+      {page?.story_grouping_enabled && (
+        <View style={[styles.auditItem, { borderTopColor: colors.border, gap: 8 }]}>
+          <TextInput
+            value={storyPrimaryId}
+            onChangeText={setStoryPrimaryId}
+            accessibilityLabel="Primary story event ID"
+            placeholder="Primary event ID"
+            placeholderTextColor={colors.textMuted}
+            autoCapitalize="none"
+            style={[styles.configInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+          />
+          <TextInput
+            value={storyRelatedId}
+            onChangeText={setStoryRelatedId}
+            accessibilityLabel="Related development event ID"
+            placeholder="Related event ID"
+            placeholderTextColor={colors.textMuted}
+            autoCapitalize="none"
+            style={[styles.configInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+          />
+          <Pressable
+            disabled={!!busyKey || !storyPrimaryId.trim() || !storyRelatedId.trim()}
+            accessibilityRole="button"
+            onPress={() => void linkStory(storyPrimaryId, storyRelatedId)}
+            style={[styles.resolveButton, { borderColor: colors.border }]}
+          >
+            <Text style={[styles.resolveText, { color: colors.text }]}>
+              Link as developing story
+            </Text>
+          </Pressable>
+          {!!actionError && (
+            <Text style={[styles.configDetail, { color: colors.error }]}>
+              {actionError}
+            </Text>
+          )}
+        </View>
+      )}
+      {(page?.story_links ?? []).map((item) => (
+        <View
+          key={item.primary_event_id + ":" + item.related_event_id}
+          style={[styles.auditItem, { borderTopColor: colors.border }]}
+        >
+          <View style={styles.auditItemCopy}>
+            <Text style={[styles.configLabel, { color: colors.text }]}>
+              {item.primary_headline || item.primary_event_id}
+            </Text>
+            <Text style={[styles.configDetail, { color: colors.textMuted }]}>
+              {item.related_headline || item.related_event_id} · {item.relation_type}
+            </Text>
+          </View>
+          <Pressable
+            disabled={!!busyKey}
+            onPress={() => void unlinkStory(item.primary_event_id, item.related_event_id)}
+            style={[styles.resolveButton, { borderColor: colors.border }]}
+          >
+            <Text style={[styles.resolveText, { color: colors.text }]}>Unlink</Text>
+          </Pressable>
+        </View>
+      ))}
 
       <View style={[styles.auditToolbar, { borderTopColor: colors.border }]}>
         <View style={styles.auditToolbarCopy}>
