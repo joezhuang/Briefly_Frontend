@@ -1,3 +1,5 @@
+import "../global.css";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocales } from "expo-localization";
 import { Stack, usePathname } from "expo-router";
@@ -140,15 +142,12 @@ function AppStack() {
     const background = colors.background;
     const root = document.getElementById("root");
     document.documentElement.style.backgroundColor = background;
+    document.documentElement.style.colorScheme = resolvedMode;
     document.body.style.backgroundColor = background;
     if (root) root.style.backgroundColor = background;
 
-    // Do not lock scrolling or set a fixed viewport height: the homepage
-    // owns its scroll restoration and must follow the visual viewport.
-    if (typeof CSS !== "undefined" && CSS.supports("height", "100dvh")) {
-      document.body.style.minHeight = "100dvh";
-      if (root) root.style.minHeight = "100dvh";
-    }
+    // Do not force 100dvh or min-height here: when mobile browser chrome
+    // collapses, an oversized root can create an empty bottom band.
 
     let themeColor = document.querySelector<HTMLMetaElement>(
       'meta[name="theme-color"]',
@@ -159,7 +158,7 @@ function AppStack() {
       document.head.appendChild(themeColor);
     }
     themeColor.content = background;
-  }, [colors.background]);
+  }, [colors.background, resolvedMode]);
   const maintenanceAllowed =
     pathname.startsWith("/beta-dashboard") ||
     pathname.startsWith("/sign-in") ||
