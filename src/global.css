@@ -1,7 +1,6 @@
-/* Reset the browser's default white 8px edge before React hydrates.
-   Percentage height follows Expo's existing root sizing. Avoid 100dvh:
-   Safari/Chrome mobile address-bar collapse can make it taller than the
-   React Native Web scroll surface, exposing a large blank strip. */
+/* Remove the browser's default outer margin and paint every layer before
+   React hydrates. The web stack has its own scroll container; keep the
+   document's ordinary scrolling/overscroll behavior otherwise unchanged. */
 html,
 body,
 #root {
@@ -9,6 +8,20 @@ body,
   padding: 0;
   height: 100%;
   background-color: #F4F1EB;
+}
+
+/* A percentage-height Expo root can stay at the OLD visible height after
+   mobile browser chrome collapses. Size the root itself to the CURRENT
+   viewport, never min-height: 100dvh (which grew the blank region).
+   With an exact height the app's FlatList resizes instead of leaving a strip
+   of the navigator/background exposed below its last measured edge. */
+@supports (height: 100dvh) {
+  @media (max-width: 900px) {
+    #root {
+      height: 100dvh;
+      min-height: 0;
+    }
+  }
 }
 
 :root {
