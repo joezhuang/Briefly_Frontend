@@ -633,6 +633,130 @@ export function StoryTile({
         </View>
   );
 
+  if (editorial) {
+    return (
+      <View
+        style={[
+          styles.editorialCard,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
+      >
+        <View
+          ref={tileRef}
+          style={[styles.editorialMedia, { height: editorialMediaHeight }]}
+        >
+          {playingVideo && videoUrl ? (
+            videoSurface
+          ) : (
+            <Pressable
+              accessibilityRole={Platform.OS === "web" ? "link" : "button"}
+              accessibilityLabel={displayedHeadline}
+              onPress={openStory}
+              style={styles.editorialPicture}
+            >
+              {imageUrl ? (
+                <Image
+                  source={{ uri: imageUrl }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  transition={180}
+                />
+              ) : (
+                <BrieflyMediaFallback style={StyleSheet.absoluteFill} />
+              )}
+              {videoAvailable && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${copy.play}${videoAccessBadge ? ` · ${videoAccessBadge}` : ""}`}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    if (videoLocked) {
+                      openVideoAccess();
+                      return;
+                    }
+                    reportVideoStart();
+                  }}
+                  style={({ pressed }) => [
+                    styles.editorialPlay,
+                    pressed && styles.actionButtonPressed,
+                  ]}
+                >
+                  <Text style={styles.editorialPlayGlyph}>▶</Text>
+                  {videoAccessBadgeCompact ? (
+                    <Text style={styles.videoProBadge}>
+                      {videoAccessBadgeCompact}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              )}
+            </Pressable>
+          )}
+        </View>
+
+        <View style={styles.editorialBody}>
+          <Pressable
+            accessibilityRole={Platform.OS === "web" ? "link" : "button"}
+            accessibilityLabel={displayedHeadline}
+            onPress={openStory}
+            style={({ pressed }) => [
+              styles.editorialTextLink,
+              pressed && styles.actionButtonPressed,
+            ]}
+          >
+            <Text style={[styles.editorialCategory, { color: colors.accent }]}>
+              {(article.category ?? t.topStory).toUpperCase()}
+              {(article.developing_story_count ?? 0) > 1
+                ? ` · ${language === "zh-CN" ? "持续新闻" : language === "zh-TW" ? "持續新聞" : language === "ja" ? "続報" : language === "es" ? "En desarrollo" : "Developing story"} (${article.developing_story_count})`
+                : ""}
+            </Text>
+            <Text
+              style={[
+                styles.editorialHeadline,
+                size === "hero"
+                  ? viewportWidth < 700
+                    ? styles.editorialHeadlineHeroCompact
+                    : styles.editorialHeadlineHero
+                  : size === "secondary"
+                    ? styles.editorialHeadlineSecondary
+                    : styles.editorialHeadlineStandard,
+                { color: colors.text },
+              ]}
+              numberOfLines={size === "hero" ? 4 : 3}
+            >
+              {displayedHeadline}
+            </Text>
+            {size === "hero" && !!displayedStandfirst && (
+              <Text
+                style={[styles.editorialStandfirst, { color: colors.textMuted }]}
+                numberOfLines={3}
+              >
+                {displayedStandfirst}
+              </Text>
+            )}
+          </Pressable>
+          <View style={[styles.editorialFooter, { borderTopColor: colors.border }]}>
+            <Pressable
+              accessibilityRole={Platform.OS === "web" ? "link" : "button"}
+              accessibilityLabel={displayedHeadline}
+              onPress={openStory}
+              style={styles.editorialSourceLink}
+            >
+              <Text style={[styles.editorialSourceText, { color: colors.textMuted }]}>
+                {sourceCount > 0
+                  ? `${sourceCount} ${sourceCount === 1 ? t.source : t.sourcesPlural}`
+                  : ""}
+              </Text>
+              <Text style={[styles.editorialArrow, { color: colors.accent }]}>
+                ↗
+              </Text>
+            </Pressable>
+            {mediaActions}
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   if (playingVideo && videoUrl) {
     return (
       <View ref={tileRef} style={StyleSheet.flatten([styles.tile, { height }])}>
