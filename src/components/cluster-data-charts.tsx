@@ -155,7 +155,7 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
       .then((next) => { if (active) setStatus(next); })
       .catch(() => { if (active) setError(true); });
     return () => { active = false; };
-  }, [eventId, articleVersionId, user?.id, account?.is_pro, account?.is_admin]);
+  }, [eventId, articleVersionId, user?.id, account?.translation_entitled, account?.is_admin]);
 
   useEffect(() => {
     if (status?.status !== "processing" || !eventId) return;
