@@ -154,7 +154,7 @@ export function StoryTile({
   onVideoTimeUpdate,
   onVideoStop,
 }: Props) {
-  const { height: viewportHeight } = useWindowDimensions();
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
   const { user, account } = useBrieflyAuth();
   const { config: appConfig } = useBrieflyAppConfig();
@@ -203,7 +203,9 @@ export function StoryTile({
     250,
     Math.min(520, Math.floor(viewportHeight - 260)),
   );
-  const compactHero = size === "hero" && fitViewport && viewportHeroHeight < 430;
+  const compactHero = size === "hero" && (
+    viewportWidth < 540 || (fitViewport && viewportHeroHeight < 430)
+  );
   const height =
     size === "hero"
       ? fitViewport
@@ -218,7 +220,9 @@ export function StoryTile({
         ? styles.heroHeadlineCompact
         : styles.heroHeadline
       : size === "secondary"
-        ? styles.secondaryHeadline
+        ? viewportWidth < 400
+          ? styles.secondaryHeadlineCompact
+          : styles.secondaryHeadline
         : styles.standardHeadline;
   const sourceCount = article.source_count ?? article.sources_used?.length ?? 0;
   const videoAvailable =
@@ -688,6 +692,7 @@ const styles = StyleSheet.create({
   heroHeadline: { fontSize: 38, lineHeight: 43 },
   heroHeadlineCompact: { fontSize: 27, lineHeight: 31 },
   secondaryHeadline: { fontSize: 23, lineHeight: 27 },
+  secondaryHeadlineCompact: { fontSize: 20, lineHeight: 25 },
   standardHeadline: { fontSize: 22, lineHeight: 27 },
   standfirst: {
     maxWidth: 620,
