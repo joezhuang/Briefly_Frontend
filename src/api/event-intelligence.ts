@@ -68,6 +68,14 @@ export type EventDevelopment = {
   representative_title?: string | null;
 };
 
+export type DevelopingStoryMember = {
+  event_id: string;
+  headline: string;
+  last_updated_at?: string | null;
+  relation_type?: "development" | "coverage" | "commentary" | null;
+  is_primary?: boolean;
+};
+
 export type EventIntelligence = {
   event_id: string;
   title?: string | null;
@@ -76,6 +84,7 @@ export type EventIntelligence = {
   assessment?: EventAssessment | null;
   evidence?: EventEvidence[];
   developments?: EventDevelopment[];
+  story_members?: DevelopingStoryMember[];
 };
 
 export function getEventIntelligence(
