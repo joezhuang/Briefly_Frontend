@@ -55,6 +55,7 @@ import {
   saveManualFeedLocation,
   type NewsLocationPreference,
 } from "@/services/feed-location";
+import { selectHomepageDevelopments } from "@/services/home-editorial";
 import { layout } from "@/theme/tokens";
 
 const PREVIEW_DRAFTS =
@@ -955,25 +956,9 @@ export default function HomeScreen() {
     availableScopes[(scopeIndex + 1) % availableScopes.length];
   const lead = articles[0];
   const secondary = articles.slice(1, 3);
-  // Promote only already-confirmed developing story groups. Keep selections
-  // within the initial page so infinite scroll cannot reshuffle the header.
-  // Unverified relationship candidates are not part of this feed contract.
-  const developingHighlights = useMemo(() => {
-    const groups = new Set<string>();
-    return articles
-      .slice(3, PAGE_SIZE)
-      .filter((article) => {
-        if ((article.developing_story_count ?? 0) <= 1) return false;
-        const group = article.developing_story_id || article.event_id;
-        if (groups.has(group)) return false;
-        groups.add(group);
-        return true;
-      })
-      .slice(0, desktop ? 3 : 2);
-  }, [articles, desktop]);
-  const highlightedKeys = new Set(developingHighlights.map(storyKey));
-  const remaining = articles.slice(3).filter(
-    (article) => !highlightedKeys.has(storyKey(article)),
+  const { developingHighlights, remaining } = useMemo(
+    () => selectHomepageDevelopments(articles, desktop ? 3 : 2, PAGE_SIZE),
+    [articles, desktop],
   );
   const remainingBatches = chunkArticles(remaining);
   const leadLanguageMatches = lead
