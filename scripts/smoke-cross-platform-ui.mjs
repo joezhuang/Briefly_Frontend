@@ -1310,6 +1310,37 @@ ensure(
   "Mobile web viewport avoids a growing bottom gap and matches the active page colour"
 );
 
+// Story/cluster tools must open intentionally, without fetching heavy
+// evidence or evolution data until the reader taps a tab.
+const eventLens = read("src/components/event-evidence-panel.tsx");
+ensure(
+  eventLens.includes('({ eventId, lens: null })') &&
+  eventLens.includes('const requestedLens = lensState.eventId === eventId ? lensState.lens : null;') &&
+  eventLens.includes('const nextLens = activeLens === lens ? null : lens;') &&
+  eventLens.includes('accessibilityState={{ expanded: selected }}') &&
+  eventLens.includes('if (activeLens !== "evidence" && activeLens !== "coverage") return;') &&
+  eventLens.includes('timelineEnabled && activeLens === "timeline" && <EventEvolutionPanel') &&
+  eventLens.includes('coverageEnabled && activeLens === "coverage" && intelligence') &&
+  !eventLens.includes('setLensState({ eventId, lens: "timeline" })'),
+  "Evidence, Timeline and Coverage start closed, toggle closed and load only on expansion"
+);
+
+// Generated source-verified charts are a PUBLIC reader feature, while only
+// eligible accounts may request a NEW extraction. Preserve both surfaces.
+const chartsUI = read("src/components/cluster-data-charts.tsx");
+const articleUI = read("src/components/article-view.tsx");
+const dashboardUI = read("src/app/beta-dashboard.tsx");
+ensure(
+  chartsUI.includes('void getClusterDataCharts(eventId)') &&
+  chartsUI.includes('const canGenerate = status?.can_generate === true;') &&
+  chartsUI.includes('status?.status === "ready"') &&
+  chartsUI.includes('void Linking.openURL(sourceUrl)') &&
+  articleUI.includes('<ClusterDataCharts eventId={article.event_id}') &&
+  dashboardUI.includes('label="Allow Pro users to generate data charts"') &&
+  dashboardUI.includes('onChange("data_charts_access_mode", enabled ? "admin_and_pro" : "admin_only")'),
+  "Public verified charts and admin-configurable Admin/Pro lazy generation remain available"
+);
+
 let passed = 0;
 for (const check of checks) {
   requireAll(check.file, check.needles);
