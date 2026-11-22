@@ -1640,6 +1640,7 @@ export type BrieflyAppConfig = {
   coverage_enabled: boolean;
   podcast_enabled: boolean;
   podcast_access_mode: FeatureAccessMode;
+  data_charts_access_mode: "admin_only" | "admin_and_pro";
   story_refresh_access_mode: FeatureAccessMode;
   translation_enabled: boolean;
   bilingual_reader_enabled: boolean;
@@ -1698,6 +1699,8 @@ function normalizeBrieflyAppConfig(
     ...value,
     source_video_access_mode: value.source_video_access_mode ?? "pro_only",
     podcast_access_mode: value.podcast_access_mode ?? "pro_only",
+    data_charts_access_mode: value.data_charts_access_mode === "admin_and_pro"
+      ? "admin_and_pro" : "admin_only",
     story_refresh_access_mode: value.story_refresh_access_mode ?? "pro_only",
     mobile_app_promotion_enabled: value.mobile_app_promotion_enabled ?? false,
     login_nudge_suppression_enabled:
@@ -1723,6 +1726,42 @@ function normalizeBrieflyAppConfig(
     rollout_android_percentage: value.rollout_android_percentage ?? 100,
     rollout_cohort_key: value.rollout_cohort_key ?? "default",
   };
+}
+
+export type VerifiedDataChartPoint = {
+  label: string;
+  value: number;
+  source: string;
+  source_url: string;
+  evidence_quote: string;
+};
+
+export type VerifiedDataChart = {
+  title: string;
+  unit: string;
+  chart_type: "bar";
+  points: VerifiedDataChartPoint[];
+};
+
+export type ClusterDataChartStatus = {
+  event_id?: string;
+  article_version_id?: number;
+  status: "not_generated" | "processing" | "ready" | "insufficient" | "failed";
+  charts: VerifiedDataChart[];
+  can_generate: boolean;
+  updated_at?: string | null;
+};
+
+export function getClusterDataCharts(eventId: string) {
+  return getJson<ClusterDataChartStatus>(
+    `/api/articles/event/${encodeURIComponent(eventId)}/data-charts`
+  );
+}
+
+export function requestClusterDataCharts(eventId: string) {
+  return postJson<ClusterDataChartStatus>(
+    `/api/articles/event/${encodeURIComponent(eventId)}/data-charts`, {}
+  );
 }
 
 export async function getBrieflyAppConfig() {
