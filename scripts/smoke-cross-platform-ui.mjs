@@ -21,6 +21,59 @@ function requireAll(relativePath, needles) {
 
 const checks = [
   {
+    name: "Measured pinned category/search navigation reuses the existing responsive tab row",
+    file: "src/components/feed-category-bar.tsx",
+    needles: [
+      "export function usePinnedFeedCategories()",
+      "export function PinnedFeedCategoryBar({",
+      "scrollOffsetRef.current > top + 1",
+      'position: "absolute"',
+      "top: 0",
+      "zIndex: 30",
+      "maxWidth: layout.pageMax",
+      "width < 480 && styles.pinnedContentCompact",
+      "<FeedCategoryBar active={active} onFeedScopePress={onFeedScopePress} />",
+    ],
+  },
+  {
+    name: "Home feed pins categories after the full header and location scroll away",
+    file: "src/app/index.tsx",
+    needles: [
+      "usePinnedFeedCategories();",
+      "headerOffsetRef.current = event.nativeEvent.layout.y",
+      "categoryOffsetRef.current = event.nativeEvent.layout.y",
+      "setBarTop(headerOffsetRef.current + categoryOffsetRef.current)",
+      "onScrollOffset(scrollY)",
+      "onScrollOffset(rememberedOffset)",
+      "scrollEventThrottle={32}",
+      "<PinnedFeedCategoryBar",
+      "visible={categoriesPinned}",
+      "onFeedScopePress={switchScope}",
+      '<NewsLocationGate',
+    ],
+  },
+  {
+    name: "Following feed pins only the category row across long update lists",
+    file: "src/app/following.tsx",
+    needles: [
+      "usePinnedFeedCategories();",
+      "onScroll={(event) => onScrollOffset(event.nativeEvent.contentOffset.y)}",
+      "onLayout={(event) => setBarTop(event.nativeEvent.layout.y)}",
+      '<PinnedFeedCategoryBar visible={categoriesPinned} active="following" />',
+    ],
+  },
+  {
+    name: "Search results retain compact category navigation while scrolling",
+    file: "src/app/search.tsx",
+    needles: [
+      "usePinnedFeedCategories();",
+      "onScroll={(event) => onScrollOffset(event.nativeEvent.contentOffset.y)}",
+      "onLayout={(event) => setBarTop(event.nativeEvent.layout.y)}",
+      '<PinnedFeedCategoryBar visible={categoriesPinned} active="search" />',
+      'keyboardShouldPersistTaps="handled"',
+    ],
+  },
+  {
     name: "Story route focus and route identity stop old video playback",
     file: "src/app/story/[slug].tsx",
     needles: [
