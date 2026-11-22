@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { DevelopingStoryLinks } from "@/components/developing-story-links";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -431,7 +432,7 @@ export function EventEvolutionPanel({
     }
   };
 
-  if (!loaded || (!timelineItems.length && !meaningful.length)) return null;
+  if (!loaded || (!timelineItems.length && !meaningful.length && (intelligence?.story_members?.length ?? 0) <= 1)) return null;
 
   const timelineUpdatedAt = formatDate(timeline?.timeline_updated_at, language);
   const visibleChanges = unseen.slice(0, 3);
@@ -609,6 +610,7 @@ export function EventEvolutionPanel({
           </View>}
         </View>
       )}
+      <DevelopingStoryLinks eventId={eventId} members={intelligence?.story_members} />
     </View>
   );
 }
