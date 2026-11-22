@@ -3084,6 +3084,14 @@ function RuntimeConfigEditor({
       <ConfigToggle label="Timeline" detail="Show event timelines in Story tools." value={config.timeline_enabled} onValueChange={(value) => onChange("timeline_enabled", value)} />
       <ConfigToggle label="Coverage" detail="Show publisher coverage inside Explore this event." value={config.coverage_enabled} onValueChange={(value) => onChange("coverage_enabled", value)} />
       <ConfigToggle label="Podcast" detail="Show Deeply podcast analysis controls." value={config.podcast_enabled} onValueChange={(value) => onChange("podcast_enabled", value)} />
+      <ConfigToggle
+        label="Allow Pro users to generate data charts"
+        detail="Off: admins only. On: admins and signed-in Briefly Pro users. Charts are generated only when requested, must cite source numbers, and are reused from the shared cache."
+        value={config.data_charts_access_mode === "admin_and_pro"}
+        onValueChange={(enabled) =>
+          onChange("data_charts_access_mode", enabled ? "admin_and_pro" : "admin_only")
+        }
+      />
       <ConfigAccessMode
         label="Podcast analysis access"
         detail="Choose whether podcast analysis is off, free after sign-in, or reserved for Briefly Pro."
