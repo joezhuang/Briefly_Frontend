@@ -1340,6 +1340,16 @@ ensure(
   chartsUI.includes('chart.chart_type === "line"') &&
   chartsUI.includes('chart.chart_type === "stacked"') &&
   chartsUI.includes('point.derived') &&
+  chartsUI.includes('const keyFigures = readyCharts.filter') &&
+  chartsUI.includes('const comparisons = readyCharts.filter') &&
+  chartsUI.includes('styles.figureGrid') &&
+  chartsUI.includes('styles.comparisonGrid') &&
+  chartsUI.includes('styles.sharedSourceTrigger') &&
+  chartsUI.includes('setSourceDisclosure({ eventId, expanded: !sourcesExpanded })') &&
+  !chartsUI.includes('showSourcesLabel') &&
+  articleUI.indexOf('<View style={[styles.actionShelf') < articleUI.indexOf('<ClusterDataCharts') &&
+  articleUI.includes('styles.storyToolsGroup') &&
+  articleUI.includes('styles.podcastFeatureRow') &&
   chartsUI.includes('status?.status === "ready"') &&
   chartsUI.includes('void Linking.openURL(sourceUrl)') &&
   articleUI.includes('<ClusterDataCharts eventId={article.event_id}') &&

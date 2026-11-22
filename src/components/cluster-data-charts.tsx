@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -22,6 +23,10 @@ import { useBrieflyTheme } from "@/context/theme";
 const chartCopy = {
   en: {
     title: "Explore the data",
+    keyFigures: "Key figures",
+    comparisons: "Comparisons",
+    showMore: "Show all comparisons",
+    showLess: "Show fewer comparisons",
     details: "Source-verified figures from this news event",
     generate: "Extract charts",
     processing: "Checking original reports for comparable data…",
@@ -43,6 +48,10 @@ const chartCopy = {
   },
   es: {
     title: "Explorar los datos",
+    keyFigures: "Cifras clave",
+    comparisons: "Comparaciones",
+    showMore: "Ver todas las comparaciones",
+    showLess: "Mostrar menos",
     details: "Cifras verificadas en las fuentes de esta noticia",
     generate: "Extraer gráficos",
     processing: "Comprobando los datos en las fuentes originales…",
@@ -64,6 +73,10 @@ const chartCopy = {
   },
   ja: {
     title: "データを詳しく見る",
+    keyFigures: "主要な数値",
+    comparisons: "比較データ",
+    showMore: "比較をすべて表示",
+    showLess: "表示を減らす",
     details: "報道元で確認された数値",
     generate: "グラフを作成",
     processing: "元記事の比較可能な数値を確認中…",
@@ -85,6 +98,10 @@ const chartCopy = {
   },
   "zh-CN": {
     title: "探索数据",
+    keyFigures: "关键数据",
+    comparisons: "数据对比",
+    showMore: "查看全部对比",
+    showLess: "收起部分对比",
     details: "来自原始报道并经过核验的数值",
     generate: "提取图表",
     processing: "正在核对原始报道中的可比较数据…",
@@ -106,6 +123,10 @@ const chartCopy = {
   },
   "zh-TW": {
     title: "探索數據",
+    keyFigures: "關鍵數據",
+    comparisons: "數據比較",
+    showMore: "查看全部比較",
+    showLess: "收起部分比較",
     details: "來自原始報導並經過核實的數值",
     generate: "擷取圖表",
     processing: "正在核對原始報導中的可比較數據…",
@@ -209,16 +230,14 @@ function TrendPlot({ chart, accent, border, textColor }: {
   );
 }
 
-function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSourcesLabel, copy }: {
+function ChartBars({ chart, evidenceLabel, sourceLabel, copy, sourcesExpanded }: {
   chart: VerifiedDataChart;
   evidenceLabel: string;
   sourceLabel: string;
-  showSourcesLabel: string;
-  hideSourcesLabel: string;
+  sourcesExpanded: boolean;
   copy: { partial: string; derived: string; forecast: string; proposal: string; target: string };
 }) {
   const { colors } = useBrieflyTheme();
-  const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const max = Math.max(Number.EPSILON, ...chart.points.map((point) => Math.max(0, point.value)));
   const total = chart.points.reduce((sum, point) => sum + point.value, 0);
   const qualifier = chart.qualifier === 'forecast' ? copy.forecast
@@ -226,17 +245,23 @@ function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSo
     : chart.qualifier === 'target' ? copy.target : null;
   return (
     <View style={styles.chart}>
-      <Text style={[styles.chartTitle, { color: colors.text }]}>{chart.title}</Text>
-      <Text style={[styles.unit, { color: colors.textMuted }]}>{chart.unit}{qualifier ? " · " + qualifier : ""}</Text>
+      {chart.chart_type !== "kpi" && (
+        <>
+          <Text style={[styles.chartTitle, { color: colors.text }]}>{chart.title}</Text>
+          <Text style={[styles.unit, { color: colors.textMuted }]}>{chart.unit}{qualifier ? " · " + qualifier : ""}</Text>
+        </>
+      )}
       {chart.partial && <Text style={[styles.note, { color: colors.textMuted }]}>{copy.partial}</Text>}
       {chart.chart_type === "kpi" ? (
-        <View style={[styles.kpi, { borderColor: colors.border }]}>
+        <View style={styles.kpiCompact}>
           <Text style={[styles.kpiValue, { color: colors.accent }]}>
             {formatVerifiedValue(chart.points[0].value, chart.unit)}
           </Text>
-          <Text style={[styles.kpiLabel, { color: colors.text }]}>
-            {chart.points[0].label}
-          </Text>
+          <Text style={[styles.kpiLabel, { color: colors.text }]}>{chart.title}</Text>
+          {chart.points[0].label !== chart.title && (
+            <Text style={[styles.kpiDetail, { color: colors.textMuted }]}>{chart.points[0].label}</Text>
+          )}
+          {qualifier && <Text style={[styles.kpiQualifier, { color: colors.textMuted }]}>{qualifier}</Text>}
         </View>
       ) : chart.chart_type === "line" ? (
         <TrendPlot chart={chart} accent={colors.accent}
@@ -285,17 +310,6 @@ function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSo
           </View>
         );
       })}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ expanded: sourcesExpanded }}
-        onPress={() => setSourcesExpanded((open) => !open)}
-        style={styles.sourceDisclosure}
-      >
-        <Text style={[styles.source, { color: colors.accent }]}>
-          {sourcesExpanded ? hideSourcesLabel : showSourcesLabel}
-          {sourcesExpanded ? " −" : " +"}
-        </Text>
-      </Pressable>
       {sourcesExpanded && chart.points.map((point, index) => {
         const sourceUrl = /^https?:\/\//i.test(point.source_url) ? point.source_url : null;
         return (
@@ -346,7 +360,12 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
   const { config } = useBrieflyAppConfig();
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+  const { width: screenWidth } = useWindowDimensions();
   const copy = chartCopy[language] ?? chartCopy.en;
+  const [sourceDisclosure, setSourceDisclosure] = useState({ eventId: "", expanded: false });
+  const [comparisonDisclosure, setComparisonDisclosure] = useState({ eventId: "", expanded: false });
+  const sourcesExpanded = sourceDisclosure.eventId === eventId && sourceDisclosure.expanded;
+  const showMoreComparisons = comparisonDisclosure.eventId === eventId && comparisonDisclosure.expanded;
   const [status, setStatus] = useState<ClusterDataChartStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -406,6 +425,11 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
     status?.status === "ready" && Array.isArray(status.charts)
       ? status.charts
       : [];
+  const keyFigures = readyCharts.filter((chart) => chart.chart_type === "kpi" && chart.points.length === 1);
+  const comparisons = readyCharts.filter((chart) => chart.chart_type !== "kpi");
+  const shownComparisons = showMoreComparisons ? comparisons : comparisons.slice(0, 2);
+  const keyCardWidth = screenWidth >= 960 ? "31.5%" : "48.5%";
+  const comparisonWidth = screenWidth >= 1030 ? "48.5%" : "100%";
   const canGenerate = status?.can_generate === true;
   // Keep an eligible reader's entry point visible when the backend fails.
   // The API remains authoritative: only can_generate=true offers extraction.
@@ -421,11 +445,62 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
     <View style={[styles.panel, { borderColor: colors.border, backgroundColor: colors.surfaceMuted }]}>
       <Text style={[styles.title, { color: colors.text }]}>{copy.title}</Text>
       <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.details}</Text>
-      {readyCharts.map((chart, index) => (
-        <ChartBars key={`${chart.title}-${index}`} chart={chart} copy={copy}
-          evidenceLabel={copy.evidence} sourceLabel={copy.source}
-          showSourcesLabel={copy.showSources} hideSourcesLabel={copy.hideSources} />
-      ))}
+      {keyFigures.length > 0 && (
+        <View style={styles.dataGroup}>
+          <Text style={[styles.groupHeading, { color: colors.text }]}>{copy.keyFigures}</Text>
+          <View style={styles.figureGrid}>
+            {keyFigures.map((chart, index) => (
+              <View key={chart.title + "-figure-" + index} style={[
+                styles.figureCard, { width: keyCardWidth, backgroundColor: colors.surface, borderColor: colors.border },
+              ]}>
+                <ChartBars chart={chart} copy={copy} sourcesExpanded={sourcesExpanded}
+                  evidenceLabel={copy.evidence} sourceLabel={copy.source} />
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+      {comparisons.length > 0 && (
+        <View style={styles.dataGroup}>
+          <Text style={[styles.groupHeading, { color: colors.text }]}>{copy.comparisons}</Text>
+          <View style={styles.comparisonGrid}>
+            {shownComparisons.map((chart, index) => (
+              <View key={chart.title + "-comparison-" + index} style={[
+                styles.comparisonCard, { width: comparisonWidth, backgroundColor: colors.surface, borderColor: colors.border },
+              ]}>
+                <ChartBars chart={chart} copy={copy} sourcesExpanded={sourcesExpanded}
+                  evidenceLabel={copy.evidence} sourceLabel={copy.source} />
+              </View>
+            ))}
+          </View>
+          {comparisons.length > 2 && (
+            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showMoreComparisons }}
+              onPress={() => setComparisonDisclosure({ eventId, expanded: !showMoreComparisons })}
+              style={styles.moreButton}
+            >
+              <Text style={[styles.source, { color: colors.accent }]}>
+                {showMoreComparisons ? copy.showLess : copy.showMore}
+                {showMoreComparisons ? " −" : " +"}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+      {readyCharts.length > 0 && (
+        <View style={[styles.sharedSourceRow, { borderTopColor: colors.border }]}>
+          <Pressable accessibilityRole="button" accessibilityState={{ expanded: sourcesExpanded }}
+            onPress={() => setSourceDisclosure({ eventId, expanded: !sourcesExpanded })}
+            style={styles.sharedSourceTrigger}
+          >
+            <Text style={[styles.source, { color: colors.accent }]}>
+              {sourcesExpanded ? copy.hideSources : copy.showSources}
+            </Text>
+            <Text style={[styles.expandGlyph, { color: colors.accent }]}>
+              {sourcesExpanded ? "−" : "+"}
+            </Text>
+          </Pressable>
+        </View>
+      )}
       {status?.status === "processing" && (
         <View style={styles.progress}>
           <ActivityIndicator size="small" color={colors.accent} />
@@ -483,11 +558,24 @@ const styles = StyleSheet.create({
   panel: { marginTop: 24, padding: 18, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, gap: 12 },
   title: { fontSize: 22, fontWeight: "900" },
   detail: { fontSize: 13, lineHeight: 20 },
-  chart: { gap: 9, paddingTop: 14, borderTopWidth: 0 },
+  chart: { gap: 8 },
+  dataGroup: { gap: 12, marginTop: 8 },
+  groupHeading: { fontSize: 15, fontWeight: "900", letterSpacing: 0.2 },
+  figureGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10 },
+  figureCard: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 12, minHeight: 130 },
+  comparisonGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10 },
+  comparisonCard: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 14 },
+  moreButton: { minHeight: 44, alignSelf: "flex-start", justifyContent: "center" },
+  sharedSourceRow: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 10, paddingTop: 4 },
+  sharedSourceTrigger: { minHeight: 44, flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
+  expandGlyph: { fontSize: 20, fontWeight: "800" },
+  kpiCompact: { gap: 7 },
+  kpiDetail: { fontSize: 12, lineHeight: 17 },
+  kpiQualifier: { fontSize: 11, fontWeight: "700" },
   note: { fontSize: 12, lineHeight: 18 },
   kpi: { borderWidth: 1, borderRadius: 12, padding: 16, gap: 5 },
-  kpiValue: { fontSize: 25, fontWeight: "900" },
-  kpiLabel: { fontSize: 13, fontWeight: "600" },
+  kpiValue: { fontSize: 22, lineHeight: 28, fontWeight: "900" },
+  kpiLabel: { fontSize: 13, lineHeight: 19, fontWeight: "800" },
   stackedTrack: { flexDirection: "row", height: 24, borderRadius: 8, overflow: "hidden", marginVertical: 8 },
   trendPlot: { position: "relative", width: "100%", height: 152, borderBottomWidth: 1, marginTop: 8 },
   trendLabels: { position: "relative", minHeight: 40, marginTop: 8 },
