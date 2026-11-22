@@ -1265,6 +1265,24 @@ ensure(speechControllerSource.includes("Speech.getAvailableVoicesAsync()") &&
        bilingualSource.includes("<EnglishVoicePicker />"),
        "Free speech prefers the best available natural/enhanced system voice for each language");
 
+// "Why it matters" belongs to the lead article, not the end of the
+// featured grid. Check both wide and stacked layouts and the mobile CTA.
+const homepageLayout = read("src/app/index.tsx");
+ensure(
+  homepageLayout.includes('const leadContextPanel = !!leadWhyItMatters && (') &&
+  homepageLayout.includes('styles.contextPanelStacked') &&
+  homepageLayout.includes('styles.contextActionInline') &&
+  homepageLayout.includes('{compactEditorial && (') &&
+  homepageLayout.includes(
+    '<View style={styles.heroColumn}>\n                {editorialFeature(lead, 1, "hero")}\n                {leadContextPanel}'
+  ) &&
+  homepageLayout.includes(
+    '<View style={styles.stack}>\n              {editorialFeature(lead, 1, "hero")}\n              {leadContextPanel}\n              <View style={tablet ? styles.twoColumnGrid : styles.stack}>'
+  ) &&
+  (homepageLayout.match(/\{leadContextPanel\}/g) || []).length === 2,
+  "Lead Why it matters appears immediately after the first story, not after the secondaries, at every breakpoint"
+);
+
 let passed = 0;
 for (const check of checks) {
   requireAll(check.file, check.needles);
