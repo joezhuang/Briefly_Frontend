@@ -458,7 +458,6 @@ export function EventEvidencePanel({
               key={tab.id}
               accessibilityRole="button"
               accessibilityState={{ expanded: selected }}
-
               onPress={() => selectLens(tab.id)}
               style={({ pressed }) => [
                 styles.tab,
