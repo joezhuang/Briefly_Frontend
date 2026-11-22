@@ -28,6 +28,8 @@ const chartCopy = {
     retry: "Try extraction again",
     source: "Source",
     evidence: "Reported evidence",
+    showSources: "View sources and numerical evidence",
+    hideSources: "Hide source evidence",
     error: "Data extraction is unavailable. Please retry.",
   },
   es: {
@@ -39,6 +41,8 @@ const chartCopy = {
     retry: "Volver a intentar",
     source: "Fuente",
     evidence: "Datos reportados",
+    showSources: "Ver fuentes y cifras",
+    hideSources: "Ocultar fuentes",
     error: "No se pueden extraer los datos. Inténtalo de nuevo.",
   },
   ja: {
@@ -50,6 +54,8 @@ const chartCopy = {
     retry: "再試行",
     source: "出典",
     evidence: "出典の記述",
+    showSources: "出典と数値の根拠を見る",
+    hideSources: "出典を閉じる",
     error: "データを抽出できません。再試行してください。",
   },
   "zh-CN": {
@@ -61,6 +67,8 @@ const chartCopy = {
     retry: "重新尝试",
     source: "来源",
     evidence: "原文依据",
+    showSources: "查看来源和数值依据",
+    hideSources: "收起来源依据",
     error: "数据提取暂不可用，请重试。",
   },
   "zh-TW": {
@@ -72,16 +80,21 @@ const chartCopy = {
     retry: "重新嘗試",
     source: "來源",
     evidence: "原文依據",
+    showSources: "查看來源與數值依據",
+    hideSources: "收起來源依據",
     error: "數據擷取暫不可用，請重試。",
   },
 } as const;
 
-function ChartBars({ chart, evidenceLabel, sourceLabel }: {
+function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSourcesLabel }: {
   chart: VerifiedDataChart;
   evidenceLabel: string;
   sourceLabel: string;
+  showSourcesLabel: string;
+  hideSourcesLabel: string;
 }) {
   const { colors } = useBrieflyTheme();
+  const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const max = Math.max(1, ...chart.points.map((point) => Math.max(0, point.value)));
   return (
     <View style={styles.chart}>
@@ -89,7 +102,6 @@ function ChartBars({ chart, evidenceLabel, sourceLabel }: {
       <Text style={[styles.unit, { color: colors.textMuted }]}>{chart.unit}</Text>
       {chart.points.map((point, index) => {
         const width = Math.max(0, Math.min(100, point.value / max * 100));
-        const sourceUrl = /^https?:\/\//i.test(point.source_url) ? point.source_url : null;
         return (
           <View key={`${point.label}-${index}`} style={styles.barItem}>
             <View style={styles.barHeading}>
@@ -104,6 +116,24 @@ function ChartBars({ chart, evidenceLabel, sourceLabel }: {
                 width: `${width}%` as `${number}%`,
               }]} />
             </View>
+          </View>
+        );
+      })}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: sourcesExpanded }}
+        onPress={() => setSourcesExpanded((open) => !open)}
+        style={styles.sourceDisclosure}
+      >
+        <Text style={[styles.source, { color: colors.accent }]}>
+          {sourcesExpanded ? hideSourcesLabel : showSourcesLabel}
+          {sourcesExpanded ? " −" : " +"}
+        </Text>
+      </Pressable>
+      {sourcesExpanded && chart.points.map((point, index) => {
+        const sourceUrl = /^https?:\/\//i.test(point.source_url) ? point.source_url : null;
+        return (
+          <View key={`${point.label}-source-${index}`} style={styles.sourceDetails}>
             {sourceUrl ? (
               <Pressable
                 accessibilityRole="link"
@@ -111,12 +141,12 @@ function ChartBars({ chart, evidenceLabel, sourceLabel }: {
                 onPress={() => void Linking.openURL(sourceUrl)}
               >
                 <Text style={[styles.source, { color: colors.accent }]}>
-                  {sourceLabel}: {point.source} ↗
+                  {point.label} · {sourceLabel}: {point.source} ↗
                 </Text>
               </Pressable>
             ) : (
               <Text style={[styles.source, { color: colors.textMuted }]}>
-                {sourceLabel}: {point.source}
+                {point.label} · {sourceLabel}: {point.source}
               </Text>
             )}
             <Text
@@ -198,7 +228,8 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
       <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.details}</Text>
       {readyCharts.map((chart, index) => (
         <ChartBars key={`${chart.title}-${index}`} chart={chart}
-          evidenceLabel={copy.evidence} sourceLabel={copy.source} />
+          evidenceLabel={copy.evidence} sourceLabel={copy.source}
+          showSourcesLabel={copy.showSources} hideSourcesLabel={copy.hideSources} />
       ))}
       {status?.status === "processing" && (
         <View style={styles.progress}>
@@ -246,6 +277,8 @@ const styles = StyleSheet.create({
   barValue: { fontSize: 13, fontWeight: "900" },
   barTrack: { width: "100%", height: 11, borderRadius: 7, overflow: "hidden" },
   barFill: { height: "100%", borderRadius: 7 },
+  sourceDisclosure: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center", marginTop: 4 },
+  sourceDetails: { gap: 4, paddingVertical: 6 },
   source: { fontSize: 12, fontWeight: "700", lineHeight: 17 },
   evidence: { fontSize: 12, lineHeight: 18 },
   progress: { flexDirection: "row", alignItems: "center", gap: 10 },
