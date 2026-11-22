@@ -902,9 +902,13 @@ export default function HomeScreen() {
     [appConfig?.floating_video_enabled, language, loadFeed, newsLocation, onScrollOffset, scope],
   );
 
+  // Responsive editorial tiers: narrow phones, phones, tablets and desktop.
+  // Maintain the original card layout, feed batching and scroll positions.
   const desktop = width >= 1000;
   const tablet = width >= 700 && width < 1000;
   const mobileHeader = width < 480;
+  const narrowPhone = width < 400;
+  const compactEditorial = width < 700;
   const mobileLeadFit =
     width < 700 || Math.min(width, viewportHeight) < 700;
   const showWebScopeArrows = Platform.OS === "web";
@@ -1019,7 +1023,7 @@ export default function HomeScreen() {
           }
         }}
       >
-        <View style={styles.headingRow}>
+        <View style={[styles.headingRow, narrowPhone && styles.headingRowNarrow]}>
           <View style={styles.headingCopy}>
             <View style={styles.editionKickerRow}>
               <View style={[styles.editionAccent, { backgroundColor: colors.accent }]} />
@@ -1031,7 +1035,9 @@ export default function HomeScreen() {
             <Text
               style={[
                 styles.editionHeadline,
-                mobileHeader && styles.editionHeadlineCompact,
+                compactEditorial && styles.editionHeadlineCompact,
+                tablet && styles.editionHeadlineTablet,
+                narrowPhone && styles.editionHeadlineNarrow,
                 { color: colors.text },
               ]}
               numberOfLines={2}
@@ -1041,7 +1047,7 @@ export default function HomeScreen() {
             <Text
               style={[
                 styles.subtitle,
-                mobileHeader && styles.subtitleCompact,
+                compactEditorial && styles.subtitleCompact,
                 { color: colors.textMuted },
               ]}
               numberOfLines={2}
@@ -1050,7 +1056,7 @@ export default function HomeScreen() {
             </Text>
           </View>
 
-          <View style={styles.headerActions}>
+          <View style={[styles.headerActions, narrowPhone && styles.headerActionsNarrow]}>
             {Platform.OS === "web" && (
               <Pressable
                 onPress={() => {
@@ -1131,11 +1137,11 @@ export default function HomeScreen() {
                 {edition[scope]}
               </Text>
             </View>
-            <View style={[styles.sectionCount, { borderColor: colors.border }]}>
+            {!narrowPhone && <View style={[styles.sectionCount, { borderColor: colors.border }]}>
               <Text style={[styles.sectionCountText, { color: colors.textMuted }]}>
                 {String(Math.min(articles.length, 3)).padStart(2, "0")} {edition.stories}
               </Text>
-            </View>
+            </View>}
           </View>
 
           {desktop ? (
@@ -1171,7 +1177,7 @@ export default function HomeScreen() {
                 <Text style={[styles.moreHeading, { color: colors.text }]}>
                   {edition.more}
                 </Text>
-                {!mobileHeader && (
+                {!compactEditorial && (
                   <Text style={[styles.moreSubtitle, { color: colors.textMuted }]}>
                     {edition.moreDetail}
                   </Text>
@@ -1462,6 +1468,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
   },
+  headingRowNarrow: { flexDirection: "column", gap: 8 },
   headingCopy: { flex: 1, minWidth: 0, gap: 8 },
   editionKickerRow: {
     flexDirection: "row",
@@ -1487,9 +1494,18 @@ const styles = StyleSheet.create({
     maxWidth: 850,
   },
   editionHeadlineCompact: {
-    fontSize: 29,
-    lineHeight: 35,
+    fontSize: 32,
+    lineHeight: 38,
     letterSpacing: -0.8,
+  },
+  editionHeadlineTablet: {
+    fontSize: 36,
+    lineHeight: 43,
+  },
+  editionHeadlineNarrow: {
+    fontSize: 26,
+    lineHeight: 31,
+    letterSpacing: -0.5,
   },
   headerActions: {
     flexDirection: "row",
@@ -1498,6 +1514,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     gap: 10,
   },
+  headerActionsNarrow: { alignSelf: "flex-end" },
   subtitle: { fontSize: 15, lineHeight: 23, maxWidth: 780 },
   subtitleCompact: { fontSize: 13, lineHeight: 18 },
   refreshButton: {
