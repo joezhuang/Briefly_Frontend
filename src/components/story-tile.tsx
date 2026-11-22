@@ -23,6 +23,7 @@ import { StoryVideo } from "@/components/story-video";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyAppConfig } from "@/context/app-config";
 import { useBrieflyLanguage } from "@/context/language";
+import { useBrieflyTheme } from "@/context/theme";
 import { usePodcastPlayer } from "@/context/podcast-player";
 import type { CanonicalArticle } from "@/models/article";
 import { shareBrieflyStory } from "@/navigation/platform-share";
@@ -54,6 +55,7 @@ type Props = {
   analyticsSource?: string;
   analyticsScope?: string;
   fitViewport?: boolean;
+  presentation?: "overlay" | "editorial";
   videoDetached?: boolean;
   videoResumeTime?: number;
   onVideoStart?: (session: StoryTileVideoStart) => void;
@@ -167,6 +169,7 @@ export function StoryTile({
   analyticsSource,
   analyticsScope,
   fitViewport = false,
+  presentation = "overlay",
   videoDetached = false,
   videoResumeTime = 0,
   onVideoStart,
@@ -175,6 +178,8 @@ export function StoryTile({
 }: Props) {
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const { language, t } = useBrieflyLanguage();
+  const { colors } = useBrieflyTheme();
+  const editorial = presentation === "editorial";
   const { user, account } = useBrieflyAuth();
   const { config: appConfig } = useBrieflyAppConfig();
   const { currentTrack, status: podcastStatus, play: playPodcast, addToQueue: addPodcastToQueue } = usePodcastPlayer();
@@ -233,6 +238,14 @@ export function StoryTile({
       : size === "secondary"
         ? 252
         : 270;
+  // The media surface is measured independently from the card body so
+  // floating playback still detaches at the actual video edge.
+  const editorialMediaHeight =
+    size === "hero"
+      ? viewportWidth < 700 ? 238 : viewportWidth < 1000 ? 320 : 360
+      : size === "secondary"
+        ? 188
+        : viewportWidth < 480 ? 186 : 205;
   const headlineStyle =
     size === "hero"
       ? compactHero
@@ -413,10 +426,153 @@ export function StoryTile({
     }
   };
 
-  if (playingVideo && videoUrl) {
-    return (
-      <View ref={tileRef} style={StyleSheet.flatten([styles.tile, { height }])}>
-        <View style={StyleSheet.absoluteFill}>
+  const mediaActions = (
+    <View style={styles.mediaActions}>
+            {articleReady && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={copy.share}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  void handleShare();
+                }}
+                style={({ pressed }) => [
+                  styles.actionIconButton,
+                  editorial && [styles.actionIconButtonSurface, {
+                    borderColor: colors.border,
+                    backgroundColor: colors.surfaceMuted,
+                  }],
+                  pressed && styles.actionButtonPressed,
+                ]}
+              >
+                <SymbolView
+                  name={{ ios: "square.and.arrow.up", android: "share", web: "share" }}
+                  size={20}
+                  tintColor={editorial ? colors.text : "#FFFFFF"}
+                />
+              </Pressable>
+            )}
+
+            {communityEnabled && articleReady && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={copy.community}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  router.push(communityHref as never);
+                }}
+                style={({ pressed }) => [
+                  styles.actionIconButton,
+                  editorial && [styles.actionIconButtonSurface, {
+                    borderColor: colors.border,
+                    backgroundColor: colors.surfaceMuted,
+                  }],
+                  pressed && styles.actionButtonPressed,
+                ]}
+              >
+                <SymbolView
+                  name={{ ios: "bubble.left", android: "chat_bubble", web: "chat_bubble" }}
+                  size={20}
+                  tintColor={editorial ? colors.text : "#FFFFFF"}
+                />
+              </Pressable>
+            )}
+            {videoAvailable && !editorial && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${copy.play}${videoAccessBadge ? ` · ${videoAccessBadge}` : ""}`}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  if (videoLocked) {
+                    openVideoAccess();
+                    return;
+                  }
+                  reportVideoStart();
+                }}
+                style={({ pressed }) => [
+                  styles.actionIconButton,
+                  editorial && [styles.actionIconButtonSurface, {
+                    borderColor: colors.border,
+                    backgroundColor: colors.surfaceMuted,
+                  }],
+                  pressed && styles.actionButtonPressed,
+                ]}
+              >
+                <Text style={[styles.actionIcon, editorial && { color: colors.text }]}>▶</Text>
+                {videoAccessBadgeCompact ? (
+                  <Text style={styles.videoProBadge}>
+                    {videoAccessBadgeCompact}
+                  </Text>
+                ) : null}
+              </Pressable>
+            )}
+
+            {!!podcastUrl && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={copy.listen}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  handlePodcast();
+                }}
+                style={({ pressed }) => [
+                  styles.actionIconButton,
+                  editorial && [styles.actionIconButtonSurface, {
+                    borderColor: colors.border,
+                    backgroundColor: colors.surfaceMuted,
+                  }],
+                  pressed && styles.actionButtonPressed,
+                ]}
+              >
+                <SymbolView
+                  name={{ ios: "headphones", android: "headphones", web: "headphones" }}
+                  size={20}
+                  tintColor={editorial ? colors.text : "#FFFFFF"}
+                />
+
+              </Pressable>
+            )}
+
+            {showTranslate && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  translationFailed
+                    ? copy.retry
+                    : translated
+                      ? copy.original
+                      : copy.translate
+                }
+                disabled={translating}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  void handleTranslation();
+                }}
+                style={({ pressed }) => [
+                  styles.actionIconButton,
+                  editorial && [styles.actionIconButtonSurface, {
+                    borderColor: colors.border,
+                    backgroundColor: colors.surfaceMuted,
+                  }],
+                  translated && styles.actionIconButtonActive,
+                  editorial && translated && { borderColor: colors.accent },
+                  pressed && styles.actionButtonPressed,
+                ]}
+              >
+                {translating ? (
+                  <ActivityIndicator size="small" color={editorial ? colors.text : "#FFFFFF"} />
+                ) : (
+                  <Text style={[styles.actionIcon, editorial && { color: colors.text }]}>
+                    {translationFailed ? "↻" : translated ? "A" : "文"}
+                  </Text>
+                )}
+              </Pressable>
+            )}
+          </View>
+  );
+
+  const videoSurface = (
+    <View style={StyleSheet.absoluteFill}>
           {videoDetached ? (
             imageUrl ? (
               <Image
@@ -475,6 +631,12 @@ export function StoryTile({
             <Text style={styles.videoCloseText}>×</Text>
           </Pressable>
         </View>
+  );
+
+  if (playingVideo && videoUrl) {
+    return (
+      <View ref={tileRef} style={StyleSheet.flatten([styles.tile, { height }])}>
+        {videoSurface}
       </View>
     );
   }
@@ -531,127 +693,7 @@ export function StoryTile({
             </Text>
           )}
 
-          <View style={styles.mediaActions}>
-            {articleReady && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={copy.share}
-                onPress={(event) => {
-                  event.stopPropagation();
-                  void handleShare();
-                }}
-                style={({ pressed }) => [
-                  styles.actionIconButton,
-                  pressed && styles.actionButtonPressed,
-                ]}
-              >
-                <SymbolView
-                  name={{ ios: "square.and.arrow.up", android: "share", web: "share" }}
-                  size={20}
-                  tintColor="#FFFFFF"
-                />
-              </Pressable>
-            )}
-
-            {communityEnabled && articleReady && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={copy.community}
-                onPress={(event) => {
-                  event.stopPropagation();
-                  router.push(communityHref as never);
-                }}
-                style={({ pressed }) => [
-                  styles.actionIconButton,
-                  pressed && styles.actionButtonPressed,
-                ]}
-              >
-                <SymbolView
-                  name={{ ios: "bubble.left", android: "chat_bubble", web: "chat_bubble" }}
-                  size={20}
-                  tintColor="#FFFFFF"
-                />
-              </Pressable>
-            )}
-            {videoAvailable && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`${copy.play}${videoAccessBadge ? ` · ${videoAccessBadge}` : ""}`}
-                onPress={(event) => {
-                  event.stopPropagation();
-                  if (videoLocked) {
-                    openVideoAccess();
-                    return;
-                  }
-                  reportVideoStart();
-                }}
-                style={({ pressed }) => [
-                  styles.actionIconButton,
-                  pressed && styles.actionButtonPressed,
-                ]}
-              >
-                <Text style={styles.actionIcon}>▶</Text>
-                {videoAccessBadgeCompact ? (
-                  <Text style={styles.videoProBadge}>
-                    {videoAccessBadgeCompact}
-                  </Text>
-                ) : null}
-              </Pressable>
-            )}
-
-            {!!podcastUrl && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={copy.listen}
-                onPress={(event) => {
-                  event.stopPropagation();
-                  handlePodcast();
-                }}
-                style={({ pressed }) => [
-                  styles.actionIconButton,
-                  pressed && styles.actionButtonPressed,
-                ]}
-              >
-                <SymbolView
-                  name={{ ios: "headphones", android: "headphones", web: "headphones" }}
-                  size={20}
-                  tintColor="#FFFFFF"
-                />
-
-              </Pressable>
-            )}
-
-            {showTranslate && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  translationFailed
-                    ? copy.retry
-                    : translated
-                      ? copy.original
-                      : copy.translate
-                }
-                disabled={translating}
-                onPress={(event) => {
-                  event.stopPropagation();
-                  void handleTranslation();
-                }}
-                style={({ pressed }) => [
-                  styles.actionIconButton,
-                  translated && styles.actionIconButtonActive,
-                  pressed && styles.actionButtonPressed,
-                ]}
-              >
-                {translating ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.actionIcon}>
-                    {translationFailed ? "↻" : translated ? "A" : "文"}
-                  </Text>
-                )}
-              </Pressable>
-            )}
-          </View>
+          {mediaActions}
         </View>
 
         <View style={styles.metaRow}>
