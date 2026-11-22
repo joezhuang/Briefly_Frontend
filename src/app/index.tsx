@@ -955,8 +955,34 @@ export default function HomeScreen() {
     availableScopes[(scopeIndex + 1) % availableScopes.length];
   const lead = articles[0];
   const secondary = articles.slice(1, 3);
-  const remaining = articles.slice(3);
+  // Promote only already-confirmed developing story groups. Keep selections
+  // within the initial page so infinite scroll cannot reshuffle the header.
+  // Unverified relationship candidates are not part of this feed contract.
+  const developingHighlights = useMemo(() => {
+    const groups = new Set<string>();
+    return articles
+      .slice(3, PAGE_SIZE)
+      .filter((article) => {
+        if ((article.developing_story_count ?? 0) <= 1) return false;
+        const group = article.developing_story_id || article.event_id;
+        if (groups.has(group)) return false;
+        groups.add(group);
+        return true;
+      })
+      .slice(0, desktop ? 3 : 2);
+  }, [articles, desktop]);
+  const highlightedKeys = new Set(developingHighlights.map(storyKey));
+  const remaining = articles.slice(3).filter(
+    (article) => !highlightedKeys.has(storyKey(article)),
+  );
   const remainingBatches = chunkArticles(remaining);
+  const leadLanguageMatches = lead
+    ? (lead.content_language || lead.language || "").toLowerCase().replace("_", "-")
+        === language.toLowerCase()
+    : false;
+  const leadWhyItMatters = lead?.article_version_id != null && leadLanguageMatches
+    ? (lead.why_it_matters || "").trim()
+    : "";
   const userIsPro = account?.translation_entitled === true;
   const homepageVideoEnabled = appConfig?.homepage_video_enabled !== false;
   const floatingVideoEnabled = appConfig?.floating_video_enabled !== false;
