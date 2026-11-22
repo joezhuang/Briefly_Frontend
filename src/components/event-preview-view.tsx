@@ -5,6 +5,7 @@ import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDi
 
 import { trackProductEvent } from "@/analytics/product-analytics";
 import { StoryVideo } from "@/components/story-video";
+import { DevelopingStoryLinks } from "@/components/developing-story-links";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type { CanonicalArticle, ArticleVideo } from "@/models/article";
@@ -391,6 +392,8 @@ export function EventPreviewView({
             </Text>
           )}
         </View>
+
+        <DevelopingStoryLinks eventId={article.event_id} />
 
         {!!article.coverage?.length && (
           <View
