@@ -517,8 +517,8 @@ const checks = [
     file: "src/app/beta-dashboard.tsx",
     needles: [
       "getBetaDashboardDevelopingStoryCandidates()",
-      "Find matching stories",
-      "Review this relationship",
+      "Inspect recent matches (optional)",
+      "Inspect relationship evidence",
       "No automatic group merge is allowed.",
       "Confirm and link as",
       'setStoryRelationType(candidate.relation_type)',
