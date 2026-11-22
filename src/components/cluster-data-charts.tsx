@@ -230,11 +230,8 @@ function TrendPlot({ chart, accent, border, textColor }: {
   );
 }
 
-function ChartBars({ chart, evidenceLabel, sourceLabel, copy, sourcesExpanded }: {
+function ChartBars({ chart, copy }: {
   chart: VerifiedDataChart;
-  evidenceLabel: string;
-  sourceLabel: string;
-  sourcesExpanded: boolean;
   copy: { partial: string; derived: string; forecast: string; proposal: string; target: string };
 }) {
   const { colors } = useBrieflyTheme();
@@ -310,7 +307,21 @@ function ChartBars({ chart, evidenceLabel, sourceLabel, copy, sourcesExpanded }:
           </View>
         );
       })}
-      {sourcesExpanded && chart.points.map((point, index) => {
+    </View>
+  );
+}
+
+function ChartEvidence({ chart, evidenceLabel, sourceLabel, derivedLabel }: {
+  chart: VerifiedDataChart;
+  evidenceLabel: string;
+  sourceLabel: string;
+  derivedLabel: string;
+}) {
+  const { colors } = useBrieflyTheme();
+  return (
+    <View style={[styles.evidenceGroup, { borderBottomColor: colors.border }]}>
+      <Text style={[styles.evidenceGroupTitle, { color: colors.text }]}>{chart.title}</Text>
+      {chart.points.map((point, index) => {
         const sourceUrl = /^https?:\/\//i.test(point.source_url) ? point.source_url : null;
         return (
           <View key={`${point.label}-source-${index}`} style={styles.sourceDetails}>
@@ -333,7 +344,7 @@ function ChartBars({ chart, evidenceLabel, sourceLabel, copy, sourcesExpanded }:
               style={[styles.evidence, { color: colors.textMuted }]}
               accessibilityLabel={`${evidenceLabel}: ${point.evidence_quote}`}
             >
-              {point.derived ? copy.derived + ": " : ""}“{point.evidence_quote}”
+              {point.derived ? derivedLabel + ": " : ""}“{point.evidence_quote}”
             </Text>
             {point.derived && point.derivation_source_quote && (
               <Text style={[styles.evidence, { color: colors.textMuted }]}>
@@ -453,8 +464,7 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
               <View key={chart.title + "-figure-" + index} style={[
                 styles.figureCard, { width: keyCardWidth, backgroundColor: colors.surface, borderColor: colors.border },
               ]}>
-                <ChartBars chart={chart} copy={copy} sourcesExpanded={sourcesExpanded}
-                  evidenceLabel={copy.evidence} sourceLabel={copy.source} />
+                <ChartBars chart={chart} copy={copy} />
               </View>
             ))}
           </View>
@@ -468,8 +478,7 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
               <View key={chart.title + "-comparison-" + index} style={[
                 styles.comparisonCard, { width: comparisonWidth, backgroundColor: colors.surface, borderColor: colors.border },
               ]}>
-                <ChartBars chart={chart} copy={copy} sourcesExpanded={sourcesExpanded}
-                  evidenceLabel={copy.evidence} sourceLabel={copy.source} />
+                <ChartBars chart={chart} copy={copy} />
               </View>
             ))}
           </View>
@@ -499,6 +508,19 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
               {sourcesExpanded ? "−" : "+"}
             </Text>
           </Pressable>
+          {sourcesExpanded && (
+            <View style={styles.evidenceList}>
+              {readyCharts.map((chart, index) => (
+                <ChartEvidence
+                  key={chart.title + "-source-details-" + index}
+                  chart={chart}
+                  evidenceLabel={copy.evidence}
+                  sourceLabel={copy.source}
+                  derivedLabel={copy.derived}
+                />
+              ))}
+            </View>
+          )}
         </View>
       )}
       {status?.status === "processing" && (
@@ -567,6 +589,9 @@ const styles = StyleSheet.create({
   comparisonCard: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 14 },
   moreButton: { minHeight: 44, alignSelf: "flex-start", justifyContent: "center" },
   sharedSourceRow: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 10, paddingTop: 4 },
+  evidenceList: { gap: 4, paddingTop: 6 },
+  evidenceGroup: { gap: 7, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  evidenceGroupTitle: { fontSize: 13, fontWeight: "900" },
   sharedSourceTrigger: { minHeight: 44, flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
   expandGlyph: { fontSize: 20, fontWeight: "800" },
   kpiCompact: { gap: 7 },
