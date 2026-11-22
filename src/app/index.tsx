@@ -336,6 +336,7 @@ export default function HomeScreen() {
       hasMoreRef.current = nextMemory.hasMore;
       lastFetchedAt.current = nextMemory.lastFetchedAt;
       homeScrollOffsetRef.current = nextMemory.scrollOffset;
+      onScrollOffset(nextMemory.scrollOffset);
 
       setArticles(nextMemory.articles);
       setHasMore(nextMemory.hasMore);
@@ -348,7 +349,7 @@ export default function HomeScreen() {
       );
       setScope(nextScope);
     },
-    [language, newsLocation, scope],
+    [language, newsLocation, onScrollOffset, scope],
   );
 
   const switchScopeByDirection = useCallback(
@@ -1179,6 +1180,7 @@ export default function HomeScreen() {
 
           if (rememberedOffset <= 0) {
             restoredScrollRef.current = true;
+            onScrollOffset(0);
             return;
           }
 
@@ -1198,7 +1200,7 @@ export default function HomeScreen() {
           });
         }}
         onScroll={handleScroll}
-        scrollEventThrottle={200}
+        scrollEventThrottle={32}
         refreshControl={
           Platform.OS === "web" || !locationUsable ? undefined : (
             <RefreshControl
