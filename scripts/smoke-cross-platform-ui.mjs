@@ -1336,6 +1336,10 @@ ensure(
   chartsUI.includes('const privilegedViewer = account?.is_admin === true') &&
   chartsUI.includes('onPress={() => void retryStatus()}') &&
   chartsUI.includes('copy.access') &&
+  chartsUI.includes('chart.chart_type === "kpi"') &&
+  chartsUI.includes('chart.chart_type === "line"') &&
+  chartsUI.includes('chart.chart_type === "stacked"') &&
+  chartsUI.includes('point.derived') &&
   chartsUI.includes('status?.status === "ready"') &&
   chartsUI.includes('void Linking.openURL(sourceUrl)') &&
   articleUI.includes('<ClusterDataCharts eventId={article.event_id}') &&

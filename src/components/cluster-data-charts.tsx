@@ -25,7 +25,7 @@ const chartCopy = {
     details: "Source-verified figures from this news event",
     generate: "Extract charts",
     processing: "Checking original reports for comparable data…",
-    insufficient: "These reports do not contain enough verified, comparable figures to chart.",
+    insufficient: "No figures could be source-verified for publication from the available original reports.",
     retry: "Try extraction again",
     source: "Source",
     evidence: "Reported evidence",
@@ -35,13 +35,18 @@ const chartCopy = {
     checking: "Checking chart availability…",
     access: "The server has not enabled chart generation for this account. Check your signed-in role and the dashboard setting.",
     refresh: "Check again",
+    partial: "Verified subset — some proposed figures could not be checked.",
+    derived: "Calculated from verified figures",
+    forecast: "Forecast",
+    proposal: "Proposed policy",
+    target: "Target",
   },
   es: {
     title: "Explorar los datos",
     details: "Cifras verificadas en las fuentes de esta noticia",
     generate: "Extraer gráficos",
     processing: "Comprobando los datos en las fuentes originales…",
-    insufficient: "No hay suficientes cifras comparables y verificadas para crear un gráfico.",
+    insufficient: "No se pudieron verificar cifras publicables en las fuentes originales disponibles.",
     retry: "Volver a intentar",
     source: "Fuente",
     evidence: "Datos reportados",
@@ -51,13 +56,18 @@ const chartCopy = {
     checking: "Comprobando disponibilidad…",
     access: "El servidor no ha habilitado la generación para esta cuenta. Comprueba los permisos y los ajustes.",
     refresh: "Comprobar de nuevo",
+    partial: "Solo datos verificados; algunas cifras no se confirmaron.",
+    derived: "Calculado con cifras verificadas",
+    forecast: "Previsión",
+    proposal: "Propuesta",
+    target: "Objetivo",
   },
   ja: {
     title: "データを詳しく見る",
     details: "報道元で確認された数値",
     generate: "グラフを作成",
     processing: "元記事の比較可能な数値を確認中…",
-    insufficient: "検証済みの比較可能な数値が十分にありません。",
+    insufficient: "参照できた元記事から公開可能な数値を検証できませんでした。",
     retry: "再試行",
     source: "出典",
     evidence: "出典の記述",
@@ -67,13 +77,18 @@ const chartCopy = {
     checking: "グラフ機能を確認中…",
     access: "サーバー側でこのアカウントの生成権限が確認できません。管理設定とログイン状態をご確認ください。",
     refresh: "もう一度確認",
+    partial: "確認済みの一部の数値のみ表示しています。",
+    derived: "確認済みの数値から算出",
+    forecast: "予測",
+    proposal: "政策案",
+    target: "目標",
   },
   "zh-CN": {
     title: "探索数据",
     details: "来自原始报道并经过核验的数值",
     generate: "提取图表",
     processing: "正在核对原始报道中的可比较数据…",
-    insufficient: "报道中没有足够经过核验的可比较数据。",
+    insufficient: "未能从可获取的原始报道中核实适合公开的统计数据。",
     retry: "重新尝试",
     source: "来源",
     evidence: "原文依据",
@@ -83,13 +98,18 @@ const chartCopy = {
     checking: "正在检查图表功能…",
     access: "服务器尚未授予此账户图表生成权限。请检查登录身份与后台设置。",
     refresh: "重新检查",
+    partial: "仅显示已核实的数据，部分数值未能确认。",
+    derived: "根据已核实的数据计算",
+    forecast: "预测",
+    proposal: "政策提案",
+    target: "目标",
   },
   "zh-TW": {
     title: "探索數據",
     details: "來自原始報導並經過核實的數值",
     generate: "擷取圖表",
     processing: "正在核對原始報導中的可比較數據…",
-    insufficient: "報導中沒有足夠經核實的可比較數據。",
+    insufficient: "未能從可取得的原始報導中核實適合公開的統計數據。",
     retry: "重新嘗試",
     source: "來源",
     evidence: "原文依據",
@@ -99,27 +119,130 @@ const chartCopy = {
     checking: "正在檢查圖表功能…",
     access: "伺服器尚未授予此帳戶圖表產生權限。請檢查登入身分與後台設定。",
     refresh: "重新檢查",
+    partial: "僅顯示已核實的數據，部分數值未能確認。",
+    derived: "根據已核實的數據計算",
+    forecast: "預測",
+    proposal: "政策建議",
+    target: "目標",
   },
 } as const;
 
-function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSourcesLabel }: {
+function TrendPlot({ chart, accent, border, textColor }: {
+  chart: VerifiedDataChart;
+  accent: string;
+  border: string;
+  textColor: string;
+}) {
+  const [width, setWidth] = useState(0);
+  const maximum = Math.max(1, ...chart.points.map((point) => point.value));
+  const coordinates = chart.points.map((point, index) => ({
+    x: 10 + Math.max(0, width - 20) * index / Math.max(1, chart.points.length - 1),
+    y: 10 + 125 * (1 - point.value / maximum),
+  }));
+  return (
+    <View>
+      <View
+        style={[styles.trendPlot, { borderBottomColor: border }]}
+        onLayout={(event) => {
+          const next = event.nativeEvent.layout.width;
+          setWidth((current) => Math.abs(current - next) > 1 ? next : current);
+        }}
+      >
+        {width > 0 && coordinates.slice(1).map((point, i) => {
+          const previous = coordinates[i];
+          const dx = point.x - previous.x;
+          const dy = point.y - previous.y;
+          const length = Math.sqrt(dx * dx + dy * dy);
+          return <View key={"segment-" + i} style={{
+            position: "absolute", width: length, height: 3,
+            left: (point.x + previous.x - length) / 2,
+            top: (point.y + previous.y - 3) / 2,
+            backgroundColor: accent, borderRadius: 2,
+            transform: [{ rotate: (Math.atan2(dy, dx) * 180 / Math.PI) + "deg" }],
+          }} />;
+        })}
+        {width > 0 && coordinates.map((point, i) =>
+          <View key={"dot-" + i} style={{
+            position: "absolute", width: 9, height: 9, borderRadius: 5,
+            backgroundColor: accent, left: point.x - 4.5, top: point.y - 4.5,
+          }} />
+        )}
+      </View>
+      <View style={styles.trendLabels}>
+        {chart.points.map((point, i) =>
+          <View key={"year-" + i} style={styles.trendLabelItem}>
+            <Text style={[styles.trendYear, { color: textColor }]}>{point.label}</Text>
+            <Text style={[styles.trendValue, { color: textColor }]}>
+              {Number(point.value).toLocaleString()}
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSourcesLabel, copy }: {
   chart: VerifiedDataChart;
   evidenceLabel: string;
   sourceLabel: string;
   showSourcesLabel: string;
   hideSourcesLabel: string;
+  copy: { partial: string; derived: string; forecast: string; proposal: string; target: string };
 }) {
   const { colors } = useBrieflyTheme();
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const max = Math.max(1, ...chart.points.map((point) => Math.max(0, point.value)));
+  const total = chart.points.reduce((sum, point) => sum + point.value, 0);
+  const qualifier = chart.qualifier === 'forecast' ? copy.forecast
+    : chart.qualifier === 'proposal' ? copy.proposal
+    : chart.qualifier === 'target' ? copy.target : null;
   return (
     <View style={styles.chart}>
       <Text style={[styles.chartTitle, { color: colors.text }]}>{chart.title}</Text>
-      <Text style={[styles.unit, { color: colors.textMuted }]}>{chart.unit}</Text>
-      {chart.points.map((point, index) => {
+      <Text style={[styles.unit, { color: colors.textMuted }]}>{chart.unit}{qualifier ? " · " + qualifier : ""}</Text>
+      {chart.partial && <Text style={[styles.note, { color: colors.textMuted }]}>{copy.partial}</Text>}
+      {chart.chart_type === "kpi" ? (
+        <View style={[styles.kpi, { borderColor: colors.border }]}>
+          <Text style={[styles.kpiValue, { color: colors.accent }]}>
+            {Number(chart.points[0].value).toLocaleString()} {chart.unit}
+          </Text>
+          <Text style={[styles.kpiLabel, { color: colors.text }]}>
+            {chart.points[0].label}
+          </Text>
+        </View>
+      ) : chart.chart_type === "line" ? (
+        <TrendPlot chart={chart} accent={colors.accent}
+          border={colors.border} textColor={colors.text} />
+      ) : chart.chart_type === "stacked" ? (
+        <>
+          <View style={[styles.stackedTrack, { backgroundColor: colors.border }]}>
+            {chart.points.map((point, index) => (
+              <View key={"slice-" + index} style={{
+                width: ((total > 0 ? 100 * point.value / total : 0) + "%") as never,
+                height: "100%",
+                backgroundColor: colors.accent,
+                opacity: Math.max(0.25, 1 - index * 0.13),
+                borderRightWidth: index < chart.points.length - 1 ? 2 : 0,
+                borderRightColor: colors.surfaceMuted,
+              }} />
+            ))}
+          </View>
+          {chart.points.map((point, index) => (
+            <View key={"part-" + index} style={styles.barHeading}>
+              <Text style={[styles.barLabel, { color: colors.text }]}>
+                {point.label}{point.derived ? " · " + copy.derived : ""}
+              </Text>
+              <Text style={[styles.barValue, { color: colors.text }]}>
+                {Number(point.value).toLocaleString()}
+              </Text>
+            </View>
+          ))}
+        </>
+      ) : chart.points.map((point, index) => {
         const width = Math.max(0, Math.min(100, point.value / max * 100));
         return (
-          <View key={`${point.label}-${index}`} style={styles.barItem}>
+          <View key={point.label + "-" + index} style={styles.barItem}>
             <View style={styles.barHeading}>
               <Text style={[styles.barLabel, { color: colors.text }]}>{point.label}</Text>
               <Text style={[styles.barValue, { color: colors.text }]}>
@@ -129,7 +252,7 @@ function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSo
             <View style={[styles.barTrack, { backgroundColor: colors.border }]}>
               <View style={[styles.barFill, {
                 backgroundColor: colors.accent,
-                width: `${width}%` as `${number}%`,
+                width: ((width + "%") as never),
               }]} />
             </View>
           </View>
@@ -169,7 +292,7 @@ function ChartBars({ chart, evidenceLabel, sourceLabel, showSourcesLabel, hideSo
               style={[styles.evidence, { color: colors.textMuted }]}
               accessibilityLabel={`${evidenceLabel}: ${point.evidence_quote}`}
             >
-              “{point.evidence_quote}”
+              {point.derived ? copy.derived + ": " : ""}“{point.evidence_quote}”
             </Text>
           </View>
         );
@@ -262,7 +385,7 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
       <Text style={[styles.title, { color: colors.text }]}>{copy.title}</Text>
       <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.details}</Text>
       {readyCharts.map((chart, index) => (
-        <ChartBars key={`${chart.title}-${index}`} chart={chart}
+        <ChartBars key={`${chart.title}-${index}`} chart={chart} copy={copy}
           evidenceLabel={copy.evidence} sourceLabel={copy.source}
           showSourcesLabel={copy.showSources} hideSourcesLabel={copy.hideSources} />
       ))}
@@ -287,7 +410,7 @@ export function ClusterDataCharts({ eventId, articleVersionId }: {
       {privilegedViewer && !error && status?.status === "not_generated" && !canGenerate && (
         <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.access}</Text>
       )}
-      {privilegedViewer && (error || (status?.status === "not_generated" && !canGenerate)) && (
+      {privilegedViewer && (error || ((status?.status === "not_generated" || status?.status === "insufficient") && !canGenerate)) && (
         <Pressable
           accessibilityRole="button"
           disabled={busy}
@@ -324,6 +447,16 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: "900" },
   detail: { fontSize: 13, lineHeight: 20 },
   chart: { gap: 9, paddingTop: 14, borderTopWidth: 0 },
+  note: { fontSize: 12, lineHeight: 18 },
+  kpi: { borderWidth: 1, borderRadius: 12, padding: 16, gap: 5 },
+  kpiValue: { fontSize: 25, fontWeight: "900" },
+  kpiLabel: { fontSize: 13, fontWeight: "600" },
+  stackedTrack: { flexDirection: "row", height: 24, borderRadius: 8, overflow: "hidden", marginVertical: 8 },
+  trendPlot: { position: "relative", width: "100%", height: 152, borderBottomWidth: 1, marginTop: 8 },
+  trendLabels: { flexDirection: "row", gap: 2, justifyContent: "space-between", marginTop: 8 },
+  trendLabelItem: { flex: 1, minWidth: 0, alignItems: "center" },
+  trendYear: { fontSize: 11, fontWeight: "600", textAlign: "center" },
+  trendValue: { fontSize: 11, fontWeight: "800", textAlign: "center", marginTop: 3 },
   chartTitle: { fontSize: 17, fontWeight: "800" },
   unit: { fontSize: 12, lineHeight: 18 },
   barItem: { gap: 6, marginVertical: 5 },

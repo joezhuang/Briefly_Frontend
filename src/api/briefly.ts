@@ -1734,12 +1734,15 @@ export type VerifiedDataChartPoint = {
   source: string;
   source_url: string;
   evidence_quote: string;
+  derived?: boolean;
 };
 
 export type VerifiedDataChart = {
   title: string;
   unit: string;
-  chart_type: "bar";
+  chart_type: "bar" | "line" | "stacked" | "kpi";
+  qualifier?: "reported" | "forecast" | "proposal" | "target";
+  partial?: boolean;
   points: VerifiedDataChartPoint[];
 };
 
