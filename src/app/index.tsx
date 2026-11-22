@@ -38,6 +38,7 @@ import { NewsLocationGate } from "@/components/news-location-gate";
 import { ScreenState } from "@/components/screen-state";
 import {
   StoryTile,
+  storyTileHref,
   stopActiveHomepageVideo,
   type StoryTileVideoStart,
 } from "@/components/story-tile";
@@ -108,6 +109,12 @@ const editionCopy = {
     stories: "STORIES",
     lead: "LEAD STORY",
     next: "ALSO IN THE NEWS",
+    evolving: "Stories in motion",
+    evolvingDetail: "Confirmed links across related coverage",
+    connected: "connected stories",
+    context: "WHY IT MATTERS",
+    readAnalysis: "Read the full analysis",
+    brief: "MORE PERSPECTIVES",
   },
   es: {
     kicker: "LA EDICIÓN BRIEFLY",
@@ -121,6 +128,12 @@ const editionCopy = {
     stories: "NOTICIAS",
     lead: "NOTICIA PRINCIPAL",
     next: "TAMBIÉN HOY",
+    evolving: "Historias en desarrollo",
+    evolvingDetail: "Coberturas relacionadas y confirmadas",
+    connected: "historias relacionadas",
+    context: "POR QUÉ IMPORTA",
+    readAnalysis: "Leer el análisis completo",
+    brief: "MÁS PERSPECTIVAS",
   },
   ja: {
     kicker: "BRIEFLY ニュース",
@@ -134,6 +147,12 @@ const editionCopy = {
     stories: "件",
     lead: "トップニュース",
     next: "注目記事",
+    evolving: "続報のあるニュース",
+    evolvingDetail: "確認済みの関連報道",
+    connected: "件の関連ニュース",
+    context: "なぜ重要なのか",
+    readAnalysis: "詳しい分析を読む",
+    brief: "さらに読む",
   },
   "zh-CN": {
     kicker: "BRIEFLY 今日视野",
@@ -147,6 +166,12 @@ const editionCopy = {
     stories: "条新闻",
     lead: "头条报道",
     next: "其他焦点",
+    evolving: "持续发展的新闻",
+    evolvingDetail: "已确认关联的后续报道",
+    connected: "条相关新闻",
+    context: "为何重要",
+    readAnalysis: "阅读完整分析",
+    brief: "更多视角",
   },
   "zh-TW": {
     kicker: "BRIEFLY 今日視野",
@@ -160,6 +185,12 @@ const editionCopy = {
     stories: "則新聞",
     lead: "頭條報導",
     next: "其他焦點",
+    evolving: "持續發展的新聞",
+    evolvingDetail: "已確認關聯的後續報導",
+    connected: "則相關新聞",
+    context: "為何重要",
+    readAnalysis: "閱讀完整分析",
+    brief: "更多視角",
   },
 } as const;
 
