@@ -511,8 +511,9 @@ const checks = [
     needles: [
       '<DevelopingStoryLinks eventId={eventId} members={intelligence?.story_members} />',
     ],
-  }  {
-        name: "Developing-story suggestions share backend classification and require focused human review",
+  },
+  {
+    name: "Developing-story suggestions share backend classification and require focused human review",
     file: "src/app/beta-dashboard.tsx",
     needles: [
       "getBetaDashboardDevelopingStoryCandidates()",
