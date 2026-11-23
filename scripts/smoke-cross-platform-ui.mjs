@@ -199,6 +199,26 @@ const checks = [
     ],
   },
   {
+    name: "Briefly search discovers all clusters while the shared legacy search helper remains unchanged",
+    file: "src/app/search.tsx",
+    needles: [
+      'import { searchBrieflyClusters } from "@/api/search";',
+      "void searchBrieflyClusters(trimmedQuery, {",
+      "includeDraft: PREVIEW_DRAFTS",
+      "language,",
+      "<StoryTile article={article} />",
+    ],
+  },
+  {
+    name: "The new cluster search endpoint does not change the legacy search client",
+    file: "src/api/search.ts",
+    needles: [
+      'return searchWithEndpoint("/api/article-search", query, options);',
+      'return searchWithEndpoint("/api/article-search/clusters", query, options);',
+      'search_scope: "event_universe" | "all_clusters";',
+    ],
+  },
+  {
     name: "Search results retain compact category navigation while scrolling",
     file: "src/app/search.tsx",
     needles: [
