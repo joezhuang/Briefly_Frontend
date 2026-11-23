@@ -54,7 +54,7 @@ export function AdminChartReview({ initialEventId }: { initialEventId?: string }
           <Text style={[styles.title, { color: colors.text }]}>Chart review</Text>
           <Text style={[styles.note, { color: colors.textMuted }]}>
             Open a live story to review its charts exactly as readers will see them.
-            Remove unwanted charts and release the selection directly in the article.
+            Remove unwanted charts, publish the selection, or dismiss a draft that is not good enough.
           </Text>
         </View>
         <Pressable accessibilityRole="button" style={[styles.button, { borderColor: colors.border }]}

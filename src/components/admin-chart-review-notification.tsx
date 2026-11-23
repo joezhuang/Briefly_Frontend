@@ -69,7 +69,7 @@ export function AdminChartReviewNotification() {
             {queue.pending_count} new chart {queue.pending_count === 1 ? "set" : "sets"} awaiting review
           </Text>
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-            Admin-only · Review and release before public display.
+            Admin-only · Review, release or dismiss the draft.
           </Text>
         </View>
         <View style={styles.actions}>
@@ -80,7 +80,7 @@ export function AdminChartReviewNotification() {
             style={[styles.openButton, { backgroundColor: colors.text }]}>
             <Text style={[styles.openLabel, { color: colors.background }]}>Review</Text>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Dismiss chart notification"
+          <Pressable accessibilityRole="button" accessibilityLabel="Hide chart notification temporarily"
             onPress={() => setDismissed({ userId, signature })} style={styles.dismiss}>
             <Text style={[styles.dismissLabel, { color: colors.textMuted }]}>×</Text>
           </Pressable>

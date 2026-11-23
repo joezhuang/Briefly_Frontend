@@ -1379,6 +1379,17 @@ ensure(
   chartsUI.includes('hasDraftChanges') &&
   chartsUI.includes('removeChartFromDraft(eventId, index, review.revision)') &&
   chartsUI.includes('releaseChartDraft(eventId, review.revision, review.published_release_id)') &&
+  chartsUI.includes('dismissChartReview(eventId, review.revision)') &&
+  chartsUI.includes('reopenChartReview(eventId, review.revision)') &&
+  chartsUI.includes('review.dismissed ? (') &&
+  chartsUI.includes('reviewText.dismissedNotice') &&
+  chartsUI.includes('onPress={() => void moderateChart("dismiss")}') &&
+  chartsUI.includes('onPress={() => void moderateChart("reopen")}') &&
+  chartsUI.includes('emitChartReviewUpdate();') &&
+  read("src/api/briefly.ts").includes('export function dismissChartReview(') &&
+  read("src/api/briefly.ts").includes('export function reopenChartReview(') &&
+  read("src/components/admin-chart-review-notification.tsx").includes('subscribeChartReviewUpdates') &&
+  read("src/services/chart-review-updates.ts").includes('export function emitChartReviewUpdate()') &&
   chartsUI.includes('styles.reviewPanel') &&
   chartsUI.includes('renderRemove(chart, removedIndex)') &&
   chartsUI.includes('draftCardsInOrder(review)') &&
