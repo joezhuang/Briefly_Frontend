@@ -1750,6 +1750,8 @@ export type VerifiedDataChart = {
   partial?: boolean;
   relationship_quote?: string;
   relationship_source_url?: string;
+  description?: string;
+  verified_chart_type?: VerifiedDataChart["chart_type"];
   points: VerifiedDataChartPoint[];
 };
 
@@ -1791,11 +1793,22 @@ export type ChartReviewQueue = {
   items: ChartReviewQueueItem[];
 };
 
+export type ChartReleaseHistory = {
+  id: number;
+  charts: VerifiedDataChart[];
+  released_by: string;
+  released_at: string | null;
+  restored_from_release_id: number | null;
+};
+
 export type ChartReviewDraft = {
   event_id: string;
   article_version_id: number;
   draft_charts: VerifiedDataChart[];
+  removed_charts: { index: number; title: string }[];
   published_charts: VerifiedDataChart[];
+  published_release_id: number | null;
+  history: ChartReleaseHistory[];
   revision: string;
   ready: boolean;
 };
@@ -1817,10 +1830,35 @@ export function removeChartFromDraft(eventId: string, index: number, revision: s
   );
 }
 
-export function releaseChartDraft(eventId: string, revision: string) {
+export function editChartInDraft(eventId: string, index: number, revision: string,
+  patch: { title?: string; description?: string; chart_type?: VerifiedDataChart["chart_type"] }) {
+  return postJson<{ charts: VerifiedDataChart[]; revision: string }>(
+    `/api/articles/event/${encodeURIComponent(eventId)}/data-charts/review/edit`,
+    { index, revision, ...patch },
+  );
+}
+
+export function restoreChartToDraft(eventId: string, index: number, revision: string) {
+  return postJson<{ charts: VerifiedDataChart[]; revision: string }>(
+    `/api/articles/event/${encodeURIComponent(eventId)}/data-charts/review/restore`,
+    { index, revision },
+  );
+}
+
+export function releaseChartDraft(eventId: string, revision: string,
+  expectedPublishedReleaseId?: number | null) {
   return postJson<{ charts: VerifiedDataChart[]; revision: string; released: boolean }>(
     `/api/articles/event/${encodeURIComponent(eventId)}/data-charts/review/release`,
-    { revision },
+    { revision, expected_published_release_id: expectedPublishedReleaseId ?? null },
+  );
+}
+
+export function rollbackChartRelease(eventId: string, targetReleaseId: number,
+  expectedPublishedReleaseId: number) {
+  return postJson<{ charts: VerifiedDataChart[]; revision: string; restored_from_release_id: number }>(
+    `/api/articles/event/${encodeURIComponent(eventId)}/data-charts/review/rollback`,
+    { target_release_id: targetReleaseId,
+      expected_published_release_id: expectedPublishedReleaseId },
   );
 }
 
