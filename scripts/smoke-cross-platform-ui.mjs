@@ -1342,11 +1342,25 @@ ensure(
   chartsUI.includes('quotaExhausted') &&
   chartsUI.includes('status?.awaiting_review') &&
   chartsUI.includes('const readyCharts = isAdmin && review') &&
-  chartsUI.includes('review.draft_charts : review.published_charts') &&
+  chartsUI.includes('viewMode === "history" ? viewedHistory?.charts') &&
+  chartsUI.includes('const viewMode = reviewView?.key === chartKey ? reviewView.mode : "preview";') &&
+  chartsUI.includes('const editMode = isAdmin && Boolean(review?.ready)') &&
+  chartsUI.includes('const previewMode = isAdmin && Boolean(review?.ready)') &&
+  chartsUI.includes('mode: "edit" | "preview" | "published" | "history"') &&
+  chartsUI.includes('editableDisplayTypes(chart)') &&
+  chartsUI.includes('editChartInDraft(eventId, index, review.revision') &&
+  chartsUI.includes('restoreChartToDraft(eventId, index, review.revision)') &&
+  chartsUI.includes('rollbackChartRelease(eventId, index, review.published_release_id)') &&
+  chartsUI.includes('review.history.map((entry)') &&
+  chartsUI.includes('viewMode === "history"') &&
+  chartsUI.includes('hasDraftChanges') &&
   chartsUI.includes('removeChartFromDraft(eventId, index, review.revision)') &&
-  chartsUI.includes('releaseChartDraft(eventId, review.revision)') &&
+  chartsUI.includes('releaseChartDraft(eventId, review.revision, review.published_release_id)') &&
   chartsUI.includes('styles.reviewPanel') &&
   chartsUI.includes('renderRemove(chart)') &&
+  chartsUI.includes('chart.description') &&
+  read("src/api/briefly.ts").includes('export function rollbackChartRelease(') &&
+  read("src/api/briefly.ts").includes('export function restoreChartToDraft(') &&
   read("src/app/story/[slug].tsx").includes('chartReviewRequested={(Array.isArray(chartReview)') &&
   articleUI.includes('reviewRequested={chartReviewRequested}') &&
   read("src/utils/chart-review-link.ts").includes('&chartReview=1') &&
