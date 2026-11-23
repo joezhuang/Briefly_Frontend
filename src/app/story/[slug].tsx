@@ -31,6 +31,7 @@ import {
 import { EventPreviewView } from "@/components/event-preview-view";
 import { EventCommunityPanel } from "@/components/event-community-panel";
 import { EventTimeline } from "@/components/event-timeline";
+import { DevelopingStoryLinks } from "@/components/developing-story-links";
 import { RelatedStoriesCarousel } from "@/components/related-stories-carousel";
 import { ScreenState } from "@/components/screen-state";
 // Metro uses the native or web implementation, preserving the existing homepage install banner.
@@ -2032,6 +2033,8 @@ export default function StoryDetailScreen() {
         footer={
           <>
             {showStoryAd && <StoryAdSlot />}
+            {/* Keep confirmed developing-story links when the preview becomes a canonical article. */}
+            <DevelopingStoryLinks eventId={displayedArticle.event_id} />
             <RelatedStoriesCarousel article={displayedArticle} />
           </>
         }

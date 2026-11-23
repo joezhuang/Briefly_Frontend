@@ -677,6 +677,16 @@ const checks = [
     ],
   },
   {
+    name: "Confirmed developing-story links persist in canonical story detail after generation",
+    file: "src/app/story/[slug].tsx",
+    needles: [
+      'import { DevelopingStoryLinks } from "@/components/developing-story-links";',
+      '<EventPreviewView',
+      '<DevelopingStoryLinks eventId={displayedArticle.event_id} />',
+      '<RelatedStoriesCarousel article={displayedArticle} />',
+    ],
+  },
+  {
     name: "Developing stories reuse the existing event preview and timeline",
     file: "src/components/event-preview-view.tsx",
     needles: [
