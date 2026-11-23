@@ -950,7 +950,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
       {quotaExhausted && (
         <Text style={[styles.detail, { color: colors.accent }]}>{copy.limitReached}</Text>
       )}
-      {status?.awaiting_review && (!review || reviewMode) && (
+      {status?.awaiting_review && !review && (
         <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.awaitingReview}</Text>
       )}
       {isAdmin && review?.ready && (
@@ -958,25 +958,35 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
           <Text style={[styles.reviewHeading, { color: colors.text }]}>{reviewText.label}</Text>
           <Text style={[styles.note, { color: colors.textMuted }]}>{reviewText.intro}</Text>
           <View style={styles.reviewActionRow}>
-            {(["draft", "public"] as const).map((mode) => {
-              const selected = mode === "draft" ? reviewMode : !reviewMode;
+            {([
+              { mode: "edit", label: reviewText.edit },
+              { mode: "preview", label: reviewText.preview },
+              ...(hasPublicRelease && review.published_charts.length > 0
+                ? [{ mode: "published", label: reviewText.published }] : []),
+            ] as { mode: "edit" | "preview" | "published"; label: string }[]).map((option) => {
+              const selected = viewMode === option.mode;
               return (
-                <Pressable key={mode} accessibilityRole="button"
+                <Pressable key={option.mode} accessibilityRole="button"
                   accessibilityState={{ selected }}
                   onPress={() => {
-                    setReviewView({ key: chartKey, mode });
+                    setReviewView({ key: chartKey, mode: option.mode });
+                    setEditing(null);
                     setRemoveConfirmation(null);
                     setReleaseConfirmation(null);
+                    setRollbackConfirmation(null);
                   }}
                   style={[styles.reviewAction, { borderColor: colors.border },
                     selected && { backgroundColor: colors.text, borderColor: colors.text }]}>
                   <Text style={[styles.source, { color: selected ? colors.background : colors.text }]}>
-                    {mode === "draft" ? reviewText.draft : reviewText.public}
+                    {option.label}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
+          {previewMode && <Text style={[styles.note, { color: colors.textMuted }]}>
+            {reviewText.draftHint}
+          </Text>}
           {reviewError && (
             <Text style={[styles.note, { color: colors.accent }]}>{reviewText.error}</Text>
           )}
@@ -1004,7 +1014,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
           )}
         </View>
       )}
-      {isAdmin && review && !reviewMode && readyCharts.length === 0 && (
+      {isAdmin && review && viewingPublic && readyCharts.length === 0 && (
         <Text style={[styles.note, { color: colors.textMuted }]}>{reviewText.noPublic}</Text>
       )}
       {keyFigures.length > 0 && (
@@ -1076,32 +1086,125 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
           )}
         </View>
       )}
+      {editMode && review?.ready && !!review.removed_charts?.length && (
+        <View style={[styles.reviewPanel, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+          <Text style={[styles.reviewHeading, { color: colors.text }]}>{reviewText.removedHeading}</Text>
+          {review.removed_charts.map((item) => (
+            <View key={item.index + "-" + item.title} style={styles.reviewActionRow}>
+              <Text style={[styles.note, styles.flexLabel, { color: colors.text }]}>
+                {item.title}
+              </Text>
+              <Pressable accessibilityRole="button" disabled={moderating}
+                style={[styles.reviewAction, { borderColor: colors.border }]}
+                onPress={() => void moderateChart("restore", item.index)}>
+                <Text style={[styles.source, { color: colors.accent }]}>{reviewText.restore}</Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      )}
       {reviewMode && review?.ready && (
         <View style={[styles.releasePanel, { borderTopColor: colors.border }]}>
+          {!hasDraftChanges && <Text style={[styles.note, { color: colors.textMuted }]}>
+            {reviewText.noChanges}
+          </Text>}
           {confirmingRelease && (
             <Text style={[styles.note, { color: colors.textMuted }]}>
               {readyCharts.length ? reviewText.releaseConfirm : reviewText.withdrawConfirm}
             </Text>
           )}
-          <View style={styles.reviewActionRow}>
-            <Pressable accessibilityRole="button" disabled={moderating}
-              onPress={() => confirmingRelease ? void moderateChart("release") :
-                setReleaseConfirmation(chartKey)}
-              style={[styles.generateButton, { backgroundColor: colors.text,
-                opacity: moderating ? 0.55 : 1 }]}>
-              {moderating && <ActivityIndicator size="small" color={colors.background} />}
-              <Text style={[styles.generateText, { color: colors.background }]}>
-                {moderating ? reviewText.busy : confirmingRelease ? reviewText.confirmRelease :
-                  readyCharts.length ? reviewText.release : reviewText.withdraw}
-              </Text>
-            </Pressable>
-            {confirmingRelease && (
-              <Pressable accessibilityRole="button" onPress={() => setReleaseConfirmation(null)}
-                style={styles.reviewAction}>
-                <Text style={[styles.source, { color: colors.accent }]}>{reviewText.cancel}</Text>
+          {hasDraftChanges && (
+            <View style={styles.reviewActionRow}>
+              <Pressable accessibilityRole="button" disabled={moderating}
+                onPress={() => confirmingRelease ? void moderateChart("release") :
+                  setReleaseConfirmation(chartKey)}
+                style={[styles.generateButton, { backgroundColor: colors.text,
+                  opacity: moderating ? 0.55 : 1 }]}>
+                {moderating && <ActivityIndicator size="small" color={colors.background} />}
+                <Text style={[styles.generateText, { color: colors.background }]}>
+                  {moderating ? reviewText.busy : confirmingRelease ? reviewText.confirmRelease :
+                    readyCharts.length ? reviewText.release : reviewText.withdraw}
+                </Text>
               </Pressable>
-            )}
-          </View>
+              {confirmingRelease && (
+                <Pressable accessibilityRole="button"
+                  onPress={() => setReleaseConfirmation(null)}
+                  style={styles.reviewAction}>
+                  <Text style={[styles.source, { color: colors.accent }]}>{reviewText.cancel}</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+        </View>
+      )}
+      {isAdmin && review && !!review.history?.length && (
+        <View style={[styles.reviewPanel, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+          <Pressable accessibilityRole="button"
+            accessibilityState={{ expanded: historyExpanded }}
+            onPress={() => setHistoryExpanded((current) => !current)}
+            style={styles.sharedSourceTrigger}>
+            <Text style={[styles.source, { color: colors.accent }]}>
+              {reviewText.historyHeading} ({review.history.length})
+            </Text>
+            <Text style={[styles.source, { color: colors.accent }]}>
+              {historyExpanded ? "−" : "+"}
+            </Text>
+          </Pressable>
+          {historyExpanded && review.history.map((entry) => (
+            <View key={entry.id} style={[styles.historyRow, { borderTopColor: colors.border }]}>
+              <View style={styles.flexLabel}>
+                <Text style={[styles.note, { color: colors.text }]}>
+                  {entry.released_at ? new Date(entry.released_at).toLocaleString() :
+                    "#" + entry.id} · {entry.charts.length} chart(s)
+                </Text>
+              </View>
+              <Pressable accessibilityRole="button"
+                style={[styles.reviewAction, { borderColor: colors.border }]}
+                onPress={() => {
+                  setReviewView({ key: chartKey, mode: "history", releaseId: entry.id });
+                  setRollbackConfirmation(null);
+                  setEditing(null);
+                }}>
+                <Text style={[styles.source, { color: colors.accent }]}>{reviewText.previewHistory}</Text>
+              </Pressable>
+            </View>
+          ))}
+          {viewedHistory && viewedHistory.id !== review.published_release_id &&
+            review.published_release_id != null && (
+            <View style={[styles.releasePanel, { borderTopColor: colors.border }]}>
+              <Text style={[styles.note, { color: colors.textMuted }]}>
+                {reviewText.history} #{viewedHistory.id}
+              </Text>
+              {rollbackConfirmation?.key === chartKey &&
+                rollbackConfirmation.releaseId === viewedHistory.id && (
+                <Text style={[styles.note, { color: colors.textMuted }]}>
+                  {reviewText.rollbackConfirm}
+                </Text>
+              )}
+              <View style={styles.reviewActionRow}>
+                <Pressable accessibilityRole="button" disabled={moderating}
+                  onPress={() => rollbackConfirmation?.key === chartKey &&
+                    rollbackConfirmation.releaseId === viewedHistory.id
+                      ? void moderateChart("rollback", viewedHistory.id)
+                      : setRollbackConfirmation({ key: chartKey, releaseId: viewedHistory.id })}
+                  style={[styles.generateButton, { backgroundColor: colors.text }]}>
+                  <Text style={[styles.generateText, { color: colors.background }]}>
+                    {rollbackConfirmation?.key === chartKey &&
+                      rollbackConfirmation.releaseId === viewedHistory.id
+                        ? reviewText.confirmRollback : reviewText.rollback}
+                  </Text>
+                </Pressable>
+                {rollbackConfirmation?.key === chartKey &&
+                  rollbackConfirmation.releaseId === viewedHistory.id && (
+                  <Pressable accessibilityRole="button"
+                    onPress={() => setRollbackConfirmation(null)}
+                    style={styles.reviewAction}>
+                    <Text style={[styles.source, { color: colors.accent }]}>{reviewText.cancel}</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          )}
         </View>
       )}
       {(status?.status === "processing" || status?.refreshing) && (
@@ -1181,6 +1284,9 @@ const styles = StyleSheet.create({
     minHeight: 40, justifyContent: "center", paddingHorizontal: 12 },
   moderationAction: { paddingTop: 9, gap: 7 },
   releasePanel: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12, gap: 9 },
+  flexLabel: { flex: 1, minWidth: 120 },
+  historyRow: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 9,
+    flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10 },
   groupHeading: { fontSize: 15, fontWeight: "900", letterSpacing: 0.2 },
   figureGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10 },
   figureCard: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 12, minHeight: 130 },
