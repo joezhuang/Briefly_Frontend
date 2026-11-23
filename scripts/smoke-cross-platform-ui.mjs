@@ -1357,7 +1357,16 @@ ensure(
   chartsUI.includes('removeChartFromDraft(eventId, index, review.revision)') &&
   chartsUI.includes('releaseChartDraft(eventId, review.revision, review.published_release_id)') &&
   chartsUI.includes('styles.reviewPanel') &&
-  chartsUI.includes('renderRemove(chart)') &&
+  chartsUI.includes('renderRemove(chart, removedIndex)') &&
+  chartsUI.includes('draftCardsInOrder(review)') &&
+  chartsUI.includes('const visibleCards: ReviewChartCard[] = editMode && review') &&
+  chartsUI.includes('onPress={() => void moderateChart("restore", removedIndex)}') &&
+  chartsUI.includes('removedIndex !== null && styles.excludedCard') &&
+  chartsUI.includes('reviewText.excluded') &&
+  chartsUI.includes('reviewText.add') &&
+  chartsUI.includes('editMode || showMoreComparisons ? comparisons') &&
+  !chartsUI.includes('!!review.removed_charts?.length && (') &&
+  read("src/api/briefly.ts").includes('chart: VerifiedDataChart;') &&
   chartsUI.includes('chart.description') &&
   read("src/api/briefly.ts").includes('export function rollbackChartRelease(') &&
   read("src/api/briefly.ts").includes('export function restoreChartToDraft(') &&
@@ -1382,8 +1391,8 @@ ensure(
   chartsUI.includes('chart.chart_type === "waterfall"') &&
   chartsUI.includes('<SmartChartVisual chart={chart} />') &&
   chartsUI.includes('point.derived') &&
-  chartsUI.includes('const keyFigures = readyCharts.filter') &&
-  chartsUI.includes('const comparisons = readyCharts.filter') &&
+  chartsUI.includes('const keyFigures = visibleCards.filter') &&
+  chartsUI.includes('const comparisons = visibleCards.filter') &&
   chartsUI.includes('styles.figureGrid') &&
   chartsUI.includes('styles.comparisonGrid') &&
   chartsUI.includes('styles.sharedSourceTrigger') &&
