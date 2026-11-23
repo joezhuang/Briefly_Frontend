@@ -942,7 +942,9 @@ export default function HomeScreen() {
   const compactEditorial = width < 700;
   const mobileLeadFit =
     width < 700 || Math.min(width, viewportHeight) < 700;
-  const showWebScopeArrows = Platform.OS === "web";
+  // The sticky category bar handles mobile/tablet navigation; do not cover
+  // the news feed with mid-screen arrows or compete with bottom controls.
+  const showWebScopeArrows = Platform.OS === "web" && desktop;
   const webScopeArrowInset = Math.max(
     14,
     (width - layout.pageMax) / 2 - 58,

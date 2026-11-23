@@ -159,6 +159,19 @@ const checks = [
     ],
   },
   {
+    name: "Floating category arrows stay desktop-only while sticky tabs and back-to-top remain available",
+    file: "src/app/index.tsx",
+    needles: [
+      'const desktop = width >= 1000;',
+      'const showWebScopeArrows = Platform.OS === "web" && desktop;',
+      '{showWebScopeArrows && (',
+      '<PinnedFeedCategoryBar',
+      'onFeedScopePress={switchScope}',
+      'accessibilityLabel="Back to top"',
+      'onPress={scrollToTop}',
+    ],
+  },
+  {
     name: "Home feed pins categories after the full header and location scroll away",
     file: "src/app/index.tsx",
     needles: [
