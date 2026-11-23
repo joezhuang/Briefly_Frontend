@@ -1805,7 +1805,12 @@ export type ChartReviewDraft = {
   event_id: string;
   article_version_id: number;
   draft_charts: VerifiedDataChart[];
-  removed_charts: { index: number; title: string }[];
+  removed_charts: {
+    index: number;
+    position: number;
+    title: string;
+    chart: VerifiedDataChart;
+  }[];
   published_charts: VerifiedDataChart[];
   published_release_id: number | null;
   history: ChartReleaseHistory[];
