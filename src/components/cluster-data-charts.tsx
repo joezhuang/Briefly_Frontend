@@ -15,6 +15,8 @@ import { SmartChartVisual } from "@/components/smart-chart-visual";
 import {
   getClusterDataCharts,
   getChartReview,
+  dismissChartReview,
+  reopenChartReview,
   editChartInDraft,
   restoreChartToDraft,
   rollbackChartRelease,
@@ -28,6 +30,7 @@ import {
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
+import { emitChartReviewUpdate } from "@/services/chart-review-updates";
 
 const chartCopy = {
   en: {
@@ -189,6 +192,11 @@ const chartCopy = {
 
 const reviewCopy = {
   "en": {
+    dismiss: "Dismiss from review",
+    dismissConfirm: "Do not publish this draft? It will leave the admin queue and notifications, but stay saved for later. Any existing public charts will remain unchanged.",
+    confirmDismiss: "Confirm dismissal",
+    reopen: "Reopen review",
+    dismissedNotice: "Review dismissed. This draft is saved and will not trigger notifications. Public charts are unchanged.",
     add: "Add",
     excluded: "Excluded from next release",
     edit: "Edit draft",
@@ -227,6 +235,11 @@ const reviewCopy = {
     saved: "Your draft changes are saved privately.",
   },
   "es": {
+    dismiss: "Descartar de revisión",
+    dismissConfirm: "¿No publicar este borrador? Se ocultará de la cola y las notificaciones, pero seguirá guardado. Los gráficos públicos no cambiarán.",
+    confirmDismiss: "Confirmar descarte",
+    reopen: "Reabrir revisión",
+    dismissedNotice: "Revisión descartada. El borrador sigue guardado y no generará avisos. La versión pública no cambia.",
     add: "Añadir",
     excluded: "Excluido de la próxima publicación",
     edit: "Editar borrador",
@@ -265,6 +278,11 @@ const reviewCopy = {
     saved: "Los cambios del borrador están guardados.",
   },
   "ja": {
+    dismiss: "レビューを見送る",
+    dismissConfirm: "この下書きを公開せずレビュー通知から除外しますか？下書きは保存され、公開済みグラフは変更されません。",
+    confirmDismiss: "見送りを確定",
+    reopen: "レビューを再開",
+    dismissedNotice: "レビューを見送りました。下書きは保存され、通知されません。公開版は変更されません。",
     add: "追加",
     excluded: "次の公開版から除外",
     edit: "下書きを編集",
@@ -303,6 +321,11 @@ const reviewCopy = {
     saved: "下書きの変更が保存されました。",
   },
   "zh-CN": {
+    dismiss: "暂不审核发布",
+    dismissConfirm: "不发布此草稿并从审核队列和通知中移除？草稿仍会保留，已公开的图表不会改变。",
+    confirmDismiss: "确认暂不发布",
+    reopen: "重新审核",
+    dismissedNotice: "已暂停此草稿的发布审核。草稿已保存，不再触发通知，公开图表不变。",
     add: "添加",
     excluded: "已从下次发布中排除",
     edit: "编辑草稿",
@@ -341,6 +364,11 @@ const reviewCopy = {
     saved: "草稿修改已保存。",
   },
   "zh-TW": {
+    dismiss: "暫不審核發布",
+    dismissConfirm: "不發布此草稿並從審核佇列與通知中移除？草稿仍會保留，已公開圖表不變。",
+    confirmDismiss: "確認暫不發布",
+    reopen: "重新審核",
+    dismissedNotice: "已暫停此草稿的發布審核。草稿已保存，不再觸發通知，公開圖表不變。",
     add: "加入",
     excluded: "已從下次發布中排除",
     edit: "編輯草稿",
@@ -678,6 +706,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
     key: string; index: number;
   } | null>(null);
   const [releaseConfirmation, setReleaseConfirmation] = useState<string | null>(null);
+  const [dismissConfirmation, setDismissConfirmation] = useState<string | null>(null);
   const [rollbackConfirmation, setRollbackConfirmation] = useState<{
     key: string; releaseId: number;
   } | null>(null);
@@ -699,6 +728,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
     ? review?.history?.find((entry) => entry.id === reviewView?.releaseId) : null;
   const reviewError = moderationError === chartKey;
   const confirmingRelease = releaseConfirmation === chartKey;
+  const confirmingDismiss = dismissConfirmation === chartKey;
   const hasPublicRelease = Boolean(review?.published_release_id != null);
   const hasDraftChanges = Boolean(review?.ready &&
     (!hasPublicRelease ||
@@ -776,7 +806,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
     setStatus(nextStatus);
   };
 
-  const moderateChart = async (action: "remove" | "restore" | "edit" | "release" | "rollback",
+  const moderateChart = async (action: "remove" | "restore" | "edit" | "release" | "rollback" | "dismiss" | "reopen",
     index?: number) => {
     if (!isAdmin || !review?.ready || moderating || !eventId) return;
     setModerating(true);
@@ -792,6 +822,10 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
           description: editing.description,
           chart_type: editing.chartType,
         });
+      } else if (action === "dismiss") {
+        await dismissChartReview(eventId, review.revision);
+      } else if (action === "reopen") {
+        await reopenChartReview(eventId, review.revision);
       } else if (action === "release") {
         await releaseChartDraft(eventId, review.revision, review.published_release_id);
       } else if (action === "rollback" && index !== undefined &&
@@ -800,11 +834,14 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
       } else {
         return;
       }
+      // Update the global admin inbox immediately instead of waiting for poll.
+      emitChartReviewUpdate();
       await refreshReview();
       setReviewView({ key: chartKey, mode: action === "rollback" ? "published" :
         action === "release" ? "preview" : "edit" });
       setRemoveConfirmation(null);
       setReleaseConfirmation(null);
+      setDismissConfirmation(null);
       setRollbackConfirmation(null);
       setEditing(null);
     } catch {
@@ -812,6 +849,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
       try { await refreshReview(); } catch { /* Keep actionable error visible. */ }
       setRemoveConfirmation(null);
       setReleaseConfirmation(null);
+      setDismissConfirmation(null);
       setRollbackConfirmation(null);
     } finally {
       setModerating(false);
@@ -1027,6 +1065,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
                     setEditing(null);
                     setRemoveConfirmation(null);
                     setReleaseConfirmation(null);
+                    setDismissConfirmation(null);
                     setRollbackConfirmation(null);
                   }}
                   style={[styles.reviewAction, { borderColor: colors.border },
@@ -1038,6 +1077,11 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
               );
             })}
           </View>
+          {review.dismissed && (
+            <Text style={[styles.note, { color: colors.textMuted }]}>
+              {reviewText.dismissedNotice}
+            </Text>
+          )}
           {previewMode && <Text style={[styles.note, { color: colors.textMuted }]}>
             {reviewText.draftHint}
           </Text>}
@@ -1150,35 +1194,89 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
       )}
       {reviewMode && review?.ready && (
         <View style={[styles.releasePanel, { borderTopColor: colors.border }]}>
-          {!hasDraftChanges && <Text style={[styles.note, { color: colors.textMuted }]}>
-            {reviewText.noChanges}
-          </Text>}
-          {confirmingRelease && (
-            <Text style={[styles.note, { color: colors.textMuted }]}>
-              {readyCharts.length ? reviewText.releaseConfirm : reviewText.withdrawConfirm}
-            </Text>
-          )}
-          {hasDraftChanges && (
+          {review.dismissed ? (
             <View style={styles.reviewActionRow}>
+              <Text style={[styles.note, { color: colors.textMuted }]}>
+                {reviewText.dismissedNotice}
+              </Text>
               <Pressable accessibilityRole="button" disabled={moderating}
-                onPress={() => confirmingRelease ? void moderateChart("release") :
-                  setReleaseConfirmation(chartKey)}
-                style={[styles.generateButton, { backgroundColor: colors.text,
-                  opacity: moderating ? 0.55 : 1 }]}>
-                {moderating && <ActivityIndicator size="small" color={colors.background} />}
-                <Text style={[styles.generateText, { color: colors.background }]}>
-                  {moderating ? reviewText.busy : confirmingRelease ? reviewText.confirmRelease :
-                    readyCharts.length ? reviewText.release : reviewText.withdraw}
+                style={[styles.reviewAction, { borderColor: colors.border }]}
+                onPress={() => void moderateChart("reopen")}>
+                <Text style={[styles.source, { color: colors.accent }]}>
+                  {reviewText.reopen}
                 </Text>
               </Pressable>
-              {confirmingRelease && (
-                <Pressable accessibilityRole="button"
-                  onPress={() => setReleaseConfirmation(null)}
-                  style={styles.reviewAction}>
-                  <Text style={[styles.source, { color: colors.accent }]}>{reviewText.cancel}</Text>
-                </Pressable>
-              )}
             </View>
+          ) : (
+            <>
+              {!hasDraftChanges && (
+                <Text style={[styles.note, { color: colors.textMuted }]}>
+                  {reviewText.noChanges}
+                </Text>
+              )}
+              {confirmingRelease && (
+                <Text style={[styles.note, { color: colors.textMuted }]}>
+                  {readyCharts.length ? reviewText.releaseConfirm : reviewText.withdrawConfirm}
+                </Text>
+              )}
+              {hasDraftChanges && (
+                <View style={styles.reviewActionRow}>
+                  <Pressable accessibilityRole="button" disabled={moderating}
+                    onPress={() => confirmingRelease ? void moderateChart("release") :
+                      (setReleaseConfirmation(chartKey), setDismissConfirmation(null))}
+                    style={[styles.generateButton, { backgroundColor: colors.text,
+                      opacity: moderating ? 0.55 : 1 }]}>
+                    {moderating && <ActivityIndicator size="small" color={colors.background} />}
+                    <Text style={[styles.generateText, { color: colors.background }]}>
+                      {moderating ? reviewText.busy : confirmingRelease ? reviewText.confirmRelease :
+                        readyCharts.length ? reviewText.release : reviewText.withdraw}
+                    </Text>
+                  </Pressable>
+                  <Pressable accessibilityRole="button" disabled={moderating}
+                    onPress={() => {
+                      setDismissConfirmation(chartKey);
+                      setReleaseConfirmation(null);
+                    }}
+                    style={[styles.reviewAction, { borderColor: colors.border }]}>
+                    <Text style={[styles.source, { color: colors.textMuted }]}>
+                      {reviewText.dismiss}
+                    </Text>
+                  </Pressable>
+                  {confirmingRelease && (
+                    <Pressable accessibilityRole="button"
+                      onPress={() => setReleaseConfirmation(null)}
+                      style={styles.reviewAction}>
+                      <Text style={[styles.source, { color: colors.accent }]}>
+                        {reviewText.cancel}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
+              {confirmingDismiss && hasDraftChanges && (
+                <View style={[styles.reviewPanel, { borderColor: colors.border }]}>
+                  <Text style={[styles.note, { color: colors.textMuted }]}>
+                    {reviewText.dismissConfirm}
+                  </Text>
+                  <View style={styles.reviewActionRow}>
+                    <Pressable accessibilityRole="button" disabled={moderating}
+                      onPress={() => void moderateChart("dismiss")}
+                      style={[styles.reviewAction, { borderColor: colors.border }]}>
+                      <Text style={[styles.source, { color: colors.accent }]}>
+                        {reviewText.confirmDismiss}
+                      </Text>
+                    </Pressable>
+                    <Pressable accessibilityRole="button"
+                      onPress={() => setDismissConfirmation(null)}
+                      style={styles.reviewAction}>
+                      <Text style={[styles.source, { color: colors.textMuted }]}>
+                        {reviewText.cancel}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+            </>
           )}
         </View>
       )}
