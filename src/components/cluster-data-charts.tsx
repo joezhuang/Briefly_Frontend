@@ -509,6 +509,11 @@ function ChartBars({ chart, copy }: {
           </View>
         );
       })}
+      {!!chart.description && (
+        <Text style={[styles.chartDescription, { color: colors.textMuted }]}>
+          {chart.description}
+        </Text>
+      )}
     </View>
   );
 }
@@ -576,6 +581,25 @@ function ChartEvidence({ chart, evidenceLabel, sourceLabel, derivedLabel }: {
       )}
     </View>
   );
+}
+
+/** Presentation choices mirror the backend's source-validated restrictions. */
+function editableDisplayTypes(chart: VerifiedDataChart): VerifiedDataChart["chart_type"][] {
+  const verified = chart.verified_chart_type ?? chart.chart_type;
+  if (verified === "donut" || verified === "stacked") {
+    const points = chart.points;
+    return points.length >= 2 && points.length <= 6 &&
+      points.every((p) => Number.isFinite(p.value) && p.value > 0)
+        ? ["donut", "stacked", "bar"] : ["stacked", "bar"];
+  }
+  if (verified === "line") return ["line", "bar"];
+  if (verified === "grouped" || verified === "dumbbell") {
+    const series = new Set(chart.points.map((p) => p.series ?? ""));
+    return series.size === 2 &&
+      Array.from(series).every((value) => /^(?:19|20|21)\d{2}$/.test(value))
+        ? ["grouped", "dumbbell"] : ["grouped"];
+  }
+  return [verified];
 }
 
 export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested = false }: {
@@ -793,6 +817,69 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
   const quota = account?.is_admin === true ? null : status?.quota;
   const quotaExhausted = Boolean(quota && quota.remaining <= 0);
   const canGenerate = status?.can_generate === true && !quotaExhausted;
+  const renderEditFields = (chart: VerifiedDataChart, index: number) => {
+    if (!editing || editing.key !== chartKey || editing.index !== index) return null;
+    const setField = (patch: Partial<typeof editing>) => {
+      setEditing((current) => current && current.key === chartKey && current.index === index
+        ? { ...current, ...patch } : current);
+    };
+    return (
+      <View style={[styles.editForm, { borderColor: colors.border }]}>
+        <Text style={[styles.editFieldLabel, { color: colors.text }]}>
+          {reviewText.titleLabel}
+        </Text>
+        <TextInput accessibilityLabel={reviewText.titleLabel}
+          value={editing.title} maxLength={140}
+          onChangeText={(title) => setField({ title })}
+          style={[styles.editInput, { borderColor: colors.border, color: colors.text,
+            backgroundColor: colors.surface }]} />
+        <Text style={[styles.editFieldLabel, { color: colors.text }]}>
+          {reviewText.descriptionLabel}
+        </Text>
+        <TextInput accessibilityLabel={reviewText.descriptionLabel}
+          value={editing.description} multiline maxLength={300}
+          onChangeText={(description) => setField({ description })}
+          style={[styles.editInput, styles.descriptionInput,
+            { borderColor: colors.border, color: colors.text, backgroundColor: colors.surface }]} />
+        <Text style={[styles.editFieldLabel, { color: colors.text }]}>
+          {reviewText.typeLabel}
+        </Text>
+        <View style={styles.reviewActionRow}>
+          {editableDisplayTypes(chart).map((kind) => (
+            <Pressable key={kind} accessibilityRole="button"
+              accessibilityState={{ selected: editing.chartType === kind }}
+              onPress={() => setField({ chartType: kind })}
+              style={[styles.reviewAction, { borderColor: colors.border },
+                editing.chartType === kind && {
+                  backgroundColor: colors.text, borderColor: colors.text,
+                }]}>
+              <Text style={[styles.source, {
+                color: editing.chartType === kind ? colors.background : colors.text,
+              }]}>{kind[0].toUpperCase() + kind.slice(1)}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <View style={styles.reviewActionRow}>
+          <Pressable accessibilityRole="button" disabled={moderating || !editing.title.trim()}
+            onPress={() => void moderateChart("edit", index)}
+            style={[styles.generateButton, {
+              backgroundColor: colors.text, opacity: moderating || !editing.title.trim() ? 0.5 : 1,
+            }]}>
+            <Text style={[styles.generateText, { color: colors.background }]}>
+              {reviewText.saveEdit}
+            </Text>
+          </Pressable>
+          <Pressable accessibilityRole="button"
+            onPress={() => setEditing(null)} style={styles.reviewAction}>
+            <Text style={[styles.source, { color: colors.textMuted }]}>
+              {reviewText.cancel}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  };
+
   const renderRemove = (chart: VerifiedDataChart) => {
     if (!editMode || !review?.ready) return null;
     const index = review.draft_charts.indexOf(chart);
@@ -803,10 +890,13 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
       <View style={styles.moderationAction}>
         <View style={styles.reviewActionRow}>
           <Pressable accessibilityRole="button" disabled={moderating}
-            onPress={() => setEditing({
-              key: chartKey, index, title: chart.title,
-              description: chart.description ?? "", chartType: chart.chart_type,
-            })}
+            onPress={() => {
+              setRemoveConfirmation(null);
+              setEditing({
+                key: chartKey, index, title: chart.title,
+                description: chart.description ?? "", chartType: chart.chart_type,
+              });
+            }}
             style={[styles.reviewAction, { borderColor: colors.border }]}>
             <Text style={[styles.source, { color: colors.accent }]}>{reviewText.editChart}</Text>
           </Pressable>
@@ -1080,6 +1170,12 @@ const styles = StyleSheet.create({
   reviewLink: { alignSelf: "flex-start", minHeight: 40, justifyContent: "center" },
   reviewPanel: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 12, gap: 9 },
   reviewHeading: { fontSize: 14, fontWeight: "900" },
+  chartDescription: { fontSize: 12, lineHeight: 18 },
+  editForm: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 11, padding: 10, gap: 8 },
+  editFieldLabel: { fontSize: 12, fontWeight: "800" },
+  editInput: { minHeight: 44, borderWidth: StyleSheet.hairlineWidth, borderRadius: 8,
+    paddingHorizontal: 11, paddingVertical: 8, fontSize: 13 },
+  descriptionInput: { minHeight: 68, textAlignVertical: "top" },
   reviewActionRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 9 },
   reviewAction: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 999,
     minHeight: 40, justifyContent: "center", paddingHorizontal: 12 },
