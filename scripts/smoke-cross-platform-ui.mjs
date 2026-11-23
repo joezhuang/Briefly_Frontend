@@ -712,6 +712,40 @@ const checks = [
     ],
   },
   {
+    name: "Story return navigates to the actual prior page and preserves the feed category",
+    file: "src/navigation/story-return.ts",
+    needles: [
+      "if (canReturnFromStory()) {",
+      "router.back();",
+      "router.replace(storyReturnFallback(source, scope) as never);",
+      'if (source === "search") return "/search";',
+      'if (source === "history") return "/history";',
+      'if (source === "saved") return "/saved";',
+      'return `/?feedScope=${scope}`;',
+    ],
+  },
+  {
+    name: "The story header and floating return button share one native and web navigation path",
+    file: "src/components/article-view.tsx",
+    needles: [
+      'import { canReturnFromStory, returnFromStory }',
+      "const canReturnWithinBriefly = canReturnFromStory();",
+      "const navigateBackOrHome = () => returnFromStory(returnSource, returnScope);",
+      'accessibilityLabel={canReturnWithinBriefly?"Back to previous page":"Return to news"}',
+      "!immutable&&showFloatingBack",
+    ],
+  },
+  {
+    name: "The story logo returns to its origin instead of always opening the home feed",
+    file: "src/components/app-header.tsx",
+    needles: [
+      'const isStoryDetail = pathname.startsWith("/story/");',
+      "onPress={() => returnFromStory(storySource, storyScope)}",
+      'accessibilityLabel="Return to previous page"',
+      '<Link href="/" asChild>',
+    ],
+  },
+  {
     name: "Confirmed developing-story links persist in canonical story detail after generation",
     file: "src/app/story/[slug].tsx",
     needles: [
