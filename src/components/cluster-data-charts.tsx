@@ -854,7 +854,11 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
   const canGenerate = status?.can_generate === true && !quotaExhausted;
   const renderEditFields = (chart: VerifiedDataChart, index: number) => {
     if (!editing || editing.key !== chartKey || editing.index !== index) return null;
-    const setField = (patch: Partial<typeof editing>) => {
+    const setField = (patch: {
+      title?: string;
+      description?: string;
+      chartType?: VerifiedDataChart["chart_type"];
+    }) => {
       setEditing((current) => current && current.key === chartKey && current.index === index
         ? { ...current, ...patch } : current);
     };
