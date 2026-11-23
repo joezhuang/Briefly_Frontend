@@ -838,7 +838,8 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
       emitChartReviewUpdate();
       await refreshReview();
       setReviewView({ key: chartKey, mode: action === "rollback" ? "published" :
-        action === "release" ? "preview" : "edit" });
+        action === "release" || action === "dismiss" || action === "reopen"
+          ? "preview" : "edit" });
       setRemoveConfirmation(null);
       setReleaseConfirmation(null);
       setDismissConfirmation(null);
@@ -1222,8 +1223,14 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
               {hasDraftChanges && (
                 <View style={styles.reviewActionRow}>
                   <Pressable accessibilityRole="button" disabled={moderating}
-                    onPress={() => confirmingRelease ? void moderateChart("release") :
-                      (setReleaseConfirmation(chartKey), setDismissConfirmation(null))}
+                    onPress={() => {
+                      if (confirmingRelease) {
+                        void moderateChart("release");
+                      } else {
+                        setReleaseConfirmation(chartKey);
+                        setDismissConfirmation(null);
+                      }
+                    }}
                     style={[styles.generateButton, { backgroundColor: colors.text,
                       opacity: moderating ? 0.55 : 1 }]}>
                     {moderating && <ActivityIndicator size="small" color={colors.background} />}
