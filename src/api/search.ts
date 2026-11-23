@@ -42,9 +42,18 @@ export function searchBrieflyArticles(
 }
 
 /** Briefly homepage search: all matching clusters, with or without canonical. */
-export function searchBrieflyClusters(
+export async function searchBrieflyClusters(
   query: string,
   options?: SearchOptions,
 ): Promise<ArticleSearchResponse> {
-  return searchWithEndpoint("/api/article-search/clusters", query, options);
+  try {
+    return await searchWithEndpoint("/api/article-search/clusters", query, options);
+  } catch (error) {
+    // During a staggered web/backend rollout, keep search usable until the
+    // opt-in endpoint exists. Never hide a real SQL/service error as a 404.
+    if (error instanceof Error && error.message.includes("Briefly API request failed (404)")) {
+      return searchBrieflyArticles(query, options);
+    }
+    throw error;
+  }
 }

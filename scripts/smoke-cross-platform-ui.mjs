@@ -214,7 +214,9 @@ const checks = [
     file: "src/api/search.ts",
     needles: [
       'return searchWithEndpoint("/api/article-search", query, options);',
-      'return searchWithEndpoint("/api/article-search/clusters", query, options);',
+      'return await searchWithEndpoint("/api/article-search/clusters", query, options);',
+      'error.message.includes("Briefly API request failed (404)")',
+      "return searchBrieflyArticles(query, options);",
       'search_scope: "event_universe" | "all_clusters";',
     ],
   },
