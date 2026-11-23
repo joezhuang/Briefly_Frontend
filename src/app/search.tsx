@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { searchBrieflyArticles } from "@/api/search";
+import { searchBrieflyClusters } from "@/api/search";
 import { AppHeader } from "@/components/app-header";
 import {
   FeedCategoryBar,
@@ -30,11 +30,11 @@ const PREVIEW_DRAFTS =
 const SEARCH_DEBOUNCE_MS = 450;
 
 const searchCopy = {
-  en: { subtitle: "Search current Briefly stories and the developments in their timelines." },
-  es: { subtitle: "Busca noticias actuales de Briefly y los acontecimientos de sus cronologías." },
-  ja: { subtitle: "Brieflyの現在の記事と、そのタイムライン上の展開を検索できます。" },
-  "zh-CN": { subtitle: "搜索 Briefly 当前新闻及其时间线中的事件进展。" },
-  "zh-TW": { subtitle: "搜尋 Briefly 當前新聞及其時間線中的事件進展。" },
+  en: { subtitle: "Search all Briefly story clusters, including those still awaiting analysis." },
+  es: { subtitle: "Busca todos los grupos de noticias de Briefly, incluso sin análisis final." },
+  ja: { subtitle: "分析記事がまだないものも含め、Brieflyのすべてのニュース群を検索できます。" },
+  "zh-CN": { subtitle: "搜索 Briefly 所有新闻事件群，包括尚未生成分析文章的事件。" },
+  "zh-TW": { subtitle: "搜尋 Briefly 所有新聞事件群，包括尚未產生分析文章的事件。" },
 } as const;
 
 export default function SearchScreen() {
@@ -64,7 +64,7 @@ export default function SearchScreen() {
       setLoading(true);
       setError(null);
 
-      void searchBrieflyArticles(trimmedQuery, {
+      void searchBrieflyClusters(trimmedQuery, {
         includeDraft: PREVIEW_DRAFTS,
         language,
         limit: 30,

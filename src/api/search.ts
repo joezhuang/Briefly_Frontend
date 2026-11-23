@@ -7,16 +7,19 @@ export type ArticleSearchResponse = {
   query: string;
   language: string;
   feed_language: "en";
-  search_scope: "event_universe";
+  search_scope: "event_universe" | "all_clusters";
 };
 
-export function searchBrieflyArticles(
+type SearchOptions = {
+  language?: string;
+  includeDraft?: boolean;
+  limit?: number;
+};
+
+function searchWithEndpoint(
+  endpoint: "/api/article-search" | "/api/article-search/clusters",
   query: string,
-  options?: {
-    language?: string;
-    includeDraft?: boolean;
-    limit?: number;
-  },
+  options?: SearchOptions,
 ): Promise<ArticleSearchResponse> {
   const params = new URLSearchParams({
     q: query.trim(),
@@ -26,6 +29,22 @@ export function searchBrieflyArticles(
   });
 
   return getBrieflyJson<ArticleSearchResponse>(
-    `/api/article-search?${params.toString()}`,
+    `${endpoint}?${params.toString()}`,
   );
+}
+
+/** Compatibility endpoint: keep its existing result universe for other clients. */
+export function searchBrieflyArticles(
+  query: string,
+  options?: SearchOptions,
+): Promise<ArticleSearchResponse> {
+  return searchWithEndpoint("/api/article-search", query, options);
+}
+
+/** Briefly homepage search: all matching clusters, with or without canonical. */
+export function searchBrieflyClusters(
+  query: string,
+  options?: SearchOptions,
+): Promise<ArticleSearchResponse> {
+  return searchWithEndpoint("/api/article-search/clusters", query, options);
 }
