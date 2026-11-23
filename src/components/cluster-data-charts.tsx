@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -14,6 +15,9 @@ import { SmartChartVisual } from "@/components/smart-chart-visual";
 import {
   getClusterDataCharts,
   getChartReview,
+  editChartInDraft,
+  restoreChartToDraft,
+  rollbackChartRelease,
   removeChartFromDraft,
   releaseChartDraft,
   requestClusterDataCharts,
@@ -185,99 +189,184 @@ const chartCopy = {
 
 const reviewCopy = {
   "en": {
-    draft: "Draft preview",
-    public: "Public view",
-    label: "Admin chart review · private",
-    intro: "Preview charts in the exact public layout. Draft edits are not public until released.",
-    noPublic: "No public charts have been released.",
+    edit: "Edit draft",
+    preview: "Preview release",
+    published: "Currently published",
+    history: "Previous release",
+    label: "Admin chart review",
+    intro: "The preview shows exactly how this draft will look to readers once published.",
+    noPublic: "There is no currently published chart set.",
     remove: "Remove chart",
     removeConfirm: "Remove this chart from the draft?",
     confirmRemove: "Confirm removal",
     cancel: "Cancel",
-    release: "Release selected charts",
+    release: "Publish updates",
     withdraw: "Withdraw public charts",
-    releaseConfirm: "Publish this selection to everyone?",
-    withdrawConfirm: "Withdraw the currently public charts?",
-    confirmRelease: "Confirm release",
+    releaseConfirm: "Publish this exact selection for everyone?",
+    withdrawConfirm: "Withdraw all currently published charts?",
+    confirmRelease: "Confirm publication",
     busy: "Saving…",
-    error: "Review changed or action failed. Please reload before retrying.",
-    loading: "Loading chart review…",
+    error: "Review changed or the action failed. Reload the draft and retry.",
+    loading: "Loading admin chart review…",
+    editChart: "Edit chart",
+    titleLabel: "Title",
+    descriptionLabel: "Description (optional; no new numerical claims)",
+    typeLabel: "Chart style",
+    saveEdit: "Save chart changes",
+    restore: "Restore",
+    removedHeading: "Removed charts",
+    historyHeading: "Release history",
+    previewHistory: "Preview old release",
+    rollback: "Restore as published",
+    rollbackConfirm: "Publish this previous release as the current public version?",
+    confirmRollback: "Confirm rollback",
+    noChanges: "No unpublished changes to publish.",
+    draftHint: "This preview is the draft, not the old public release.",
+    saved: "Your draft changes are saved privately.",
   },
   "es": {
-    draft: "Vista del borrador",
-    public: "Vista pública",
-    label: "Revisión administrativa · privada",
-    intro: "Vista previa con el mismo diseño público. Los cambios requieren publicación.",
-    noPublic: "Aún no hay gráficos publicados.",
+    edit: "Editar borrador",
+    preview: "Vista previa de publicación",
+    published: "Publicación actual",
+    history: "Publicación anterior",
+    label: "Revisión administrativa",
+    intro: "Esta vista muestra exactamente cómo se verá el borrador al publicarlo.",
+    noPublic: "No hay gráficos públicos todavía.",
     remove: "Quitar gráfico",
     removeConfirm: "¿Quitar este gráfico del borrador?",
     confirmRemove: "Confirmar eliminación",
     cancel: "Cancelar",
-    release: "Publicar gráficos seleccionados",
+    release: "Publicar cambios",
     withdraw: "Retirar gráficos públicos",
     releaseConfirm: "¿Publicar esta selección para todos?",
-    withdrawConfirm: "¿Retirar los gráficos públicos?",
+    withdrawConfirm: "¿Retirar todos los gráficos públicos?",
     confirmRelease: "Confirmar publicación",
     busy: "Guardando…",
-    error: "La revisión cambió o la acción falló. Actualiza el borrador.",
+    error: "La revisión cambió o falló. Recarga el borrador.",
     loading: "Cargando revisión…",
+    editChart: "Editar gráfico",
+    titleLabel: "Título",
+    descriptionLabel: "Descripción (sin cifras nuevas)",
+    typeLabel: "Tipo de gráfico",
+    saveEdit: "Guardar cambios",
+    restore: "Restaurar",
+    removedHeading: "Gráficos eliminados",
+    historyHeading: "Historial de publicaciones",
+    previewHistory: "Ver versión anterior",
+    rollback: "Restaurar publicación",
+    rollbackConfirm: "¿Restaurar esta versión para todos?",
+    confirmRollback: "Confirmar restauración",
+    noChanges: "No hay cambios nuevos para publicar.",
+    draftHint: "Esta es la vista del borrador, no la publicación anterior.",
+    saved: "Los cambios del borrador están guardados.",
   },
   "ja": {
-    draft: "下書きプレビュー",
-    public: "公開表示",
-    label: "管理者レビュー · 非公開",
-    intro: "公開版と同じ表示で確認できます。公開まで変更は反映されません。",
-    noPublic: "公開済みグラフはまだありません。",
+    edit: "下書きを編集",
+    preview: "公開プレビュー",
+    published: "現在の公開版",
+    history: "過去の公開版",
+    label: "管理者レビュー",
+    intro: "公開後の読者表示と同じレイアウトで下書きを確認できます。",
+    noPublic: "公開済みグラフはありません。",
     remove: "グラフを削除",
     removeConfirm: "下書きから削除しますか？",
-    confirmRemove: "削除を確認",
+    confirmRemove: "削除を確定",
     cancel: "キャンセル",
-    release: "選択したグラフを公開",
+    release: "変更を公開",
     withdraw: "公開グラフを取り下げ",
     releaseConfirm: "この内容を全読者に公開しますか？",
-    withdrawConfirm: "公開グラフを取り下げますか？",
+    withdrawConfirm: "すべての公開グラフを取り下げますか？",
     confirmRelease: "公開を確定",
     busy: "保存中…",
-    error: "変更を保存できません。下書きを再読み込みしてください。",
+    error: "内容が変わったか操作に失敗しました。再読み込みしてください。",
     loading: "レビューを読み込み中…",
+    editChart: "グラフを編集",
+    titleLabel: "タイトル",
+    descriptionLabel: "説明（新しい数値は入力不可）",
+    typeLabel: "グラフ形式",
+    saveEdit: "変更を保存",
+    restore: "復元",
+    removedHeading: "削除したグラフ",
+    historyHeading: "公開履歴",
+    previewHistory: "過去の版をプレビュー",
+    rollback: "過去の版を公開",
+    rollbackConfirm: "この版を現在の公開版に戻しますか？",
+    confirmRollback: "復元を確定",
+    noChanges: "未公開の変更はありません。",
+    draftHint: "これは新しい下書きのプレビューです。",
+    saved: "下書きの変更が保存されました。",
   },
   "zh-CN": {
-    draft: "草稿预览",
-    public: "公开版本",
-    label: "管理员审核 · 未公开",
-    intro: "图表以正式阅读布局显示，发布前不会影响公开版本。",
-    noPublic: "尚无已发布图表。",
+    edit: "编辑草稿",
+    preview: "发布预览",
+    published: "当前公开版本",
+    history: "历史发布版本",
+    label: "管理员图表审核",
+    intro: "这里显示草稿发布后读者看到的实际布局。",
+    noPublic: "目前尚无公开图表。",
     remove: "移除图表",
-    removeConfirm: "从草稿中移除此图表？",
+    removeConfirm: "从草稿移除此图表？",
     confirmRemove: "确认移除",
     cancel: "取消",
-    release: "发布所选图表",
+    release: "发布更新",
     withdraw: "撤回公开图表",
-    releaseConfirm: "将此选择发布给所有读者？",
-    withdrawConfirm: "撤回已发布的图表？",
+    releaseConfirm: "向所有读者发布此选择？",
+    withdrawConfirm: "撤回全部已公开图表？",
     confirmRelease: "确认发布",
     busy: "正在保存…",
-    error: "审核版本已变化或操作失败，请重新加载。",
+    error: "审核版本已变更或操作失败，请重新加载。",
     loading: "正在加载审核…",
+    editChart: "编辑图表",
+    titleLabel: "标题",
+    descriptionLabel: "说明（不得添加未验证数字）",
+    typeLabel: "图表类型",
+    saveEdit: "保存修改",
+    restore: "恢复",
+    removedHeading: "已移除图表",
+    historyHeading: "发布历史",
+    previewHistory: "预览旧版本",
+    rollback: "恢复为公开版本",
+    rollbackConfirm: "将此旧版本重新发布给所有读者？",
+    confirmRollback: "确认恢复",
+    noChanges: "没有待发布的修改。",
+    draftHint: "这里预览的是草稿而不是旧公开版本。",
+    saved: "草稿修改已保存。",
   },
   "zh-TW": {
-    draft: "草稿預覽",
-    public: "公開版本",
-    label: "管理員審核 · 未公開",
-    intro: "圖表以正式閱讀版面顯示，發布前不會影響公開版本。",
-    noPublic: "尚無已發布圖表。",
+    edit: "編輯草稿",
+    preview: "發布預覽",
+    published: "目前公開版本",
+    history: "歷史發布版本",
+    label: "管理員圖表審核",
+    intro: "這裡顯示草稿發布後讀者看到的實際版面。",
+    noPublic: "目前尚無公開圖表。",
     remove: "移除圖表",
-    removeConfirm: "從草稿中移除此圖表？",
+    removeConfirm: "從草稿移除此圖表？",
     confirmRemove: "確認移除",
     cancel: "取消",
-    release: "發布所選圖表",
+    release: "發布更新",
     withdraw: "撤回公開圖表",
-    releaseConfirm: "將此選擇發布給所有讀者？",
-    withdrawConfirm: "撤回已發布的圖表？",
+    releaseConfirm: "向所有讀者發布此選擇？",
+    withdrawConfirm: "撤回全部已公開圖表？",
     confirmRelease: "確認發布",
     busy: "正在儲存…",
     error: "審核版本已變更或操作失敗，請重新載入。",
     loading: "正在載入審核…",
+    editChart: "編輯圖表",
+    titleLabel: "標題",
+    descriptionLabel: "說明（不得添加未驗證數字）",
+    typeLabel: "圖表類型",
+    saveEdit: "儲存修改",
+    restore: "還原",
+    removedHeading: "已移除圖表",
+    historyHeading: "發布歷史",
+    previewHistory: "預覽舊版本",
+    rollback: "還原為公開版本",
+    rollbackConfirm: "將此舊版本重新發布給所有讀者？",
+    confirmRollback: "確認還原",
+    noChanges: "沒有待發布的修改。",
+    draftHint: "此處預覽的是草稿而非舊公開版本。",
+    saved: "草稿修改已儲存。",
   },
 } as const;
 
@@ -529,20 +618,38 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
     reviewResponse.value.article_version_id === articleVersionId
       ? reviewResponse.value : null;
   const [reviewView, setReviewView] = useState<{
-    key: string; mode: "draft" | "public";
+    key: string; mode: "edit" | "preview" | "published" | "history";
+    releaseId?: number;
   } | null>(null);
   const [removeConfirmation, setRemoveConfirmation] = useState<{
     key: string; index: number;
   } | null>(null);
   const [releaseConfirmation, setReleaseConfirmation] = useState<string | null>(null);
+  const [rollbackConfirmation, setRollbackConfirmation] = useState<{
+    key: string; releaseId: number;
+  } | null>(null);
+  const [editing, setEditing] = useState<{
+    key: string; index: number; title: string; description: string;
+    chartType: VerifiedDataChart["chart_type"];
+  } | null>(null);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const [moderating, setModerating] = useState(false);
   const [moderationError, setModerationError] = useState<string | null>(null);
-  const reviewMode = isAdmin && Boolean(review?.ready) &&
-    (reviewView?.key === chartKey
-      ? reviewView.mode === "draft"
-      : reviewRequested || status?.awaiting_review === true);
+  // The default is always a post-publication preview of the DRAFT, not
+  // the old published edition. Existing public releases are optional comparisons.
+  const viewMode = reviewView?.key === chartKey ? reviewView.mode : "preview";
+  const editMode = isAdmin && Boolean(review?.ready) && viewMode === "edit";
+  const previewMode = isAdmin && Boolean(review?.ready) && viewMode === "preview";
+  const reviewMode = editMode || previewMode;
+  const viewingPublic = isAdmin && Boolean(review) && viewMode === "published";
+  const viewedHistory = viewMode === "history"
+    ? review?.history?.find((entry) => entry.id === reviewView?.releaseId) : null;
   const reviewError = moderationError === chartKey;
   const confirmingRelease = releaseConfirmation === chartKey;
+  const hasPublicRelease = Boolean(review?.published_release_id != null);
+  const hasDraftChanges = Boolean(review?.ready &&
+    (!hasPublicRelease ||
+      JSON.stringify(review.draft_charts) !== JSON.stringify(review.published_charts)));
 
   // Stale cached data from another story or login is never rendered.
   // The fetch resolves asynchronously, so the effect has no sync state reset.
@@ -606,38 +713,53 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
     }
   };
 
-  const moderateChart = async (action: "remove" | "release", index?: number) => {
+  const refreshReview = async () => {
+    const [nextReview, nextStatus] = await Promise.all([
+      getChartReview(eventId), getClusterDataCharts(eventId),
+    ]);
+    if (nextReview.article_version_id === articleVersionId) {
+      setReviewResponse({ key: chartKey, value: nextReview });
+    }
+    setStatus(nextStatus);
+  };
+
+  const moderateChart = async (action: "remove" | "restore" | "edit" | "release" | "rollback",
+    index?: number) => {
     if (!isAdmin || !review?.ready || moderating || !eventId) return;
     setModerating(true);
     setModerationError(null);
     try {
       if (action === "remove" && index !== undefined) {
         await removeChartFromDraft(eventId, index, review.revision);
+      } else if (action === "restore" && index !== undefined) {
+        await restoreChartToDraft(eventId, index, review.revision);
+      } else if (action === "edit" && editing?.key === chartKey && index === editing.index) {
+        await editChartInDraft(eventId, index, review.revision, {
+          title: editing.title,
+          description: editing.description,
+          chart_type: editing.chartType,
+        });
       } else if (action === "release") {
-        await releaseChartDraft(eventId, review.revision);
+        await releaseChartDraft(eventId, review.revision, review.published_release_id);
+      } else if (action === "rollback" && index !== undefined &&
+        review.published_release_id != null) {
+        await rollbackChartRelease(eventId, index, review.published_release_id);
       } else {
         return;
       }
-      const [nextReview, nextStatus] = await Promise.all([
-        getChartReview(eventId), getClusterDataCharts(eventId),
-      ]);
-      if (nextReview.article_version_id === articleVersionId) {
-        setReviewResponse({ key: chartKey, value: nextReview });
-      }
-      setStatus(nextStatus);
-      setReviewView({ key: chartKey, mode: action === "release" ? "public" : "draft" });
+      await refreshReview();
+      setReviewView({ key: chartKey, mode: action === "rollback" ? "published" :
+        action === "release" ? "preview" : "edit" });
       setRemoveConfirmation(null);
       setReleaseConfirmation(null);
+      setRollbackConfirmation(null);
+      setEditing(null);
     } catch {
       setModerationError(chartKey);
-      try {
-        const next = await getChartReview(eventId);
-        if (next.article_version_id === articleVersionId) {
-          setReviewResponse({ key: chartKey, value: next });
-        }
-      } catch { /* Keep the actionable error. */ }
+      try { await refreshReview(); } catch { /* Keep actionable error visible. */ }
       setRemoveConfirmation(null);
       setReleaseConfirmation(null);
+      setRollbackConfirmation(null);
     } finally {
       setModerating(false);
     }
@@ -658,7 +780,8 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
 
   // Both the draft and public versions use the exact same reader renderer.
   const readyCharts = isAdmin && review
-    ? reviewMode ? review.draft_charts : review.published_charts
+    ? viewingPublic ? review.published_charts :
+      viewMode === "history" ? viewedHistory?.charts ?? [] : review.draft_charts
     : status?.status === "ready" && Array.isArray(status.charts)
       ? status.charts
       : [];
@@ -671,13 +794,24 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
   const quotaExhausted = Boolean(quota && quota.remaining <= 0);
   const canGenerate = status?.can_generate === true && !quotaExhausted;
   const renderRemove = (chart: VerifiedDataChart) => {
-    if (!reviewMode || !review?.ready) return null;
+    if (!editMode || !review?.ready) return null;
     const index = review.draft_charts.indexOf(chart);
     if (index < 0) return null;
     const confirming = removeConfirmation?.key === chartKey &&
       removeConfirmation.index === index;
     return (
       <View style={styles.moderationAction}>
+        <View style={styles.reviewActionRow}>
+          <Pressable accessibilityRole="button" disabled={moderating}
+            onPress={() => setEditing({
+              key: chartKey, index, title: chart.title,
+              description: chart.description ?? "", chartType: chart.chart_type,
+            })}
+            style={[styles.reviewAction, { borderColor: colors.border }]}>
+            <Text style={[styles.source, { color: colors.accent }]}>{reviewText.editChart}</Text>
+          </Pressable>
+        </View>
+        {editing?.key === chartKey && editing.index === index && renderEditFields(chart, index)}
         {confirming && <Text style={[styles.note, { color: colors.textMuted }]}>
           {reviewText.removeConfirm}
         </Text>}
