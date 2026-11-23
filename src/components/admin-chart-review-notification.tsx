@@ -4,6 +4,7 @@ import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { getChartReviewQueue, type ChartReviewQueue } from "@/api/briefly";
 import { chartReviewStoryHref } from "@/utils/chart-review-link";
+import { subscribeChartReviewUpdates } from "@/services/chart-review-updates";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyTheme } from "@/context/theme";
 
@@ -42,6 +43,7 @@ export function AdminChartReviewNotification() {
       }
     };
     void refresh(); // First admin app load: no dashboard visit required.
+    const unsubscribeReview = subscribeChartReviewUpdates(() => void refresh());
     const interval = setInterval(() => void refresh(), 60000);
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") void refresh();
@@ -50,6 +52,7 @@ export function AdminChartReviewNotification() {
       active = false;
       clearInterval(interval);
       subscription.remove();
+      unsubscribeReview();
     };
   }, [enabled, userId, pathname]);
 

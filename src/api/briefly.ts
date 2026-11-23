@@ -1815,6 +1815,7 @@ export type ChartReviewDraft = {
   published_release_id: number | null;
   history: ChartReleaseHistory[];
   revision: string;
+  dismissed: boolean;
   ready: boolean;
 };
 
@@ -1847,6 +1848,20 @@ export function restoreChartToDraft(eventId: string, index: number, revision: st
   return postJson<{ charts: VerifiedDataChart[]; revision: string }>(
     `/api/articles/event/${encodeURIComponent(eventId)}/data-charts/review/restore`,
     { index, revision },
+  );
+}
+
+export function dismissChartReview(eventId: string, revision: string) {
+  return postJson<{ dismissed: boolean; revision: string }>(
+    `/api/articles/event/${encodeURIComponent(eventId)}/data-charts/review/dismiss`,
+    { revision },
+  );
+}
+
+export function reopenChartReview(eventId: string, revision: string) {
+  return postJson<{ dismissed: boolean; revision: string }>(
+    `/api/articles/event/${encodeURIComponent(eventId)}/data-charts/review/reopen`,
+    { revision },
   );
 }
 
