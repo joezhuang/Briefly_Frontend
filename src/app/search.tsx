@@ -173,7 +173,7 @@ export default function SearchScreen() {
                   key={String(article.event_id ?? article.article_version_id)}
                   style={styles.card}
                 >
-                  <StoryTile article={article} />
+                  <StoryTile article={article} analyticsSource="search" />
                 </View>
               ))}
             </View>

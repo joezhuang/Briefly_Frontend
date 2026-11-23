@@ -1893,6 +1893,8 @@ export default function StoryDetailScreen() {
         autoStartVideo={videoAccess.allowed && resolvedAutoplayVideo}
         initialVideoTime={resolvedVideoTime}
         shareHref={currentStoryHref}
+        returnSource={resolvedSource}
+        returnScope={resolvedScope}
         podcast={podcastEnabled ? podcast : null}
         podcastBusy={podcastEnabled && podcastBusy}
         podcastAccess={podcastAccess}

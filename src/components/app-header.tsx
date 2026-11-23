@@ -1,4 +1,4 @@
-import { Link, router, usePathname } from "expo-router";
+import { Link, router, usePathname, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
   Modal,
@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import { BrieflyLogo } from "@/components/briefly-brand";
+import { returnFromStory } from "@/navigation/story-return";
 import { useBrieflyAuth } from "@/context/auth";
 import { useBrieflyAppConfig } from "@/context/app-config";
 import { LANGUAGES, useBrieflyLanguage } from "@/context/language";
@@ -142,6 +143,8 @@ type SettingsRoute =
 
 export function AppHeader() {
   const pathname = usePathname();
+  const { source: storySource, scope: storyScope } = useLocalSearchParams<{ source?: string; scope?: string }>();
+  const isStoryDetail = pathname.startsWith("/story/");
   const { width } = useWindowDimensions();
   const { user, account } = useBrieflyAuth();
   const { config: appConfig } = useBrieflyAppConfig();
@@ -179,15 +182,21 @@ export function AppHeader() {
   return (
     <View style={[styles.wrap, { borderBottomColor: colors.border }]}>
       <View style={styles.row}>
-        <Link href="/" asChild>
-          <Pressable
-            accessibilityRole="link"
-            accessibilityLabel="Briefly home"
-            style={styles.brandLink}
-          >
+        {isStoryDetail ? (
+          <Pressable accessibilityRole="button"
+            accessibilityLabel="Return to previous page"
+            onPress={() => returnFromStory(storySource, storyScope)}
+            style={styles.brandLink}>
             <BrieflyLogo markSize={phoneNav ? 28 : 32} color={colors.text} />
           </Pressable>
-        </Link>
+        ) : (
+          <Link href="/" asChild>
+            <Pressable accessibilityRole="link" accessibilityLabel="Briefly home"
+              style={styles.brandLink}>
+              <BrieflyLogo markSize={phoneNav ? 28 : 32} color={colors.text} />
+            </Pressable>
+          </Link>
+        )}
 
         <View style={[styles.nav, compactNav && styles.navSingle]}>
           {renderNavLinks &&
