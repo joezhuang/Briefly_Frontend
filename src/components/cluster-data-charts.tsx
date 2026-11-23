@@ -189,6 +189,8 @@ const chartCopy = {
 
 const reviewCopy = {
   "en": {
+    add: "Add",
+    excluded: "Excluded from next release",
     edit: "Edit draft",
     preview: "Preview release",
     published: "Currently published",
@@ -225,6 +227,8 @@ const reviewCopy = {
     saved: "Your draft changes are saved privately.",
   },
   "es": {
+    add: "Añadir",
+    excluded: "Excluido de la próxima publicación",
     edit: "Editar borrador",
     preview: "Vista previa de publicación",
     published: "Publicación actual",
@@ -261,6 +265,8 @@ const reviewCopy = {
     saved: "Los cambios del borrador están guardados.",
   },
   "ja": {
+    add: "追加",
+    excluded: "次の公開版から除外",
     edit: "下書きを編集",
     preview: "公開プレビュー",
     published: "現在の公開版",
@@ -297,6 +303,8 @@ const reviewCopy = {
     saved: "下書きの変更が保存されました。",
   },
   "zh-CN": {
+    add: "添加",
+    excluded: "已从下次发布中排除",
     edit: "编辑草稿",
     preview: "发布预览",
     published: "当前公开版本",
@@ -333,6 +341,8 @@ const reviewCopy = {
     saved: "草稿修改已保存。",
   },
   "zh-TW": {
+    add: "加入",
+    excluded: "已從下次發布中排除",
     edit: "編輯草稿",
     preview: "發布預覽",
     published: "目前公開版本",
@@ -602,6 +612,25 @@ function editableDisplayTypes(chart: VerifiedDataChart): VerifiedDataChart["char
   return [verified];
 }
 
+type ReviewChartCard = {
+  chart: VerifiedDataChart;
+  removedIndex: number | null;
+};
+
+/** Excluded charts stay in the same editorial draft order, never in the release. */
+function draftCardsInOrder(review: ChartReviewDraft): ReviewChartCard[] {
+  const cards: ReviewChartCard[] = review.draft_charts.map((chart) => ({
+    chart, removedIndex: null,
+  }));
+  const removed = [...(review.removed_charts ?? [])]
+    .sort((left, right) => left.position - right.position || left.index - right.index);
+  for (const item of removed) {
+    const position = Math.min(Math.max(0, item.position), cards.length);
+    cards.splice(position, 0, { chart: item.chart, removedIndex: item.index });
+  }
+  return cards;
+}
+
 export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested = false }: {
   eventId: string;
   articleVersionId: number | null;
@@ -809,9 +838,15 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
     : status?.status === "ready" && Array.isArray(status.charts)
       ? status.charts
       : [];
-  const keyFigures = readyCharts.filter((chart) => chart.chart_type === "kpi" && chart.points.length === 1);
-  const comparisons = readyCharts.filter((chart) => chart.chart_type !== "kpi");
-  const shownComparisons = showMoreComparisons ? comparisons : comparisons.slice(0, 2);
+  // Edit draft shows every chart, including excluded ones in their original
+  // slots. Preview release and public views render ONLY included charts.
+  const visibleCards: ReviewChartCard[] = editMode && review
+    ? draftCardsInOrder(review)
+    : readyCharts.map((chart) => ({ chart, removedIndex: null }));
+  const keyFigures = visibleCards.filter((item) =>
+    item.chart.chart_type === "kpi" && item.chart.points.length === 1);
+  const comparisons = visibleCards.filter((item) => item.chart.chart_type !== "kpi");
+  const shownComparisons = editMode || showMoreComparisons ? comparisons : comparisons.slice(0, 2);
   const keyCardWidth = screenWidth >= 960 ? "31.5%" : "48.5%";
   const comparisonWidth = screenWidth >= 1030 ? "48.5%" : "100%";
   const quota = account?.is_admin === true ? null : status?.quota;
@@ -880,8 +915,23 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
     );
   };
 
-  const renderRemove = (chart: VerifiedDataChart) => {
+  const renderRemove = (chart: VerifiedDataChart, removedIndex: number | null) => {
     if (!editMode || !review?.ready) return null;
+    if (removedIndex !== null) {
+      return (
+        <View style={styles.moderationAction}>
+          <Text style={[styles.excludedLabel, { color: colors.textMuted }]}>
+            {reviewText.excluded}
+          </Text>
+          <Pressable accessibilityRole="button" disabled={moderating}
+            accessibilityLabel={reviewText.add + ": " + chart.title}
+            onPress={() => void moderateChart("restore", removedIndex)}
+            style={[styles.reviewAction, styles.addButton, { borderColor: colors.border }]}>
+            <Text style={[styles.source, { color: colors.accent }]}>{reviewText.add}</Text>
+          </Pressable>
+        </View>
+      );
+    }
     const index = review.draft_charts.indexOf(chart);
     if (index < 0) return null;
     const confirming = removeConfirmation?.key === chartKey &&
@@ -1021,12 +1071,16 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
         <View style={styles.dataGroup}>
           <Text style={[styles.groupHeading, { color: colors.text }]}>{copy.keyFigures}</Text>
           <View style={styles.figureGrid}>
-            {keyFigures.map((chart, index) => (
+            {keyFigures.map(({ chart, removedIndex }, index) => (
               <View key={chart.title + "-figure-" + index} style={[
-                styles.figureCard, { width: keyCardWidth, backgroundColor: colors.surface, borderColor: colors.border },
+                styles.figureCard,
+                removedIndex !== null && styles.excludedCard,
+                { width: keyCardWidth, backgroundColor: colors.surface, borderColor: colors.border },
               ]}>
-                <ChartBars chart={chart} copy={copy} />
-                {renderRemove(chart)}
+                <View style={removedIndex !== null ? styles.excludedChart : undefined}>
+                  <ChartBars chart={chart} copy={copy} />
+                </View>
+                {renderRemove(chart, removedIndex)}
               </View>
             ))}
           </View>
@@ -1036,16 +1090,20 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
         <View style={styles.dataGroup}>
           <Text style={[styles.groupHeading, { color: colors.text }]}>{copy.comparisons}</Text>
           <View style={styles.comparisonGrid}>
-            {shownComparisons.map((chart, index) => (
+            {shownComparisons.map(({ chart, removedIndex }, index) => (
               <View key={chart.title + "-comparison-" + index} style={[
-                styles.comparisonCard, { width: comparisonWidth, backgroundColor: colors.surface, borderColor: colors.border },
+                styles.comparisonCard,
+                removedIndex !== null && styles.excludedCard,
+                { width: comparisonWidth, backgroundColor: colors.surface, borderColor: colors.border },
               ]}>
-                <ChartBars chart={chart} copy={copy} />
-                {renderRemove(chart)}
+                <View style={removedIndex !== null ? styles.excludedChart : undefined}>
+                  <ChartBars chart={chart} copy={copy} />
+                </View>
+                {renderRemove(chart, removedIndex)}
               </View>
             ))}
           </View>
-          {comparisons.length > 2 && (
+          {comparisons.length > 2 && !editMode && (
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showMoreComparisons }}
               onPress={() => setComparisonDisclosure({ eventId, expanded: !showMoreComparisons })}
               style={styles.moreButton}
@@ -1058,7 +1116,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
           )}
         </View>
       )}
-      {readyCharts.length > 0 && (
+      {visibleCards.length > 0 && (
         <View style={[styles.sharedSourceRow, { borderTopColor: colors.border }]}>
           <Pressable accessibilityRole="button" accessibilityState={{ expanded: sourcesExpanded }}
             onPress={() => setSourceDisclosure({ eventId, expanded: !sourcesExpanded })}
@@ -1073,9 +1131,9 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
           </Pressable>
           {sourcesExpanded && (
             <View style={styles.evidenceList}>
-              {readyCharts.map((chart, index) => (
+              {visibleCards.map(({ chart, removedIndex }, index) => (
                 <ChartEvidence
-                  key={chart.title + "-source-details-" + index}
+                  key={chart.title + "-source-details-" + index + "-" + removedIndex}
                   chart={chart}
                   evidenceLabel={copy.evidence}
                   sourceLabel={copy.source}
@@ -1084,23 +1142,6 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
               ))}
             </View>
           )}
-        </View>
-      )}
-      {editMode && review?.ready && !!review.removed_charts?.length && (
-        <View style={[styles.reviewPanel, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-          <Text style={[styles.reviewHeading, { color: colors.text }]}>{reviewText.removedHeading}</Text>
-          {review.removed_charts.map((item) => (
-            <View key={item.index + "-" + item.title} style={styles.reviewActionRow}>
-              <Text style={[styles.note, styles.flexLabel, { color: colors.text }]}>
-                {item.title}
-              </Text>
-              <Pressable accessibilityRole="button" disabled={moderating}
-                style={[styles.reviewAction, { borderColor: colors.border }]}
-                onPress={() => void moderateChart("restore", item.index)}>
-                <Text style={[styles.source, { color: colors.accent }]}>{reviewText.restore}</Text>
-              </Pressable>
-            </View>
-          ))}
         </View>
       )}
       {reviewMode && review?.ready && (
@@ -1273,6 +1314,10 @@ const styles = StyleSheet.create({
   reviewLink: { alignSelf: "flex-start", minHeight: 40, justifyContent: "center" },
   reviewPanel: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 12, gap: 9 },
   reviewHeading: { fontSize: 14, fontWeight: "900" },
+  excludedCard: { borderStyle: "dashed" },
+  excludedChart: { opacity: 0.48 },
+  excludedLabel: { fontSize: 12, fontWeight: "700" },
+  addButton: { alignSelf: "flex-start", minWidth: 68, alignItems: "center" },
   chartDescription: { fontSize: 12, lineHeight: 18 },
   editForm: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 11, padding: 10, gap: 8 },
   editFieldLabel: { fontSize: 12, fontWeight: "800" },
