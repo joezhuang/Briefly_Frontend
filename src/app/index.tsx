@@ -35,6 +35,7 @@ import { HomeAdSlot } from "@/components/home-ad-slot";
 // Metro resolves the platform-specific .native/.web implementation at runtime.
 import { HomeInstallBanners } from "@/components/home-install-banners";
 import { NewsLocationGate } from "@/components/news-location-gate";
+import { FeedRefreshButton } from "@/components/feed-refresh-button";
 import { ScreenState } from "@/components/screen-state";
 import {
   StoryTile,
@@ -1145,27 +1146,15 @@ export default function HomeScreen() {
             </Text>
           </View>
 
-          <View style={[styles.headerActions, narrowPhone && styles.headerActionsNarrow]}>
-            {Platform.OS === "web" && (
-              <Pressable
-                onPress={() => {
-                  void refreshAppConfig();
-                  void loadFeed("refresh");
-                }}
-                disabled={refreshing || !locationUsable}
-                style={({ pressed }) => [
-                  styles.refreshButton,
-                  { borderColor: colors.border },
-                  (refreshing || !locationUsable) && styles.refreshDisabled,
-                  pressed && styles.refreshPressed,
-                ]}
-              >
-                <Text style={[styles.refreshText, { color: colors.textMuted }]}>
-                  {copy.refresh}
-                </Text>
-              </Pressable>
-            )}
-          </View>
+          <FeedRefreshButton
+            label={copy.refresh}
+            refreshing={refreshing}
+            disabled={!locationUsable}
+            onRefresh={() => {
+              void refreshAppConfig();
+              void loadFeed("refresh");
+            }}
+          />
         </View>
         )}
 
@@ -1654,7 +1643,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
   },
-  headingRowNarrow: { flexDirection: "column", gap: 8 },
+  headingRowNarrow: { gap: 8 },
   headingCopy: { flex: 1, minWidth: 0, gap: 8 },
   editionKickerRow: {
     flexDirection: "row",
@@ -1693,25 +1682,8 @@ const styles = StyleSheet.create({
     lineHeight: 31,
     letterSpacing: -0.5,
   },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    flexShrink: 0,
-    gap: 10,
-  },
-  headerActionsNarrow: { alignSelf: "flex-end" },
   subtitle: { fontSize: 15, lineHeight: 23, maxWidth: 780 },
   subtitleCompact: { fontSize: 13, lineHeight: 18 },
-  refreshButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  refreshDisabled: { opacity: 0.5 },
-  refreshPressed: { opacity: 0.7 },
-  refreshText: { fontSize: 12, fontWeight: "700" },
   sectionHeading: {
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: 20,

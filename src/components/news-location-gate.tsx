@@ -18,6 +18,7 @@ import {
   type NewsLocationCountryOption,
   type NewsLocationRegionOption,
 } from "@/api/briefly";
+import { FeedRefreshButton } from "@/components/feed-refresh-button";
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
 import type {
@@ -413,23 +414,12 @@ export function NewsLocationGate({
             </Text>
             <Text style={[styles.chevron, { color: colors.textMuted }]}>{expanded ? "⌃" : "⌄"}</Text>
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={refreshLabel}
-            accessibilityState={{ disabled: refreshDisabled || refreshing, busy: refreshing }}
-            disabled={refreshDisabled || refreshing}
-            onPress={onRefresh}
-            style={({ pressed }) => [
-              styles.refreshIconButton,
-              { borderColor: colors.border },
-              (refreshDisabled || refreshing) && styles.disabled,
-              pressed && styles.pressed,
-            ]}
-          >
-            {refreshing
-              ? <ActivityIndicator size="small" color={colors.textMuted} />
-              : <Text style={[styles.refreshIcon, { color: colors.text }]}>↻</Text>}
-          </Pressable>
+          <FeedRefreshButton
+            label={refreshLabel}
+            refreshing={refreshing}
+            disabled={refreshDisabled}
+            onRefresh={onRefresh}
+          />
         </View>
         {expanded && (
           <View style={styles.modeRow}>
@@ -747,11 +737,6 @@ const styles = StyleSheet.create({
     alignItems: "center", gap: 8,
   },
   compactLocation: { flexShrink: 1, minWidth: 0, fontSize: 16, fontWeight: "800" },
-  refreshIconButton: {
-    width: 44, height: 44, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth,
-    alignItems: "center", justifyContent: "center",
-  },
-  refreshIcon: { fontSize: 24, lineHeight: 28, fontWeight: "700" },
   pressed: { opacity: 0.65 },
   eyebrow: { fontSize: 10, fontWeight: "900", letterSpacing: 1.1 },
   modeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
