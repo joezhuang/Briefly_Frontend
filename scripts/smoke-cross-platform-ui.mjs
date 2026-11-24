@@ -206,7 +206,16 @@ const checks = [
       "void searchBrieflyClusters(trimmedQuery, {",
       "includeDraft: PREVIEW_DRAFTS",
       "language,",
-      "<StoryTile article={article} />",
+      '<StoryTile article={article} analyticsSource="search" />',
+    ],
+  },
+  {
+    name: "Story tiles preserve the originating surface in story navigation",
+    file: "src/components/story-tile.tsx",
+    needles: [
+      'if (analyticsSource) params.set("source", analyticsSource);',
+      'if (analyticsScope) params.set("scope", analyticsScope);',
+      "href ?? storyTileHref(article, analyticsSource, analyticsScope, videoUrl)",
     ],
   },
   {
