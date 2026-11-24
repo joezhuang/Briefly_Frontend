@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { HomepageFeedScope } from "@/api/briefly";
 import { layout } from "@/theme/tokens";
@@ -84,12 +85,14 @@ export function PinnedFeedCategoryBar({
 }) {
   const { colors } = useBrieflyTheme();
   const { width } = useWindowDimensions();
+  const { top: safeAreaTop } = useSafeAreaInsets();
   if (!visible) return null;
   return (
     <View
       style={[
         styles.pinnedLayer,
-        { backgroundColor: colors.background, borderBottomColor: colors.border },
+        // Absolute children use the screen edge, not SafeAreaView padding.
+        { top: safeAreaTop, backgroundColor: colors.background, borderBottomColor: colors.border },
       ]}
     >
       <View style={[styles.pinnedContent, width < 480 && styles.pinnedContentCompact]}>
@@ -221,7 +224,6 @@ export function FeedCategoryBar({
 const styles = StyleSheet.create({
   pinnedLayer: {
     position: "absolute",
-    top: 0,
     left: 0,
     right: 0,
     zIndex: 30,
