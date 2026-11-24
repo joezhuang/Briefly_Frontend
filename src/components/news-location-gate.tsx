@@ -38,6 +38,10 @@ type Props = {
   location: FeedLocation | null;
   busy?: boolean;
   error?: string | null;
+  refreshing: boolean;
+  refreshDisabled: boolean;
+  refreshLabel: string;
+  onRefresh: () => void;
   onEnableAuto: () => void;
   onSaveManual: (input: ManualInput) => void;
   onDisable: () => void;
@@ -213,6 +217,10 @@ export function NewsLocationGate({
   location,
   busy = false,
   error,
+  refreshing,
+  refreshDisabled,
+  refreshLabel,
+  onRefresh,
   onEnableAuto,
   onSaveManual,
   onDisable,
@@ -220,6 +228,7 @@ export function NewsLocationGate({
   const { colors } = useBrieflyTheme();
   const { language } = useBrieflyLanguage();
   const labels = locationCopy[language] ?? locationCopy.en;
+  const [expanded, setExpanded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [manualMode, setManualMode] = useState(mode === "manual");
   const [picker, setPicker] = useState<PickerKind>(null);
@@ -238,15 +247,9 @@ export function NewsLocationGate({
     !!location?.country &&
     (scope === "national" || !!localName);
 
-  const compactLocation =
-    scope === "national"
-      ? location?.country || ""
-      : [location?.region || location?.city, location?.country]
-          .filter(Boolean)
-          .join(" · ");
-
-  const modeLabel =
-    mode === "auto" ? labels.auto : mode === "manual" ? labels.manual : labels.off;
+  const compactLocation = usable
+    ? (scope === "national" ? location?.country : localName)
+    : (scope === "national" ? labels.chooseCountry : labels.chooseRegion);
   const displayedError = error?.startsWith("Location permission")
     ? labels.permissionError
     : error === "Unable to save news location."
@@ -394,91 +397,56 @@ export function NewsLocationGate({
     </Pressable>
   );
 
-  if (usable && !displayedError) {
-    return (
-      <>
-        <View style={[styles.compactBar, { borderColor: colors.border }]}> 
-          <Text
-            style={[styles.compactLocation, { color: colors.textMuted }]}
-            numberOfLines={1}
-          >
-            {compactLocation}
-          </Text>
-          <View style={styles.compactActions}>
-            <Text style={[styles.compactMode, { color: colors.textMuted }]}> 
-              {modeLabel}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => openSettings(false)}
-              hitSlop={8}
-            >
-              <Text style={[styles.changeText, { color: colors.accent }]}>{labels.change}</Text>
-            </Pressable>
-          </View>
-        </View>
-        <LocationModal
-          visible={modalOpen}
-          scope={scope}
-          mode={mode}
-          busy={busy}
-          manualMode={manualMode}
-          setManualMode={setManualMode}
-          picker={picker}
-          setPicker={setPicker}
-          search={search}
-          setSearch={setSearch}
-          country={country}
-          region={region}
-          loadingCountries={loadingCountries}
-          loadingRegions={loadingRegions}
-          filteredCountries={filteredCountries}
-          filteredRegions={filteredRegions}
-          optionsError={optionsError}
-          onChooseCountry={chooseCountry}
-          onChooseRegion={chooseRegion}
-          onEnableAuto={() => {
-            setModalOpen(false);
-            onEnableAuto();
-          }}
-          onDisable={() => {
-            setModalOpen(false);
-            onDisable();
-          }}
-          onSaveManual={saveManual}
-          onClose={() => setModalOpen(false)}
-          modeButton={modeButton}
-        />
-      </>
-    );
-  }
-
   return (
     <>
-      <View
-        style={[
-          styles.setupCard,
-          { backgroundColor: colors.surface, borderColor: colors.border },
-        ]}
-      >
-        <View style={styles.setupHeader}>
-          <View style={styles.setupCopy}>
-            <Text style={[styles.eyebrow, { color: colors.textMuted }]}>{labels.eyebrow}</Text>
-            <Text style={[styles.title, { color: colors.text }]}> 
-              {scope === "national" ? labels.setNational : labels.setLocal}
+      <View style={styles.compactPanel}>
+        <View style={styles.compactBar}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={labels.changeLocation + ": " + compactLocation}
+            accessibilityState={{ expanded }}
+            onPress={() => setExpanded((value) => !value)}
+            style={({ pressed }) => [styles.locationTrigger, pressed && styles.pressed]}
+          >
+            <Text style={[styles.compactLocation, { color: colors.text }]} numberOfLines={1}>
+              {compactLocation}
             </Text>
-            <Text style={[styles.body, { color: colors.textMuted }]}> 
-              {displayedError || labels.setupBody}
-            </Text>
+            <Text style={[styles.chevron, { color: colors.textMuted }]}>{expanded ? "⌃" : "⌄"}</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={refreshLabel}
+            accessibilityState={{ disabled: refreshDisabled || refreshing, busy: refreshing }}
+            disabled={refreshDisabled || refreshing}
+            onPress={onRefresh}
+            style={({ pressed }) => [
+              styles.refreshIconButton,
+              { borderColor: colors.border },
+              (refreshDisabled || refreshing) && styles.disabled,
+              pressed && styles.pressed,
+            ]}
+          >
+            {refreshing
+              ? <ActivityIndicator size="small" color={colors.textMuted} />
+              : <Text style={[styles.refreshIcon, { color: colors.text }]}>↻</Text>}
+          </Pressable>
+        </View>
+        {expanded && (
+          <View style={styles.modeRow}>
+            {modeButton("auto", labels.auto, mode === "auto", () => {
+              setExpanded(false);
+              onEnableAuto();
+            })}
+            {modeButton("manual", labels.change, mode === "manual", () => {
+              setExpanded(false);
+              openSettings(true);
+            })}
           </View>
-          {busy && <ActivityIndicator size="small" color={colors.textMuted} />}
-        </View>
-
-        <View style={styles.modeRow}>
-          {modeButton("auto", labels.useCurrent, mode === "auto", onEnableAuto)}
-          {modeButton("manual", labels.chooseManually, mode === "manual", () => openSettings(true))}
-          {modeButton("off", labels.off, mode === "off", onDisable)}
-        </View>
+        )}
+        {!!displayedError && (
+          <Text style={[styles.helper, { color: colors.textMuted }]}>{displayedError}</Text>
+        )}
+        {busy && <ActivityIndicator size="small" color={colors.textMuted} />}
       </View>
 
       <LocationModal
@@ -766,37 +734,26 @@ function LocationModal({
 }
 
 const styles = StyleSheet.create({
+  compactPanel: { gap: 6 },
   compactBar: {
-    minHeight: 34,
-    marginBottom: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-    paddingVertical: 6,
+    gap: 8,
   },
-  compactLocation: { flex: 1, minWidth: 0, fontSize: 12, fontWeight: "700" },
-  compactActions: { flexDirection: "row", alignItems: "center", gap: 10 },
-  compactMode: { fontSize: 11, fontWeight: "700" },
-  changeText: { fontSize: 12, fontWeight: "800" },
-  setupCard: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 18,
-    gap: 12,
+  locationTrigger: {
+    flex: 1, minWidth: 0, minHeight: 44, flexDirection: "row",
+    alignItems: "center", gap: 8,
   },
-  setupHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
+  compactLocation: { flexShrink: 1, minWidth: 0, fontSize: 16, fontWeight: "800" },
+  refreshIconButton: {
+    width: 44, height: 44, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center", justifyContent: "center",
   },
-  setupCopy: { flex: 1, gap: 3 },
+  refreshIcon: { fontSize: 24, lineHeight: 28, fontWeight: "700" },
+  pressed: { opacity: 0.65 },
   eyebrow: { fontSize: 10, fontWeight: "900", letterSpacing: 1.1 },
-  title: { fontSize: 17, lineHeight: 22, fontWeight: "900" },
-  body: { fontSize: 13, lineHeight: 19 },
   modeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   modeButton: {
     minHeight: 34,

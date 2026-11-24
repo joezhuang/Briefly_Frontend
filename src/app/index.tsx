@@ -1103,7 +1103,7 @@ export default function HomeScreen() {
       )}
 
       <View
-        style={[styles.header, mobileHeader && styles.headerCompact]}
+        style={[styles.header, mobileHeader && styles.headerCompact, scope !== "top" && styles.locationHeader]}
         onLayout={(event) => {
           headerOffsetRef.current = event.nativeEvent.layout.y;
           if (categoryOffsetRef.current !== null) {
@@ -1111,6 +1111,7 @@ export default function HomeScreen() {
           }
         }}
       >
+        {scope === "top" && (
         <View style={[styles.headingRow, narrowPhone && styles.headingRowNarrow]}>
           <View style={styles.headingCopy}>
             <View style={styles.editionKickerRow}>
@@ -1166,14 +1167,23 @@ export default function HomeScreen() {
             )}
           </View>
         </View>
+        )}
 
         {scope !== "top" && locationReady && (
           <NewsLocationGate
+            key={scope}
             scope={scope}
             mode={newsLocation.mode}
             location={newsLocation.location}
             busy={locationBusy}
             error={locationError}
+            refreshing={refreshing}
+            refreshDisabled={!locationUsable || locationBusy}
+            refreshLabel={copy.refresh}
+            onRefresh={() => {
+              void refreshAppConfig();
+              void loadFeed("refresh");
+            }}
             onEnableAuto={() => void handleEnableAutoLocation()}
             onSaveManual={(input) => void handleSaveManualLocation(input)}
             onDisable={() => void handleDisableLocation()}
@@ -1216,6 +1226,7 @@ export default function HomeScreen() {
 
       {authReady && locationUsable && !loading && !error && lead && (
         <>
+          {scope === "top" && (
           <View style={[styles.sectionHeading, { borderTopColor: colors.border }]}>
             <View style={styles.sectionHeadingCopy}>
               <Text style={[styles.sectionEyebrow, { color: colors.accent }]}>
@@ -1231,6 +1242,7 @@ export default function HomeScreen() {
               </Text>
             </View>}
           </View>
+          )}
 
           {desktop ? (
             <View style={styles.heroGrid}>
@@ -1635,6 +1647,7 @@ const styles = StyleSheet.create({
   announcementText: { fontSize: 14, lineHeight: 20, fontWeight: "700" },
   header: { paddingTop: 22, paddingBottom: 20, gap: 18 },
   headerCompact: { paddingTop: 14, paddingBottom: 14, gap: 12 },
+  locationHeader: { paddingTop: 8, paddingBottom: 12, gap: 8 },
   headingRow: {
     flexDirection: "row",
     alignItems: "flex-start",
