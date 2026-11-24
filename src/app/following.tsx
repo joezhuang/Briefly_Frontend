@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SCROLL_SCREEN_EDGES, useScrollSafeArea } from "@/components/edge-to-edge";
 
 import {
   acknowledgeEventUpdate,
@@ -125,6 +126,7 @@ export default function FollowingScreen() {
   const { config: appConfig } = useBrieflyAppConfig();
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+  const { scrollEndStyle } = useScrollSafeArea();
   const text = copy[language] ?? copy.en;
   const followingEnabled = appConfig?.following_enabled !== false;
   const [events, setEvents] = useState<FollowedEvent[]>([]);
@@ -213,9 +215,9 @@ export default function FollowingScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={SCROLL_SCREEN_EDGES} style={[styles.screen, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, scrollEndStyle]}
         onScroll={(event) => onScrollOffset(event.nativeEvent.contentOffset.y)}
         scrollEventThrottle={32}
       >

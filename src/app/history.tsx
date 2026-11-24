@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SCROLL_SCREEN_EDGES, useScrollSafeArea } from "@/components/edge-to-edge";
 
 import { AppHeader } from "@/components/app-header";
 import { ScreenState } from "@/components/screen-state";
@@ -73,12 +74,13 @@ export default function HistoryScreen() {
   const { width } = useWindowDimensions();
   const { language } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+  const { scrollEndStyle } = useScrollSafeArea();
   const { items, ready, clearHistory } = useReadingHistory();
   const labels = copy[language] ?? copy.en;
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+    <SafeAreaView edges={SCROLL_SCREEN_EDGES} style={[styles.screen, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={[styles.scroll, scrollEndStyle]}>
         <View style={[styles.page, width < 480 && styles.pageCompact]}>
           <AppHeader />
 

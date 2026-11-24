@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useScrollSafeArea } from "@/components/edge-to-edge";
 
 import { trackProductEvent } from "@/analytics/product-analytics";
 import { StoryVideo } from "@/components/story-video";
@@ -169,6 +170,8 @@ export function EventPreviewView({
   signedIn?: boolean;
 }) {
   const { width } = useWindowDimensions();
+  const { scrollEndStyle } = useScrollSafeArea();
+
   const { language, t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
   const copy = previewCopy[language] ?? previewCopy.en;
@@ -264,7 +267,7 @@ export function EventPreviewView({
     <ScrollView
       ref={scrollRef}
       style={[styles.screen, { backgroundColor: colors.surface }]}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, scrollEndStyle]}
     >
       <View style={[styles.page, width < 480 && styles.pageCompact]}>
         {!!selectedVideo && (

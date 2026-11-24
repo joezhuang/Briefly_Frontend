@@ -150,6 +150,13 @@ function AppStack() {
     // CSS owns exact mobile root sizing; do not imperatively add any
     // dynamic minimum height, which can produce a growing bottom band.
 
+    // Also opt in during web development, where the static HTML template may
+    // not be used. Preserve existing viewport directives and zoom behaviour.
+    const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+    if (viewport && !viewport.content.includes("viewport-fit=cover")) {
+      viewport.content = viewport.content.replace(/,?\s*viewport-fit\s*=\s*[^,]+/g, "") + ", viewport-fit=cover";
+    }
+
     let themeColor = document.querySelector<HTMLMetaElement>(
       'meta[name="theme-color"]',
     );

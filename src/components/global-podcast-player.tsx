@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { usePodcastPlayer } from "@/context/podcast-player";
 import { useBrieflyTheme } from "@/context/theme";
@@ -13,6 +14,7 @@ function formatTime(value: number) {
 
 export function GlobalPodcastPlayer() {
   const { colors } = useBrieflyTheme();
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const {
     currentTrack,
     queue,
@@ -52,7 +54,7 @@ export function GlobalPodcastPlayer() {
 
   if (minimized) {
     return (
-      <View pointerEvents="box-none" style={styles.minimizedOverlay}>
+      <View pointerEvents="box-none" style={[styles.minimizedOverlay, { bottom: 18 + bottomInset }]}>
         <View
           style={[
             styles.minimizedPlayer,
@@ -110,7 +112,7 @@ export function GlobalPodcastPlayer() {
   }
 
   return (
-    <View pointerEvents="box-none" style={styles.overlay}>
+    <View pointerEvents="box-none" style={[styles.overlay, { bottom: 14 + bottomInset }]}>
       <View
         style={[
           styles.player,

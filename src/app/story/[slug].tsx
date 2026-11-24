@@ -3,6 +3,7 @@ import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, AppState, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SCROLL_SCREEN_EDGES, useScrollSafeArea } from "@/components/edge-to-edge";
 
 import { trackProductEvent } from "@/analytics/product-analytics";
 import {
@@ -298,6 +299,7 @@ export default function StoryDetailScreen() {
 
   const { language, t, setTransientLanguage } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+  const { bottomInset } = useScrollSafeArea();
   const navigation = useNavigation();
   const { autoTranslateStories, preferencesReady } = useTranslationPreferences();
 
@@ -1658,7 +1660,7 @@ export default function StoryDetailScreen() {
       storyVideoEnabled,
     );
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <SafeAreaView edges={SCROLL_SCREEN_EDGES} style={{ flex: 1, backgroundColor: colors.background }}>
       {isSharedStory && !!resolvedEventId && (
         <SharedAppChoice
           appPath={`/s/${resolvedEventId}`}
@@ -1758,7 +1760,7 @@ export default function StoryDetailScreen() {
 
   return (
     <SafeAreaView
-      edges={["top"]}
+      edges={SCROLL_SCREEN_EDGES}
       style={{ flex: 1, backgroundColor: colors.surface }}
     >
       {isSharedStory && !!resolvedEventId && (
@@ -2043,7 +2045,7 @@ export default function StoryDetailScreen() {
       />
 
       {showLoginNudge && !user && !isSharedStory && (
-        <View pointerEvents="box-none" style={styles.loginNudgeHost}>
+        <View pointerEvents="box-none" style={[styles.loginNudgeHost, { bottom: 18 + bottomInset }]}>
           <View
             accessibilityLabel={loginNudgeText.title}
             style={[

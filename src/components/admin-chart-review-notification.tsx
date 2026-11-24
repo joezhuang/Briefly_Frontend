@@ -1,6 +1,7 @@
 import { router, usePathname } from "expo-router";
 import { useEffect, useState } from "react";
 import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getChartReviewQueue, type ChartReviewQueue } from "@/api/briefly";
 import { chartReviewStoryHref } from "@/utils/chart-review-link";
@@ -17,6 +18,7 @@ function queueSignature(queue: ChartReviewQueue): string {
 export function AdminChartReviewNotification() {
   const { ready, user, account } = useBrieflyAuth();
   const { colors } = useBrieflyTheme();
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const pathname = usePathname();
   const [queueByUser, setQueueByUser] = useState<{
     userId: string;
@@ -61,7 +63,7 @@ export function AdminChartReviewNotification() {
   if (dismissed?.userId === userId && dismissed.signature === signature) return null;
 
   return (
-    <View pointerEvents="box-none" style={styles.position}>
+    <View pointerEvents="box-none" style={[styles.position, { bottom: 82 + bottomInset }]}>
       <View style={[styles.notice, { backgroundColor: colors.surface,
         borderColor: colors.border }]}>
         <View style={styles.copy}>

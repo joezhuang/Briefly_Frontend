@@ -5,6 +5,7 @@ import { StoryVideo } from "@/components/story-video";
 type Props = {
   url: string;
   posterUrl?: string | null;
+  topInset?: number;
   accessibilityLabel?: string;
   initialTime?: number;
   onTimeUpdate?: (seconds: number) => void;
@@ -16,6 +17,7 @@ type Props = {
 export function FloatingStoryVideo({
   url,
   posterUrl,
+  topInset = 0,
   accessibilityLabel = "Playing video",
   initialTime = 0,
   onTimeUpdate,
@@ -27,7 +29,7 @@ export function FloatingStoryVideo({
   const playerWidth = Math.min(360, Math.max(220, width * 0.62));
 
   return (
-    <View pointerEvents="box-none" style={styles.overlay}>
+    <View pointerEvents="box-none" style={[styles.overlay, { top: 12 + topInset }]}>
       <View style={[styles.player, { width: playerWidth }]}>
         <StoryVideo
           url={url}

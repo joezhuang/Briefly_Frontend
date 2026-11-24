@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SCROLL_SCREEN_EDGES, useScrollSafeArea } from "@/components/edge-to-edge";
 
 import { trackProductEvent } from "@/analytics/product-analytics";
 import {
@@ -297,6 +298,7 @@ export default function HomeScreen() {
   const { ready: authReady, account } = useBrieflyAuth();
   const { config: appConfig, refresh: refreshAppConfig } = useBrieflyAppConfig();
   const { colors } = useBrieflyTheme();
+  const { topInset, bottomInset, scrollEndStyle } = useScrollSafeArea();
   const initialHomeFeed =
     findRememberedHomeFeed("top", language, {
       mode: "off",
@@ -1370,6 +1372,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView
       {...swipeResponder.panHandlers}
+      edges={SCROLL_SCREEN_EDGES}
       style={[styles.screen, { backgroundColor: colors.background }]}
     >
       <FlatList
@@ -1455,7 +1458,7 @@ export default function HomeScreen() {
             )}
           </View>
         }
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, scrollEndStyle]}
         onContentSizeChange={() => {
           if (
             restoredScrollRef.current ||
@@ -1570,6 +1573,7 @@ export default function HomeScreen() {
       {floatingVideoEnabled && videoFloating && videoSession && (
         <FloatingStoryVideo
           url={videoSession.url}
+          topInset={topInset}
           posterUrl={videoSession.posterUrl}
           accessibilityLabel={videoSession.headline}
           initialTime={videoResumeTime}
@@ -1594,6 +1598,7 @@ export default function HomeScreen() {
           style={({ pressed }) => [
             styles.topButton,
             {
+              bottom: 22 + bottomInset,
               backgroundColor: colors.surface,
               borderColor: colors.border,
               opacity: pressed ? 0.72 : 0.94,

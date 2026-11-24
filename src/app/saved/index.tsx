@@ -6,6 +6,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SCROLL_SCREEN_EDGES, useScrollSafeArea } from "@/components/edge-to-edge";
 
 import { AppHeader } from "@/components/app-header";
 import { ScreenState } from "@/components/screen-state";
@@ -20,10 +21,11 @@ export default function SavedScreen() {
   const { snapshots, ready } = useSavedArticles();
   const { t } = useBrieflyLanguage();
   const { colors } = useBrieflyTheme();
+  const { scrollEndStyle } = useScrollSafeArea();
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+    <SafeAreaView edges={SCROLL_SCREEN_EDGES} style={[styles.screen, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={[styles.scroll, scrollEndStyle]}>
         <View style={[styles.page, width < 480 && styles.pageCompact]}>
           <AppHeader />
 

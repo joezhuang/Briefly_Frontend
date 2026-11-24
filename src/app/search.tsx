@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SCROLL_SCREEN_EDGES, useScrollSafeArea } from "@/components/edge-to-edge";
 
 import { searchBrieflyClusters } from "@/api/search";
 import { AppHeader } from "@/components/app-header";
@@ -42,6 +43,7 @@ export default function SearchScreen() {
   const { language, t } = useBrieflyLanguage();
   const { config: appConfig } = useBrieflyAppConfig();
   const { colors } = useBrieflyTheme();
+  const { scrollEndStyle } = useScrollSafeArea();
   const labels = searchCopy[language] ?? searchCopy.en;
 
   const [query, setQuery] = useState("");
@@ -115,9 +117,9 @@ export default function SearchScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={SCROLL_SCREEN_EDGES} style={[styles.screen, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, scrollEndStyle]}
         keyboardShouldPersistTaps="handled"
         onScroll={(event) => onScrollOffset(event.nativeEvent.contentOffset.y)}
         scrollEventThrottle={32}

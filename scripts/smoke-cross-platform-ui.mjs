@@ -20,6 +20,20 @@ function requireAll(relativePath, needles) {
 }
 
 const checks = [
+  {"name":"Scrollable screens reserve safe area inside content instead of clipping the viewport","file":"src/components/edge-to-edge.ts","needles":["SCROLL_SCREEN_EDGES: Edge[] = [\"top\", \"left\", \"right\"]","useSafeAreaInsets()","scrollEndStyle: { paddingBottom: bottom }"]},
+  {"name":"Edge-to-edge scrolling and safe last item: src/app/index.tsx","file":"src/app/index.tsx","needles":["edges={SCROLL_SCREEN_EDGES}","contentContainerStyle={[styles.scrollContent, scrollEndStyle]}","bottom: 22 + bottomInset","topInset={topInset}"]},
+  {"name":"Edge-to-edge scrolling and safe last item: src/app/search.tsx","file":"src/app/search.tsx","needles":["edges={SCROLL_SCREEN_EDGES}","contentContainerStyle={[styles.scroll, scrollEndStyle]}"]},
+  {"name":"Edge-to-edge scrolling and safe last item: src/app/following.tsx","file":"src/app/following.tsx","needles":["edges={SCROLL_SCREEN_EDGES}","contentContainerStyle={[styles.scroll, scrollEndStyle]}"]},
+  {"name":"Edge-to-edge scrolling and safe last item: src/app/history.tsx","file":"src/app/history.tsx","needles":["edges={SCROLL_SCREEN_EDGES}","contentContainerStyle={[styles.scroll, scrollEndStyle]}"]},
+  {"name":"Edge-to-edge scrolling and safe last item: src/app/saved/index.tsx","file":"src/app/saved/index.tsx","needles":["edges={SCROLL_SCREEN_EDGES}","contentContainerStyle={[styles.scroll, scrollEndStyle]}"]},
+  {"name":"Both story variants protect safe controls while allowing bottom-edge scrolling","file":"src/app/story/[slug].tsx","needles":["edges={SCROLL_SCREEN_EDGES}","bottom: 18 + bottomInset"]},
+  {"name":"Reader scroll padding follows gesture inset: src/components/event-preview-view.tsx","file":"src/components/event-preview-view.tsx","needles":["useScrollSafeArea()","contentContainerStyle={[styles.scrollContent, scrollEndStyle]}"]},
+  {"name":"Reader scroll padding follows gesture inset: src/components/article-view.tsx","file":"src/components/article-view.tsx","needles":["useScrollSafeArea()","contentContainerStyle={[styles.scrollContent, scrollEndStyle]}"]},
+  {"name":"Global podcast controls avoid the system gesture area","file":"src/components/global-podcast-player.tsx","needles":["bottom: 18 + bottomInset","bottom: 14 + bottomInset"]},
+  {"name":"Admin chart notification avoids the system gesture area","file":"src/components/admin-chart-review-notification.tsx","needles":["bottom: 82 + bottomInset"]},
+  {"name":"Floating home video respects the status bar","file":"src/components/floating-story-video.tsx","needles":["topInset = 0","top: 12 + topInset"]},
+  {"name":"Static mobile web opts into the gesture area before hydration","file":"src/app/+html.tsx","needles":["name=\"viewport\"","viewport-fit=cover","<ScrollViewStyleReset />","<body>{children}</body>"]},
+  {"name":"Web development uses the same viewport fit without overriding theme handling","file":"src/app/_layout.tsx","needles":["viewport.content.includes(\"viewport-fit=cover\")","themeColor.content = background"]},
   {
     name: "Homepage editorial cards place text and tools outside photographs at every width",
     file: "src/components/story-tile.tsx",
@@ -334,7 +348,7 @@ const checks = [
     file: "src/app/story/[slug].tsx",
     needles: [
       "showLoginNudge && !user && !isSharedStory",
-      'pointerEvents="box-none" style={styles.loginNudgeHost}',
+      'pointerEvents="box-none" style={[styles.loginNudgeHost, { bottom: 18 + bottomInset }]}',
       'position: "absolute"',
       'bottom: 18',
       'maxWidth: 640',
