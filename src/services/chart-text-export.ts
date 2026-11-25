@@ -16,6 +16,21 @@ export function publishedChartsForExport(isAdmin: boolean, review: ChartReviewDr
   return status?.published === true && status.status === "ready" ? status.charts : [];
 }
 
+// null means every chart; an empty selection means no charts, never all.
+export type ChartExportSelection = readonly number[] | null;
+
+export function selectedExportCharts(charts: readonly VerifiedDataChart[], selection: ChartExportSelection): VerifiedDataChart[] {
+  return charts.filter((_, index) => selection === null || selection.includes(index));
+}
+
+export function toggleExportChart(selection: ChartExportSelection, index: number, count: number): ChartExportSelection {
+  if (!Number.isInteger(index) || index < 0 || index >= count) return selection;
+  const current = new Set(selection ?? Array.from({ length: count }, (_, i) => i));
+  if (current.has(index)) current.delete(index);
+  else current.add(index);
+  return current.size === count ? null : [...current].sort((a, b) => a - b);
+}
+
 const clean = (value: string | undefined) => (value ?? "").replace(/\s+/g, " ").trim();
 const cell = (value: string) => value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
 

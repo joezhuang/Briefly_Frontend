@@ -22,9 +22,10 @@ function requireAll(relativePath, needles) {
 }
 
 const checks = [
+  {"name":"Chart text export supports multi-select, select all, clear all and disabled empty export","file":"src/components/chart-text-export.tsx","needles":["useState<ChartExportSelection>(null)","selectedExportCharts(charts, selection)","accessibilityRole=\"checkbox\"","toggleExportChart(current, index, charts.length)","setSelection([])","setSelection(null)","chosen.length ? formatChartText","pill(copy.share, () => void run(\"share\"), true, !chosen.length)","pill(copy.copy, () => void run(\"copy\"), false, !chosen.length)"]},
   {"name":"Chart text defaults to simple with references optional for both formats","file":"src/components/chart-text-export.tsx","needles":["useState(false);","const [includeReferences, setIncludeReferences] = useState(false);","setIncludeReferences(false)","setIncludeReferences(true)","storyUrl, includeReferences, labels:"]},
   {"name":"Chart text export is separate from the article share and restricted to admins","file":"src/components/cluster-data-charts.tsx","needles":["publishedChartsForExport(isAdmin, review, status)","{isAdmin && !moderating && exportCharts.length > 0 && (","<ChartTextExport","charts={exportCharts}"]},
-  {"name":"Chart export preserves full text and offers both forum formats","file":"src/components/chart-text-export.tsx","needles":["useState<ChartTextFormat>(\"plain\")","setFormat(\"markdown\")","shareBrieflyText(headline, text)","navigator.clipboard.writeText(text)","<Text selectable","charts.slice(selection, selection + 1)"]},
+  {"name":"Chart export preserves full text and offers both forum formats","file":"src/components/chart-text-export.tsx","needles":["useState<ChartTextFormat>(\"plain\")","setFormat(\"markdown\")","shareBrieflyText(headline, text)","navigator.clipboard.writeText(text)","<Text selectable","selectedExportCharts(charts, selection)"]},
   {"name":"Text shares do not use the story URL-only fallback","file":"src/navigation/platform-share.ts","needles":["export async function shareBrieflyText","navigator.share({ title, text })","navigator.clipboard.writeText(text)","{ message: text,"]},
   {"name":"Top uses the same refresh icon on every platform without a separate narrow-phone row","file":"src/app/index.tsx","needles":["<FeedRefreshButton\n            label={copy.refresh}","disabled={!locationUsable}","headingRowNarrow: { gap: 8 }","<RefreshControl"]},
   {"name":"Shared refresh icon preserves accessible labels, busy and disabled states","file":"src/components/feed-refresh-button.tsx","needles":["accessibilityLabel={label}","accessibilityState={{ disabled: unavailable, busy: refreshing }}","const unavailable = disabled || refreshing;","disabled={unavailable}","onPress={onRefresh}","<ActivityIndicator",">↻</Text>","width: 44, height: 44"]},
@@ -1545,7 +1546,7 @@ ensure(
 const chartExportJS = ts.transpileModule(read("src/services/chart-text-export.ts"), {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
 }).outputText;
-const { formatChartText, publishedChartsForExport } = await import(
+const { formatChartText, publishedChartsForExport, selectedExportCharts, toggleExportChart } = await import(
   "data:text/javascript;base64," + Buffer.from(chartExportJS).toString("base64")
 );
 const exportLabels = { item:"Item", value:"Value", source:"Source", sources:"Sources",
@@ -1582,6 +1583,19 @@ assert.ok(referencedMarkdownExport.includes("| Road | 34.125 billion litres | [1
 assert.equal(formatChartText([chartFixture], {...chartOptions, format:"plain", includeReferences:false}), plainExport);
 const group = {...chartFixture, chart_type:"grouped", unit:"%", points:[{...chartFixture.points[0], group:"Road", series:"2050", label:"Road", value:15}]};
 assert.ok(formatChartText([group], {...chartOptions, format:"plain"}).includes("Road / 2050: 15%"));
+const exportSelectionFixture = [chartFixture, group, {...chartFixture, title:"Third chart", points:[{...chartFixture.points[0], label:"Third", value:7}]}];
+assert.deepEqual(selectedExportCharts(exportSelectionFixture,null), exportSelectionFixture);
+assert.deepEqual(selectedExportCharts(exportSelectionFixture,[]), []);
+assert.deepEqual(toggleExportChart(null,1,3), [0,2]);
+assert.deepEqual(toggleExportChart([],2,3), [2]);
+assert.deepEqual(toggleExportChart([2],0,3), [0,2]);
+assert.equal(toggleExportChart([0,2],1,3), null);
+assert.deepEqual(toggleExportChart([1],1,3), []);
+assert.deepEqual(toggleExportChart([0],99,3), [0]);
+const multiChartExport = formatChartText(selectedExportCharts(exportSelectionFixture,[2,0]), {...chartOptions, format:"plain", includeReferences:true});
+assert.ok(multiChartExport.includes("Third chart") && multiChartExport.includes("Fuel | consumption"));
+assert.ok(!multiChartExport.includes("Road / 2050: 15%"));
+assert.ok(multiChartExport.indexOf("Fuel | consumption") < multiChartExport.indexOf("Third chart"));
 const draft = {...chartFixture, title:"Private draft"};
 assert.deepEqual(publishedChartsForExport(false,null,{status:"ready",published:true,charts:[chartFixture]}), []);
 assert.deepEqual(publishedChartsForExport(true,null,{status:"ready",published:false,charts:[draft]}), []);
