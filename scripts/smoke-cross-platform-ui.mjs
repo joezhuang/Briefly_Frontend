@@ -22,7 +22,7 @@ function requireAll(relativePath, needles) {
 }
 
 const checks = [
-  {"name":"Chart text export is separate from the article share and restricted to admins","file":"src/components/cluster-data-charts.tsx","needles":["publishedChartsForExport(isAdmin, review, status)","{isAdmin && !moderating && !!storyUrl && exportCharts.length > 0 && (","<ChartTextExport","charts={exportCharts}"]},
+  {"name":"Chart text export is separate from the article share and restricted to admins","file":"src/components/cluster-data-charts.tsx","needles":["publishedChartsForExport(isAdmin, review, status)","{isAdmin && !moderating && exportCharts.length > 0 && (","<ChartTextExport","charts={exportCharts}"]},
   {"name":"Chart export preserves full text and offers both forum formats","file":"src/components/chart-text-export.tsx","needles":["useState<ChartTextFormat>(\"plain\")","setFormat(\"markdown\")","shareBrieflyText(headline, text)","navigator.clipboard.writeText(text)","<Text selectable","charts.slice(selection, selection + 1)"]},
   {"name":"Text shares do not use the story URL-only fallback","file":"src/navigation/platform-share.ts","needles":["export async function shareBrieflyText","navigator.share({ title, text })","navigator.clipboard.writeText(text)","{ message: text,"]},
   {"name":"Top uses the same refresh icon on every platform without a separate narrow-phone row","file":"src/app/index.tsx","needles":["<FeedRefreshButton\n            label={copy.refresh}","disabled={!locationUsable}","headingRowNarrow: { gap: 8 }","<RefreshControl"]},
@@ -1547,24 +1547,25 @@ const chartExportJS = ts.transpileModule(read("src/services/chart-text-export.ts
 const { formatChartText, publishedChartsForExport } = await import(
   "data:text/javascript;base64," + Buffer.from(chartExportJS).toString("base64")
 );
-const exportLabels = { source:"Source", sources:"Sources", item:"Item", value:"Value",
+const exportLabels = { item:"Item", value:"Value",
   forecast:"Forecast", proposal:"Proposal", target:"Target", partial:"Verified subset",
   derived:"Calculated", start:"Start", increase:"Increase", decrease:"Decrease", end:"End" };
 const chartFixture = { title:"Fuel | consumption", unit:"billion litres", chart_type:"bar",
-  qualifier:"forecast", partial:true, points:[
+  qualifier:"forecast", partial:true, relationship_source_url:"https://example.com/relationship", points:[
     { label:"Road", value:34.125, source:"Publisher", source_url:"https://example.com/report" },
     { label:"Air", value:10, source:"Publisher", source_url:"https://example.com/report", derived:true },
     { label:"Mining", value:8, source:"Publisher", source_url:"https://example.com/report" },
   ] };
-const chartOptions = { headline:"Example", storyUrl:"https://briefly-news.deeplyapp.uk/s/example", labels:exportLabels };
+const chartOptions = { headline:"Example", labels:exportLabels };
 const plainExport = formatChartText([chartFixture], {...chartOptions, format:"plain"});
 const markdownExport = formatChartText([chartFixture], {...chartOptions, format:"markdown"});
-assert.ok(plainExport.includes("Road: 34.125 billion litres [1]") && plainExport.includes("█".repeat(16)));
+assert.ok(plainExport.includes("Road: 34.125 billion litres") && plainExport.includes("█".repeat(16)));
 assert.ok(plainExport.includes("Air: 10 billion litres (Calculated)") && plainExport.includes("Forecast") && plainExport.includes("Verified subset"));
-assert.equal(plainExport.split("https://example.com/report").length, 2);
-assert.ok(markdownExport.includes("| Road | 34.125 billion litres | [1] |"));
+assert.ok(!plainExport.includes("https://") && !plainExport.includes("[1]") && !plainExport.includes("Publisher"));
+assert.ok(markdownExport.includes("| Road | 34.125 billion litres |"));
 assert.ok(!markdownExport.includes("█"));
-assert.ok(markdownExport.includes(chartOptions.storyUrl));
+assert.ok(!markdownExport.includes("https://") && !markdownExport.includes("[1]") && !markdownExport.includes("Publisher"));
+assert.ok(markdownExport.includes("| Item | Value |") && !markdownExport.includes("| Source |"));
 const group = {...chartFixture, chart_type:"grouped", unit:"%", points:[{...chartFixture.points[0], group:"Road", series:"2050", label:"Road", value:15}]};
 assert.ok(formatChartText([group], {...chartOptions, format:"plain"}).includes("Road / 2050: 15%"));
 const draft = {...chartFixture, title:"Private draft"};
@@ -1573,7 +1574,7 @@ assert.deepEqual(publishedChartsForExport(true,null,{status:"ready",published:fa
 assert.deepEqual(publishedChartsForExport(true,{published_release_id:null,published_charts:[],draft_charts:[draft]},{status:"ready",published:true,charts:[chartFixture]}), []);
 assert.deepEqual(publishedChartsForExport(true,{published_release_id:1,published_charts:[chartFixture],draft_charts:[draft]},{status:"ready",published:false,charts:[draft]}), [chartFixture]);
 assert.deepEqual(publishedChartsForExport(true,null,{status:"ready",published:true,charts:[chartFixture]}), [chartFixture]);
-process.stdout.write("✓ Chart text export preserves precision, sources, format and admin/public-release gating\n");
+process.stdout.write("✓ Chart text export preserves precision, link-free formatting and admin/public-release gating\n");
 
 let passed = 0;
 for (const check of checks) {

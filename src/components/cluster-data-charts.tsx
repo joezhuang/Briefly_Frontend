@@ -661,12 +661,11 @@ function draftCardsInOrder(review: ChartReviewDraft): ReviewChartCard[] {
   return cards;
 }
 
-export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested = false, headline, storyUrl }: {
+export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested = false, headline }: {
   eventId: string;
   articleVersionId: number | null;
   reviewRequested?: boolean;
   headline: string;
-  storyUrl: string | null;
 }) {
   const { user, account } = useBrieflyAuth();
   const { config } = useBrieflyAppConfig();
@@ -1170,9 +1169,9 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
           )}
         </View>
       )}
-      {isAdmin && !moderating && !!storyUrl && exportCharts.length > 0 && (
+      {isAdmin && !moderating && exportCharts.length > 0 && (
         <ChartTextExport key={chartKey + ":" + JSON.stringify(exportCharts)} charts={exportCharts}
-          headline={headline} storyUrl={storyUrl} labels={copy} />
+          headline={headline} labels={copy} />
       )}
       {visibleCards.length > 0 && (
         <View style={[styles.sharedSourceRow, { borderTopColor: colors.border }]}>

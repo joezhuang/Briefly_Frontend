@@ -2,7 +2,7 @@ import type { ClusterDataChartStatus, ChartReviewDraft, VerifiedDataChart } from
 
 export type ChartTextFormat = "plain" | "markdown";
 export type ChartTextLabels = {
-  source: string; sources: string; item: string; value: string;
+  item: string; value: string;
   forecast: string; proposal: string; target: string; partial: string; derived: string;
   start: string; increase: string; decrease: string; end: string;
 };
@@ -18,20 +18,12 @@ export function publishedChartsForExport(isAdmin: boolean, review: ChartReviewDr
 
 const clean = (value: string | undefined) => (value ?? "").replace(/\s+/g, " ").trim();
 const cell = (value: string) => value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
-const safeUrl = (value: string | undefined) => /^https?:\/\/[^\s]+$/i.test(value ?? "") ? value! : "";
 
 export function formatChartText(charts: readonly VerifiedDataChart[], options: {
-  format: ChartTextFormat; headline: string; storyUrl: string; labels: ChartTextLabels;
+  format: ChartTextFormat; headline: string; labels: ChartTextLabels;
 }): string {
   const { format, labels } = options;
   const markdown = format === "markdown";
-  const sources: { name: string; url: string }[] = [];
-  const sourceRef = (name: string, url: string) => {
-    if (!name && !url) return "";
-    let index = sources.findIndex(s => s.name === name && s.url === url);
-    if (index === -1) { index = sources.length; sources.push({ name, url }); }
-    return "[" + (index + 1) + "]";
-  };
   const lines = [clean(options.headline), ""];
   for (const chart of charts) {
     const qualifier = chart.qualifier && chart.qualifier !== "reported" ? labels[chart.qualifier] : "";
@@ -40,7 +32,7 @@ export function formatChartText(charts: readonly VerifiedDataChart[], options: {
     if (chart.partial) lines.push(labels.partial);
     const description = clean(chart.description);
     if (description) lines.push(description);
-    if (markdown) lines.push("", "| " + cell(labels.item) + " | " + cell(labels.value) + " | " + cell(labels.source) + " |", "| --- | ---: | --- |");
+    if (markdown) lines.push("", "| " + cell(labels.item) + " | " + cell(labels.value) + " |", "| --- | ---: |");
     const bars = !markdown && chart.chart_type === "bar" && chart.points.length > 1
       && chart.points.every(p => Number.isFinite(p.value) && p.value >= 0);
     const maximum = bars ? Math.max(...chart.points.map(p => p.value)) : 0;
@@ -51,23 +43,15 @@ export function formatChartText(charts: readonly VerifiedDataChart[], options: {
       // Retain stored precision and units; never recompute verified values.
       const unit = clean(chart.unit);
       const value = String(point.value) + (unit.startsWith("%") ? unit : unit ? " " + unit : "");
-      const ref = sourceRef(clean(point.source), safeUrl(point.source_url));
       const note = point.derived ? " (" + labels.derived + ")" : "";
-      if (markdown) lines.push("| " + cell(label) + " | " + cell(value + note) + " | " + ref + " |");
+      if (markdown) lines.push("| " + cell(label) + " | " + cell(value + note) + " |");
       else {
-        lines.push("• " + label + ": " + value + note + (ref ? " " + ref : ""));
+        lines.push("• " + label + ": " + value + note);
         if (bars && maximum > 0) lines.push("  " + "█".repeat(Math.round(16 * point.value / maximum)));
       }
     }
-    const relationshipUrl = safeUrl(chart.relationship_source_url);
-    if (relationshipUrl) lines.push("", labels.source + ": " + sourceRef("", relationshipUrl));
     lines.push("");
   }
-  if (sources.length) {
-    lines.push(labels.sources);
-    sources.forEach((s, i) => lines.push("[" + (i + 1) + "] " + [s.name, s.url].filter(Boolean).join(" — ")));
-    lines.push("");
-  }
-  lines.push("Briefly: " + options.storyUrl);
+  // Article sharing is a separate action; chart text is intentionally link-free.
   return lines.join("\n").trim();
 }

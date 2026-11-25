@@ -369,7 +369,7 @@ export function ArticleView({article,chartReviewRequested=false,immutable=false,
     <View style={styles.actions}>{!immutable&&followingEnabled&&!!article.event_id&&<EventFollowButton eventId={article.event_id} returnTo={followReturnTo} variant="storyAction"/>}<Pressable accessibilityRole="button" accessibilityState={{ selected: saved }} onPress={()=>void toggleSaved(article)} style={[styles.action,{borderColor:colors.border},saved&&{backgroundColor:colors.text,borderColor:colors.text}]}><Text style={[styles.actionText,{color:saved?colors.background:colors.text}]}>{saved?t.savedAction:t.save}</Text></Pressable><Pressable accessibilityRole="button" onPress={()=>void share()} style={[styles.action,{borderColor:colors.border}]}><Text style={[styles.actionText,{color:colors.text}]}>{t.share}</Text></Pressable></View>
     </View>
     {!immutable && (article.authoritative_article_version_id ?? article.article_version_id) != null && !!article.event_id && (
-      <ClusterDataCharts eventId={article.event_id} articleVersionId={article.authoritative_article_version_id ?? article.article_version_id} reviewRequested={chartReviewRequested} headline={article.headline} storyUrl={buildPublicStoryShareUrl(article,shareHref,language)} />
+      <ClusterDataCharts eventId={article.event_id} articleVersionId={article.authoritative_article_version_id ?? article.article_version_id} reviewRequested={chartReviewRequested} headline={article.headline} />
     )}
     {!immutable&&((evidenceEnabled||timelineEnabled||coverageEnabled)&&!!article.event_id||podcastEnabled&&!!onPodcastAction)&&(
       <View style={[styles.storyToolsGroup,{borderTopColor:colors.border}]}>
