@@ -12,6 +12,8 @@ import {
 } from "react-native";
 
 import { SmartChartVisual } from "@/components/smart-chart-visual";
+import { ChartTextExport } from "@/components/chart-text-export";
+import { publishedChartsForExport } from "@/services/chart-text-export";
 import {
   getClusterDataCharts,
   getChartReview,
@@ -659,10 +661,12 @@ function draftCardsInOrder(review: ChartReviewDraft): ReviewChartCard[] {
   return cards;
 }
 
-export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested = false }: {
+export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested = false, headline, storyUrl }: {
   eventId: string;
   articleVersionId: number | null;
   reviewRequested?: boolean;
+  headline: string;
+  storyUrl: string | null;
 }) {
   const { user, account } = useBrieflyAuth();
   const { config } = useBrieflyAppConfig();
@@ -882,6 +886,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
   const visibleCards: ReviewChartCard[] = editMode && review
     ? draftCardsInOrder(review)
     : readyCharts.map((chart) => ({ chart, removedIndex: null }));
+  const exportCharts = publishedChartsForExport(isAdmin, review, status);
   const keyFigures = visibleCards.filter((item) =>
     item.chart.chart_type === "kpi" && item.chart.points.length === 1);
   const comparisons = visibleCards.filter((item) => item.chart.chart_type !== "kpi");
@@ -1164,6 +1169,10 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
             </Pressable>
           )}
         </View>
+      )}
+      {isAdmin && !moderating && !!storyUrl && exportCharts.length > 0 && (
+        <ChartTextExport key={chartKey + ":" + JSON.stringify(exportCharts)} charts={exportCharts}
+          headline={headline} storyUrl={storyUrl} labels={copy} />
       )}
       {visibleCards.length > 0 && (
         <View style={[styles.sharedSourceRow, { borderTopColor: colors.border }]}>

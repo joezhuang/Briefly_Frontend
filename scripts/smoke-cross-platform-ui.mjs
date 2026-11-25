@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import assert from "node:assert/strict";
+import ts from "typescript";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -20,6 +22,9 @@ function requireAll(relativePath, needles) {
 }
 
 const checks = [
+  {"name":"Chart text export is separate from the article share and restricted to admins","file":"src/components/cluster-data-charts.tsx","needles":["publishedChartsForExport(isAdmin, review, status)","{isAdmin && !moderating && !!storyUrl && exportCharts.length > 0 && (","<ChartTextExport","charts={exportCharts}"]},
+  {"name":"Chart export preserves full text and offers both forum formats","file":"src/components/chart-text-export.tsx","needles":["useState<ChartTextFormat>(\"plain\")","setFormat(\"markdown\")","shareBrieflyText(headline, text)","navigator.clipboard.writeText(text)","<Text selectable","charts.slice(selection, selection + 1)"]},
+  {"name":"Text shares do not use the story URL-only fallback","file":"src/navigation/platform-share.ts","needles":["export async function shareBrieflyText","navigator.share({ title, text })","navigator.clipboard.writeText(text)","{ message: text,"]},
   {"name":"Top uses the same refresh icon on every platform without a separate narrow-phone row","file":"src/app/index.tsx","needles":["<FeedRefreshButton\n            label={copy.refresh}","disabled={!locationUsable}","headingRowNarrow: { gap: 8 }","<RefreshControl"]},
   {"name":"Shared refresh icon preserves accessible labels, busy and disabled states","file":"src/components/feed-refresh-button.tsx","needles":["accessibilityLabel={label}","accessibilityState={{ disabled: unavailable, busy: refreshing }}","const unavailable = disabled || refreshing;","disabled={unavailable}","onPress={onRefresh}","<ActivityIndicator",">↻</Text>","width: 44, height: 44"]},
   {"name":"National and Local use only the compact location header; Top keeps its editorial heading","file":"src/app/index.tsx","needles":["{scope === \"top\" && (","scope !== \"top\" && styles.locationHeader","<NewsLocationGate\n            key={scope}","refreshing={refreshing}","refreshDisabled={!locationUsable || locationBusy}","refreshLabel={copy.refresh}","onRefresh={() => {\n              void refreshAppConfig();\n              void loadFeed(\"refresh\");","{scope === \"top\" && (\n          <View style={[styles.sectionHeading"]},
@@ -1534,6 +1539,41 @@ ensure(
   dashboardUI.includes('onChange("data_charts_access_mode", enabled ? "admin_and_pro" : "admin_only")'),
   "Public verified charts and admin-configurable Admin/Pro lazy generation remain available"
 );
+
+
+const chartExportJS = ts.transpileModule(read("src/services/chart-text-export.ts"), {
+  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const { formatChartText, publishedChartsForExport } = await import(
+  "data:text/javascript;base64," + Buffer.from(chartExportJS).toString("base64")
+);
+const exportLabels = { source:"Source", sources:"Sources", item:"Item", value:"Value",
+  forecast:"Forecast", proposal:"Proposal", target:"Target", partial:"Verified subset",
+  derived:"Calculated", start:"Start", increase:"Increase", decrease:"Decrease", end:"End" };
+const chartFixture = { title:"Fuel | consumption", unit:"billion litres", chart_type:"bar",
+  qualifier:"forecast", partial:true, points:[
+    { label:"Road", value:34.125, source:"Publisher", source_url:"https://example.com/report" },
+    { label:"Air", value:10, source:"Publisher", source_url:"https://example.com/report", derived:true },
+    { label:"Mining", value:8, source:"Publisher", source_url:"https://example.com/report" },
+  ] };
+const chartOptions = { headline:"Example", storyUrl:"https://briefly-news.deeplyapp.uk/s/example", labels:exportLabels };
+const plainExport = formatChartText([chartFixture], {...chartOptions, format:"plain"});
+const markdownExport = formatChartText([chartFixture], {...chartOptions, format:"markdown"});
+assert.ok(plainExport.includes("Road: 34.125 billion litres [1]") && plainExport.includes("█".repeat(16)));
+assert.ok(plainExport.includes("Air: 10 billion litres (Calculated)") && plainExport.includes("Forecast") && plainExport.includes("Verified subset"));
+assert.equal(plainExport.split("https://example.com/report").length, 2);
+assert.ok(markdownExport.includes("| Road | 34.125 billion litres | [1] |"));
+assert.ok(!markdownExport.includes("█"));
+assert.ok(markdownExport.includes(chartOptions.storyUrl));
+const group = {...chartFixture, chart_type:"grouped", unit:"%", points:[{...chartFixture.points[0], group:"Road", series:"2050", label:"Road", value:15}]};
+assert.ok(formatChartText([group], {...chartOptions, format:"plain"}).includes("Road / 2050: 15%"));
+const draft = {...chartFixture, title:"Private draft"};
+assert.deepEqual(publishedChartsForExport(false,null,{status:"ready",published:true,charts:[chartFixture]}), []);
+assert.deepEqual(publishedChartsForExport(true,null,{status:"ready",published:false,charts:[draft]}), []);
+assert.deepEqual(publishedChartsForExport(true,{published_release_id:null,published_charts:[],draft_charts:[draft]},{status:"ready",published:true,charts:[chartFixture]}), []);
+assert.deepEqual(publishedChartsForExport(true,{published_release_id:1,published_charts:[chartFixture],draft_charts:[draft]},{status:"ready",published:false,charts:[draft]}), [chartFixture]);
+assert.deepEqual(publishedChartsForExport(true,null,{status:"ready",published:true,charts:[chartFixture]}), [chartFixture]);
+process.stdout.write("✓ Chart text export preserves precision, sources, format and admin/public-release gating\n");
 
 let passed = 0;
 for (const check of checks) {

@@ -54,3 +54,27 @@ export async function shareBrieflyStory({
 
   return result.action === Share.dismissedAction ? "dismissed" : "shared";
 }
+
+// Keep the full text in one share item, including on clipboard fallback.
+export async function shareBrieflyText(title: string, text: string): Promise<BrieflyShareResult> {
+  if (Platform.OS === "web" && typeof navigator !== "undefined") {
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title, text });
+        return "shared";
+      } catch (error) {
+        if (isAbortError(error)) return "dismissed";
+      }
+    }
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return "copied";
+    }
+    throw new Error("Text sharing unavailable; select the text to copy.");
+  }
+  const result = await Share.share(
+    { message: text, ...(Platform.OS === "android" ? { title } : {}) },
+    Platform.OS === "ios" ? { subject: title } : undefined,
+  );
+  return result.action === Share.dismissedAction ? "dismissed" : "shared";
+}
