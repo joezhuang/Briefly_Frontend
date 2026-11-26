@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text } from "react-native";
 
 import { useBrieflyTheme } from "@/context/theme";
 
@@ -11,6 +11,8 @@ type Props = {
 
 export function FeedRefreshButton({ label, refreshing, disabled = false, onRefresh }: Props) {
   const { colors } = useBrieflyTheme();
+  // Native feeds already use RefreshControl; browser and installed PWA need an explicit action.
+  if (Platform.OS !== "web") return null;
   const unavailable = disabled || refreshing;
   return (
     <Pressable
