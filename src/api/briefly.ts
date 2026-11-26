@@ -1758,6 +1758,7 @@ export type VerifiedDataChart = {
 export type ClusterDataChartStatus = {
   event_id?: string;
   article_version_id?: number;
+  published_article_version_id?: number | null;
   status: "not_generated" | "processing" | "ready" | "insufficient" | "failed";
   charts: VerifiedDataChart[];
   can_generate: boolean;
@@ -1795,6 +1796,7 @@ export type ChartReviewQueue = {
 
 export type ChartReleaseHistory = {
   id: number;
+  article_version_id?: number | null;
   charts: VerifiedDataChart[];
   released_by: string;
   released_at: string | null;
@@ -1804,6 +1806,8 @@ export type ChartReleaseHistory = {
 export type ChartReviewDraft = {
   event_id: string;
   article_version_id: number;
+  published_article_version_id?: number | null;
+  draft_article_version_id?: number | null;
   draft_charts: VerifiedDataChart[];
   removed_charts: {
     index: number;

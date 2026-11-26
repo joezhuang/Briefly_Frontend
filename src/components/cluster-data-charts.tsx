@@ -37,6 +37,7 @@ import { emitChartReviewUpdate } from "@/services/chart-review-updates";
 const chartCopy = {
   en: {
     title: "Explore the data",
+    earlierVersion: "These charts use verified data from an earlier version of this story.",
     keyFigures: "Key figures",
     comparisons: "Comparisons",
     showMore: "Show all comparisons",
@@ -68,6 +69,7 @@ const chartCopy = {
   },
   es: {
     title: "Explorar los datos",
+    earlierVersion: "Estos gráficos utilizan datos verificados de una versión anterior de esta noticia.",
     keyFigures: "Cifras clave",
     comparisons: "Comparaciones",
     showMore: "Ver todas las comparaciones",
@@ -99,6 +101,7 @@ const chartCopy = {
   },
   ja: {
     title: "データを詳しく見る",
+    earlierVersion: "この記事の以前の版で確認されたデータを使用しています。",
     keyFigures: "主要な数値",
     comparisons: "比較データ",
     showMore: "比較をすべて表示",
@@ -130,6 +133,7 @@ const chartCopy = {
   },
   "zh-CN": {
     title: "探索数据",
+    earlierVersion: "这些图表使用此新闻较早版本中已核实的数据。",
     keyFigures: "关键数据",
     comparisons: "数据对比",
     showMore: "查看全部对比",
@@ -161,6 +165,7 @@ const chartCopy = {
   },
   "zh-TW": {
     title: "探索數據",
+    earlierVersion: "這些圖表使用此新聞較早版本中已核實的數據。",
     keyFigures: "關鍵數據",
     comparisons: "數據比較",
     showMore: "查看全部比較",
@@ -767,7 +772,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
         if (active) setModerationError(chartKey);
       });
     return () => { active = false; };
-  }, [isAdmin, eventId, articleVersionId, chartKey, status?.status, status?.awaiting_review]);
+  }, [isAdmin, eventId, articleVersionId, chartKey, status?.status, status?.awaiting_review, status?.refreshing]);
 
   useEffect(() => {
     if ((status?.status !== "processing" && !status?.refreshing) || !eventId) return;
@@ -812,7 +817,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
 
   const moderateChart = async (action: "remove" | "restore" | "edit" | "release" | "rollback" | "dismiss" | "reopen",
     index?: number) => {
-    if (!isAdmin || !review?.ready || moderating || !eventId) return;
+    if (!isAdmin || !review || (!review.ready && action !== "rollback") || moderating || !eventId) return;
     setModerating(true);
     setModerationError(null);
     try {
@@ -877,7 +882,8 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
   // Both the draft and public versions use the exact same reader renderer.
   const readyCharts = isAdmin && review
     ? viewingPublic ? review.published_charts :
-      viewMode === "history" ? viewedHistory?.charts ?? [] : review.draft_charts
+      viewMode === "history" ? viewedHistory?.charts ?? [] :
+      review.ready ? review.draft_charts : review.published_charts
     : status?.status === "ready" && Array.isArray(status.charts)
       ? status.charts
       : [];
@@ -887,6 +893,13 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
     ? draftCardsInOrder(review)
     : readyCharts.map((chart) => ({ chart, removedIndex: null }));
   const exportCharts = publishedChartsForExport(isAdmin, review, status);
+  const displayedChartVersionId = isAdmin && review
+    ? viewingPublic ? review.published_article_version_id
+      : viewMode === "history" ? viewedHistory?.article_version_id
+      : review.ready ? review.draft_article_version_id : review.published_article_version_id
+    : status?.published ? status.published_article_version_id : null;
+  const earlierChartVersion = readyCharts.length > 0 && displayedChartVersionId != null
+    && articleVersionId != null && displayedChartVersionId !== articleVersionId;
   const keyFigures = visibleCards.filter((item) =>
     item.chart.chart_type === "kpi" && item.chart.points.length === 1);
   const comparisons = visibleCards.filter((item) => item.chart.chart_type !== "kpi");
@@ -896,6 +909,10 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
   const quota = account?.is_admin === true ? null : status?.quota;
   const quotaExhausted = Boolean(quota && quota.remaining <= 0);
   const canGenerate = status?.can_generate === true && !quotaExhausted;
+  const hasSavedCharts = readyCharts.length > 0 || !!review?.published_charts.length ||
+    !!review?.draft_charts.length || status?.status === "ready";
+  const generationLabel = hasSavedCharts ? copy.update :
+    status?.status === "failed" ? copy.retry : copy.generate;
   const renderEditFields = (chart: VerifiedDataChart, index: number) => {
     if (!editing || editing.key !== chartKey || editing.index !== index) return null;
     const setField = (patch: {
@@ -1040,6 +1057,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
     <View style={[styles.panel, { borderColor: colors.border, backgroundColor: colors.surfaceMuted }]}>
       <Text style={[styles.title, { color: colors.text }]}>{copy.title}</Text>
       <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.details}</Text>
+      {earlierChartVersion && <Text style={[styles.note, { color: colors.textMuted }]}>{copy.earlierVersion}</Text>}
       {!!quota && (
         <Text style={[styles.detail, { color: colors.textMuted }]}>
           {copy.usage}: {quota.used}/{quota.limit} · {quota.remaining} remaining
@@ -1051,18 +1069,21 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
       {status?.awaiting_review && !review && (
         <Text style={[styles.detail, { color: colors.textMuted }]}>{copy.awaitingReview}</Text>
       )}
-      {isAdmin && review?.ready && (
+      {isAdmin && review && (review.ready || hasPublicRelease) && (
         <View style={[styles.reviewPanel, { borderColor: colors.border, backgroundColor: colors.surface }]}>
           <Text style={[styles.reviewHeading, { color: colors.text }]}>{reviewText.label}</Text>
           <Text style={[styles.note, { color: colors.textMuted }]}>{reviewText.intro}</Text>
           <View style={styles.reviewActionRow}>
             {([
-              { mode: "edit", label: reviewText.edit },
-              { mode: "preview", label: reviewText.preview },
-              ...(hasPublicRelease && review.published_charts.length > 0
+              ...(review.ready ? [
+                { mode: "edit", label: reviewText.edit },
+                { mode: "preview", label: reviewText.preview },
+              ] : []),
+              ...(hasPublicRelease
                 ? [{ mode: "published", label: reviewText.published }] : []),
             ] as { mode: "edit" | "preview" | "published"; label: string }[]).map((option) => {
-              const selected = viewMode === option.mode;
+              const selected = viewMode === option.mode ||
+                (!review.ready && viewMode !== "history" && option.mode === "published");
               return (
                 <Pressable key={option.mode} accessibilityRole="button"
                   accessibilityState={{ selected }}
@@ -1403,8 +1424,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
       {canGenerate && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={status?.status === "ready" ? copy.update :
-            status?.status === "failed" ? copy.retry : copy.generate}
+          accessibilityLabel={generationLabel}
           disabled={busy}
           onPress={() => void generate()}
           style={[styles.generateButton, {
@@ -1414,8 +1434,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
         >
           {busy && <ActivityIndicator size="small" color={colors.background} />}
           <Text style={[styles.generateText, { color: colors.background }]}>
-            {status?.status === "ready" ? copy.update :
-              status?.status === "failed" ? copy.retry : copy.generate}
+            {generationLabel}
           </Text>
         </Pressable>
       )}
