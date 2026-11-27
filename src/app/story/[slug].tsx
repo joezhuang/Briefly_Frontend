@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createStoryLoginNudgePolicy } from "@/services/story-login-nudge";
 import { ActivityIndicator, Alert, AppState, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SCROLL_SCREEN_EDGES, useScrollSafeArea } from "@/components/edge-to-edge";
@@ -63,10 +64,7 @@ const SHARED_LOGIN_NUDGE_DELAY_MS = 15_000;
 const NORMAL_WEB_LOGIN_NUDGE_DELAY_MS = 60_000;
 const NORMAL_WEB_ENGAGED_STORY_THRESHOLD = 2;
 const NORMAL_NATIVE_ENGAGED_STORY_THRESHOLD = 3;
-const LOGIN_NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
-const LOGIN_NUDGE_REPEAT_COOLDOWN_MS = 30 * 60 * 1000;
-const LOGIN_NUDGE_DISMISSED_AT_KEY = "briefly.storyLoginNudge.dismissedAt";
-const LOGIN_NUDGE_LAST_SHOWN_AT_KEY = "briefly.storyLoginNudge.lastShownAt";
+const storyLoginNudgePolicy = createStoryLoginNudgePolicy(AsyncStorage);
 
 const anonymousEngagedStoriesThisSession = new Set<string>();
 let normalWebLoginNudgeActiveMs = 0;
@@ -345,8 +343,10 @@ export default function StoryDetailScreen() {
   const [storyToolsExpanded, setStoryToolsExpanded] = useState(false);
   const [storyFocused, setStoryFocused] = useState(true);
   const [loginNudgeEligibleKey, setLoginNudgeEligibleKey] = useState("");
-  const [loginNudgeVisibleKey, setLoginNudgeVisibleKey] = useState("");
-  const [loginNudgeDismissedKey, setLoginNudgeDismissedKey] = useState("");
+  const [loginNudgeVisible, setLoginNudgeVisible] = useState<{ key: string; dismissedAt: number } | null>(null);
+  const loginNudgeDismissedAt = useSyncExternalStore(
+    storyLoginNudgePolicy.subscribe, storyLoginNudgePolicy.getDismissedAt, storyLoginNudgePolicy.getDismissedAt,
+  );
   const [readerEngagedKey, setReaderEngagedKey] = useState("");
   const [sessionEngagedStoryCount, setSessionEngagedStoryCount] = useState(
     anonymousEngagedStoriesThisSession.size,
@@ -421,7 +421,8 @@ export default function StoryDetailScreen() {
       : article.slug === resolvedSlug);
   const storyMediaActive = storyFocused && storyArticleMatchesRoute;
   const readerEngaged = readerEngagedKey === storyIdentity;
-  const showLoginNudge = loginNudgeVisibleKey === storyIdentity;
+  const showLoginNudge = loginNudgeVisible?.key === storyIdentity &&
+    loginNudgeVisible.dismissedAt === loginNudgeDismissedAt && storyFocused;
   const sharedAppChoiceDismissed = sharedAppChoiceDismissedKey === storyIdentity;
   const mobileWebInstallChoiceActive =
     isSharedStory &&
@@ -455,31 +456,30 @@ export default function StoryDetailScreen() {
     !mobileWebInstallChoiceActive;
   const loginNudgeEligible =
     loginNudgeBaseEligible &&
-    loginNudgeDismissedKey !== storyIdentity &&
-    (!loginNudgeSuppressionEnabled ||
-      loginNudgeEligibleKey === storyIdentity);
+    loginNudgeEligibleKey === storyIdentity;
 
   useEffect(() => {
     let active = true;
-    if (!loginNudgeBaseEligible || !loginNudgeSuppressionEnabled) return;
+    if (!loginNudgeBaseEligible || !storyFocused) return;
 
-    void Promise.all([
-      AsyncStorage.getItem(LOGIN_NUDGE_DISMISSED_AT_KEY),
-      AsyncStorage.getItem(LOGIN_NUDGE_LAST_SHOWN_AT_KEY),
-    ]).then(([dismissedAt, lastShownAt]) => {
+    // The QA switch can bypass repeat prompts, never an explicit Not now.
+    const checkEligibility = async () => {
+      await storyLoginNudgePolicy.refresh();
       if (!active) return;
-      const now = Date.now();
-      if (now - Number(dismissedAt || 0) < LOGIN_NUDGE_COOLDOWN_MS) return;
-      if (now - Number(lastShownAt || 0) < LOGIN_NUDGE_REPEAT_COOLDOWN_MS) return;
-      setLoginNudgeEligibleKey(storyIdentity);
-    }).catch(() => {
-      if (active) setLoginNudgeEligibleKey(storyIdentity);
+      setLoginNudgeEligibleKey(storyLoginNudgePolicy.canShow(loginNudgeSuppressionEnabled)
+        ? storyIdentity : "");
+    };
+    void checkEligibility();
+    const subscription = AppState.addEventListener("change", state => {
+      if (state === "active") void checkEligibility();
     });
 
-    return () => { active = false; };
+    return () => { active = false; subscription.remove(); };
   }, [
     loginNudgeBaseEligible,
     loginNudgeSuppressionEnabled,
+    loginNudgeDismissedAt,
+    storyFocused,
     storyIdentity,
   ]);
 
@@ -508,14 +508,14 @@ export default function StoryDetailScreen() {
       else normalWebLoginNudgeActiveMs = elapsed;
     };
     const show = () => {
-      if (!active || !storyFocused || AppState.currentState !== "active") return;
-      setLoginNudgeVisibleKey(storyIdentity);
-      if (loginNudgeSuppressionEnabled) {
-        void AsyncStorage.setItem(
-          LOGIN_NUDGE_LAST_SHOWN_AT_KEY,
-          String(Date.now()),
-        ).catch(() => null);
-      }
+      timer = null;
+      // Revalidate old timers and already-mounted routes before displaying.
+      void storyLoginNudgePolicy.refresh().then(() => {
+        if (!active || !storyFocused || AppState.currentState !== "active") return;
+        if (!storyLoginNudgePolicy.markShown(loginNudgeSuppressionEnabled)) return;
+        setLoginNudgeVisible({ key: storyIdentity,
+          dismissedAt: storyLoginNudgePolicy.getDismissedAt() });
+      });
     };
     const schedule = () => {
       if (!active || startedAt == null || timer || loginNudgeDelayMs == null) return;
@@ -561,6 +561,7 @@ export default function StoryDetailScreen() {
     loginNudgeDelayMs,
     loginNudgeEligible,
     loginNudgeSuppressionEnabled,
+    loginNudgeDismissedAt,
     loginNudgeEngagementReached,
     showLoginNudge,
     storyFocused,
@@ -568,15 +569,9 @@ export default function StoryDetailScreen() {
   ]);
 
   const dismissLoginNudge = () => {
-    setLoginNudgeVisibleKey("");
-    setLoginNudgeDismissedKey(storyIdentity);
+    storyLoginNudgePolicy.dismiss();
+    setLoginNudgeVisible(null);
     setLoginNudgeEligibleKey("");
-    if (loginNudgeSuppressionEnabled) {
-      void AsyncStorage.setItem(
-        LOGIN_NUDGE_DISMISSED_AT_KEY,
-        String(Date.now()),
-      ).catch(() => null);
-    }
   };
 
   const markReaderEngaged = () => {

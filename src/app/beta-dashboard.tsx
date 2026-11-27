@@ -3114,7 +3114,7 @@ function RuntimeConfigEditor({
       <ConfigToggle label="Search" detail="Allow users to search the canonical event universe." value={config.search_enabled} onValueChange={(value) => onChange("search_enabled", value)} />
       <ConfigToggle
         label="Login nudge suppression"
-        detail="Keep production anti-spam protection: suppress another login nudge for 30 minutes after it is shown and for 7 days after Not now. Turn this off temporarily to ignore persisted suppression while testing."
+        detail="Suppress repeat login nudges for 30 minutes after display. Turn off temporarily to test repeat prompts. An explicit Not now always dismisses the prompt for 7 days."
         value={config.login_nudge_suppression_enabled}
         onValueChange={(value) =>
           onChange("login_nudge_suppression_enabled", value)

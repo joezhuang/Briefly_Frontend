@@ -22,6 +22,7 @@ function requireAll(relativePath, needles) {
 }
 
 const checks = [
+  {"name":"Explicit story login nudge dismissal is device-wide and unconditional","file":"src/services/story-login-nudge.ts","needles":["LOGIN_NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000","LOGIN_NUDGE_REPEAT_COOLDOWN_MS = 30 * 60 * 1000","if (value <= dismissedAt) return;","dismissedAt > 0 && now - dismissedAt < LOGIN_NUDGE_COOLDOWN_MS","repeatSuppression && lastShownAt > 0","storage.setItem(LOGIN_NUDGE_DISMISSED_AT_KEY, String(now))","if (!canShow(repeatSuppression)) return false;"]},
   {"name":"Story reading language labels use native target language independently of interface locale","file":"src/components/web-translate-button.tsx","needles":["readingLanguageOption(readingLanguage)","{selected.title}","{selected.label} ▾","accessibilityLabel={selected.google}","{selected.google}","{item.label}","const labels = copy[language] ?? copy.en;","normalizedReadingLanguage(initialReadingLanguage)","readingLanguage !== \"en\" && readingLanguage !== displayedContentLanguage","googleTranslateUrl(translatedSource.toString(), readingLanguage)"]},
   {"name":"Draft export is explicitly labelled and does not publish or alter charts","file":"src/components/chart-text-export.tsx","needles":["kind === \"draft\" ? copy.draftOpen : copy.open","kind === \"draft\" && <Text","{copy.draftHint}","shareBrieflyText(headline, text)","navigator.clipboard.writeText(text)"]},
   {"name":"Saved cluster charts survive canonical revisions with original version context and optional refresh","file":"src/components/cluster-data-charts.tsx","needles":["review.ready ? review.draft_charts : review.published_charts","review.draft_article_version_id : review.published_article_version_id","status.published_article_version_id","displayedChartVersionId !== articleVersionId","{copy.earlierVersion}","const generationLabel = hasSavedCharts ? copy.update","accessibilityLabel={generationLabel}","status?.awaiting_review, status?.refreshing","(!review.ready && action !== \"rollback\")"]},
@@ -315,14 +316,15 @@ const checks = [
       "readerEngaged",
       "loginNudgeDelayMs",
       "onReaderEngaged={markReaderEngaged}",
-      "LOGIN_NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000",
-      "LOGIN_NUDGE_REPEAT_COOLDOWN_MS = 30 * 60 * 1000",
       "login_nudge_suppression_enabled",
       "loginNudgeBaseEligible",
-      "loginNudgeDismissedKey !== storyIdentity",
-      "!loginNudgeSuppressionEnabled ||",
+      "storyLoginNudgePolicy.canShow(loginNudgeSuppressionEnabled)",
+      "storyLoginNudgePolicy.markShown(loginNudgeSuppressionEnabled)",
       "loginNudgeEligibleKey === storyIdentity",
-      "setLoginNudgeDismissedKey(storyIdentity)",
+      "storyLoginNudgePolicy.dismiss()",
+      "loginNudgeDismissedAt",
+      "storyLoginNudgePolicy.refresh()",
+      "useSyncExternalStore(",
       "setLoginNudgeEligibleKey(\"\")",
       "mobileWebInstallChoiceActive",
       "loginNudgeCopy",
@@ -1545,6 +1547,55 @@ ensure(
   "Public verified charts and admin-configurable Admin/Pro lazy generation remain available"
 );
 
+
+const nudgePolicyJS = ts.transpileModule(read("src/services/story-login-nudge.ts"), {
+  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const { createStoryLoginNudgePolicy, LOGIN_NUDGE_COOLDOWN_MS, LOGIN_NUDGE_REPEAT_COOLDOWN_MS,
+  LOGIN_NUDGE_DISMISSED_AT_KEY } = await import(
+  "data:text/javascript;base64," + Buffer.from(nudgePolicyJS).toString("base64")
+);
+let nudgeClock = 1000000000;
+const nudgeStorageData = new Map();
+const nudgeStorage = {
+  getItem: async key => nudgeStorageData.get(key) ?? null,
+  setItem: async (key, value) => { nudgeStorageData.set(key,value); },
+};
+const nudgePolicy = createStoryLoginNudgePolicy(nudgeStorage, () => nudgeClock);
+await nudgePolicy.refresh();
+assert.equal(nudgePolicy.markShown(true), true);
+assert.equal(nudgePolicy.canShow(true), false);
+assert.equal(nudgePolicy.canShow(false), true);
+nudgeClock += LOGIN_NUDGE_REPEAT_COOLDOWN_MS;
+assert.equal(nudgePolicy.canShow(true), true);
+const dismissalAt = nudgeClock;
+let dismissalNotifications = 0;
+const unsubscribeNudge = nudgePolicy.subscribe(() => dismissalNotifications++);
+nudgePolicy.dismiss();
+assert.equal(dismissalNotifications,1);
+assert.equal(nudgePolicy.getDismissedAt(),dismissalAt);
+assert.equal(nudgePolicy.canShow(false),false);
+assert.equal(nudgePolicy.markShown(true),false);
+unsubscribeNudge();
+const reopenedNudge = createStoryLoginNudgePolicy(nudgeStorage, () => nudgeClock);
+await reopenedNudge.refresh();
+assert.equal(reopenedNudge.canShow(false),false);
+nudgeClock += LOGIN_NUDGE_COOLDOWN_MS - 1;
+assert.equal(reopenedNudge.canShow(true),false);
+nudgeClock++;
+assert.equal(reopenedNudge.canShow(true),true);
+let resolveOldDismissal;
+const delayedNudge = createStoryLoginNudgePolicy({
+  getItem: key => key === LOGIN_NUDGE_DISMISSED_AT_KEY
+    ? new Promise(resolve => { resolveOldDismissal = resolve; }) : Promise.resolve(null),
+  setItem: async () => { throw new Error("storage unavailable"); },
+}, () => nudgeClock);
+const pendingNudgeRead = delayedNudge.refresh();
+delayedNudge.dismiss();
+resolveOldDismissal(null);
+await pendingNudgeRead;
+assert.equal(delayedNudge.canShow(false),false);
+process.stdout.write("✓ Story login nudge honors Not now across navigation, reloads, QA mode and delayed storage\n");
 
 const readingLanguageJS = ts.transpileModule(read("src/services/reading-language.ts"), {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
