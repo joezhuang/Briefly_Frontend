@@ -7,13 +7,31 @@ export type ChartTextLabels = {
   start: string; increase: string; decrease: string; end: string;
 };
 
-// A privileged GET can return a private draft with status=ready. Never use
-// readyCharts, visibleCards, draft_charts or historical versions for export.
-export function publishedChartsForExport(isAdmin: boolean, review: ChartReviewDraft | null,
-  status: ClusterDataChartStatus | null): VerifiedDataChart[] {
-  if (!isAdmin) return [];
-  if (review) return review.published_release_id != null ? review.published_charts : [];
-  return status?.published === true && status.status === "ready" ? status.charts : [];
+export type ChartExportKind = "draft" | "published";
+export type ChartExportView = "edit" | "preview" | "published" | "history";
+
+// Export the active editorial snapshot without changing publication. In edit
+// mode, excluded cards are visible but must never enter the export by default.
+export function chartsForAdminExport(isAdmin: boolean, review: ChartReviewDraft | null,
+  status: ClusterDataChartStatus | null, viewMode: ChartExportView): {
+  charts: VerifiedDataChart[]; kind: ChartExportKind;
+} {
+  const empty: { charts: VerifiedDataChart[]; kind: ChartExportKind } = { charts: [], kind: "published" };
+  if (!isAdmin || viewMode === "history") return empty;
+  if (review) {
+    if (viewMode !== "published" && review.ready) {
+      return { charts: review.draft_charts, kind: "draft" };
+    }
+    return review.published_release_id != null
+      ? { charts: review.published_charts, kind: "published" }
+      : empty;
+  }
+  if (status?.status !== "ready") return empty;
+  if (status.published === true) return { charts: status.charts, kind: "published" };
+  if (status.published === false && viewMode !== "published") {
+    return { charts: status.charts, kind: "draft" };
+  }
+  return empty;
 }
 
 // null means every chart; an empty selection means no charts, never all.

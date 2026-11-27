@@ -22,10 +22,11 @@ function requireAll(relativePath, needles) {
 }
 
 const checks = [
+  {"name":"Draft export is explicitly labelled and does not publish or alter charts","file":"src/components/chart-text-export.tsx","needles":["kind === \"draft\" ? copy.draftOpen : copy.open","kind === \"draft\" && <Text","{copy.draftHint}","shareBrieflyText(headline, text)","navigator.clipboard.writeText(text)"]},
   {"name":"Saved cluster charts survive canonical revisions with original version context and optional refresh","file":"src/components/cluster-data-charts.tsx","needles":["review.ready ? review.draft_charts : review.published_charts","review.draft_article_version_id : review.published_article_version_id","status.published_article_version_id","displayedChartVersionId !== articleVersionId","{copy.earlierVersion}","const generationLabel = hasSavedCharts ? copy.update","accessibilityLabel={generationLabel}","status?.awaiting_review, status?.refreshing","(!review.ready && action !== \"rollback\")"]},
   {"name":"Chart text export supports multi-select, select all, clear all and disabled empty export","file":"src/components/chart-text-export.tsx","needles":["useState<ChartExportSelection>(null)","selectedExportCharts(charts, selection)","accessibilityRole=\"checkbox\"","toggleExportChart(current, index, charts.length)","setSelection([])","setSelection(null)","chosen.length ? formatChartText","pill(copy.share, () => void run(\"share\"), true, !chosen.length)","pill(copy.copy, () => void run(\"copy\"), false, !chosen.length)"]},
   {"name":"Chart text defaults to simple with references optional for both formats","file":"src/components/chart-text-export.tsx","needles":["useState(false);","const [includeReferences, setIncludeReferences] = useState(false);","setIncludeReferences(false)","setIncludeReferences(true)","storyUrl, includeReferences, labels:"]},
-  {"name":"Chart text export is separate from the article share and restricted to admins","file":"src/components/cluster-data-charts.tsx","needles":["publishedChartsForExport(isAdmin, review, status)","{isAdmin && !moderating && exportCharts.length > 0 && (","<ChartTextExport","charts={exportCharts}"]},
+  {"name":"Chart text export is separate from the article share and restricted to admins","file":"src/components/cluster-data-charts.tsx","needles":["chartsForAdminExport(isAdmin, review, status, viewMode)","{isAdmin && !moderating && exportCharts.length > 0 && (","<ChartTextExport","charts={exportCharts}","kind={exportKind}","chartKey + \":\" + exportKind"]},
   {"name":"Chart export preserves full text and offers both forum formats","file":"src/components/chart-text-export.tsx","needles":["useState<ChartTextFormat>(\"plain\")","setFormat(\"markdown\")","shareBrieflyText(headline, text)","navigator.clipboard.writeText(text)","<Text selectable","selectedExportCharts(charts, selection)"]},
   {"name":"Text shares do not use the story URL-only fallback","file":"src/navigation/platform-share.ts","needles":["export async function shareBrieflyText","navigator.share({ title, text })","navigator.clipboard.writeText(text)","{ message: text,"]},
   {"name":"Top shares the web refresh icon while native feeds retain pull-to-refresh","file":"src/app/index.tsx","needles":["<FeedRefreshButton\n            label={copy.refresh}","disabled={!locationUsable}","headingRowNarrow: { gap: 8 }","<RefreshControl","Platform.OS === \"web\" || !locationUsable ? undefined : (","<RefreshControl\n              refreshing={refreshing}"]},
@@ -1547,7 +1548,7 @@ ensure(
 const chartExportJS = ts.transpileModule(read("src/services/chart-text-export.ts"), {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
 }).outputText;
-const { formatChartText, publishedChartsForExport, selectedExportCharts, toggleExportChart } = await import(
+const { formatChartText, chartsForAdminExport, selectedExportCharts, toggleExportChart } = await import(
   "data:text/javascript;base64," + Buffer.from(chartExportJS).toString("base64")
 );
 const exportLabels = { item:"Item", value:"Value", source:"Source", sources:"Sources",
@@ -1598,12 +1599,35 @@ assert.ok(multiChartExport.includes("Third chart") && multiChartExport.includes(
 assert.ok(!multiChartExport.includes("Road / 2050: 15%"));
 assert.ok(multiChartExport.indexOf("Fuel | consumption") < multiChartExport.indexOf("Third chart"));
 const draft = {...chartFixture, title:"Private draft"};
-assert.deepEqual(publishedChartsForExport(false,null,{status:"ready",published:true,charts:[chartFixture]}), []);
-assert.deepEqual(publishedChartsForExport(true,null,{status:"ready",published:false,charts:[draft]}), []);
-assert.deepEqual(publishedChartsForExport(true,{published_release_id:null,published_charts:[],draft_charts:[draft]},{status:"ready",published:true,charts:[chartFixture]}), []);
-assert.deepEqual(publishedChartsForExport(true,{published_release_id:1,published_charts:[chartFixture],draft_charts:[draft]},{status:"ready",published:false,charts:[draft]}), [chartFixture]);
-assert.deepEqual(publishedChartsForExport(true,null,{status:"ready",published:true,charts:[chartFixture]}), [chartFixture]);
-process.stdout.write("✓ Chart text export preserves precision, optional references and admin/public-release gating\n");
+const privateChartStatus = {status:"ready",published:false,charts:[draft]};
+const publicChartStatus = {status:"ready",published:true,charts:[chartFixture]};
+const unpublishedReview = {ready:true,published_release_id:null,published_charts:[],draft_charts:[draft],removed_charts:[{chart:group}]};
+const revisedReview = {...unpublishedReview,published_release_id:1,published_charts:[chartFixture]};
+const noDraftReview = {...revisedReview,ready:false,draft_charts:[]};
+const noExport = {charts:[],kind:"published"};
+for (const mode of ["edit","preview","published","history"]) {
+  assert.deepEqual(chartsForAdminExport(false,revisedReview,privateChartStatus,mode), noExport);
+}
+assert.deepEqual(chartsForAdminExport(true,null,privateChartStatus,"preview"), {charts:[draft],kind:"draft"});
+assert.deepEqual(chartsForAdminExport(true,null,privateChartStatus,"published"), noExport);
+assert.deepEqual(chartsForAdminExport(true,unpublishedReview,privateChartStatus,"preview"), {charts:[draft],kind:"draft"});
+assert.deepEqual(chartsForAdminExport(true,unpublishedReview,privateChartStatus,"published"), noExport);
+for (const mode of ["edit","preview"]) {
+  const result = chartsForAdminExport(true,revisedReview,publicChartStatus,mode);
+  assert.deepEqual(result, {charts:[draft],kind:"draft"});
+  const exported = formatChartText(result.charts, {...chartOptions,format:"plain",includeReferences:true});
+  assert.ok(exported.includes("Private draft"));
+  assert.ok(!exported.includes("Road / 2050"));
+}
+assert.deepEqual(chartsForAdminExport(true,revisedReview,privateChartStatus,"published"), {charts:[chartFixture],kind:"published"});
+assert.deepEqual(chartsForAdminExport(true,revisedReview,privateChartStatus,"history"), noExport);
+assert.deepEqual(chartsForAdminExport(true,noDraftReview,privateChartStatus,"preview"), {charts:[chartFixture],kind:"published"});
+assert.deepEqual(chartsForAdminExport(true,null,publicChartStatus,"preview"), {charts:[chartFixture],kind:"published"});
+assert.deepEqual(chartsForAdminExport(true,null,{status:"processing",published:false,charts:[draft]},"preview"), noExport);
+assert.deepEqual(chartsForAdminExport(true,{...unpublishedReview,draft_charts:[]},privateChartStatus,"edit"), {charts:[],kind:"draft"});
+assert.deepEqual(revisedReview.published_charts,[chartFixture]);
+assert.deepEqual(revisedReview.draft_charts,[draft]);
+process.stdout.write("✓ Chart text export preserves precision, optional references, draft and public selection, and admin-only gating\n");
 
 let passed = 0;
 for (const check of checks) {

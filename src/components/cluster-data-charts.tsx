@@ -13,7 +13,7 @@ import {
 
 import { SmartChartVisual } from "@/components/smart-chart-visual";
 import { ChartTextExport } from "@/components/chart-text-export";
-import { publishedChartsForExport } from "@/services/chart-text-export";
+import { chartsForAdminExport } from "@/services/chart-text-export";
 import {
   getClusterDataCharts,
   getChartReview,
@@ -892,7 +892,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
   const visibleCards: ReviewChartCard[] = editMode && review
     ? draftCardsInOrder(review)
     : readyCharts.map((chart) => ({ chart, removedIndex: null }));
-  const exportCharts = publishedChartsForExport(isAdmin, review, status);
+  const { charts: exportCharts, kind: exportKind } = chartsForAdminExport(isAdmin, review, status, viewMode);
   const displayedChartVersionId = isAdmin && review
     ? viewingPublic ? review.published_article_version_id
       : viewMode === "history" ? viewedHistory?.article_version_id
@@ -1192,7 +1192,7 @@ export function ClusterDataCharts({ eventId, articleVersionId, reviewRequested =
         </View>
       )}
       {isAdmin && !moderating && exportCharts.length > 0 && (
-        <ChartTextExport key={chartKey + ":" + JSON.stringify(exportCharts)} charts={exportCharts}
+        <ChartTextExport key={chartKey + ":" + exportKind + ":" + JSON.stringify(exportCharts)} charts={exportCharts} kind={exportKind}
           headline={headline} storyUrl={storyUrl} labels={copy} />
       )}
       {visibleCards.length > 0 && (
