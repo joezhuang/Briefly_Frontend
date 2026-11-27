@@ -21,6 +21,7 @@ export function FeedRefreshButton({ label, refreshing, disabled = false, onRefre
       accessibilityState={{ disabled: unavailable, busy: refreshing }}
       disabled={unavailable}
       onPress={onRefresh}
+      hitSlop={6}
       style={({ pressed }) => [
         styles.button,
         { borderColor: colors.border },
@@ -37,11 +38,11 @@ export function FeedRefreshButton({ label, refreshing, disabled = false, onRefre
 
 const styles = StyleSheet.create({
   button: {
-    width: 44, height: 44, flexShrink: 0, borderRadius: 22,
+    width: 32, height: 32, flexShrink: 0, borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center", justifyContent: "center",
   },
-  icon: { fontSize: 24, lineHeight: 28, fontWeight: "700" },
+  icon: { fontSize: 18, lineHeight: 22, fontWeight: "600" },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.65 },
 });
