@@ -1,0 +1,56 @@
+// Reading-language labels are independent of Briefly's interface locale.
+// Each supported Google target has its own native name and action copy.
+export const READING_LANGUAGES = [
+  {code: "ar",label: "العربية",title: "لغة القراءة",google: "القراءة بالعربية باستخدام ترجمة Google"},
+  {code: "bn",label: "বাংলা",title: "পড়ার ভাষা",google: "Google অনুবাদে বাংলায় পড়ুন"},
+  {code: "bg",label: "Български",title: "Език за четене",google: "Четете на български с Google Преводач"},
+  {code: "zh-CN",label: "简体中文",title: "阅读语言",google: "使用 Google 翻译阅读简体中文"},
+  {code: "zh-TW",label: "繁體中文",title: "閱讀語言",google: "使用 Google 翻譯閱讀繁體中文"},
+  {code: "hr",label: "Hrvatski",title: "Jezik čitanja",google: "Čitajte na hrvatskom uz Google prevoditelj"},
+  {code: "cs",label: "Čeština",title: "Jazyk čtení",google: "Číst česky s Překladačem Google"},
+  {code: "da",label: "Dansk",title: "Læsesprog",google: "Læs på dansk med Google Oversæt"},
+  {code: "nl",label: "Nederlands",title: "Leestaal",google: "Lees in het Nederlands met Google Translate"},
+  {code: "en",label: "English",title: "Reading language",google: "Read in English with Google"},
+  {code: "fi",label: "Suomi",title: "Lukukieli",google: "Lue suomeksi Google Kääntäjällä"},
+  {code: "fr",label: "Français",title: "Langue de lecture",google: "Lire en français avec Google Traduction"},
+  {code: "de",label: "Deutsch",title: "Lesesprache",google: "Auf Deutsch mit Google Übersetzer lesen"},
+  {code: "el",label: "Ελληνικά",title: "Γλώσσα ανάγνωσης",google: "Διαβάστε στα ελληνικά με τη Μετάφραση Google"},
+  {code: "gu",label: "ગુજરાતી",title: "વાંચવાની ભાષા",google: "Google અનુવાદ વડે ગુજરાતીમાં વાંચો"},
+  {code: "he",label: "עברית",title: "שפת קריאה",google: "קריאה בעברית באמצעות Google Translate"},
+  {code: "hi",label: "हिन्दी",title: "पढ़ने की भाषा",google: "Google अनुवाद से हिंदी में पढ़ें"},
+  {code: "hu",label: "Magyar",title: "Olvasási nyelv",google: "Olvasás magyarul a Google Fordítóval"},
+  {code: "id",label: "Bahasa Indonesia",title: "Bahasa bacaan",google: "Baca dalam bahasa Indonesia dengan Google Terjemahan"},
+  {code: "it",label: "Italiano",title: "Lingua di lettura",google: "Leggi in italiano con Google Traduttore"},
+  {code: "ja",label: "日本語",title: "閲覧言語",google: "Google 翻訳で日本語の記事を読む"},
+  {code: "kn",label: "ಕನ್ನಡ",title: "ಓದುವ ಭಾಷೆ",google: "Google ಅನುವಾದದೊಂದಿಗೆ ಕನ್ನಡದಲ್ಲಿ ಓದಿ"},
+  {code: "ko",label: "한국어",title: "읽기 언어",google: "Google 번역으로 한국어로 읽기"},
+  {code: "ms",label: "Bahasa Melayu",title: "Bahasa bacaan",google: "Baca dalam bahasa Melayu dengan Google Terjemahan"},
+  {code: "ml",label: "മലയാളം",title: "വായനാ ഭാഷ",google: "Google വിവർത്തനം ഉപയോഗിച്ച് മലയാളത്തിൽ വായിക്കുക"},
+  {code: "mr",label: "मराठी",title: "वाचनाची भाषा",google: "Google भाषांतर वापरून मराठीत वाचा"},
+  {code: "no",label: "Norsk",title: "Lesespråk",google: "Les på norsk med Google Oversetter"},
+  {code: "fa",label: "فارسی",title: "زبان مطالعه",google: "خواندن به فارسی با ترجمهٔ Google"},
+  {code: "pl",label: "Polski",title: "Język czytania",google: "Czytaj po polsku z Tłumaczem Google"},
+  {code: "pt",label: "Português",title: "Idioma de leitura",google: "Leia em português com o Google Tradutor"},
+  {code: "pa",label: "ਪੰਜਾਬੀ",title: "ਪੜ੍ਹਨ ਦੀ ਭਾਸ਼ਾ",google: "Google ਅਨੁਵਾਦ ਨਾਲ ਪੰਜਾਬੀ ਵਿੱਚ ਪੜ੍ਹੋ"},
+  {code: "ro",label: "Română",title: "Limba de lectură",google: "Citește în română cu Google Traducere"},
+  {code: "ru",label: "Русский",title: "Язык чтения",google: "Читать на русском с Google Переводчиком"},
+  {code: "sr",label: "Српски",title: "Језик читања",google: "Читајте на српском уз Google преводилац"},
+  {code: "sk",label: "Slovenčina",title: "Jazyk čítania",google: "Čítať po slovensky s Prekladačom Google"},
+  {code: "sl",label: "Slovenščina",title: "Jezik branja",google: "Berite v slovenščini z Google Prevajalnikom"},
+  {code: "es",label: "Español",title: "Idioma de lectura",google: "Leer en español con Google"},
+  {code: "sw",label: "Kiswahili",title: "Lugha ya kusoma",google: "Soma kwa Kiswahili ukitumia Google Tafsiri"},
+  {code: "sv",label: "Svenska",title: "Lässpråk",google: "Läs på svenska med Google Översätt"},
+  {code: "ta",label: "தமிழ்",title: "வாசிப்பு மொழி",google: "Google மொழிபெயர்ப்பைப் பயன்படுத்தி தமிழில் படிக்கவும்"},
+  {code: "te",label: "తెలుగు",title: "చదివే భాష",google: "Google అనువాదంతో తెలుగులో చదవండి"},
+  {code: "th",label: "ไทย",title: "ภาษาในการอ่าน",google: "อ่านเป็นภาษาไทยด้วย Google แปลภาษา"},
+  {code: "tr",label: "Türkçe",title: "Okuma dili",google: "Google Çeviri ile Türkçe oku"},
+  {code: "uk",label: "Українська",title: "Мова читання",google: "Читати українською з Google Перекладачем"},
+  {code: "ur",label: "اردو",title: "پڑھنے کی زبان",google: "Google ترجمہ کے ذریعے اردو میں پڑھیں"},
+  {code: "vi",label: "Tiếng Việt",title: "Ngôn ngữ đọc",google: "Đọc bằng tiếng Việt với Google Dịch"},
+] as const;
+
+export type ReadingLanguage = (typeof READING_LANGUAGES)[number]["code"];
+
+export function readingLanguageOption(code: string) {
+  return READING_LANGUAGES.find(item => item.code === code) ?? READING_LANGUAGES.find(item => item.code === "en")!;
+}

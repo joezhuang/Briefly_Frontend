@@ -22,6 +22,7 @@ function requireAll(relativePath, needles) {
 }
 
 const checks = [
+  {"name":"Story reading language labels use native target language independently of interface locale","file":"src/components/web-translate-button.tsx","needles":["readingLanguageOption(readingLanguage)","{selected.title}","{selected.label} ▾","accessibilityLabel={selected.google}","{selected.google}","{item.label}","const labels = copy[language] ?? copy.en;","normalizedReadingLanguage(initialReadingLanguage)","readingLanguage !== \"en\" && readingLanguage !== displayedContentLanguage","googleTranslateUrl(translatedSource.toString(), readingLanguage)"]},
   {"name":"Draft export is explicitly labelled and does not publish or alter charts","file":"src/components/chart-text-export.tsx","needles":["kind === \"draft\" ? copy.draftOpen : copy.open","kind === \"draft\" && <Text","{copy.draftHint}","shareBrieflyText(headline, text)","navigator.clipboard.writeText(text)"]},
   {"name":"Saved cluster charts survive canonical revisions with original version context and optional refresh","file":"src/components/cluster-data-charts.tsx","needles":["review.ready ? review.draft_charts : review.published_charts","review.draft_article_version_id : review.published_article_version_id","status.published_article_version_id","displayedChartVersionId !== articleVersionId","{copy.earlierVersion}","const generationLabel = hasSavedCharts ? copy.update","accessibilityLabel={generationLabel}","status?.awaiting_review, status?.refreshing","(!review.ready && action !== \"rollback\")"]},
   {"name":"Chart text export supports multi-select, select all, clear all and disabled empty export","file":"src/components/chart-text-export.tsx","needles":["useState<ChartExportSelection>(null)","selectedExportCharts(charts, selection)","accessibilityRole=\"checkbox\"","toggleExportChart(current, index, charts.length)","setSelection([])","setSelection(null)","chosen.length ? formatChartText","pill(copy.share, () => void run(\"share\"), true, !chosen.length)","pill(copy.copy, () => void run(\"copy\"), false, !chosen.length)"]},
@@ -1544,6 +1545,26 @@ ensure(
   "Public verified charts and admin-configurable Admin/Pro lazy generation remain available"
 );
 
+
+const readingLanguageJS = ts.transpileModule(read("src/services/reading-language.ts"), {
+  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const { READING_LANGUAGES, readingLanguageOption } = await import(
+  "data:text/javascript;base64," + Buffer.from(readingLanguageJS).toString("base64")
+);
+assert.deepEqual(READING_LANGUAGES.map(item => item.code), ["ar","bn","bg","zh-CN","zh-TW","hr","cs","da","nl","en","fi","fr","de","el","gu","he","hi","hu","id","it","ja","kn","ko","ms","ml","mr","no","fa","pl","pt","pa","ro","ru","sr","sk","sl","es","sw","sv","ta","te","th","tr","uk","ur","vi"]);
+for (const item of READING_LANGUAGES) {
+  assert.ok(item.label && item.title && item.google.includes("Google"));
+  assert.equal(readingLanguageOption(item.code), item);
+}
+assert.equal(readingLanguageOption("zh-CN").title, "阅读语言");
+assert.equal(readingLanguageOption("zh-TW").title, "閱讀語言");
+assert.equal(readingLanguageOption("ja").label, "日本語");
+assert.equal(readingLanguageOption("es").google, "Leer en español con Google");
+assert.equal(readingLanguageOption("fr").title, "Langue de lecture");
+assert.equal(readingLanguageOption("ar").label, "العربية");
+assert.equal(readingLanguageOption("invalid").title, "Reading language");
+process.stdout.write("✓ All reading language targets have native names and localized reading controls\n");
 
 const chartExportJS = ts.transpileModule(read("src/services/chart-text-export.ts"), {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },

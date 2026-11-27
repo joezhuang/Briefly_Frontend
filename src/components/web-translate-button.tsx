@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Linking,
   Modal,
@@ -12,116 +12,57 @@ import {
 
 import { useBrieflyLanguage } from "@/context/language";
 import { useBrieflyTheme } from "@/context/theme";
+import { READING_LANGUAGES, readingLanguageOption, type ReadingLanguage } from "@/services/reading-language";
 
 const READING_LANGUAGE_STORAGE_KEY = "briefly.reading-language.v1";
 
-const READING_LANGUAGES = [
-  { code: "ar", label: "Arabic" },
-  { code: "bn", label: "Bengali" },
-  { code: "bg", label: "Bulgarian" },
-  { code: "zh-CN", label: "Chinese (Simplified)" },
-  { code: "zh-TW", label: "Chinese (Traditional)" },
-  { code: "hr", label: "Croatian" },
-  { code: "cs", label: "Czech" },
-  { code: "da", label: "Danish" },
-  { code: "nl", label: "Dutch" },
-  { code: "en", label: "English" },
-  { code: "fi", label: "Finnish" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "el", label: "Greek" },
-  { code: "gu", label: "Gujarati" },
-  { code: "he", label: "Hebrew" },
-  { code: "hi", label: "Hindi" },
-  { code: "hu", label: "Hungarian" },
-  { code: "id", label: "Indonesian" },
-  { code: "it", label: "Italian" },
-  { code: "ja", label: "Japanese" },
-  { code: "kn", label: "Kannada" },
-  { code: "ko", label: "Korean" },
-  { code: "ms", label: "Malay" },
-  { code: "ml", label: "Malayalam" },
-  { code: "mr", label: "Marathi" },
-  { code: "no", label: "Norwegian" },
-  { code: "fa", label: "Persian" },
-  { code: "pl", label: "Polish" },
-  { code: "pt", label: "Portuguese" },
-  { code: "pa", label: "Punjabi" },
-  { code: "ro", label: "Romanian" },
-  { code: "ru", label: "Russian" },
-  { code: "sr", label: "Serbian" },
-  { code: "sk", label: "Slovak" },
-  { code: "sl", label: "Slovenian" },
-  { code: "es", label: "Spanish" },
-  { code: "sw", label: "Swahili" },
-  { code: "sv", label: "Swedish" },
-  { code: "ta", label: "Tamil" },
-  { code: "te", label: "Telugu" },
-  { code: "th", label: "Thai" },
-  { code: "tr", label: "Turkish" },
-  { code: "uk", label: "Ukrainian" },
-  { code: "ur", label: "Urdu" },
-  { code: "vi", label: "Vietnamese" },
-] as const;
-
-type ReadingLanguage = (typeof READING_LANGUAGES)[number]["code"];
 
 const copy = {
   en: {
-    title: "Reading language",
     sameAsUi: "Same as interface",
     hint: "Saved on this device. It does not change the Briefly interface.",
     choose: "Choose reading language",
     close: "Close",
-    readWithGoogle: (name: string) => `Read in ${name} with Google`,
     sharedHint: (name: string) =>
       `Reading language for this story: ${name}. Your saved preference is unchanged.`,
     englishHint: "Choose another reading language to use Google Translate.",
     localHint: "For local development, use your browser's Translate page option.",
   },
   es: {
-    title: "Idioma de lectura",
     sameAsUi: "Igual que la interfaz",
     hint: "Se guarda en este dispositivo y no cambia la interfaz de Briefly.",
     choose: "Elegir idioma de lectura",
     close: "Cerrar",
-    readWithGoogle: (name: string) => `Leer en ${name} con Google`,
     sharedHint: (name: string) =>
       `Idioma de lectura de esta historia: ${name}. Tu preferencia guardada no cambia.`,
     englishHint: "Elige otro idioma de lectura para usar Google Translate.",
     localHint: "En desarrollo local, usa la opción Traducir página de tu navegador.",
   },
   ja: {
-    title: "読む言語",
     sameAsUi: "インターフェースと同じ",
     hint: "この端末に保存されます。Brieflyの表示言語は変わりません。",
     choose: "読む言語を選択",
     close: "閉じる",
-    readWithGoogle: (name: string) => `Googleで${name}で読む`,
     sharedHint: (name: string) =>
       `このストーリーの読む言語: ${name}。保存済みの設定は変更されません。`,
     englishHint: "Google翻訳を使うには別の読む言語を選択してください。",
     localHint: "ローカル開発では、ブラウザの「ページを翻訳」機能を使用してください。",
   },
   "zh-CN": {
-    title: "阅读语言",
     sameAsUi: "跟随界面语言",
     hint: "保存在此设备上，不会更改 Briefly 的界面语言。",
     choose: "选择阅读语言",
     close: "关闭",
-    readWithGoogle: (name: string) => `使用 Google 阅读${name}`,
     sharedHint: (name: string) =>
       `此报道的阅读语言：${name}。不会更改你已保存的阅读语言。`,
     englishHint: "选择其他阅读语言即可使用 Google 翻译。",
     localHint: "本地开发环境请使用浏览器自带的“翻译此页面”功能。",
   },
   "zh-TW": {
-    title: "閱讀語言",
     sameAsUi: "跟隨介面語言",
     hint: "儲存在此裝置上，不會更改 Briefly 的介面語言。",
     choose: "選擇閱讀語言",
     close: "關閉",
-    readWithGoogle: (name: string) => `使用 Google 閱讀${name}`,
     sharedHint: (name: string) =>
       `此報導的閱讀語言：${name}。不會更改你已儲存的閱讀語言。`,
     englishHint: "選擇其他閱讀語言即可使用 Google 翻譯。",
@@ -218,12 +159,7 @@ export function WebTranslateButton({
   const needsGoogleTranslation =
     readingLanguage !== "en" && readingLanguage !== displayedContentLanguage;
 
-  const selected = useMemo(
-    () =>
-      READING_LANGUAGES.find((item) => item.code === readingLanguage) ??
-      READING_LANGUAGES.find((item) => item.code === "en")!,
-    [readingLanguage],
-  );
+  const selected = readingLanguageOption(readingLanguage);
 
   const selectLanguage = (next: ReadingLanguage | null) => {
     setReadingLanguageOverride(next);
@@ -264,11 +200,11 @@ export function WebTranslateButton({
     >
       <View style={styles.headingRow}>
         <Text numberOfLines={1} style={[styles.title, { color: colors.textMuted }]}>
-          {labels.title}
+          {selected.title}
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={labels.choose}
+          accessibilityLabel={`${selected.title}: ${selected.label}`}
           onPress={() => setPickerOpen(true)}
           style={({ pressed }) => [
             styles.selector,
@@ -312,7 +248,7 @@ export function WebTranslateButton({
       {needsGoogleTranslation ? (
         <Pressable
           accessibilityRole={privateUrl ? "button" : "link"}
-          accessibilityLabel={labels.readWithGoogle(selected.label)}
+          accessibilityLabel={selected.google}
           onPress={handlePress}
           style={({ pressed }) => [
             styles.button,
@@ -324,7 +260,7 @@ export function WebTranslateButton({
           ]}
         >
           <Text style={[styles.label, { color: colors.text }]}>
-            {labels.readWithGoogle(selected.label)}
+            {selected.google}
             {privateUrl ? "" : " ↗"}
           </Text>
         </Pressable>
