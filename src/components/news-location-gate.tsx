@@ -412,7 +412,7 @@ export function NewsLocationGate({
             <Text style={[styles.compactLocation, { color: colors.text }]} numberOfLines={1}>
               {compactLocation}
             </Text>
-            <Text style={[styles.chevron, { color: colors.textMuted }]}>{expanded ? "⌃" : "⌄"}</Text>
+            <Text style={[styles.locationDisclosure, { color: colors.textMuted }]}>{expanded ? "−" : "+"}</Text>
           </Pressable>
           <FeedRefreshButton
             label={refreshLabel}
@@ -736,7 +736,8 @@ const styles = StyleSheet.create({
     flex: 1, minWidth: 0, minHeight: 44, flexDirection: "row",
     alignItems: "center", gap: 8,
   },
-  compactLocation: { flexShrink: 1, minWidth: 0, fontSize: 16, fontWeight: "800" },
+  compactLocation: { flexShrink: 1, minWidth: 0, fontSize: 13, fontWeight: "500" },
+  locationDisclosure: { fontSize: 15, fontWeight: "500", lineHeight: 20 },
   pressed: { opacity: 0.65 },
   eyebrow: { fontSize: 10, fontWeight: "900", letterSpacing: 1.1 },
   modeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
